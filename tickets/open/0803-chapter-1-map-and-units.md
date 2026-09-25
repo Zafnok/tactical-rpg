@@ -26,7 +26,7 @@ Proves the chapter is winnable with an automated replay.
 ## Scope
 
 **In:** `assets/maps/ch01.map`, `assets/chapters/ch01.ron`, real characters
-in `characters.ron` (with class/level/stats/items), enemy templates, trigger
+in `characters.ron` (with class/level/stats/loadouts), enemy templates, trigger
 wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
 
 **Out:** Chapter 2; balance changes to core formulas (file tickets instead).
@@ -40,8 +40,12 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
 2. **Roster:** real Chapter 1 characters from the story (replace
    `// PLACEHOLDER` entries; keep test fixtures in `tests/fixtures/` instead of
    shipped data). Stats per `progression.md` class bases + personal modifiers.
+   Loadouts, starting weapon ranks, the pack cap, default pack and gold per
+   `chapter-1.md` and `weapons-and-items.md`.
 3. **Enemies:** count/mix per `chapter-1.md`; AI mix (mostly `Aggressive`, a
-   `Guard` group near the boss, boss `Stationary`), sensible items, one boss with
+   `Guard` group near the boss, boss `Stationary`), sensible loadouts (mix
+   weapon kinds so Nick's per-type traits show: a mounted enemy for spears,
+   a flyer for bows if the story allows), one boss with
    a name and portrait.
 4. **Triggers:** wire `ch01_*` scene ids from 0707 (intro, prebattle, boss
    engage, talk-recruit if any, death quotes, victory, tbc).

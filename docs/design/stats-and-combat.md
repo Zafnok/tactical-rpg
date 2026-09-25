@@ -87,8 +87,8 @@ damage     = max(0, power - mitigation)
 crit_damage = damage * 3
 ```
 
-Weapon-triangle / effectiveness modifiers from 0003 and magic rules from 0004
-are added to `power` / `hit` when those docs define them.
+Weapon-type traits, effectiveness, broken weapons and gauntlet avoid are in
+`weapons-and-items.md` (0003); magic rules from 0004.
 
 ### Hit
 
@@ -127,10 +127,11 @@ strikes_A = 1  if diff < 4
   enemy (+4..+13) strikes 2x; ten levels of heavy Spd growth plus best gear
   (+14..+23) gives 3x; a capped Spd-40 unit with gear against an ordinary
   Spd-16..20 enemy (+24) gives 4x. 3x and 4x should be rare.
-- `as_bonus` is 0 for now. It is the hook for "best-in-slot gear" and
-  "investment in the weapon skill" (Nick's example). Whether gear, weapon ranks
-  or skills raise it, and whether weapon weight lowers it, is decided in 0003
-  (weapons) / 0005 (progression). Level never adds to it directly.
+- `as_bonus` is defined in `weapons-and-items.md` (0003): weapon rank bonus
+  minus the burden of weapon + armour weight not carried by Str; gear adds to
+  Spd itself. Class skills (0005) may add more. Level never adds to it
+  directly. The worked examples below use weight 0, rank E and no gear, so
+  their `as_bonus` is 0.
 
 ### Counterattacks
 
@@ -198,7 +199,8 @@ start of that unit's side's phase (rounded down; used by 0305).
 ## Worked examples
 
 These use placeholder weapons (the numbers are inputs, not a weapon list;
-0003 owns the real weapons). No weapon triangle applies. Ticket 0304 turns
+0003 owns the real weapons): weight 0, rank E, no armour, no weapon-type
+trait. `weapons-and-items.md` has examples with real weapons. Ticket 0304 turns
 them into table-driven tests.
 
 ### Example 1 — plain melee, attacker doubles (exactly at the threshold)
@@ -272,10 +274,10 @@ vs. defender Spd 16 (diff 24) → 4 strikes.
 - **Number scale and strike thresholds:** ticket 0013, decided after Nick's
   Chapter 1 playtest. Small, FE-sized or huge numbers; thresholds follow.
 
-- **Attack-speed modifiers** (`as_bonus`, weapon weight): ticket 0003 (gear,
-  weapon ranks) and 0005 (class skills). Nick's example expects "investment in
-  the weapon skill" and "best in slot gear" to help reach 3x/4x.
-- **Weapon triangle / effectiveness bonuses:** 0003.
+- **Attack-speed modifiers:** decided in `weapons-and-items.md` (0003);
+  class skills that add more: 0005.
+- **Weapon traits / effectiveness:** decided in `weapons-and-items.md` (0003):
+  no weapon triangle.
 - **Magic specifics** (healing formula, magic weapons at range): 0004.
 - **Skills** that add strikes (e.g. brave weapons) or ignore thresholds: not
   planned yet; would need a new decision ticket.

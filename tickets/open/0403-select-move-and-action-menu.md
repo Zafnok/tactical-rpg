@@ -31,7 +31,7 @@ animation, action menu with `Wait` (and `Seize` when legal), cancel flows,
 inspecting enemy ranges.
 
 **Out:** `Attack` targeting/forecast/playback (0404; show `Attack` in the menu
-but disabled until 0404), items/trade menu entries (added by 0404/0306 follow-ups),
+but disabled until 0404), `Item`/`Equip` menu entries (0407; there is no in-battle trade),
 map menu (0405).
 
 ## Implementation steps

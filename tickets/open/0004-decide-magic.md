@@ -19,6 +19,14 @@ Nick explicitly flagged "should there be magic, what type" as a question for
 him. It affects combat (0304), classes (0302/0005), the story bible (0701) and
 healing (0306). Run with the `ask-nick` skill.
 
+From 0003 (`docs/design/weapons-and-items.md`): Nick rejected a weapon
+triangle ("no built-in triangle forcing anything"), preferring per-weapon-type
+traits (Fortune's Weave); magic's role there is hitting Res, which armoured
+enemies lack. So a magic triangle is unlikely to fit; offer per-element traits
+instead. Decide also whether tomes are weapons in the 3-weapon loadout, their
+weight (it feeds attack speed via `burden`), and whether spells spend
+durability like Combat Arts or have their own uses.
+
 ## Nick input
 
 **Decision.**

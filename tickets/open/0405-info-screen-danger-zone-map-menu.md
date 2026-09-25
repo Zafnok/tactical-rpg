@@ -33,7 +33,8 @@ None.
 
 1. **Unit info screen** (`Info` on any unit, overlay): name, class, level, EXP,
    HP, every stat from the design with its cap shown dim (`Str 7/20`), move,
-   movement type, inventory with weapon stats, weapon ranks/skills if designed.
+   movement type, loadout (3 weapons with stats and durability, armour,
+   accessory), weapon ranks, class tags (Mounted/Flying/Armored), skills if designed.
    `j/k` or `Tab` cycles units of the same faction; `d` closes. Leave a 24×12
    portrait area on the left (placeholder box until 0703 exists).
 2. **Danger zone** (`DangerZone` toggle): union of hostile threat areas (0303

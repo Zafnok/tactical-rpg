@@ -44,7 +44,10 @@ real story characters (07xx creates them).
    design uses growths.
 2. `core::class::ClassDef`: `id`, `name`, `tier`, `movement_type: MovementTypeId`,
    `move_points`, `base: Stats`, `caps: Stats`, growth modifiers (if design
-   has them), usable weapon types (ids from the weapons design), `promotes_to: Vec<ClassId>`,
+   has them), usable weapon kinds with starting and maximum weapon rank (kinds from
+   `weapons-and-items.md`), allowed armour weights (Light/Medium/Heavy, if
+   0005 limits them), `tags: UnitTags` (`Mounted`, `Flying`, `Armored`; used
+   by weapon effectiveness), `promotes_to: Vec<ClassId>`,
    `skills` (only if design has class skills; ids only, effects come later).
 3. `core::unit`:
    - `Faction { Player, Enemy, Ally, Neutral }` with `is_hostile_to(other)`
