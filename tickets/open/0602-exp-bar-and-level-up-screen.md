@@ -38,14 +38,18 @@ The dopamine moment Nick asked for ("unit progression (level ups…)"). Shows
    its own row revealed one per ~0.12 s: `Str  6 → 7  +1` with `+1` in
    `text_highlight`; stats that didn't grow shown dim without `+`. Hold Confirm
    = reveal all; Confirm when done closes.
-3. Sequencing: combat playback → EXP bar → (level-up) → back to battle.
-   Same for heals.
+3. **Class progress** (`progression.md`): after the EXP bar, a one-line
+   `Swordsman  CL 3 → 4` notice when a `ClassLeveledUp` happened, and a
+   `CLASS MASTERED!  Learned: Keen Edge` banner on `ClassMastered`; any
+   `SkillLearned` / `SpellLearned` gets a `Learned: <name>` line.
+4. Sequencing: combat playback → EXP bar → (level-up) → (class progress) →
+   back to battle. Same for heals and tile casts.
 
 ## Acceptance criteria
 
 - [ ] Numbers shown equal the `LeveledUp` event.
 - [ ] Harness: force a level-up via a scripted setup (unit at 99 EXP) → overlay appears → closes → state correct.
-- [ ] Snapshots of EXP bar and completed level-up screen.
+- [ ] Snapshots of EXP bar, completed level-up screen and the mastery banner.
 
 ## Tests required
 

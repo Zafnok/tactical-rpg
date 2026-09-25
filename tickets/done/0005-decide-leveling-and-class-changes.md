@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0001"]
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0005 — Decide: level ups, class changes and the class tree
@@ -122,10 +122,48 @@ Update `docs/design/README.md`; adjust 0302, 0309, 0601–0603, 0803 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q3 and approved a class tree (Q4).
-- [ ] `docs/design/progression.md` written with exact formulas and the class table.
-- [ ] Design README updated; downstream tickets adjusted.
-- [ ] Ticket archived.
+- [x] Nick answered Q1–Q3 and approved a class tree (Q4).
+- [x] `docs/design/progression.md` written with exact formulas and the class table.
+- [x] Design README updated; downstream tickets adjusted.
+- [x] Ticket archived.
 
 ## Completion notes
 
+Decided with Nick on 2026-09-25 and recorded in
+[`docs/design/progression.md`](../../docs/design/progression.md).
+
+- **Q1:** growth comes from the class, plus one personal **talent** stat at
+  +20%. There is a per-tier minimum number of gains per level up ("blessed
+  N") that goes up with the tier. The exact steps are left open (starting
+  values 2/2/3 for tiers 1–3).
+- **Q2:** branching promotion plus reclass. The character level **never
+  resets**. There is also a per-class **class level** raised by class
+  points; mastering a class opens its promotions. Open certification was
+  rejected.
+- **Q3:** unlocking a class teaches its passives, and mastering it teaches
+  its active. Both are kept for good. A higher rank of a skill family
+  replaces the lower one (Nick's White Magic 1 → 2 example).
+- **Q4:** Nick approved the revised tree: 9 starter lines, 16 tier-2 classes
+  and 16 tier-3 classes. Martial lines have as many tiers as magic lines.
+  Names are generic placeholders, with no Fire Emblem-specific names
+  (Nick). Nick expects 6–10 tiers eventually, so every rule takes the tier
+  as a number.
+- **Deviation:**
+  - The first tree preview inside the question pop-up didn't show for
+    Nick, so the tree was shown as plain text instead.
+  - The first tree gave only the magic lines a tier 3. Nick asked for tier 3
+    on every line and for generic names.
+- **Claude's starting rules** (Nick may veto):
+  - free switching back to classes already unlocked;
+  - the Reclass Seal only enters tier-1 classes;
+  - promotion bonus = difference in class bases;
+  - stats are kept above the caps after a reclass;
+  - the EXP/CP numbers;
+  - the tier 1–2 skill list.
+- **Downstream tickets adjusted:** 0302 (class record, talent, generic
+  units, validation), 0309 (spells by class level), 0601 (class points,
+  class levels, safety net), 0602 (class-progress banners), 0603 (no reset,
+  mastery, seals, reclass; now also blocked by 0306), 0803 (talent, generic
+  units, blocked by 0412). ROADMAP updated.
+- **Follow-up tickets created:** 0311 (class skills in core), 0412 (skill UI),
+  1001 (tier-3 class skills).

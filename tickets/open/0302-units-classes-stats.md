@@ -47,36 +47,50 @@ real story characters (07xx creates them).
    `weapons-and-items.md`), allowed armour weights (Light/Medium/Heavy, if
    0005 limits them), `tags: UnitTags` (`Mounted`, `Flying`, `Armored`; used
    by weapon effectiveness), `promotes_to: Vec<ClassId>`,
-   `skills` (only if design has class skills; ids only, effects come later),
+   `passives: Vec<SkillId>` (learned on unlock) and `active: Option<SkillId>`
+   (learned on mastery) — ids only, effects are 0311; `enemy_only: bool`;
    and from `magic.md`: `weapon_slots: u8` (3, or 0 for tier-3+ magic
-   classes), `spells: Vec<(u8 /* level */, SpellId)>` (ids only; spell
+   classes), `spells: Vec<(u8 /* class level */, SpellId)>` (ids only; spell
    definitions, uses and id validation are 0309), `affinities: Vec<(Element, Affinity)>`.
-   Character defs get `personal_spells: Vec<(u8, SpellId)>` (0–2 entries).
+   `tier` is a plain number (Nick expects 6–10 tiers eventually; nothing may
+   assume 3 is the top). A per-tier `min_gains` table (safety net) lives in
+   the same data file. Character defs get `talent: StatKind` (not Mov),
+   base stats, starting weapon ranks, and
+   `personal_spells: Vec<(u8 /* character level */, SpellId)>` (0–2 entries).
 3. `core::unit`:
    - `Faction { Player, Enemy, Ally, Neutral }` with `is_hostile_to(other)`
      (Player+Ally friendly; Enemy hostile to both; Neutral per design default:
      hostile to nobody).
-   - `UnitId(u32)`, `Unit { id, character: Option<CharacterId>, name, class, level, exp, stats, hp, faction, pos: Pos, acted: bool, is_lord: bool }`.
-     Stats stored are *current permanent* stats (base + growth gains), always ≤ class caps.
+   - `UnitId(u32)`, `Unit { id, character: Option<CharacterId>, name, class, level, exp, class_records: BTreeMap<ClassId, ClassRecord { class_level, class_points }>, stats, hp, faction, pos: Pos, acted: bool, is_lord: bool }`.
+     `level` is the **character level** (never resets); class levels live in
+     `class_records` (`progression.md`).
+     Stats stored are *current permanent* stats (base + growth gains). They
+     are ≤ the class caps, except after a reclass, when stats above the new
+     class's caps are kept (`progression.md`).
 4. `assets/data/classes.ron`: the class tree from `progression.md` with its
    numbers. `assets/data/characters.ron`: 3 placeholder player characters
    (`test_lord`, `test_knight`, `test_archer` — whatever classes exist) and 2
    generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
 5. `content` loaders + validation: unknown class/movement/weapon ids;
-   promotion targets must exist and be a higher tier; `weapon_slots ≤ 3`;
+   promotion targets must exist, be exactly one tier higher and not
+   `enemy_only`; `weapon_slots ≤ 3`; start rank ≤ max rank; `min_gains` is
+   non-decreasing by tier and has an entry for every tier used;
    at most 2 personal spells; one affinity per element per class; base ≤ caps; growths
    0..=255; level in 1..=max; every class reachable in the tree.
-6. `Unit::from_character(def, class_table, level, faction, pos) -> Unit`.
+6. `Unit::from_character(def, class_table, level, faction, pos) -> Unit`, and
+   `Unit::generic(class, level, faction, pos)` using the deterministic
+   generic-unit formula in `progression.md`.
 
 ## Acceptance criteria
 
-- [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes).
+- [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes, one of them a shared promotion such as Iron Rider).
+- [ ] The whole class tree in `progression.md` (tiers 1–3 and the enemy-only classes) is in `classes.ron`.
 - [ ] All validation errors covered by tests.
 - [ ] Data files load in the all-assets test.
 
 ## Tests required
 
-- Unit: validators, `Faction::is_hostile_to` truth table, `from_character`.
+- Unit: validators, `Faction::is_hostile_to` truth table, `from_character`, `generic` (matches a hand-worked example).
 - Property: any `Unit` created via `from_character` has every stat ≤ its class cap and `hp == stats.hp`.
 
 ## Completion notes
