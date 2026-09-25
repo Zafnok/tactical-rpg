@@ -116,10 +116,16 @@ Manual browser check (screenshots).
   --all-targets -- -D warnings`, `cargo test --workspace`,
   `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`,
   `cargo xtask web --release`, `cargo machete`, `typos`, `cargo deny check
-  licenses` — all pass. `typos` needed one addition to `_typos.toml`
-  excluding the vendored `web/mq_js_bundle.js` (minified third-party JS, not
-  our prose, e.g. flags `Lod`/`registred` inside GLSL/JS identifiers).
-  `cargo mutants` was not run: this ticket adds no `core`/`content`/`ui`
-  logic for it to target (the new logic lives in `xtask`, which the gate's
-  package list doesn't cover).
+  licenses`, and `cargo mutants --in-diff <diff against main> --in-place -vV`
+  (CI's actual invocation, over the whole workspace) — all pass. `typos`
+  needed one addition to `_typos.toml` excluding the vendored
+  `web/mq_js_bundle.js` (minified third-party JS, not our prose — it trips
+  the checker on English-word-shaped fragments inside GLSL/JS identifiers).
+  `cargo mutants` needed `crates/xtask/src/web.rs`'s `run`/`package` split
+  and a `WasmOpt` trait (real impl behind `#[mutants::skip]`, with a comment
+  explaining why: it only spawns an optional external tool — `wasm-opt` —
+  that isn't guaranteed installed anywhere tests run) so the new `web`
+  command's logic is exercised with fakes instead of a real `wasm-opt`/network
+  dependency; added the `mutants` crate (MIT) as a new, ordinary dependency
+  for the skip attribute.
 

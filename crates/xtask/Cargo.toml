@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 trpg-content = { path = "../content" }
+mutants = "0.0.4"
 png = "0.17"
 ron.workspace = true
 serde_norway = "0.9.42"
