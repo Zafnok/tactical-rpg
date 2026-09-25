@@ -77,7 +77,13 @@ units learn skills and equip a few. **C. No skills for now.**
 
 ### Q4. Class tree
 
-Based on the answers above and 0003/0004, **propose** a starter class tree
+Based on the answers above and 0003/0004, **propose** a starter class tree.
+From 0003 (`docs/design/weapons-and-items.md`): weapon kinds are Sword, Spear,
+Axe, Bow, Gauntlet (+ magic from 0004), each with a trait and no triangle, so
+the tree should cover them (a gauntlet "punching class" speed specialist was
+Nick's own example in 0001); armoured classes should have high Def and low Res
+(Nick: "encouraged to use magic users on those enemies"); spears need
+`Mounted` targets and bows `Flying` ones to matter
 (about 6–8 base classes, each with 1–2 promotions) as an ASCII tree, e.g.:
 
 ```
@@ -99,7 +105,9 @@ cap per tier; growth mechanics exactly (roll procedure incl. safety net);
 per-class growth modifiers (if any); promotion rules (level requirement, item,
 stat bonuses); skills (if any) with exact effects; the approved class tree with,
 for each class: move, movement type (foot / mounted / armoured / flying),
-usable weapons, base stats, stat caps, growth rates or modifiers.
+usable weapon kinds with starting and maximum weapon rank (E…S), allowed
+armour weights (Light/Medium/Heavy), tags (`Mounted`, `Flying`, `Armored`),
+base stats, stat caps, growth rates or modifiers.
 
 Update `docs/design/README.md`; adjust 0302, 0601–0603, 0803 if needed.
 

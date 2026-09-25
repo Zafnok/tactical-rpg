@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0405", "0502", "0705"]
+blocked_by: ["0405", "0408", "0502", "0705"]
 nick_input: none
 completed:
 ---
@@ -40,7 +40,10 @@ replacing the title's placeholder and debug Quick Battle wiring.
      map: "maps/ch01.map",
      intro_scenes: ["ch01_intro", "ch01_prebattle"],
      player_slots: [ (character: "ana", pos: (3, 10)), … ],   // roster members placed here
-     enemies: [ (template: "brigand", level: 2, pos: (14, 4), ai: Aggressive, items: ["iron_axe"], boss: false, name: None), … ],
+     enemies: [ (template: "brigand", level: 2, pos: (14, 4), ai: Aggressive, loadout: (weapons: ["iron_axe"], armour: None, accessory: None), consumable: None, boss: false, name: None), … ],
+     preparations: true,                                       // show the 0408 Preparations screen
+     pack_cap: 6, default_pack: ["potion", "potion"],          // shared battle pack (weapons-and-items.md)
+     clear_gold: 500,
      objective: DefeatUnit("boss_id") | Rout | Seize((x, y)) | Survive(8),
      triggers: [ … ],                                          // 0705 trigger list
      victory_scenes: ["ch01_victory", "ch01_tbc"],
@@ -51,11 +54,14 @@ replacing the title's placeholder and debug Quick Battle wiring.
 2. Validator: positions in bounds, on terrain passable for that unit's movement
    type, no overlaps; all ids exist (characters, templates, items, scenes);
    objective target exists.
-3. `core::campaign::Campaign { chapter: String, roster: Vec<Unit>, flags: BTreeMap<String, bool>, playtime_s: u64 }`
+3. `core::campaign::Campaign { chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
    (serde). `Campaign::new_game()` with the starting roster;
    `Campaign::battle_setup(&ChapterDef) -> BattleSetup`;
-   `Campaign::apply_result(&BattleState)` updates roster (levels, items, fallen per 0006).
-4. `ui::flow`: `New Game` → intro scenes → `BattleScreen` → on `BattleEnded`
+   `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
+   weapon ranks, durability, fallen per 0006), returns unused pack items to the
+   stock and adds gold.
+4. `ui::flow`: `New Game` → intro scenes → (`PreparationsScreen` from 0408 if
+   `preparations: true`, else the default pack) → `BattleScreen` → on `BattleEnded`
    victory → victory scenes → (0802 save prompt hook) → next chapter or
    `ToBeContinuedScreen` → title. Defeat → `GameOverScreen` (`Retry chapter` / `Title`).
 5. Title menu: `New Game`, `Quit` (+ debug-only `Quick Battle`, F12 tools).

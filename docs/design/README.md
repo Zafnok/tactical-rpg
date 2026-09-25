@@ -10,7 +10,8 @@ here.
 | ----- | ---- | ------ | ------ |
 | Stats & combat maths | [`stats-and-combat.md`](stats-and-combat.md) | 0001 | ✅ decided 2026-09-25 |
 | Turn structure | [`turn-structure.md`](turn-structure.md) | 0002 | ✅ decided 2026-09-25 |
-| Weapons, items, triangle | `weapons-and-items.md` | 0003 | ⏳ awaiting Nick |
+| Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003 | ✅ decided 2026-09-25 |
+| Combat Arts | `weapons-and-items.md` (arts section) | 0014 | ⏳ awaiting Nick |
 | Magic & healing | `magic.md` | 0004 | ⏳ awaiting Nick |
 | Level ups, classes, class tree | `progression.md` | 0005 | ⏳ awaiting Nick |
 | Death, rewind, difficulty, saving | `death-and-difficulty.md` | 0006 | ⏳ awaiting Nick |

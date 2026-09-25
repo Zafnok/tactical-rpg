@@ -57,19 +57,30 @@ appears (first enemy in range, first level up). Feel: no hand-holding.
 ### Q4. Extras in Chapter 1
 
 Pick any: a talk-to-recruit enemy (FE staple), a village to visit for an item,
-a mid-battle reinforcement wave, a treasure chest, none.
+a mid-battle reinforcement wave, a treasure chest, an on-map shop (armoury,
+vendor or blacksmith; Nick chose FE on-map shops in 0003), none.
 **Recommendation:** one talk-recruit — it shows off two-portrait dialogue mid-battle.
+
+### Q5. Preparations and the battle pack
+
+From 0003 (`docs/design/weapons-and-items.md`): each battle has its own cap
+on shared consumables ("scale them to the battle"), picked on a Preparations
+screen. Ask: does Chapter 1 open with a Preparations screen (loadouts +
+pack) or start straight in with a fixed loadout and pack (FE's first chapters
+skip Preparations)? What pack cap and contents (e.g. 4 Potions)? Starting
+gold, and gold for clearing the map?
 
 ## What to record
 
 `docs/design/chapter-1.md`: Nick's words; objective and loss conditions; roster
 (slots with class, not names yet unless the story has them); enemy count and
 mix; map size and rough layout idea (an ASCII sketch at tile resolution is
-welcome); teaching approach; extras. Adjust tickets 0707, 0801, 0803 if needed.
+welcome); teaching approach; extras; Preparations yes/no, pack cap and default
+pack, starting and reward gold. Adjust tickets 0707, 0801, 0803, 0407–0409 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q4.
+- [ ] Nick answered Q1–Q5.
 - [ ] `docs/design/chapter-1.md` written.
 - [ ] Design README updated; downstream tickets adjusted; ticket archived.
 

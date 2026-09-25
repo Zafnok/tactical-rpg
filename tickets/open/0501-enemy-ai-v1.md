@@ -40,7 +40,9 @@ reinforcements this turn are already acted and must be skipped.
    nearest target), `Guard` (attack only if a target is in its threat area this
    turn, else hold), `Stationary` (never move; attack only from its tile —
    bosses on thrones), `Healer` (if the design has healers: heal the most
-   injured ally in reach, else keep distance behind allies).
+   injured ally in reach, else keep distance behind allies). Any unit
+   carrying its own consumable (0306) uses it on itself instead of acting
+   when below 40% HP and no attack scores a kill (*tunable*).
 2. **Attack choice:** for each stoppable dest × each target in range × each
    usable weapon, score with `forecast`:
    `score = w_dmg * expected_damage + w_kill * P(kill) + w_lord * is_lord(target)

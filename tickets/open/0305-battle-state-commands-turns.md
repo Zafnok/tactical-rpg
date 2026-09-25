@@ -31,7 +31,7 @@ units and game over per `docs/design/death-and-difficulty.md` (0006).
 `Event`, `CommandError`, phase/turn progression, objective + defeat checks,
 serde on state, replay test.
 
-**Out:** items/heal/trade actions (0306), EXP (0601), rewind (0307), AI (0501).
+**Out:** item/equip/heal actions (0306), EXP (0601), rewind (0307), AI (0501).
 
 ## Implementation steps
 

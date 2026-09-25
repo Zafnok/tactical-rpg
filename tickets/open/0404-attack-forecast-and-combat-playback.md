@@ -44,15 +44,18 @@ driven by `CombatResolved`/`UnitFell` events, fall animation.
    ```
    ┌──────── FORECAST ────────┐
    │ Ana            Brigand   │
-   │ Iron Sword ▲   Iron Axe ▼│
+   │ Iron Sword     Iron Axe  │
    │ HP   18          HP   22 │
-   │ DMG   7 ×2       DMG   4 │
+   │ DMG  7+8 ×2      DMG   4 │
    │ HIT  87          HIT  61 │
    │ CRIT  3          CRIT  0 │
    └──────────────────────────┘
    ```
-   `×2` when the side strikes twice; `▲/▼` triangle advantage per design; `--`
-   when a side can't counter. Confirm → apply `Act { Attack }`.
+   `×N` when the side strikes N times; for swords the follow-up damage is
+   shown (`7+8` = first strike 7, each follow-up 8); an effectiveness marker
+   (e.g. `!` after DMG, highlight colour) when the weapon is effective against
+   the target; `(broken)` after a broken weapon's name; `--` when a side
+   can't counter. There is no weapon triangle (`weapons-and-items.md`). Confirm → apply `Act { Attack }`.
 4. **CombatPlayback** overlay (a Screen pushed with the events): top-centre
    box with both combatants' names, HP bars and numbers. For each `Strike`:
    attacker's name flashes, then `HIT -7` / `MISS` / `CRITICAL! -21` in

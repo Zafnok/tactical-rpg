@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0003 — Decide: weapons, items and the weapon triangle
@@ -81,10 +81,44 @@ Update `docs/design/README.md`; adjust 0304, 0306, 0404 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q3.
-- [ ] `docs/design/weapons-and-items.md` written with exact numbers.
-- [ ] Downstream tickets adjusted; design README updated.
-- [ ] Ticket archived.
+- [x] Nick answered Q1–Q3.
+- [x] `docs/design/weapons-and-items.md` written with exact numbers.
+- [x] Downstream tickets adjusted; design README updated.
+- [x] Ticket archived.
 
 ## Completion notes
 
+Nick answered all three questions plus three follow-ups. Recorded in
+`docs/design/weapons-and-items.md`.
+
+- **Weapons:** Nick went with neither A nor B. He asked for *Fire Emblem:
+  Fortune's Weave*'s model, which Claude researched: **no weapon triangle**,
+  a trait per weapon type (sword ×1.2 on follow-ups, spear ×2 vs Mounted,
+  bow ×3 vs Flying at range 2, axe minimum 5 damage, gauntlet +15 avoid),
+  durability spent **only by Combat Arts**, broken weapons still usable with
+  penalties, repair at a blacksmith. Weapon ranks E–S grow with weapon EXP.
+- **Attack speed:** Nick asked for weight, Str, weapon skill and Spd, with
+  gauntlets reaching multiple strikes more easily than axes. Claude's formula:
+  `as_bonus = rank_speed − max(0, weapon wt + armour wt − Str/5)`, with gear
+  adding to Spd. `stats-and-combat.md`'s examples are unchanged (weight 0, rank E).
+- **Inventory:** Nick's own design. Each unit has a loadout of 3 weapons,
+  1 armour and 1 accessory. Consumables go in one shared battle pack, capped
+  **per battle** (Nick: "scale them to the battle").
+- **Money:** FE on-map shops (Armoury / Vendor / Blacksmith), plus the same
+  shops between chapters. Villages and chests.
+- Claude's starting rules that Nick may veto: using an item ends the unit's
+  action (self or an adjacent ally); no trading during battle; items found
+  mid-battle go into the pack past the cap; weapon EXP +2/+1 per combat;
+  an art needs `durability_left ≥ cost`; chests need no key yet; default
+  pack cap 6.
+
+Downstream tickets adjusted: 0004, 0005, 0009, 0302, 0304, 0305, 0306
+(rewritten: loadouts, pack, ranks, durability, no trade), 0403, 0404
+(forecast: effectiveness marker and sword follow-up damage, not triangle
+arrows), 0405, 0501, 0801 (chapter pack/gold fields, now blocked by 0408),
+0803. `stats-and-combat.md` now points to the new `as_bonus` rule.
+
+Follow-up tickets created: **0014** Decide Combat Arts (Nick: its own ticket,
+in Chapter 1), **0308** gold/shops/villages/chests (core), **0407** Item and
+Equip menus, **0408** Preparations screen, **0409** shop screen and
+Visit/Open.
