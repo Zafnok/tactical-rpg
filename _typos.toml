@@ -1,0 +1,13 @@
+[default.extend-words]
+# vim-style keys mentioned throughout design/UI docs.
+hjkl = "hjkl"
+# Project/tool names typos misreads as misspellings of other words.
+ratatui = "ratatui"
+# Fragments from hyphenated/compound tokens split across lines or by
+# typos's identifier splitting (e.g. "CC-BY-ND", "mis-keys", "PNGs").
+nd = "nd"
+mis = "mis"
+pn = "pn"
+# Verbatim quote of Nick's spoken words in docs/design/magic.md; preserved
+# as said, not a real typo to fix.
+beginnning = "beginnning"
