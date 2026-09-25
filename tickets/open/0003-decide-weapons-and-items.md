@@ -46,6 +46,13 @@ Feel: clean and readable; no inventory.
 **Recommendation:** B — keeps FE's triangle decisions on the map without menu
 chores that are clunkier in an ASCII UI.
 
+**Follow-up (from 0001):** units can strike up to 4 times based on attack
+speed (`docs/design/stats-and-combat.md`), and Nick expects "investment in
+the weapon skill" and "best in slot gear" to help reach 3x/4x. Ask how
+weapons/gear feed `as_bonus`: e.g. weapon rank grants +Spd for attack speed
+(Three Houses-style skill levels), gear with +Spd, and/or weapon weight
+lowering attack speed (FE). Record the exact rule.
+
 ### Q2. Inventory & consumables
 
 **A. FE: 5 item slots per unit**, healing items (Vulnerary), trade between adjacent units, convoy.
@@ -64,7 +71,8 @@ chores that are clunkier in an ASCII UI.
 
 `docs/design/weapons-and-items.md`: Nick's words; weapon types and triangle
 effects (exact bonus, e.g. +1 damage +15 hit, *tunable*); weapon stats fields;
-ranks (if any) and how they grow; durability (if any); the starter weapon list
+ranks (if any) and how they grow; how weapons/gear/ranks change attack speed
+(`as_bonus` in `stats-and-combat.md`); durability (if any); the starter weapon list
 with numbers (propose FE-like values: Iron Sword Mt 5 Hit 90 Crit 0 Rng 1…);
 inventory size; consumables list for Chapter 1 (at least a healing item); trade
 rules; money/shops (or "deferred").

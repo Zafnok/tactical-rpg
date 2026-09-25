@@ -51,11 +51,12 @@ state (0305), UI (0404).
    triangle / magic rules from the design docs. All integer maths, rounding as
    specified in the doc.
 4. `resolve(forecast, hp_attacker, hp_defender, rng) -> CombatOutcome`:
-   strike order per design (FE default: attacker, defender, then the side that
-   doubles strikes again); each `Strike { by: Side, hit: bool, crit: bool, damage: u16, target_hp_after: u16 }`;
+   strike order per design (attacker, defender, then the faster side's extra
+   strikes 2..N, N ≤ 4); each `Strike { by: Side, hit: bool, crit: bool, damage: u16, target_hp_after: u16 }`;
    stop as soon as someone reaches 0 HP. Hit roll procedure exactly per the
-   design's RNG model (e.g. 2RN: hit if `(r1 + r2) / 2 < hit`, specify integer
-   handling). Crit only rolls on a hit.
+   design's 2RN model (always two rolls, hit iff `r1 + r2 < 2 * hit`). Crit
+   rolls only on a hit (third roll). Strike thresholds `[4, 14, 24]` are data,
+   not hard-coded constants scattered in code.
 5. Put the three worked examples from the design doc into a table-driven test.
 
 ## Acceptance criteria
@@ -66,7 +67,7 @@ state (0305), UI (0404).
 
 ## Tests required
 
-- Unit: worked examples; triangle advantage/disadvantage; no-counter cases (range, no weapon); doubling threshold boundary (exactly at threshold, one below); lethal first strike ends combat.
+- Unit: worked examples; triangle advantage/disadvantage; no-counter cases (range, no weapon); strike-count boundaries for 2, 3 and 4 strikes (exactly at each threshold, one below); strike order A, D, A, A for a triple; Example 1's scripted-roll resolution trace; lethal first strike ends combat.
 - Property: `hit`, `crit` in 0..=100; `damage ≥ 0`; HP never underflows; strike count ≤ 4 (or the design's max); resolving with a `ScriptedRng` of all-0 rolls hits whenever `hit > 0`.
 - Statistical (seeded, deterministic): `roll_percent` distribution roughly uniform (chi-square-ish bound over 100k rolls); if 2RN, displayed 80 hits ≈ 92% (±1%).
 
