@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0102", "0103", "0104", "0105", "0109"]
 nick_input: setup
-completed:
+completed: 2026-09-25
 ---
 
 # 0106 — Repo guardrails: PR template, ticket lint, branch protection
@@ -91,11 +91,94 @@ repo merge settings.
 
 ## Acceptance criteria
 
-- [ ] `cargo xtask ticket-lint` passes on the current repo and has unit tests
+- [x] `cargo xtask ticket-lint` passes on the current repo and has unit tests
       for each rule (including failing cases).
-- [ ] CI `tickets` job passes on this PR (this ticket itself moved to `done/`).
-- [ ] Ruleset active on `main`; a direct push to `main` is rejected.
-- [ ] PR template appears on new PRs.
+- [x] CI `tickets` job passes on this PR (this ticket itself moved to `done/`).
+- [ ] Ruleset active on `main`; a direct push to `main` is rejected. **Blocked
+      on Nick running the `gh api ... rulesets` command below — this session
+      has no ruleset-API access.**
+- [x] PR template appears on new PRs (`.github/pull_request_template.md`).
 
 ## Completion notes
+
+- Added `.github/pull_request_template.md` (verbatim from this ticket).
+- Added `cargo xtask ticket-lint [--pr-branch <name>]` in
+  `crates/xtask/src/tickets.rs` (dispatched from `crates/xtask/src/main.rs`).
+  It parses each `tickets/{open,done}/*.md` file's frontmatter with
+  `serde_norway` (a maintained fork of `serde_yaml`, which is archived;
+  `serde_yml`, the other common fork, has had maintainer-trust concerns —
+  `serde_norway` is MIT/Apache-2.0 and allowed by ADR-0013) and checks every
+  rule from the ticket: filename shape, frontmatter parses and has all
+  required keys, `id` matches the filename and is unique across both
+  folders, enum fields (`type`, `model`, `effort`, `status`, `nick_input`)
+  take a value from `tickets/README.md`, `done/` files have `status: done`
+  and a `completed:` date while `open/` files don't have `status: done`,
+  every `blocked_by` id exists, and (with `--pr-branch t<NNNN>-…`) ticket
+  `NNNN` is in `done/`. 21 unit tests cover each rule (including failing
+  cases) with in-memory frontmatter, plus one end-to-end test that runs the
+  full checker against this repo's real `tickets/` tree. `xtask` was already
+  covered by the `coverage` job's `cargo llvm-cov --workspace --exclude
+  trpg-app` (only `trpg-app` is excluded) and wasn't noisy, so it stays in
+  both Sonar coverage and `cargo mutants` scope, as the ticket allows.
+- Added the `tickets` job to `ci.yml`: runs unconditionally (not gated on
+  `needs.changes`, per ADR-0014 — ticket hygiene is exactly what a docs-only
+  PR needs checked) and added to `ci-result`'s `needs`. On `pull_request` it
+  passes `--pr-branch "$HEAD_REF"` (`HEAD_REF`/`EVENT_NAME` come from
+  `env:`, never interpolated into `run:`, per zizmor); on `push` it runs
+  without `--pr-branch`.
+- **Not done by this session — needs Nick's OK, see "Nick input" above:**
+  the repository ruleset and repo merge/branch settings. This session has
+  no `gh` CLI or GitHub ruleset-API access, so it could only prepare, not
+  run, these:
+
+  Ruleset (`gh api repos/Zafnok/tactical-rpg/rulesets -X POST --input ruleset.json`,
+  do not commit `ruleset.json`):
+  ```json
+  {
+    "name": "main-protection",
+    "target": "branch",
+    "enforcement": "active",
+    "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
+    "rules": [
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": false
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "required_status_checks": [
+            { "context": "ci-result" },
+            { "context": "codeql-result" },
+            { "context": "mutants (diff)" },
+            { "context": "deny" },
+            { "context": "machete" },
+            { "context": "typos" },
+            { "context": "zizmor" },
+            { "context": "tickets" }
+          ],
+          "strict_required_status_checks_policy": false
+        }
+      },
+      { "type": "deletion" },
+      { "type": "non_fast_forward" }
+    ]
+  }
+  ```
+
+  Repo settings:
+  ```
+  gh repo edit Zafnok/tactical-rpg --enable-squash-merge --disable-merge-commit --disable-rebase-merge --delete-branch-on-merge
+  ```
+
+  Until Nick runs these, `main` is not actually protected — the code side
+  (PR template, `tickets` CI job, all checks named above) is in place and
+  green, but the last two acceptance criteria ("ruleset active", "a direct
+  push to main is rejected") are outstanding pending his OK and access.
 
