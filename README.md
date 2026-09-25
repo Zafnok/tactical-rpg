@@ -15,6 +15,11 @@ ticket at a time; see the [roadmap](docs/ROADMAP.md).
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Zafnok_tactical-rpg&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Zafnok_tactical-rpg&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg)
 
+## Play
+
+The latest `main` build runs in your browser, no install:
+**https://zafnok.github.io/tactical-rpg/**
+
 ## Targets
 
 - Windows executable first (itch.io, later Steam), then Linux and macOS.
