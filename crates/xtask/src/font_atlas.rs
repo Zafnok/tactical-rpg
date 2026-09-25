@@ -305,6 +305,16 @@ mod tests {
     }
 
     #[test]
+    fn font_x_offset_shifts_glyphs() {
+        // The font box starts 1 px left of the origin, so a glyph at x = 0
+        // lands in cell column 1.
+        let bdf = "FONTBOUNDINGBOX 4 2 -1 0\n\
+            STARTCHAR a\nENCODING 97\nBBX 1 1 0 0\nBITMAP\n80\nENDCHAR\n";
+        let font = parse_bdf(bdf).unwrap();
+        assert_eq!(grid(&font, 'a'), ["....", ".#.."]);
+    }
+
+    #[test]
     fn parse_errors() {
         assert!(
             parse_bdf("STARTCHAR A\n")
