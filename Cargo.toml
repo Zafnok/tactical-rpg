@@ -12,6 +12,11 @@ repository = "https://github.com/Zafnok/tactical-rpg"
 
 [workspace.dependencies]
 macroquad = "0.4"
+serde = { version = "1", features = ["derive"] }
+ron = "0.12"
+include_dir = "0.7"
+thiserror = "2"
+proptest = "1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
