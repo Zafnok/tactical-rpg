@@ -71,3 +71,4 @@ early so every later PR is checked by them.
 - Colour-blind palette variant; text size options.
 - Difficulty modes; more chapters (story pipeline repeats per chapter).
 - Fuzzing the content parsers (`cargo-fuzz`).
+
