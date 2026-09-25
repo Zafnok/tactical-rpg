@@ -110,11 +110,12 @@ Nick picked **Streamlined FE** stats (HP, Str, Mag, Dex, Spd, Def, Res, Mov),
 formulas, the roll procedure, *tunable* terrain defaults and three worked
 examples (one with a scripted-roll resolution trace).
 
-- Strike thresholds chosen as `diff ≥ 4 / 14 / 24` → 2 / 3 / 4 strikes
-  (*tunable*), sized to Nick's example (even level → 2x, +10 levels of growth
-  with best gear → 3x, capped → 4x).
+- Strike thresholds `diff ≥ 4 / 14 / 24` → 2 / 3 / 4 strikes are **placeholders**:
+  Nick deferred the number scale (small vs FE-sized vs huge) to after the
+  playtest. New ticket **0013** decides it; 0302 now uses one `StatValue` alias.
 - Luck's crit-avoid role goes to Dex (`crit − defender.Dex / 4`, *tunable*).
 - `as_bonus` hook left at 0; how gear / weapon skill feed it is now a
   follow-up question added to ticket 0003.
 - Downstream edits: 0003 (attack-speed sub-question), 0304 (strike order up
-  to 4, 2RN procedure, boundary tests). 0302, 0405, 0601 needed no change.
+  to 4, 2RN procedure, boundary tests), 0302 (`StatValue` alias). 0405, 0601
+  needed no change.

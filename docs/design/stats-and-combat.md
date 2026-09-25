@@ -18,17 +18,34 @@ Source: ticket 0001
 > 4x. Lv doesn't play a role in the number of attacks I am just using it here
 > as an example of stat growth."
 
+Follow-up, on the strike thresholds and number sizes:
+
+> "I don't think we ever decided on scaling algorithms yet... so I think we can
+> push this question to later. Like maybe I wanna be crazy like dragon ball and
+> we're talking trillions of points endgame who knows. Unlikely given we're
+> limited by the terminal size but just saying. Let's just say it's possible
+> and you can figure out the scaling algorithm once I have a playtest and see
+> if big numbers or low numbers or even medium numbers look nicer to me"
+
 So: streamlined Fire Emblem stats (no Luck, no Constitution/Build), FE "true
 hit" (2RN) hit rolls, and FE doubling extended to up to **4 strikes**, where
 3 and 4 need very large Speed gaps. Level itself never enters combat maths.
+
+**The number scale is not decided.** How big stats get (single digits, FE-ish
+tens, or huge "Dragon Ball" numbers) and therefore the exact strike thresholds
+are placeholders until Nick has played (ticket 0013, after the Chapter 1
+playtest 0804). The ranges, caps and thresholds below are FE-sized starting
+values so the game can be built and played; the *rules* (which stats, how they
+combine, 2RN, up to 4 strikes, 3x/4x rare) are Nick's and stay.
 
 Everything below marked *tunable* is a starting value Claude chose; balance
 tickets may change it without asking Nick. Unmarked rules are Nick's choices.
 
 ## Stat list
 
-All stats are non-negative integers (store as `u8`). Every unit also has a
-current HP (`0..=HP`). Per-class caps and growths come from
+All stats are non-negative integers. Code must use one stat value type
+alias everywhere (not a hard-wired `u8`) so the scale can grow later without a
+rewrite. Every unit also has a current HP (`0..=HP`). Per-class caps and growths come from
 `progression.md` (ticket 0005); the hard ceilings here are absolute limits
 that no class cap, gear or bonus may exceed.
 
@@ -43,9 +60,10 @@ that no class cap, gear or bonus may exceed.
 | `Res` | Reduces magical damage taken. | `0..=50` hard ceiling, cap per class *(tunable)* |
 | `Mov` | Movement points per turn (see movement/pathfinding). Set by class; does not grow on level up. | `0..=15`, set per class, typically 4–8 *(tunable)* |
 
-Guideline for class caps (*tunable*, for 0005): specialist stats cap around
-35–40 (e.g. a speed class's Spd), ordinary stats 20–30, HP 50–60. The strike
-thresholds below are sized for these numbers.
+All ranges above are *placeholders* for the FE-sized first build (see
+ticket 0013). Guideline for class caps (*tunable*, for 0005): specialist stats
+cap around 35–40 (e.g. a speed class's Spd), ordinary stats 20–30, HP 50–60.
+The strike thresholds below are sized for these numbers.
 
 No Luck, no Constitution/Build/weight stat. Whether weapons have weight (and
 what it would subtract from) is ticket 0003's decision; see *Attack speed*.
@@ -99,8 +117,11 @@ strikes_A = 1  if diff < 4
             4  if diff >= 24
 ```
 
-- Thresholds `4 / 14 / 24` are *tunable*, stored as data (a list
+- Thresholds `4 / 14 / 24` are *placeholders*, stored as data (a list
   `[4, 14, 24]`), so the maximum number of strikes is `1 + len(list)` = 4.
+  Nick fixed only that 3x and 4x are possible but rare; the actual thresholds
+  (and whether they are fixed gaps, percentages of the enemy's Speed, or
+  something else) are set with the number scale in ticket 0013.
 - At most one side gets more than 1 strike (diff is positive for only one).
 - Sizing (what Nick asked for): a speed specialist a bit ahead of an equal
   enemy (+4..+13) strikes 2x; ten levels of heavy Spd growth plus best gear
@@ -247,6 +268,9 @@ Boundaries: defender Spd 17 (diff 13) → attacker 2 strikes; attacker Spd 40
 vs. defender Spd 16 (diff 24) → 4 strikes.
 
 ## Open sub-questions (deferred)
+
+- **Number scale and strike thresholds:** ticket 0013, decided after Nick's
+  Chapter 1 playtest. Small, FE-sized or huge numbers; thresholds follow.
 
 - **Attack-speed modifiers** (`as_bonus`, weapon weight): ticket 0003 (gear,
   weapon ranks) and 0005 (class skills). Nick's example expects "investment in

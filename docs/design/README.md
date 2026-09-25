@@ -20,6 +20,7 @@ here.
 | Supports & relationships | `supports.md` | 0010 | ⏳ awaiting Nick |
 | Look & feel | `look-and-feel.md` | 0011 | ⏳ after font ticket 0203 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
+| Number scale & strike thresholds | [`stats-and-combat.md`](stats-and-combat.md) | 0013 | ⏳ after playtest 0804 |
 
 Each file starts with `Decided: YYYY-MM-DD`, `Source: ticket NNNN`, and Nick's
 words verbatim, followed by the derived rules (numbers marked *tunable* where
