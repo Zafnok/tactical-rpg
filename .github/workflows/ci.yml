@@ -17,8 +17,14 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  changes:
+    name: changes
+    uses: ./.github/workflows/changes.yml
+
   fmt:
     name: fmt
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -30,6 +36,8 @@ jobs:
 
   clippy:
     name: clippy
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,6 +51,8 @@ jobs:
 
   test:
     name: test
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -61,6 +71,8 @@ jobs:
 
   wasm:
     name: wasm
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,6 +84,8 @@ jobs:
 
   docs:
     name: docs
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       RUSTDOCFLAGS: -D warnings
@@ -87,6 +101,8 @@ jobs:
 
   coverage:
     name: coverage
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -113,3 +129,22 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Single required check for this workflow. Matrix jobs skipped by `if:`
+  # report one check with an unexpanded name, never the per-leg names, so
+  # branch protection requires this job instead (ADR-0014).
+  ci-result:
+    name: ci-result
+    if: always()
+    needs: [changes, fmt, clippy, test, wasm, docs, coverage]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$NEEDS" | jq -e '[.[].result] | any(. == "failure" or . == "cancelled")' > /dev/null; then
+            echo "::error::A required job failed or was cancelled."
+            exit 1
+          fi
