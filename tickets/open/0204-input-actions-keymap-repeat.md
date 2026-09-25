@@ -40,7 +40,9 @@ translation of macroquad keys.
    round-trips.
 2. `Action` enum exactly per ADR-0006: `CursorLeft/Down/Up/Right`,
    `CursorJumpLeft/Down/Up/Right`, `Confirm`, `Cancel`, `Info`, `DangerZone`,
-   `NextUnit`, `PrevUnit`, `EndTurn`, `Menu`, `Debug` (F12). Mark which are
+   `NextUnit`, `PrevUnit`, `EndTurn`, `Menu`, `Debug` (F12), plus
+   `ToggleAutoEnd` (default `Shift+e`; required by
+   `docs/design/turn-structure.md`, added after ADR-0006). Mark which are
    *repeatable* (the eight cursor actions) via a method.
 3. `assets/data/keymap.ron`: `bindings: { "CursorLeft": ["h", "Left"], "CursorJumpLeft": ["Shift+h", "Shift+Left"], … }`,
    `repeat: (delay_ms: 170, interval_ms: 55)`. `Esc`-as-menu rule from the ADR

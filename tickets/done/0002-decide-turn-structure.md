@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0002 — Decide: turn structure
@@ -74,10 +74,30 @@ Update `docs/design/README.md`; adjust tickets 0305, 0501, 0502 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1 (and Q2/Q3 if relevant).
-- [ ] `docs/design/turn-structure.md` written with the exact sequence.
-- [ ] `docs/design/README.md` updated; downstream tickets adjusted.
-- [ ] Ticket archived.
+- [x] Nick answered Q1 (and Q2/Q3 if relevant).
+- [x] `docs/design/turn-structure.md` written with the exact sequence.
+- [x] `docs/design/README.md` updated; downstream tickets adjusted.
+- [x] Ticket archived.
 
 ## Completion notes
 
+Nick picked **FE phases**, **FE-standard move-then-act only** (no built-in
+Canto; post-action movement only via specific combat skills, like FE's bow
+skill that steps 1 tile away), and **reinforcements that never act on arrival**.
+Follow-ups: **auto-end ON by default** with a toggle shortcut, an **Other
+phase** for green Ally/Neutral units, and **optional per-map turn limits**.
+Recorded in `docs/design/turn-structure.md` with the exact sequence
+`Player → Enemy → Other → turn += 1`.
+
+- Claude's starting rules (Nick may veto): empty phases are skipped silently;
+  reinforcements arrive at the start of their own side's phase already done,
+  and wait a turn if their tile is occupied; Survive / turn limits resolve
+  when turn N's last phase ends; toggle key `Shift+e`.
+- Downstream edits: 0305 (`Phase` enum, Other phase, reinforcements,
+  `turn_limit`, auto-end lives in the UI, skill-move hook, new acceptance
+  criteria), 0501 (AI also runs the Other phase), 0502 (plays back Other
+  phase too), 0405 (auto-end + toggle, `OTHER PHASE` banner, turn limit in
+  Objective), 0204 (`ToggleAutoEnd` action, an addition to ADR-0006's
+  bindings), 0805 (`auto_end_turn` setting), 0005 (Canto example replaced).
+  0303 needed no change (Canto was already out of scope).
+- No local gates to run yet (no Cargo workspace before 0101); docs only.

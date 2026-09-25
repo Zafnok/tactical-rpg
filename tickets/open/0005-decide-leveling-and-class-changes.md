@@ -67,8 +67,11 @@ switch to a different class line entirely. Feel: A with late-game flexibility.
 
 ### Q3. Skills?
 
-**A. Class skills (FE)** — each class has 1–2 passive skills (e.g. Canto for
-mounts, Vantage). **B. Learnable skill loadouts (FE Awakening, FFT)** —
+**A. Class skills (FE)** — each class has 1–2 passive skills (e.g. Vantage).
+Note (0002, `docs/design/turn-structure.md`): Nick ruled out built-in Canto;
+post-action movement exists only as specific combat skills (e.g. FE's bow
+skill that steps 1 tile away after attacking). Use such skills as examples,
+not Canto for all mounts. **B. Learnable skill loadouts (FE Awakening, FFT)** —
 units learn skills and equip a few. **C. No skills for now.**
 **Recommendation:** A, small.
 

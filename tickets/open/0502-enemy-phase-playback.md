@@ -33,7 +33,8 @@ fast-forward, input lockout, returning control at player phase.
 
 ## Implementation steps
 
-1. On `PhaseStarted` for a non-player faction: after the banner, loop:
+1. On `PhaseStarted` for a non-player phase (Enemy **and** Other, per
+   `docs/design/turn-structure.md`): after the banner, loop:
    `next_command` → if `None`, apply `EndPhase` → else animate: camera pans
    (smooth, ~0.25 s) to the unit, 0.2 s highlight, walk along `UnitMoved.path`,
    then combat playback for `CombatResolved`, then next.
