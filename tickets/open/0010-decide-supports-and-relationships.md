@@ -17,7 +17,9 @@ completed:
 
 Nick wants "story (both overall and personal)". Personal stories in FE mostly
 live in **support conversations**. Not needed for Chapter 1 — low priority —
-but the answer shapes the character sheets (0701). Run with the `ask-nick` skill.
+but the answer shapes the character sheets (0701). Nick said in 0007 that the
+supporting cast should have "some arcs or role to play in the story etc as well
+as support conversations", so supports of some kind are expected. Run with the `ask-nick` skill.
 
 ## Nick input
 
@@ -46,7 +48,12 @@ adds tactical meaning to positioning.
 ### Q2 (if A). Support limits
 
 **A. Unlimited supports per unit.** **B. Max 5 A-ranks per unit (FE GBA).**
-**C. Romance/marriage-style S rank (FE Awakening).** Recommendation: B, no S rank for now.
+Recommendation: B.
+
+**No romance option:** 0007 ruled out romance, S ranks, marriage and shipping
+([`setting-and-tone.md`](../../docs/design/setting-and-tone.md)). Don't offer
+it. Supports are friendship, rivalry, mentorship and family (pre-existing
+relationships only).
 
 ## What to record
 

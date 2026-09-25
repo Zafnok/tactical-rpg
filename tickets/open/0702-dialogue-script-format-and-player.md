@@ -30,7 +30,9 @@ None.
 `content`, `ui::dialogue::DialoguePlayer` (state machine, no drawing),
 one example scene.
 
-**Out:** drawing (0704), portraits (0703), battle triggers (0705).
+**Out:** drawing (0704), portraits (0703), battle triggers (0705), lead reply
+choices and `{lead}`/pronoun tokens (0708, which extends this format; keep the
+parser easy to extend with block steps).
 
 ## Implementation steps
 

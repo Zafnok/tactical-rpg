@@ -46,6 +46,12 @@ outline. Follow the `story-writing` skill strictly.
    at gate 1 and record his pick. It must fit the mechanics (innate spells
    with uses per battle, black and white magic, fire/ice terrain effects,
    uncommon elementals).
+   Hard constraints from `setting-and-tone.md` (0007): tone B (dark with
+   warmth and humour); the ending is a resolved, hard-fought victory, never a
+   tragedy (scripted losses along the way are allowed); **no romance or
+   shipping** (pre-existing relationships only); the world has other
+   continents (e.g. a wuxia-inspired Asian one) that the bible leaves room for;
+   every main companion has an arc or story role.
 3. **Cast:** 8–12 characters for Act 1: the lord/protagonist, 4–6 playable
    companions (covering the Chapter 1 roster classes), 1 antagonist with an
    understandable motive, 1–2 recurring secondary villains/rivals, 1–2 NPCs.
@@ -56,13 +62,26 @@ outline. Follow the `story-writing` skill strictly.
    standard ones), and for spellcasters **1–2 personal signature spells**
    (name, element, one-line effect; `magic.md`: numbers are set by 0005 or a
    balance ticket, not here).
-4. **Gate 1:** send Nick a one-page summary (premise, factions in a line each,
-   cast in a line each). Revise until he approves. Record his feedback verbatim
+   **The lead's sheet is different** (Persona-style lead, see "The lead" in
+   `setting-and-tone.md`): id `lead`, 18–25, disgraced/exiled noble,
+   gender chosen by the player. Record background, situation and
+   want/pressure, but **no fixed personality or voice**. Instead give 3 reply
+   tones (e.g. earnest / wry / blunt) with one sample choice. Give a portrait
+   brief for **both** `lead_m` and `lead_f` (same age, costume and colours).
+4. **Gate 1:** Nick deferred several things to this gate (0007), so ask him
+   first, with the `ask-nick` skill (options from games he likes + "describe
+   your own"): (a) 2–3 options for **why the lead was disgraced or exiled** and
+   the inciting incident; (b) **leading questions about the cast** (he asked
+   for them: e.g. the mentor figure, the rival, what the antagonist wants);
+   (c) **can the player rename the lead?** Then send Nick a one-page summary
+   (premise, factions in a line each, cast in a line each). Revise until he approves. Record his feedback verbatim
    at the bottom of `bible.md`.
 5. **outline.md:** Act 1 in detail (6–10 chapters: goal, conflict, turn, map
    idea, which personal arcs advance, recruits); Acts 2–3 as a paragraph each
    with the ending. Every chapter must advance the main plot **and** a personal arc.
-6. **Gate 2:** one-page outline summary to Nick; revise until approved.
+6. **Gate 2:** one-page outline summary to Nick, including 2–3 options for the
+   **midpoint twist** (Nick deferred it until the lead is known); revise until
+   approved.
 7. **chapters/ch01.md:** scene-by-scene beat sheet matching `chapter-1.md`
    (pre-battle scenes, in-battle moments incl. boss/talk-recruit if any,
    post-battle), each scene with purpose and what changes.

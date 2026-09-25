@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: fable-5.1
 effort: high
 status: todo
-blocked_by: ["0701", "0702", "0009"]
+blocked_by: ["0701", "0702", "0009", "0708"]
 nick_input: sign-off
 completed:
 ---
@@ -37,7 +37,10 @@ scene, "to be continued" tease. Ledger update.
 ## Implementation steps
 
 1. Reread the canon (skill's canon order) and the sheets of every character in Chapter 1.
-2. Write scenes following the beat sheet. Budget: opening + pre-battle ≤ ~40
+2. Write scenes following the beat sheet and the lead rules in
+   `docs/design/setting-and-tone.md`: the lead is gender-neutral (`{lead}` and
+   pronoun tokens, 0708), speaks only through `@choice` blocks and short
+   neutral lines, and gets 1–3 choice points in the chapter. No romance. Budget: opening + pre-battle ≤ ~40
    text boxes total (players want to play); in-battle lines 1–4 boxes each;
    victory ≤ ~20 boxes.
 3. Scene ids: `ch01_intro`, `ch01_prebattle`, `ch01_boss_engage`,
