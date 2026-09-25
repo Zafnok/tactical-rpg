@@ -49,7 +49,7 @@ player-faction units.
    `LeveledUp { unit, new_level, gains }` (current HP rises with HP gains); at
    the level cap (40, data) EXP is `--` and no EXP is gained.
 5. `grant_class_points(unit, amount) -> Vec<Event>`: to the current class
-   record only; class level = `1 + cp / (15 × tier)` capped at 10 (data);
+   record only; class level = `1 + cp / cp_per_class_level[tier]` (a per-tier data table), capped at 10 (data);
    crossing a class level emits `ClassLeveledUp`, learns class spells for that
    class level (0309's `learn_new_spells`, if it exists), and at 10 emits
    `ClassMastered` + `SkillLearned` for the class's active.

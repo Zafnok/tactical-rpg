@@ -53,8 +53,8 @@ real story characters (07xx creates them).
    classes), `spells: Vec<(u8 /* class level */, SpellId)>` (ids only; spell
    definitions, uses and id validation are 0309), `affinities: Vec<(Element, Affinity)>`.
    `tier` is a plain number (Nick expects 6–10 tiers eventually; nothing may
-   assume 3 is the top). A per-tier `min_gains` table (safety net) lives in
-   the same data file. Character defs get `talent: StatKind` (not Mov),
+   assume 3 is the top). Per-tier `min_gains` (safety net) and
+   `cp_per_class_level` tables live in the same data file. Character defs get `talent: StatKind` (not Mov),
    base stats, starting weapon ranks, and
    `personal_spells: Vec<(u8 /* character level */, SpellId)>` (0–2 entries).
 3. `core::unit`:
@@ -73,8 +73,9 @@ real story characters (07xx creates them).
    generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
 5. `content` loaders + validation: unknown class/movement/weapon ids;
    promotion targets must exist, be exactly one tier higher and not
-   `enemy_only`; `weapon_slots ≤ 3`; start rank ≤ max rank; `min_gains` is
-   non-decreasing by tier and has an entry for every tier used;
+   `enemy_only`; `weapon_slots ≤ 3`; start rank ≤ max rank; `min_gains` and
+   `cp_per_class_level` are non-decreasing by tier and have an entry for every
+   tier used;
    at most 2 personal spells; one affinity per element per class; base ≤ caps; growths
    0..=255; level in 1..=max; every class reachable in the tree.
 6. `Unit::from_character(def, class_table, level, faction, pos) -> Unit`, and

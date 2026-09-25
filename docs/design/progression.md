@@ -66,6 +66,13 @@ Follow-ups:
 >
 > **Promotion boost:** "A" (a big boost from the gap between the two classes'
 > base stats, FE GBA style).
+>
+> **Mastery pace:** "C" (it rises with tier: about 6 battles for tier 1,
+> 10 for tier 2, 15 for tier 3…).
+>
+> **Promotion item:** "B" (a separate seal per tier, rarer at higher tiers).
+>
+> **Generic enemy stats:** "A" (fixed average stats, not random level ups).
 
 So:
 
@@ -231,10 +238,20 @@ nothing.
 | … and killed the target | +2 |
 | Heal, tile cast, or non-combat active skill | 2 |
 
-- **Class level:** `CP per class level = 15 × class tier` (*tunable*).
-  Class level cap = **10** for every tier (*tunable*). Class level `n` needs
-  `(n − 1) × 15 × tier` total CP in that class. A tier-1 class masters at
-  135 CP, a tier-2 class at 270 and a tier-3 class at 405.
+- **Class level:** each tier has a `cp_per_class_level` value, stored as
+  data with one entry per tier. **It rises with the tier** (Nick: early
+  classes are quick, late ones are long-term goals). A higher tier never
+  needs fewer CP than the tier below it.
+
+  | Tier | CP per class level (*tunable*) | CP to master | About how many battles |
+  | ---- | ------------------------------ | ------------ | ---------------------- |
+  | 1 | 10 | 90 | 6 |
+  | 2 | 17 | 153 | 10 |
+  | 3 | 25 | 225 | 15 |
+  | 4 and up | Set when those tiers are designed | | |
+
+  The class level cap is **10** for every tier (*tunable*). Class level `n`
+  needs `(n − 1) × cp_per_class_level[tier]` total CP in that class.
 - **Mastered** = class level 10. After that, CP for that class stop counting.
 - What class levels do:
   - **Class level 1 (unlock):** learn the class's **passive skills** (Nick's
@@ -242,18 +259,20 @@ nothing.
   - **Class spells** at their listed class level (see *Spells*).
   - **Class level 10 (mastery):** learn the class's **active skill** (Nick's
     "reward on mastery"), and the class's promotions open up.
-- Rough pace (*tunable*): about 15 CP per battle for an active unit, so a
-  tier-1 class masters in about 9 battles. Chapter 1 units won't master
-  anything.
+- Pace: the battle counts above assume about 15 CP per battle for an active
+  unit. Chapter 1 is shorter than that, so no unit masters a class in it.
 
 ## Promotion (branching)
 
 - A unit can **promote** from its current class to one of the classes in its
   `promotes_to` list (one tier higher) when:
   1. its current class is **mastered** (class level 10), and
-  2. it uses a **Promotion Seal** (*placeholder name*; one item for every
-     tier, a consumable in the battle pack or used from the between-battle
-     menu; price and drops are for the shop/chapter tickets).
+  2. it uses the **seal for the target tier** (Nick: a separate seal per
+     tier). The placeholder names are *Tier 2 Seal*, *Tier 3 Seal* and so
+     on. Higher-tier seals are rarer; that rarity is how pacing is
+     controlled. A seal is a consumable in the battle pack, or used from the
+     between-battle menu. Prices and drops belong to the shop and chapter
+     tickets.
 - **The character level doesn't reset** (Nick). EXP stays the same.
 - **Promotion bonus** (Nick: FE GBA-style big boost): for each stat,
   `bonus = max(0, new_class.base[stat] − old_class.base[stat])`. The bonus is
@@ -580,8 +599,8 @@ Design intent behind the numbers:
 
 A generic unit of class `C` at character level `L` has
 `stat = min(cap, base + (growth × (L − 1)) / 100)` for each stat, with no
-talent and no randomness (*Claude's starting rule*: deterministic, so maps
-play the same way every time). Its weapon ranks are the class's start ranks
+talent and no randomness (Nick: fixed average stats, so a map plays the
+same way every time and you can plan exactly). Its weapon ranks are the class's start ranks
 unless the chapter data says otherwise. Its class level is 1, with the
 class's level-1 passives. Chapter data may give a generic enemy extra skills
 or spells.
@@ -602,5 +621,5 @@ ranks, class records (usually just the starting class at class level 1), and
   (Nick). They must not copy Fire Emblem names.
 - **Number scale:** all stats, caps and EXP numbers rescale with ticket 0013.
 - **How Combat Arts (0014) relate to mastery actives:** decided in 0014.
-- **Where Promotion and Reclass Seals come from** (shops, chests, story):
+- **Where the tier seals and Reclass Seals come from** (shops, chests, story):
   chapter and shop data (0009 and later).

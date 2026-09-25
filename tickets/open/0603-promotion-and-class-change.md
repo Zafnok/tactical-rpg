@@ -25,8 +25,8 @@ Nick wants class changes "like Fire Emblem". Rules in
 
 ## Scope
 
-**In:** core promotion and reclass rules + events; the **Promotion Seal**
-and **Reclass Seal** items (placeholder names); reclass (always costs a
+**In:** core promotion and reclass rules + events; the per-tier **promotion seals**
+(Tier 2 Seal, Tier 3 Seal …) and the **Reclass Seal** items (placeholder names); reclass (always costs a
 seal, class progress saved); class-choice screen with side-by-side stat
 previews; promotion stat-gain overlay (reuse 0602's).
 
@@ -37,7 +37,7 @@ prices/drops (chapter and shop data).
 
 1. `core::progression::promote(unit, target_class, classes) -> Result<Vec<Event>, PromoteError>`
    per `progression.md`: current class **mastered** (class level 10),
-   `target_class ∈ promotes_to`, a Promotion Seal is consumed. The
+   `target_class ∈ promotes_to`, the seal for the target class's tier is consumed. The
    **character level and EXP do not reset**. Bonus per stat =
    `max(0, new.base − old.base)` (clamped to the hard ceiling), current HP
    rises by the HP bonus, new class record at class level 1 → learn its
@@ -51,7 +51,7 @@ prices/drops (chapter and shop data).
    unchanged; a new class unlocks at class level 1. Stats never change, and
    stats above the new caps are kept.
    Event `Reclassed { unit, from, to }`.
-3. Triggers: `UnitAction::UseItem` on a Promotion Seal in battle (ends the
+3. Triggers: `UnitAction::UseItem` on a tier seal in battle (ends the
    action), plus the same actions from the between-battle unit menu /
    Preparations (0408) if it exists; otherwise note it as a follow-up ticket.
 4. **Choice screen:** two (or N) columns, each: class name, map glyph, move,
@@ -63,7 +63,7 @@ prices/drops (chapter and shop data).
 
 ## Acceptance criteria
 
-- [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, enemy-only class, reclass into a tier-2 class whose prerequisite isn't mastered) — state unchanged.
+- [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, a seal for the wrong tier, enemy-only class, reclass into a tier-2 class whose prerequisite isn't mastered) — state unchanged.
 - [ ] Promotion keeps the character level and EXP; shared promotion (Iron Rider from Guard vs from Rider) gives different bonuses, matching a hand-worked example.
 - [ ] Reclass never changes stats and always consumes a seal; learned skills, spells and saved class records are kept (leave a class at class level 6, come back, and it is still 6).
 - [ ] Choice screen shows correct previews (test against `promote` on a cloned unit).
