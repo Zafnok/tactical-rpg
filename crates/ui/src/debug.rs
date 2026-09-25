@@ -4,6 +4,46 @@
 use crate::color::{Palette, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
+use crate::input::Action;
+use crate::screen::{Ctx, FrameInput, Screen, Transition};
+
+/// The [`glyph_sampler`] as a screen (F12 in debug builds); Cancel closes it.
+#[derive(Debug, Clone)]
+pub struct GlyphSamplerScreen {
+    /// Drawn once on creation; the sampler never changes.
+    sampler: GlyphBuffer,
+}
+
+impl GlyphSamplerScreen {
+    /// Name reported by [`Screen::name`].
+    pub const NAME: &'static str = "glyph_sampler";
+
+    /// The sampler for the font and palette in `ctx`.
+    pub fn new(ctx: &Ctx) -> Self {
+        let glyphs: Vec<char> = ctx.content.font.glyphs.keys().copied().collect();
+        Self {
+            sampler: glyph_sampler(&ctx.palette, &glyphs),
+        }
+    }
+}
+
+impl Screen for GlyphSamplerScreen {
+    fn name(&self) -> &'static str {
+        Self::NAME
+    }
+
+    fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        if input.actions.contains(&Action::Cancel) {
+            Transition::Pop
+        } else {
+            Transition::None
+        }
+    }
+
+    fn draw(&self, _ctx: &Ctx, buf: &mut GlyphBuffer) {
+        buf.blit(&self.sampler, 0, 0);
+    }
+}
 
 /// Glyphs per sampler row; each glyph is followed by a blank cell.
 const GLYPHS_PER_ROW: usize = 48;
@@ -148,6 +188,26 @@ mod tests {
         assert!(rows < usize::try_from(BOTTOM).unwrap());
         assert!(2 + 2 * GLYPHS_PER_ROW <= usize::from(CONSOLE_W));
         assert!(SWATCH_COLUMNS * SWATCH_W < i32::from(CONSOLE_W));
+    }
+
+    #[test]
+    fn sampler_screen_draws_the_sampler_and_closes_on_cancel() {
+        let mut ctx = crate::screen::tests::ctx();
+        let mut screen = GlyphSamplerScreen::new(&ctx);
+        assert_eq!(screen.name(), "glyph_sampler");
+        let p = &ctx.palette;
+        let mut buf = GlyphBuffer::new(
+            CONSOLE_W,
+            CONSOLE_H,
+            Cell::new('x', p.get(UiColor::Text), p.get(UiColor::Black)),
+        );
+        screen.draw(&ctx, &mut buf);
+        assert_eq!(buf, glyph_sampler(p, &atlas_glyphs()));
+        let frame = |a: &[Action]| FrameInput::new(a.to_vec(), 0.0, vec![]);
+        let stay = screen.update(&mut ctx, &frame(&[Action::Confirm]));
+        assert!(matches!(stay, Transition::None));
+        let pop = screen.update(&mut ctx, &frame(&[Action::Confirm, Action::Cancel]));
+        assert!(matches!(pop, Transition::Pop));
     }
 
     #[test]

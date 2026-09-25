@@ -1,0 +1,27 @@
+---
+source: crates/ui/src/widgets/menu.rs
+expression: render(&m)
+---
+            
+ ┌────────┐ 
+ │ Move   │ 
+ │ Attack │ 
+ │ Items  │ 
+ │ Wait   │ 
+ └────────┘ 
+            
+--- colours ---
+aaaaaaaaaaaa
+abbbbbbbbbba
+abccccccccba
+abddddddddba
+abeeeeeeeeba
+abccccccccba
+abbbbbbbbbba
+aaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_dim bg:panel_bg
+e = fg:panel_bg bg:panel_border_focus

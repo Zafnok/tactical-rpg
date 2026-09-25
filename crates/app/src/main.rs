@@ -5,8 +5,7 @@ mod render;
 
 use macroquad::prelude::*;
 use trpg_content::font::ATLAS_PNG_PATH;
-use trpg_ui::input::{InputState, Keymap};
-use trpg_ui::{Palette, UiColor};
+use trpg_ui::{Ctx, Game, UiColor};
 
 use crate::render::Renderer;
 
@@ -27,33 +26,35 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let content = match trpg_content::load_embedded() {
-        Ok(content) => content,
-        Err(errors) => return show_content_errors(&errors.to_string()).await,
-    };
-    let palette = match Palette::new(&content.palette) {
-        Ok(palette) => palette,
-        Err(missing) => {
-            return show_content_errors(&format!("palette lacks {}", missing.join(", "))).await;
-        }
+    let ctx = match Ctx::embedded() {
+        Ok(ctx) => ctx,
+        Err(e) => return show_content_errors(&e.to_string()).await,
     };
     let png = trpg_content::bundle::bytes(ATLAS_PNG_PATH).unwrap_or_default();
-    let glyphs: Vec<char> = content.font.glyphs.keys().copied().collect();
-    let mut renderer = match Renderer::new(content.font, png, palette.get(UiColor::Black)) {
+    let black = ctx.palette.get(UiColor::Black);
+    let mut renderer = match Renderer::new(ctx.content.font.clone(), png, black) {
         Ok(renderer) => renderer,
         Err(e) => return show_content_errors(&e).await,
     };
-    // Screens arrive with ticket 0205; until then the app shows the sampler.
-    let sampler = trpg_ui::debug::glyph_sampler(&palette, &glyphs);
-    let mut input = InputState::new(Keymap::from_def(&content.keymap));
+    let mut game = Game::start(ctx);
+    let mut running = true;
     loop {
-        let actions = keys::poll(&mut input);
-        if cfg!(debug_assertions) {
-            for action in &actions {
-                info!("action: {}", action);
+        let events = keys::poll();
+        if running {
+            let out = game.frame(&events, get_frame_time());
+            renderer.draw(out.buffer);
+            if out.quit {
+                // Native: leaving main closes the window. The web page can't
+                // be closed, so it stops updating and keeps the last frame.
+                if cfg!(target_arch = "wasm32") {
+                    running = false;
+                } else {
+                    break;
+                }
             }
+        } else {
+            renderer.draw(game.buffer());
         }
-        renderer.draw(&sampler);
         next_frame().await;
     }
 }

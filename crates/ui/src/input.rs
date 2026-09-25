@@ -41,6 +41,25 @@ impl Keymap {
     pub fn repeat(&self) -> RepeatDef {
         self.repeat
     }
+
+    /// Every chord bound to `action`, in [`Chord`] order (letters, digits,
+    /// then named keys; plain before shifted), so the result is stable.
+    pub fn chords_for(&self, action: Action) -> Vec<Chord> {
+        let mut chords: Vec<Chord> = self
+            .bindings
+            .iter()
+            .filter(|&(_, &a)| a == action)
+            .map(|(&c, _)| c)
+            .collect();
+        chords.sort_unstable();
+        chords
+    }
+
+    /// The chord help text names for `action`: the first of
+    /// [`chords_for`](Self::chords_for), or `None` if it is unbound.
+    pub fn primary(&self, action: Action) -> Option<Chord> {
+        self.chords_for(action).into_iter().next()
+    }
 }
 
 /// The repeat currently running for the most recently pressed repeatable key.
@@ -237,6 +256,17 @@ mod tests {
                 interval_ms: 40
             }
         );
+    }
+
+    #[test]
+    fn chords_for_lists_every_binding_in_order() {
+        let km = default_state().keymap().clone();
+        assert_eq!(km.chords_for(CursorLeft), vec![chord("h"), chord("Left")]);
+        assert_eq!(km.chords_for(Info), vec![chord("Shift+h")]);
+        assert_eq!(km.chords_for(Action::Cancel), vec![]);
+        assert_eq!(km.primary(CursorLeft), Some(chord("h")));
+        assert_eq!(km.primary(Confirm), Some(chord("f")));
+        assert_eq!(km.primary(Action::Cancel), None);
     }
 
     #[test]
