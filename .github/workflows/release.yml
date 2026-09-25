@@ -1,0 +1,296 @@
+name: Release
+
+# Cuts a GitHub Release from a `vX.Y.Z` tag (ADR-0009): builds Windows, Linux,
+# macOS (universal) and web packages for `trpg-app`, each with third-party
+# licence notices, and attaches them to the release. `workflow_dispatch` runs
+# the exact same pipeline as a dry run (packages are uploaded as workflow
+# artifacts but no release is created), so it can be exercised on a branch
+# before ever pushing a tag.
+#
+# See the "Releasing" section in README.md for how to actually cut one.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      fake_tag:
+        description: >-
+          Dry-run only: tag to check against Cargo.toml's version instead of
+          the real workspace version (e.g. a bogus "v0.0.0" to verify
+          check-version fails as expected). Leave blank for a normal dry run.
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: tactical-rpg
+
+jobs:
+  # Establishes the version for this run and whether this is a real release
+  # or a dry run, and fails fast on a tag/Cargo.toml mismatch (implementation
+  # step 2).
+  check-version:
+    name: check-version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      dry_run: ${{ steps.version.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FAKE_TAG: ${{ inputs.fake_tag }}
+        run: |
+          set -euo pipefail
+          cargo_version=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "trpg-app") | .version')
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            dry_run=true
+            tag="${FAKE_TAG:-v$cargo_version}"
+          else
+            dry_run=false
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+          tag_version="${tag#v}"
+
+          echo "tag=$tag cargo_version=$cargo_version dry_run=$dry_run"
+          if [ "$tag_version" != "$cargo_version" ]; then
+            echo "::error::tag '$tag' (version '$tag_version') does not match" \
+              "workspace.package.version '$cargo_version' in Cargo.toml"
+            exit 1
+          fi
+
+          echo "version=$cargo_version" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
+  # Third-party licence notices (ADR-0013), shared by every package below.
+  licenses:
+    name: licenses
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@c3ec0de9ae7f1019cea21aa96aa0a895b9552063 # v2.87.9
+        with:
+          tool: cargo-about
+      # `-m crates/app/Cargo.toml` scopes the report to trpg-app's own
+      # dependency tree so our unpublished, license-less workspace crates
+      # (core/content/ui) don't need entries; about.toml's `accepted` list is
+      # the same allow list as deny.toml's `[licenses] allow` (ADR-0013).
+      - run: |
+          cargo about generate -m crates/app/Cargo.toml about.hbs \
+            -o THIRD_PARTY_LICENSES.html
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: licenses
+          path: THIRD_PARTY_LICENSES.html
+          retention-days: 1
+
+  build-windows:
+    name: build-windows
+    needs: [check-version, licenses]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - run: rustup target add x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo build --release --locked -p trpg-app --target x86_64-pc-windows-msvc
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: licenses
+      - name: Package
+        shell: bash
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="tactical-rpg-$VERSION-windows-x64"
+          mkdir -p "$pkg"
+          cp "target/x86_64-pc-windows-msvc/release/$BIN_NAME.exe" "$pkg/"
+          cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
+          cp assets/fonts/*LICENSE* "$pkg/"
+          cat > "$pkg/README.txt" <<EOF
+          tactical-rpg $VERSION (Windows x64)
+
+          Double-click $BIN_NAME.exe to run. No installation needed.
+
+          LICENSE is the game's own license (proprietary; see it for what you
+          may and may not do with this copy). THIRD_PARTY_LICENSES.html and
+          the other *LICENSE* files cover open-source components used to
+          build the game.
+          EOF
+          7z a "$pkg.zip" "$pkg"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-windows
+          path: tactical-rpg-*-windows-x64.zip
+
+  build-linux:
+    name: build-linux
+    needs: [check-version, licenses]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install macroquad system libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+      - run: cargo build --release --locked -p trpg-app --target x86_64-unknown-linux-gnu
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: licenses
+      - name: Package
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="tactical-rpg-$VERSION-linux-x64"
+          mkdir -p "$pkg"
+          cp "target/x86_64-unknown-linux-gnu/release/$BIN_NAME" "$pkg/"
+          chmod +x "$pkg/$BIN_NAME"
+          cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
+          cp assets/fonts/*LICENSE* "$pkg/"
+          cat > "$pkg/README.txt" <<EOF
+          tactical-rpg $VERSION (Linux x64)
+
+          Run ./$BIN_NAME from a terminal (mark it executable first if the
+          archive extractor didn't preserve that: chmod +x $BIN_NAME).
+
+          LICENSE is the game's own license (proprietary; see it for what you
+          may and may not do with this copy). THIRD_PARTY_LICENSES.html and
+          the other *LICENSE* files cover open-source components used to
+          build the game.
+          EOF
+          tar czf "$pkg.tar.gz" "$pkg"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-linux
+          path: tactical-rpg-*-linux-x64.tar.gz
+
+  build-macos:
+    name: build-macos
+    needs: [check-version, licenses]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo build --release --locked -p trpg-app --target aarch64-apple-darwin
+      - run: cargo build --release --locked -p trpg-app --target x86_64-apple-darwin
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: licenses
+      - name: Package (lipo universal binary)
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="tactical-rpg-$VERSION-macos-universal"
+          mkdir -p "$pkg"
+          lipo -create -output "$pkg/$BIN_NAME" \
+            "target/aarch64-apple-darwin/release/$BIN_NAME" \
+            "target/x86_64-apple-darwin/release/$BIN_NAME"
+          chmod +x "$pkg/$BIN_NAME"
+          cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
+          cp assets/fonts/*LICENSE* "$pkg/"
+          cat > "$pkg/README.txt" <<EOF
+          tactical-rpg $VERSION (macOS, universal: Apple Silicon + Intel)
+
+          This build is unsigned. macOS will refuse to open it with a normal
+          double-click ("cannot be opened because the developer cannot be
+          verified"). Instead, right-click (or Control-click) $BIN_NAME and
+          choose Open, then confirm in the dialog that appears; you only need
+          to do this once.
+
+          LICENSE is the game's own license (proprietary; see it for what you
+          may and may not do with this copy). THIRD_PARTY_LICENSES.html and
+          the other *LICENSE* files cover open-source components used to
+          build the game.
+          EOF
+          ditto -c -k --sequesterRsrc "$pkg" "$pkg.zip"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-macos
+          path: tactical-rpg-*-macos-universal.zip
+
+  build-web:
+    name: build-web
+    needs: [check-version, licenses]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo xtask web --release
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: licenses
+      - name: Package
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="tactical-rpg-$VERSION-web"
+          mkdir -p "$pkg"
+          cp -r dist/web/. "$pkg/"
+          cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
+          cp assets/fonts/*LICENSE* "$pkg/"
+          cp web/mq_js_bundle-LICENSE-MIT.txt "$pkg/"
+          cat > "$pkg/README.txt" <<EOF
+          tactical-rpg $VERSION (web)
+
+          Serve this folder with any static file server and open index.html,
+          e.g.: python -m http.server 8000, then http://localhost:8000
+
+          LICENSE is the game's own license (proprietary; see it for what you
+          may and may not do with this copy). THIRD_PARTY_LICENSES.html and
+          the other *LICENSE* files cover open-source components used to
+          build the game.
+          EOF
+          zip -r "$pkg.zip" "$pkg"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-web
+          path: tactical-rpg-*-web.zip
+
+  # Only this job needs write access, and only for a real (non-dry-run) run.
+  release:
+    name: release
+    if: needs.check-version.outputs.dry_run == 'false'
+    needs: [check-version, build-windows, build-linux, build-macos, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: packages
+      - uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # v2.4.1
+        with:
+          files: packages/*
+          generate_release_notes: true

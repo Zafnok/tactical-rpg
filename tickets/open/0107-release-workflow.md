@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0102", "0206"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0107 — Release workflow

@@ -1,0 +1,33 @@
+# Config for `cargo about generate` (ticket 0107), producing the
+# THIRD_PARTY_LICENSES.html attached to every release package.
+#
+# The `accepted` list must match the "Code" allow list in
+# docs/adr/0013-licensing-and-third-party-policy.md and deny.toml exactly:
+# permissive licenses only, no copyleft, no non-commercial, nothing that
+# costs money.
+accepted = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Unlicense",
+    "OFL-1.1",
+]
+
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+
+# Our own workspace crates are proprietary (`license-file = "LICENSE"`, not an
+# SPDX identifier), so the report is scoped to trpg-app's dependency tree with
+# `cargo about generate -m crates/app/Cargo.toml` (see
+# .github/workflows/release.yml) instead of ignoring them here — mirrors
+# cargo-deny's `[licenses.private] ignore = true`, the same policy.
