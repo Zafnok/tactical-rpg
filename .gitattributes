@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.rs text eol=lf
+*.snap text eol=lf
+*.ron text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.wasm binary

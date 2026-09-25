@@ -1,0 +1,14 @@
+/target
+/dist
+**/*.rs.bk
+*.snap.new
+mutants.out*
+lcov.info
+*.profraw
+clippy-report.json
+.scannerwork/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
