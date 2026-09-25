@@ -17,7 +17,8 @@ here.
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
-| Chapter 1 scope | `chapter-1.md` | 0009 | ⏳ awaiting Nick |
+| Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
+| The lord's unique class line | `progression.md` (lord section) | 0016 | ⏳ awaiting Nick |
 | Supports & relationships | `supports.md` | 0010 | ⏳ awaiting Nick |
 | Look & feel | `look-and-feel.md` | 0011 | ⏳ after font ticket 0203 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |

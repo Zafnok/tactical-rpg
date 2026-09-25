@@ -303,7 +303,7 @@ Any unit can wear any accessory.
   village closes. Enemies destroying villages: not in Chapter 1.
 - **Chests** (*Claude's starting rule*): a player unit on a chest uses `Open`;
   no key needed for now. Contents: gold or an item.
-- Whether Chapter 1 has any shop, village or chest is decided in 0009.
+- Chapter 1 has no shop, village or chest (0009, `chapter-1.md`).
 
 ## Worked examples
 
@@ -393,7 +393,8 @@ Distance 1.
   them): ticket 0014, in Chapter 1.
 - **Magic** weapons/tomes, their weight and traits: 0004.
 - **Class weapon kinds, starting/max ranks, armour limits, tags:** 0005.
-- **Pack cap, shops/villages/chests in Chapter 1:** 0009.
+- **Pack cap, shops/villages/chests in Chapter 1:** decided in 0009
+  (`chapter-1.md`: cap 3, no shops/villages/chests).
 - **Materials and forging** at the blacksmith: when the overworld/world
   structure (0008) adds material sources.
 - **Enemies destroying villages, chest keys, thief classes:** later chapters.

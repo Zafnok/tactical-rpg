@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0007"]
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0009 — Decide: Chapter 1 scope
@@ -82,9 +82,31 @@ pack, starting and reward gold. Adjust tickets 0707, 0801, 0803, 0407–0409 if 
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q5.
-- [ ] `docs/design/chapter-1.md` written.
-- [ ] Design README updated; downstream tickets adjusted; ticket archived.
+- [x] Nick answered Q1–Q5.
+- [x] `docs/design/chapter-1.md` written.
+- [x] Design README updated; downstream tickets adjusted; ticket archived.
 
 ## Completion notes
 
+Nick answered Q1–Q5 on 2026-09-25; recorded in `docs/design/chapter-1.md`.
+
+- **Q1:** Rout, no turn limit. Nick also said a chapter is a story beat, which
+  can hold several battles (e.g. overworld skirmishes before a climax).
+  Chapter 1 is a single battle. The multi-battle idea is added to 0008's questions and 0801's Out scope.
+- **Q2:** the bigger option: 6 units (lord + Rider, Archer, Cleric, Guard,
+  Mage), 12–14 enemies + boss, about 24×16, 20–30 min. Nick added that **the lord
+  has a unique starting class/tree**, which is new design work, so I created
+  **0016** (decide the lord's class line) and made 0803 wait for it.
+- **Q3:** contextual hints (0406 context updated).
+- **Q4:** no extras in Chapter 1 (no talk-recruit, village, chest, shop,
+  reinforcements, terrain-magic moment, elemental or battle note). 0707 and 0803
+  updated to drop the talk-recruit scene and the extras.
+- **Q5:** no Preparations; fixed pack of 3 Potions (cap 3); 0 starting gold;
+  1000 gold clear reward (tunable).
+- Map difficulty tier: Normal (3 rewind charges); Nick changed it from my Easy
+  proposal.
+- Claude's choices (tunable): the enemy mix (mostly Brigand/Raider/Archer); a rough ASCII layout sketch for 0803.
+- Pointers in `magic.md` and `weapons-and-items.md` updated. Also updated the
+  design README (with a 0016 row) and ROADMAP (Nick's queue).
+- No changes were needed in 0408/0409: Preparations and shops are still built
+  for Chapter 2 onward and for Quick Battle.

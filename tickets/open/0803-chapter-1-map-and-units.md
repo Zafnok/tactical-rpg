@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0410", "0411", "0412", "0501", "0706", "0707", "0801"]
+blocked_by: ["0009", "0016", "0410", "0411", "0412", "0501", "0706", "0707", "0801"]
 nick_input: sign-off
 completed:
 ---
@@ -42,16 +42,19 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
    shipped data). Each character's base stats, **talent** stat, starting
    weapon ranks and class records per `progression.md`; generic enemies use
    its generic-unit formula. Classes come from its class tree (which ones is
-   `chapter-1.md`'s call; tier-3 skills aren't designed yet, ticket 1001).
+   `chapter-1.md`'s call: the lord's unique class (0016) + Rider, Archer,
+   Cleric, Guard, Mage; tier-3 skills aren't designed yet, ticket 1001).
    Loadouts, starting weapon ranks, the pack cap, default pack and gold per
-   `chapter-1.md` and `weapons-and-items.md`.
+   `chapter-1.md` and `weapons-and-items.md` (`preparations: false`,
+   objective `Rout`, no turn limit, difficulty `Normal`).
 3. **Enemies:** count/mix per `chapter-1.md`; AI mix (mostly `Aggressive`, a
    `Guard` group near the boss, boss `Stationary`), sensible loadouts (mix
    weapon kinds so Nick's per-type traits show: a mounted enemy for spears,
    a flyer for bows if the story allows), one boss with
-   a name and portrait.
+   a name and portrait. No elementals, reinforcements, villages, chests,
+   shops, talk-recruits or battle notes in Chapter 1 (`chapter-1.md`).
 4. **Triggers:** wire `ch01_*` scene ids from 0707 (intro, prebattle, boss
-   engage, talk-recruit if any, death quotes, victory, tbc).
+   engage, death quotes, victory, tbc; no talk-recruit in Chapter 1).
 5. New Game → `ch01`.
 6. **Winning replay test** `crates/ui/tests/ch01_winnable.rs` (or core): a
    hand-authored command list from the chapter seed that wins the map. Keep it

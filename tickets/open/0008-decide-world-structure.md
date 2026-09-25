@@ -27,6 +27,13 @@ to Asia and encounter wuxia inspired encounters...)"
 travel between continents fits the structure he picks (e.g. a later act moves
 to a new continent, or the world map expands).
 
+In 0009 Nick said a **chapter is a story beat, not a single battle**: it often
+ends with a climactic battle, and some chapters may hold several battles first
+(e.g. overworld-triggered skirmishes to train before the climax)
+([`chapter-1.md`](../../docs/design/chapter-1.md)). Ask how those skirmishes
+fit the structure he picks (optional or required, repeatable, where they
+trigger), and create follow-up tickets for multi-battle chapters.
+
 ## Nick input
 
 **Decision.** Nick can also answer "decide later" — record that.

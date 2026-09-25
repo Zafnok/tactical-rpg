@@ -171,8 +171,8 @@ weapon traits that spells don't have.) Hit and crit rolls follow the normal
 | Fire Elemental | Fire `Absorb`, Ice `Weak` | Casts Fire |
 | Frost Elemental | Ice `Absorb`, Fire `Weak` | Casts Frost |
 
-Nick: these "won't be overly common". Whether Chapter 1 has one is decided in
-0009. Their other stats come from 0005.
+Nick: these "won't be overly common". Chapter 1 has none (0009,
+`chapter-1.md`). Their other stats come from 0005.
 
 ## Battle notes (strategy hints)
 
@@ -357,6 +357,6 @@ equips Force on their turn, the mage counters with Force (and spends a use).
 - **Personal signature spells:** named by 0701, with numbers set by 0005 or a
   balance ticket.
 - **Elemental enemies in Chapter 1, and a terrain-magic moment on the Chapter
-  1 map:** 0009 and 0803.
+  1 map:** neither in Chapter 1 (0009, `chapter-1.md`).
 - **Push spells, more elements, more terrain interactions, spell Combat
   Arts:** not planned. Each would need a design change.

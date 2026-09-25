@@ -16,9 +16,9 @@ completed:
 ## Context
 
 Implements the teaching approach Nick picked in `docs/design/chapter-1.md`
-(0009). The recommendation was **contextual one-time tips**; if Nick picked a
-guided tutorial instead, rewrite this ticket's steps accordingly before starting
-(use `write-ticket` conventions) and note it in Completion notes.
+(0009): **contextual hints** (help bar + one-time tips), no forced tutorial
+steps. Chapter 1 has no Preparations screen, so no Preparations tip is needed
+yet.
 
 ## Nick input
 
