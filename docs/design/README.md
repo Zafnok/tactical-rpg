@@ -9,7 +9,7 @@ here.
 | Topic | File | Ticket | Status |
 | ----- | ---- | ------ | ------ |
 | Stats & combat maths | [`stats-and-combat.md`](stats-and-combat.md) | 0001 | ✅ decided 2026-09-25 |
-| Turn structure | `turn-structure.md` | 0002 | ⏳ awaiting Nick |
+| Turn structure | [`turn-structure.md`](turn-structure.md) | 0002 | ✅ decided 2026-09-25 |
 | Weapons, items, triangle | `weapons-and-items.md` | 0003 | ⏳ awaiting Nick |
 | Magic & healing | `magic.md` | 0004 | ⏳ awaiting Nick |
 | Level ups, classes, class tree | `progression.md` | 0005 | ⏳ awaiting Nick |

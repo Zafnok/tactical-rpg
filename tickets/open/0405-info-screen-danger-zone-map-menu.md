@@ -44,11 +44,18 @@ None.
    (list of player units with HP and ready/acted; choosing one jumps the
    cursor), `Objective` (objective text, turn number), `Options` (disabled
    placeholder), `Suspend` (disabled placeholder), `End Turn`.
-4. **End turn:** from menu or `EndTurn` key → if units still ready, confirm
-   dialog `End turn with N units ready? f yes / d no` → `Command::EndPhase`.
+4. **End turn** (per `docs/design/turn-structure.md`): from menu or `EndTurn`
+   key → if units still ready, confirm dialog
+   `End turn with N units ready? f yes / d no` → `Command::EndPhase`; no
+   confirmation when no units are ready. **Auto-end:** when ON (default) and
+   the last ready player unit acts, issue `EndPhase` immediately. The
+   `ToggleAutoEnd` key (0204, default `Shift+e`) flips it, shows a brief
+   `Auto-end: ON/OFF` toast, and the help bar shows its state. Keep the flag
+   in the battle screen's context until 0805 persists it in `Settings`.
 5. **Phase banner:** on `PhaseStarted`, a centred double-box banner
-   `PLAYER PHASE` / `ENEMY PHASE` (faction colour) with `Turn N` beneath, for
-   1.0 s or until Confirm.
+   `PLAYER PHASE` / `ENEMY PHASE` / `OTHER PHASE` (faction colour) with
+   `Turn N` beneath, for 1.0 s or until Confirm. `Objective` in the map menu
+   shows the turn limit if the map has one (`Turn 3/8`).
 6. **Victory / defeat:** on `BattleEnded`, banner `VICTORY` / `DEFEAT` → on
    confirm, `Transition::Pop` (0801 replaces this with real flow). Until 0502
    exists, ending the player phase makes the enemy phase simply `EndPhase`

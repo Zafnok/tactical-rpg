@@ -58,22 +58,38 @@ serde on state, replay test.
    `UnitMoved { unit, path }`, `CombatResolved { attacker, defender, forecast, outcome }`,
    `UnitFell { unit }` (per 0006: removed/retreated/injured), `UnitActed { unit }`,
    `BattleEnded { outcome: Outcome }`.
-6. Turn flow per `turn-structure.md`: `EndPhase` → next faction's phase (skip
-   factions with no units) → after the last, `turn += 1`; units' `acted` reset
-   at the start of their phase. If the design says phases auto-end when all
-   units acted, emit that automatically after the last `Act`.
-7. `Objective`: `Rout`, `DefeatUnit(UnitId)`, `Seize { pos, by_lord: bool }`
+6. Turn flow per `turn-structure.md`: phases are `Player → Enemy → Other`
+   (`Other` = `Ally` + `Neutral` factions), then `turn += 1`. Use a `Phase`
+   enum (not `Faction`) for `phase`. `EndPhase` → next phase; skip phases
+   with no living units and no arrivals; units' `acted` reset at the start of
+   their phase. **Auto-end is not in `core`:** it's a player setting handled
+   by the battle screen (0405), which issues `EndPhase` itself. AI phases end
+   when the AI issues `EndPhase` (0501/0502).
+7. **Reinforcements:** `BattleSetup.reinforcements: Vec<Reinforcement { turn, unit: Unit }>`
+   (the unit's faction decides its phase). At the start of that faction's
+   phase on `turn`, place it with `acted = true` (never acts on arrival);
+   if its tile is occupied, retry on the next turn. Event
+   `UnitsArrived { units }`.
+8. `Objective`: `Rout`, `DefeatUnit(UnitId)`, `Seize { pos, by_lord: bool }`
    (`Seize` is a `UnitAction` only available on that tile — add it),
-   `Survive { turns }`. Loss: any `is_lord` player unit falls (if the design
-   says so), or all player units fall. Checked after every command.
-8. Replay test: a fixed setup + seed + list of commands applied twice → identical
+   `Survive { turns }` (win when turn `N`'s last phase ends), plus an optional
+   `turn_limit: Option<u32>` on the non-Survive objectives (lose if not done
+   when turn `N`'s last phase ends). Loss: any `is_lord` player unit falls (if
+   the design says so), or all player units fall. Checked after every command
+   and at every phase boundary.
+9. Design for skill-granted post-action movement (turn-structure.md): no
+   Canto, but leave `UnitAction`/`Event` open to an action ending with a
+   skill-defined extra move (implemented by the skill tickets, not here).
+10. Replay test: a fixed setup + seed + list of commands applied twice → identical
    event vectors; and serialise state mid-battle → deserialise → apply the rest
    → identical events to an uninterrupted run.
 
 ## Acceptance criteria
 
 - [ ] Every `CommandError` variant has a test proving the state is unchanged.
-- [ ] Phase/turn sequence matches `turn-structure.md` (test walks 3 full turns).
+- [ ] Phase/turn sequence matches `turn-structure.md` (test walks 3 full turns, with and without Other units; empty phases skipped).
+- [ ] Reinforcements arrive at their phase start already acted, act next turn, and wait while their tile is occupied (tests).
+- [ ] Survive and `turn_limit` resolve exactly when turn N's last phase ends (tests at N-1 and N).
 - [ ] Each objective and loss condition has a win test and a not-yet test.
 - [ ] Replay + save/load determinism tests pass.
 

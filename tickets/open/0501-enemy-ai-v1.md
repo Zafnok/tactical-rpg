@@ -26,7 +26,11 @@ None (difficulty feel is judged in playtest 0804).
 ## Scope
 
 **In:** `core::ai`, AI behaviour field on units, `assets/data/ai.ron` weights,
-`next_command(state) -> Option<Command>` for the acting AI faction.
+`next_command(state) -> Option<Command>` for the acting AI phase. Per
+`docs/design/turn-structure.md` the AI runs **both** the Enemy phase and the
+Other phase (`Ally` + `Neutral` units): the same code, with targets = units
+hostile to the acting unit (`Faction::is_hostile_to`). Units that arrived as
+reinforcements this turn are already acted and must be skipped.
 
 **Out:** UI playback (0502), fancy group tactics, difficulty modes.
 
