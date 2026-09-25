@@ -3,6 +3,7 @@
 pub mod color;
 pub mod console;
 pub mod glyph_buffer;
+pub mod input;
 pub mod snapshot;
 
 pub use color::{Palette, Rgb, UiColor};

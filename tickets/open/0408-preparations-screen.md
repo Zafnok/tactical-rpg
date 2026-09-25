@@ -36,7 +36,7 @@ and pack), `Loadouts` and `Pack` tabs, `Fight!` to start.
 
 ## Implementation steps
 
-1. Screen with tabs (`h`/`l` switch): **Loadouts**, **Pack**, and a `Fight!`
+1. Screen with tabs (Left/Right cursor actions switch): **Loadouts**, **Pack**, and a `Fight!`
    entry.
 2. **Loadouts:** list of deployed units; choosing one shows its 3 weapon
    slots, armour and accessory beside the stock, filtered to what that unit

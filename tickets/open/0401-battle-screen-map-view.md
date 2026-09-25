@@ -50,7 +50,7 @@ placeholder units.
    (`·` ready, `ˇ` acted, `!` HP ≤ 25%). Fg = faction colour; acted units dimmed
    (`Rgb::scale`). Background = terrain bg. Follow `look-and-feel.md` if it exists.
 6. `BattleScreen::new(state, content)`; `draw` renders map + empty side panel box
-   + help bar text `hjkl move · f select · d back · s info`.
+   + help bar text `arrows move · f select · d back · e info` (key names read from the keymap).
 7. Title menu: in debug builds add `Quick Battle` → pushes a `BattleScreen` built
    from `test_small.map` + placeholder characters (`d` pops back for now).
 

@@ -107,13 +107,14 @@ which the unit is done.
 **Player phase:**
 
 - **Manual:** the player can end the phase at any time from the map menu or
-  the End Turn key. If any units are still ready, a confirmation asks first
+  the End Turn key (`Space`; `Space` again confirms, see `controls.md`). If any
+  units are still ready, a confirmation asks first
   (`End turn with N units ready?`); units still ready simply don't act.
 - **Auto-end:** when **auto-end is ON** and the last ready player unit becomes
   done, the player phase ends immediately (no confirmation).
 - **Auto-end is ON by default.** It's a player setting, saved with the other
   options, and has a **shortcut key to toggle it** during battle (default key
-  `Shift+e`, *tunable*/rebindable), which shows a brief `Auto-end: ON/OFF`
+  `Shift+Space`, decided in `controls.md`; rebindable), which shows a brief `Auto-end: ON/OFF`
   message. The current state is also shown in the help bar.
 - With auto-end OFF and every unit done, nothing happens until the player ends
   the turn manually (no confirmation needed then, since no units are ready).

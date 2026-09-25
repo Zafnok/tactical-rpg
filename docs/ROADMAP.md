@@ -12,7 +12,7 @@ folders: `tickets/open/` vs `tickets/done/`.
 | ----- | --------- | ------- | ------- |
 | `00xx` | Design decisions | Nick's answers recorded in `docs/design/` | 0001–0014 |
 | `01xx` | M0 Foundation | Workspace, CI on 3 OSes, security scanners, SonarCloud, mutation gate, release + Pages pipelines | 0101–0108 |
-| `02xx` | M1 Engine | Coloured glyph console in a window and browser, input with vim keys, screens + test harness | 0201–0207 |
+| `02xx` | M1 Engine | Coloured glyph console in a window and browser, keyboard input with right/left-handed layouts, screens + test harness | 0201–0208 |
 | `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills — pure and heavily tested | 0301–0311 |
 | `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus | 0401–0412 |
 | `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase | 0501–0502 |
@@ -48,7 +48,7 @@ parallel sessions/worktrees):
  4  0203  0302  0106
  5  0205  0206  0303  0304  0702   (0011 look sign-off)
  6  0207  0305  0401  0703  0107  0108
- 7  0306  0402  0704  0706
+ 7  0306  0402  0704  0706  0208
  8  0403  0309  0601  0308  0708
  9  0404  0407  0408  0409  0310  0311  0501  0707
 10  0405  0602  0307  0410

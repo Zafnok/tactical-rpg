@@ -27,7 +27,7 @@ and replay up to any point.
 ## Scope
 
 **In:** `core::history::BattleHistory`, rewind charges, a `RewindScreen` in `ui`,
-a `Rewind` action + key binding (`r` by default, added to `keymap.ron`).
+a `Rewind` action + key binding (`r` in the right-handed layout, `u` in the left-handed one, per `docs/design/controls.md`).
 
 **Out:** anything outside battles.
 
@@ -46,7 +46,7 @@ a `Rewind` action + key binding (`r` by default, added to `keymap.ron`).
    commands included. Charges don't carry between battles (unused ones become
    an EXP bonus, 0801); restarting a battle (0801) starts a fresh
    `BattleHistory` with full charges. Expose `charges_left()`.
-3. `Action::Rewind` in `trpg-ui` and `"r"` in `keymap.ron`.
+3. `Action::Rewind` (in `trpg-content::keymap`, re-exported by `trpg-ui`) and its keys in every layout in `keymap.ron` (`r` right-handed, `u` left-handed).
 4. `RewindScreen` (overlay): lists past actions newest-first as readable lines
    (`Turn 2 · Ana attacked Brigand (hit, 7 dmg)`), `j/k` to choose,
    the map behind shows the state at the highlighted point, `f` confirms (with a
