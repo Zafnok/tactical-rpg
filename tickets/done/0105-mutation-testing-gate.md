@@ -59,10 +59,10 @@ None.
 
 ## Acceptance criteria
 
-- [ ] PR job runs and passes on this PR (no Rust diff → quick pass, or real diff → no misses).
-- [ ] Evidence (run URL) that a weak test made the job fail, in Completion notes.
-- [ ] Weekly workflow runs via `workflow_dispatch` at least once successfully.
-- [ ] `mutants.out/` uploaded as an artifact in both jobs.
+- [x] PR job runs and passes on this PR (no Rust diff → quick pass, or real diff → no misses).
+- [x] Evidence (run URL) that a weak test made the job fail, in Completion notes.
+- [x] Weekly workflow runs via `workflow_dispatch` at least once successfully.
+- [x] `mutants.out/` uploaded as an artifact in both jobs.
 
 ## Completion notes
 
@@ -110,9 +110,24 @@ None.
   -p trpg-ui`); left as-is — it matches what CI runs, just scoped to the
   three rule crates instead of the whole workspace, which is fine since
   `app` is excluded from the config anyway.
-- Weekly `workflow_dispatch` run: not yet triggered from this branch (GitHub
-  only allows `workflow_dispatch` once the workflow file exists on the
-  default branch). **Follow-up:** after this PR merges, manually trigger
-  `Mutants` → `Run workflow` on `main` once to satisfy acceptance criterion
-  #3, and confirm here or in a follow-up ticket note that it succeeded.
+- **Weekly `workflow_dispatch` run (acceptance criterion #3):** triggered
+  directly from this branch via the GitHub API (`workflow_dispatch` only
+  needs the workflow file on the ref being dispatched, not on the default
+  branch):
+  https://github.com/Zafnok/tactical-rpg/actions/runs/36163235665
+  `mutants (full, baseline)` ran the baseline once, then all four
+  `mutants (full, shard N)` jobs (0–3) completed successfully in parallel
+  (`--baseline=skip` each), each uploading its own `mutants.out/` artifact.
+  With no real rules code yet, each shard's slice of the workspace mutants
+  is trivially clean; this run exercises the mechanism end-to-end, which is
+  what this ticket is scoped to prove. Also confirmed via a plain PR-trigger
+  run that both job types upload `mutants.out/` correctly (acceptance
+  criterion #4): the PR job's artifact
+  (https://github.com/Zafnok/tactical-rpg/actions/runs/36163053321) and each
+  weekly shard's artifact above.
+- After the earlier fix commit, re-ran the PR job with the scratch code
+  removed: green, as expected
+  (https://github.com/Zafnok/tactical-rpg/actions/runs/36163230843), and the
+  full CI workflow is green on the same commit
+  (https://github.com/Zafnok/tactical-rpg/actions/runs/36163231010).
 
