@@ -1,0 +1,32 @@
+---
+source: crates/ui/src/snapshot.rs
+expression: snap
+---
+                         
+ ╔═ Battle ═══════════╗  
+ ║                    ║  
+ ║ Aldo vs Brigand    ║  
+ ║ HP ■■■■            ║  
+ ║ move               ║  
+ ╚════════════════════╝  
+                         
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaa
+abbccccccccbbbbbbbbbbbbaa
+abddddddddddddddddddddbaa
+abdeeeedffdgggggggddddbaa
+abddddhhhhddddddddddddbaa
+abdiiiidddddddddddddjjbaa
+abbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border_focus bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:text_dim bg:panel_bg
+g = fg:enemy bg:panel_bg
+h = fg:hp_high bg:panel_bg
+i = fg:text bg:move_range
+j = fg:text bg:#898a8e
