@@ -5,7 +5,7 @@ description: Run the local quality gates (fmt, clippy, tests, content validation
 
 # Run the local gates
 
-These mirror CI (ADR-0008). Commands become valid once ticket 0101 has created
+These mirror CI (ADR-0014). Commands become valid once ticket 0101 has created
 the workspace; tools are added by tickets 0102–0105. If a tool isn't installed
 locally, install it with `cargo install --locked <tool>`.
 

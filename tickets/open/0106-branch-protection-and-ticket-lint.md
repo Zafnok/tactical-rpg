@@ -6,7 +6,7 @@ milestone: M0 Foundation
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0102", "0103", "0104", "0105"]
+blocked_by: ["0102", "0103", "0104", "0105", "0109"]
 nick_input: setup
 completed:
 ---
@@ -69,15 +69,23 @@ repo merge settings.
    Use `serde_yaml`-compatible parsing (e.g. `serde_yml` or `serde_norway`;
    check which is maintained) — keep deps minimal.
    Unit-test the checker functions with in-memory inputs.
-4. CI job `tickets` in `ci.yml`: `cargo xtask ticket-lint --pr-branch "${{ github.head_ref }}"`
-   on PRs; without `--pr-branch` on push.
+4. CI job `tickets` in `ci.yml`: `cargo xtask ticket-lint --pr-branch "$HEAD_REF"`
+   (with `HEAD_REF: ${{ github.head_ref }}` in `env:`, never inline; zizmor)
+   on PRs; without `--pr-branch` on push. Do **not** gate it on
+   `needs.changes` (ticket PRs are docs-only), and add it to `ci-result`'s
+   `needs` (ADR-0014).
 5. **Ruleset for `main`** (via `gh api repos/Zafnok/tactical-rpg/rulesets -X POST --input ruleset.json`,
    after Nick's OK): require a pull request (0 approvals — Nick doesn't review),
-   require status checks: `fmt`, `clippy`, `test (windows-latest)`,
-   `test (ubuntu-latest)`, `test (macos-latest)`, `wasm`, `docs`, `tickets`,
-   `deny`, `machete`, `typos`, `zizmor`, CodeQL, mutants PR job, SonarCloud
-   quality gate; block force pushes; block deletion. Use the exact check names
-   shown on a recent PR. Don't commit `ruleset.json`; paste it in Completion notes.
+   require status checks (names per [ADR-0014](../../docs/adr/0014-ci-gates-skip-docs-only-prs.md)):
+   `ci-result`, `codeql-result`, `mutants (diff)`, `deny`, `machete`,
+   `typos`, `zizmor`, `tickets`. Do **not** require the matrix legs
+   (`test (…)`, `analyze (…)`): on docs-only PRs they are skipped and never
+   report under those names; `ci-result` / `codeql-result` cover them. Do not
+   require the code-scanning `CodeQL` / `zizmor` result checks or a SonarCloud
+   app check either (not posted when their job is skipped); the Sonar quality
+   gate is enforced through the `coverage` job inside `ci-result` only if that
+   job fails on a red gate. Block force pushes; block deletion. Check the names
+   against a recent PR. Don't commit `ruleset.json`; paste it in Completion notes.
 6. Repo settings (same OK from Nick): squash merge only, auto-delete head
    branches: `gh repo edit --enable-squash-merge --disable-merge-commit --disable-rebase-merge --delete-branch-on-merge`.
 

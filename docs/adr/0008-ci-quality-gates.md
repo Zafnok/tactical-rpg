@@ -1,6 +1,6 @@
 # ADR-0008: CI and quality gates (free tier only)
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0014
 - **Date:** 2026-09-25
 
 ## Context
