@@ -46,6 +46,13 @@ Set `status: in-progress` in the ticket frontmatter.
 - **Scope creep rule:** if you notice something else worth doing (a bug,
   refactor, missing feature), do NOT do it. Create a new ticket with the
   `write-ticket` skill and mention it in the PR description.
+- **Adding a dependency or third-party asset** (crate, font, JS file, image,
+  sound, SDK): check its license against ADR-0013 *before* using it. Only the
+  allowed permissive licenses; no GPL/LGPL/MPL/copyleft, no non-commercial, no
+  "GPL or buy a commercial license", nothing requiring payment. For crates,
+  `cargo deny check licenses` must pass. For anything else, add a row to
+  `THIRD_PARTY_ASSETS.md` and commit its license text next to it. If unsure,
+  don't add it: pick another or write the small piece yourself.
 - A new architectural choice (new dependency with wide impact, new pattern,
   new file format) needs an ADR in the same PR (`write-adr` skill). Adding a
   small, well-known crate for a local need does not.

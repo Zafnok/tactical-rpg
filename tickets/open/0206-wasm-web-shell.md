@@ -35,7 +35,8 @@ CI step running the packaging.
 
 1. Vendor `mq_js_bundle.js` from the macroquad GitHub repo **at the exact tag
    matching the `macroquad` version in `Cargo.lock`**; add `web/README.md`
-   stating the source URL, version and licence (MIT/Apache).
+   stating the source URL, version and licence (MIT/Apache), commit the licence
+   text beside it, and add a row to `THIRD_PARTY_ASSETS.md` (ADR-0013).
 2. `web/index.html`: black full-window `<canvas id="glcanvas" tabindex="1">`,
    no margins/scrollbars, `<title>tactical-rpg</title>`, loads the bundle then
    `load("tactical-rpg.wasm")`. Focus the canvas on load and on click. Prevent

@@ -27,7 +27,7 @@ GitHub Actions (unlimited free minutes on public repos) runs the following.
 | Tests (3 OS) | `cargo test --workspace` on `windows-latest`, `ubuntu-latest`, `macos-latest` | PR, push | ✅ | 0102 |
 | WASM build | `cargo build --target wasm32-unknown-unknown -p trpg-app` | PR, push | ✅ | 0102 |
 | Docs build | `cargo doc --no-deps` with `-D warnings` | PR, push | ✅ | 0102 |
-| Licences, advisories, banned/duplicate crates, sources | `cargo-deny` | PR, push, weekly | ✅ | 0103 |
+| Licences (policy: ADR-0013), advisories, banned/duplicate crates, sources | `cargo-deny` | PR, push, weekly | ✅ | 0103 |
 | Unused dependencies | `cargo-machete` | PR | ✅ | 0103 |
 | Spelling | `typos` | PR | ✅ | 0103 |
 | Workflow security | `zizmor` (GitHub Actions linter) | PR touching `.github/` | ✅ | 0103 |

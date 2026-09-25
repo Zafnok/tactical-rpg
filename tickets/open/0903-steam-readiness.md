@@ -32,7 +32,10 @@ Until then this ticket can do everything with Valve's test App ID 480.
 1. Add optional Cargo feature `steam` to `trpg-app` using the `steamworks`
    crate: init on startup (fail gracefully → run without Steam), run callbacks
    each frame, show overlay-compatibility check. App ID 480 for development.
-   The default build must not require Steam or its SDK.
+   The default build must not require Steam or its SDK. The Steamworks SDK
+   redistributable (`steam_api64.dll`) is allowed under Valve's free SDK
+   agreement per ADR-0013: record it in `THIRD_PARTY_ASSETS.md` and confirm
+   `cargo deny check licenses` passes with the feature enabled.
 2. Research and write `docs/steam.md`: Steamworks setup, depot layout, redistributing
    `steam_api64.dll`, `steamcmd` + `app_build.vdf` upload flow, Steam Cloud for
    saves (maps to our storage keys), achievements idea list (don't implement).

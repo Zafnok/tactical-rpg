@@ -38,9 +38,14 @@ printing it first.)
 ## Implementation steps
 
 1. **cargo-deny:** `cargo install --locked cargo-deny`, `cargo deny init`, then edit `deny.toml`:
-   - `[licenses] allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0", "BSL-1.0", "CC0-1.0"]`
-     — add others only if a real dependency needs them and they allow closed
-     commercial distribution (no GPL/AGPL/LGPL). Note the reason in a comment.
+   - `[licenses] allow` = **exactly** the "Code" list in
+     [ADR-0013](../../docs/adr/0013-licensing-and-third-party-policy.md)
+     (plus `OFL-1.1` only if a font crate needs it), `confidence-threshold = 0.9`,
+     `[licenses.private] ignore = true` (our own crates are proprietary and
+     `publish = false`). Never add a denied license. An unknown/custom license
+     needs a `[[licenses.clarify]]` or exception entry with a comment explaining
+     why it is safe to ship commercially, and a mention in the PR.
+   - A comment block at the top of `deny.toml` pointing to ADR-0013.
    - `[advisories]`: default (deny vulnerabilities, warn unmaintained).
    - `[bans] multiple-versions = "warn"`, `wildcards = "deny"`.
    - `[sources] unknown-registry = "deny"`, `unknown-git = "deny"`.
@@ -69,6 +74,7 @@ printing it first.)
 ## Acceptance criteria
 
 - [ ] `cargo deny check`, `cargo machete`, `typos` pass locally and in CI.
+- [ ] Proven: temporarily adding a GPL-licensed crate makes `cargo deny check licenses` fail (verify, then remove).
 - [ ] zizmor reports no medium/high findings on all workflows.
 - [ ] CodeQL runs on the PR and completes (Security tab shows the analysis).
 - [ ] Scorecard workflow file present and valid (runs on main after merge).

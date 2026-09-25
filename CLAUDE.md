@@ -28,6 +28,11 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
    only `app` touches macroquad, files, clock, keyboard.
 5. **Tests are the review** (ADR-0007). Run the `run-gates` skill before
    pushing. Never weaken a gate to pass it.
+6. **Licensing** (ADR-0013): the game is proprietary (see `LICENSE`) and will
+   be sold. Only ship dependencies and assets under the permissive licenses
+   allowed by ADR-0013: no GPL/LGPL/MPL/copyleft, no non-commercial, nothing that
+   costs money. Every non-crate asset goes in `THIRD_PARTY_ASSETS.md`. Never
+   change `LICENSE`; that is Nick's call.
 
 ## Map of the repo
 
@@ -36,6 +41,7 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `tickets/` | Backlog. `README.md` explains numbering & lifecycle. `open/` → `done/` |
 | `docs/ROADMAP.md` | Milestones and the Chapter 1 critical path |
 | `docs/adr/` | Technical decisions (read the index) |
+| `LICENSE`, `THIRD_PARTY_ASSETS.md` | Proprietary source-available license; registry of shipped third-party assets |
 | `docs/design/` | Nick's game-design decisions (filled by `00xx` tickets) |
 | `docs/story/` | Story beats, bible, characters, outline, ledger (ADR-0011) |
 | `.claude/skills/` | `work-ticket`, `write-ticket`, `write-adr`, `ask-nick`, `story-writing`, `ascii-art`, `run-gates` |

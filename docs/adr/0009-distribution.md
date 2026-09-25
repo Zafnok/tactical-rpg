@@ -27,8 +27,9 @@ Rules:
 - **Saves and settings** go in the OS config directory (`directories` crate) on
   native, and browser `localStorage` on web, behind one storage trait (ticket 0207).
 - **Code signing:** none at first (Windows SmartScreen will warn on first run,
-  normal for indie itch games). The SignPath Foundation offers free signing to
-  open-source projects; a later ticket may apply.
+  normal for indie itch games). Free programs like the SignPath Foundation's
+  require an open-source license, which we don't have (ADR-0013); paid signing
+  (e.g. Azure Trusted Signing) is a later decision for Nick.
 - The `steam` feature must never be required for a normal build; the game runs
   identically without Steam.
 

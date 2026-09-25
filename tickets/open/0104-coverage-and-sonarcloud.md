@@ -70,9 +70,13 @@ See [ADR-0007](../../docs/adr/0007-testing-strategy.md) and
    the older `sonarcloud-github-action` is deprecated) with
    `SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}`. Skip the step when the secret is
    unavailable (PRs from forks): `if: ${{ env.SONAR_TOKEN != '' }}`.
-4. In SonarCloud keep the default **"Sonar way"** quality gate (includes
+4. Confirm SonarCloud's free plan has no open-source-license requirement for
+   public projects (our code is proprietary, ADR-0013). If it does, stop and
+   report back instead of continuing; the fallback is a coverage threshold via
+   `cargo llvm-cov --fail-under-lines` and no Sonar.
+5. In SonarCloud keep the default **"Sonar way"** quality gate (includes
    ≥ 80% coverage on new code). Note it in Completion notes.
-5. Add SonarCloud quality-gate and coverage badges to `README.md`.
+6. Add SonarCloud quality-gate and coverage badges to `README.md`.
 
 ## Acceptance criteria
 

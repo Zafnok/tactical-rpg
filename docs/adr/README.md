@@ -21,5 +21,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0010](0010-ticket-workflow-and-model-routing.md) | Ticket workflow and model routing | Accepted |
 | [0011](0011-story-authoring-pipeline.md) | Story authoring pipeline with LLMs | Accepted |
 | [0012](0012-visual-style.md) | Visual style: cells, tiles, color, portraits | Accepted (pending Nick's look sign-off, ticket 0011) |
+| [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

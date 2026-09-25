@@ -45,7 +45,8 @@ window, and an empty `xtask` tooling crate (later tickets add commands to it).
 2. Root `Cargo.toml`:
    - `[workspace]` with `members = ["crates/*"]`, `resolver = "3"`.
    - `[workspace.package]`: `version = "0.1.0"`, `edition = "2024"`,
-     `rust-version = "1.98"`, `publish = false`,
+     `rust-version = "1.98"`, `publish = false`, `license-file = "LICENSE"`
+     (proprietary, see ADR-0013; never `license = "MIT"` or similar),
      `repository = "https://github.com/Zafnok/tactical-rpg"`.
    - `[workspace.dependencies]`: `macroquad` (latest 0.4.x). Nothing else yet.
    - `[workspace.lints.rust]`: `unsafe_code = "forbid"`, `missing_docs = "warn"`.

@@ -37,14 +37,16 @@ showing the sampler.
 
 1. **Choose the font.** Requirements: 8×16 cells; covers printable ASCII,
    box drawing (`─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬`), blocks (`░▒▓█▀▄▌▐`), and
-   `♣ ♠ ♥ ♦ ≈ · • ˇ ▲ ▼ ◄ ► ← ↑ → ↓ ☺ ☻ ♪ ¤ †`, plus Latin-1 letters; licence allowing commercial
-   redistribution (OFL, MIT, BSD, CC0, CC-BY; CC-BY-SA acceptable for an unmodified font
-   file with attribution). Candidates to compare (verify licences at source):
-   **Spleen 8x16** (BSD-2), **Terminus** (OFL), **GNU Unifont** (OFL; very wide coverage),
-   **Px437 IBM VGA 8x16** from the Ultimate Oldschool PC Font Pack (CC BY-SA 4.0).
+   `♣ ♠ ♥ ♦ ≈ · • ˇ ▲ ▼ ◄ ► ← ↑ → ↓ ☺ ☻ ♪ ¤ †`, plus Latin-1 letters; licence
+   **allowed by [ADR-0013](../../docs/adr/0013-licensing-and-third-party-policy.md)**
+   (OFL-1.1, MIT, BSD, CC0; *not* CC-BY-SA, GPL-only or "free for personal use").
+   Candidates to compare (verify licences at the source, not from memory):
+   **Spleen 8x16** (BSD-2), **Terminus** (OFL), **GNU Unifont** (dual-licensed;
+   take the OFL option; very wide coverage). Avoid fonts whose only licence is
+   CC-BY-SA (e.g. the Ultimate Oldschool PC Font Pack).
    Pick one (or a primary + Unifont fallback for missing glyphs). Record the
    choice and reasons in `assets/fonts/README.md`; put the licence text in
-   `assets/fonts/<FONT>-LICENSE.txt`.
+   `assets/fonts/<FONT>-LICENSE.txt`; add a row to `THIRD_PARTY_ASSETS.md`.
 2. **Atlas tool:** `cargo xtask font-atlas <font.bdf|.psf> <out-dir>` parses the
    bitmap font (use a small crate such as `bdf-parser`, or hand-parse PSF2) and
    writes `assets/fonts/atlas.png` (white glyphs on transparent, grid of 8×16

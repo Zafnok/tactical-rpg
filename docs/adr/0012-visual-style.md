@@ -68,7 +68,7 @@ final choice confirmed in ticket 0011.
 ### Font
 
 A bitmap font covering ASCII, CP437 box-drawing/blocks/symbols and Latin-1,
-with a licence allowing commercial redistribution (OFL, CC0, CC-BY, MIT).
+under a licence allowed by ADR-0013 (e.g. OFL-1.1, MIT, BSD, CC0).
 Selected in ticket 0203; the licence file ships in `assets/fonts/`.
 
 ## Consequences

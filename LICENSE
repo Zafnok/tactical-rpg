@@ -1,0 +1,145 @@
+tactical-rpg Source-Available License, version 1.0
+
+Copyright (c) 2026 Nick Wentz. All rights reserved.
+
+This repository is public so that people can see how the game is made. Being
+able to see it does not mean you may use it however you like. This is NOT an
+open-source license.
+
+--------------------------------------------------------------------------------
+1. Definitions
+--------------------------------------------------------------------------------
+
+"Licensor" means Nick Wentz.
+
+"Software" means everything in this repository and every build made from it:
+source code, data files, maps, dialogue and story text, characters, ASCII art,
+portraits, documentation, and compiled executables or web builds.
+
+"Game" means a compiled, playable build of the Software.
+
+"Mod" means original material you create that changes, extends or adds to the
+Game (for example new maps, dialogue, balance changes, or a patch).
+
+"Commercial" means intended for or directed toward commercial advantage or
+monetary compensation, including selling, charging for access, paywalls,
+advertising revenue tied to the thing itself, or bundling with something sold.
+
+--------------------------------------------------------------------------------
+2. No rights except those listed here
+--------------------------------------------------------------------------------
+
+Except for the permissions in sections 3, 4 and 4A, no rights are granted.
+You may not copy, modify, distribute, sell, sublicense, publish, or create derivative
+works of the Software.
+
+Hosting on GitHub: GitHub's Terms of Service let GitHub users view this public
+repository and fork it within GitHub. That permission comes from GitHub's terms,
+is limited to GitHub's own features, and grants nothing beyond them.
+
+--------------------------------------------------------------------------------
+3. Permission: personal study and education
+--------------------------------------------------------------------------------
+
+You may, free of charge and for non-Commercial purposes only:
+
+  a. read the Software, and build and run it on your own devices, to learn
+     from it;
+  b. use it in teaching and learning (for example classes, workshops, study
+     groups, and non-Commercial articles, talks or videos about how it works);
+  c. quote short excerpts of source code or text, with attribution to
+     "tactical-rpg by Nick Wentz" and a link to this repository.
+
+You may not distribute builds of the Software or substantial portions of it
+under this section.
+
+--------------------------------------------------------------------------------
+4. Permission: mods
+--------------------------------------------------------------------------------
+
+You may create Mods and share them publicly, free of charge, provided that:
+
+  a. using the Mod requires a legitimately obtained copy of the Game;
+  b. the Mod does not include the Game's executables or web builds, and does
+     not include substantial portions of the Software (your own original
+     content, patch/diff files, and the minimum excerpts of data files needed
+     for the Mod to work are fine);
+  c. the Mod is not sold or otherwise used Commercially (voluntary donations
+     to the Mod's author are fine);
+  d. the Mod is clearly labelled as unofficial and not endorsed by the
+     Licensor; and
+  e. you remove or stop distributing a Mod if the Licensor asks you to.
+
+The Licensor may, at their discretion, include or adapt ideas from Mods in the
+Game without obligation to you.
+
+--------------------------------------------------------------------------------
+4A. Permission: videos, streams and screenshots
+--------------------------------------------------------------------------------
+
+If you obtained the Game legitimately, you may stream it, record and publish
+videos of it (including reviews and let's-plays), and post screenshots, and you
+may monetise that content (ads, sponsorships, subscriptions, donations). This
+permission does not cover distributing the Game itself.
+
+--------------------------------------------------------------------------------
+5. Things you may not do
+--------------------------------------------------------------------------------
+
+Without the Licensor's prior written permission you may not:
+
+  a. use the Software for any Commercial purpose (except content permitted by
+     section 4A);
+  b. publish, distribute or sell the Game, a build of the Software, or any
+     game or product derived from it, on any store or website;
+  c. use the Game's characters, story, world, names, art or other creative
+     content in other works (fan works that are Mods under section 4, or
+     non-Commercial fan art and fan fiction, are fine);
+  d. remove or alter copyright or license notices.
+
+--------------------------------------------------------------------------------
+6. Third-party components
+--------------------------------------------------------------------------------
+
+Some parts of the Software are third-party components (libraries, fonts, and
+similar) under their own licenses. Those licenses apply to those components.
+Release builds include a THIRD_PARTY_LICENSES file listing them.
+
+--------------------------------------------------------------------------------
+7. Contributions
+--------------------------------------------------------------------------------
+
+If you submit a contribution (for example a pull request, patch, issue text or
+suggestion), you grant the Licensor a perpetual, worldwide, irrevocable,
+royalty-free, transferable and sublicensable license to use, modify and
+distribute it for any purpose, including Commercially. You also confirm that you
+have the right to grant this. The Licensor is not obliged to accept
+contributions.
+
+--------------------------------------------------------------------------------
+8. Termination
+--------------------------------------------------------------------------------
+
+If you breach this license, your permissions under it end automatically. If you
+stop the breach within 30 days of being notified, your permissions are restored
+unless the Licensor has previously notified you of a breach.
+
+--------------------------------------------------------------------------------
+9. No warranty and limitation of liability
+--------------------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OF OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+10. Other permissions
+--------------------------------------------------------------------------------
+
+For any use not covered here (for example commercial licensing, ports, or
+translations), contact the Licensor through GitHub
+(@Zafnok). Permissions granted in writing by the Licensor override this license
+for the parties named in them.

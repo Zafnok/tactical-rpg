@@ -31,3 +31,12 @@ happens one ticket at a time; see the [roadmap](docs/ROADMAP.md).
 Code is written by Claude, one ticket per pull request. CI (tests on three
 OSes, mutation testing, coverage, SonarCloud, security scanners) is the code
 review. Nick owns the game design and plays the builds.
+
+## License
+
+**Source-available, not open source.** Copyright (c) 2026 Nick Wentz, all
+rights reserved. You may read and learn from the code, use it in
+non-commercial teaching, make free non-commercial mods, and stream or post
+videos of the game (monetised is fine). You may not redistribute or sell it or
+games made from it. See [`LICENSE`](LICENSE) for the exact terms, and
+[`THIRD_PARTY_ASSETS.md`](THIRD_PARTY_ASSETS.md) for third-party material.

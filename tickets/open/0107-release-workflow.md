@@ -43,7 +43,10 @@ packaging layout.
    - web: reuse the packaging command from 0206 to produce the web folder
 4. Licence notices: use `cargo-about` (`about.toml` + a simple Markdown/HTML
    template) to generate `THIRD_PARTY_LICENSES.html`; also copy
-   `assets/fonts/*LICENSE*` (from 0203) into each package.
+   `assets/fonts/*LICENSE*` (from 0203) and every license file listed in
+   `THIRD_PARTY_ASSETS.md` into each package, plus our own `LICENSE`
+   ([ADR-0013](../../docs/adr/0013-licensing-and-third-party-policy.md)).
+   `cargo-about` must use the same allowed-license list as `deny.toml`.
 5. Package names: `tactical-rpg-<version>-windows-x64.zip`,
    `…-linux-x64.tar.gz`, `…-macos-universal.zip`, `…-web.zip`. Each contains
    the binary (or web files), `README.txt` (how to run; macOS right-click →
