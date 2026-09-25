@@ -12,6 +12,9 @@ character portraits on screen.
 **Status:** workspace skeleton only, no game logic yet. Work happens one
 ticket at a time; see the [roadmap](docs/ROADMAP.md).
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Zafnok_tactical-rpg&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Zafnok_tactical-rpg&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg)
+
 ## Targets
 
 - Windows executable first (itch.io, later Steam), then Linux and macOS.

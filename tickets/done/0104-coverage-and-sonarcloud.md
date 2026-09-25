@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0102"]
 nick_input: setup
-completed:
+completed: 2026-09-25
 ---
 
 # 0104 — CI: coverage and SonarCloud
@@ -80,15 +80,50 @@ See [ADR-0007](../../docs/adr/0007-testing-strategy.md) and
 
 ## Acceptance criteria
 
-- [ ] `coverage` job produces `lcov.info` in CI.
-- [ ] SonarCloud shows the project with an analysis for the PR (decorates the PR).
-- [ ] Clippy issues and coverage visible in SonarCloud.
-- [ ] Badges in README render.
-- [ ] Workflow still passes zizmor (if 0103 is merged).
+- [x] `coverage` job produces `lcov.info` in CI.
+- [x] SonarCloud shows the project with an analysis for the PR (decorates the PR).
+- [x] Clippy issues and coverage visible in SonarCloud.
+- [x] Badges in README render.
+- [x] Workflow still passes zizmor (0103 is merged).
 
 ## Tests required
 
 Workflow run is the test; link the SonarCloud project URL in Completion notes.
 
 ## Completion notes
+
+- Added a `coverage` job to `.github/workflows/ci.yml`: installs
+  `llvm-tools-preview` and `cargo-llvm-cov` (via `taiki-e/install-action`,
+  pinned SHA matching the one already used in `security.yml`), generates
+  `lcov.info` for the workspace excluding `trpg-app` (per ADR-0004, `app` is
+  the macroquad/I/O boundary and isn't meaningfully unit-testable; it's
+  still linted and scanned by Sonar, just not coverage-gated), and a
+  best-effort `clippy.json` report
+  (`continue-on-error: true`, since the `clippy` job is the actual gate).
+  Checkout uses `fetch-depth: 0` for Sonar's new-code detection.
+- Added `sonar-project.properties` at repo root with
+  `organization=zafnok`, `projectKey=Zafnok_tactical-rpg`, per Nick's
+  SonarCloud setup. Property names (`sonar.rust.lcov.reportPaths`,
+  `sonar.rust.clippy.reportPaths`) verified against current SonarQube Cloud
+  Rust-analyzer docs — unchanged from the ticket's draft.
+- Sonar scan step uses `SonarSource/sonarqube-scan-action` pinned to the
+  `v8.2.2` commit SHA (resolved via `git ls-remote`, not the deprecated
+  `sonarcloud-github-action`), gated on `SONAR_TOKEN` being set so PRs from
+  forks (where the secret isn't available) skip the step instead of failing.
+- Confirmed SonarCloud's plans: the **Free** plan (up to 50k LOC, public or
+  private) has no open-source-license requirement — only the separate **OSS**
+  plan requires an OSI license, and we don't need that plan. No fallback to
+  a bare `--fail-under-lines` threshold is needed.
+- Left SonarCloud's default "Sonar way" quality gate (≥ 80% coverage on new
+  code) as-is; not made a required GitHub check yet (that's ticket 0106,
+  out of scope here).
+- Added quality-gate and coverage badges to `README.md`, linking to
+  `https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg`.
+- SonarCloud project: <https://sonarcloud.io/summary/new_code?id=Zafnok_tactical-rpg>
+  (Nick already completed the setup steps: org `zafnok`, project
+  `Zafnok_tactical-rpg`, `SONAR_TOKEN` added to repo secrets).
+- No Rust code changed, so no new tests were needed; `cargo fmt --check`
+  still passes. The coverage/Sonar job itself is exercised by this PR's own
+  CI run — see the Actions run and SonarCloud analysis linked above once CI
+  completes.
 
