@@ -26,8 +26,8 @@ Nick wants class changes "like Fire Emblem". Rules in
 ## Scope
 
 **In:** core promotion and reclass rules + events; the **Promotion Seal**
-and **Reclass Seal** items (placeholder names); free switching between
-already-unlocked classes; class-choice screen with side-by-side stat
+and **Reclass Seal** items (placeholder names); reclass (always costs a
+seal, class progress saved); class-choice screen with side-by-side stat
 previews; promotion stat-gain overlay (reuse 0602's).
 
 **Out:** tiers above 3 (not designed yet); flavour names; seal
@@ -44,11 +44,12 @@ prices/drops (chapter and shop data).
    passives and class-level-1 spells (`SkillLearned` / `SpellLearned`),
    weapon ranks raised to the new class's start ranks, extra weapons to
    stock if the slots shrink (0309's helper). Event `Promoted { unit, from, to, gains }`.
-2. `reclass(unit, target_class, via: {Unlocked, ReclassSeal}, classes)`:
-   `Unlocked` = switching to a class already in `class_records`, free,
-   between battles / Preparations only; `ReclassSeal` = entering a not yet
-   unlocked **tier-1** class of another line (not `enemy_only`), consuming
-   the seal. Stats never change; stats above the new caps are kept.
+2. `reclass(unit, target_class, classes)` per `progression.md`: always
+   consumes a Reclass Seal. The target must be a tier-1 class, or a class
+   whose prerequisite the unit has mastered, or a class already in
+   `class_records`, and never `enemy_only`. Saved class records come back
+   unchanged; a new class unlocks at class level 1. Stats never change, and
+   stats above the new caps are kept.
    Event `Reclassed { unit, from, to }`.
 3. Triggers: `UnitAction::UseItem` on a Promotion Seal in battle (ends the
    action), plus the same actions from the between-battle unit menu /
@@ -56,15 +57,15 @@ prices/drops (chapter and shop data).
 4. **Choice screen:** two (or N) columns, each: class name, map glyph, move,
    weapons, passives gained, and every stat `current → promoted` with gains
    highlighted; `h/l` switch column, `f` choose, confirm dialog, `d` cancel.
-   Reclass uses the same screen listing unlocked classes (and, with a seal,
-   eligible tier-1 classes).
+   Reclass uses the same screen, listing every class the seal can reach
+   (unlocked classes show their saved class level).
 5. After choice: stat-gain overlay (reuse 0602 widget) → back.
 
 ## Acceptance criteria
 
-- [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, enemy-only class, reclass seal into a tier-2 class) — state unchanged.
+- [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, enemy-only class, reclass into a tier-2 class whose prerequisite isn't mastered) — state unchanged.
 - [ ] Promotion keeps the character level and EXP; shared promotion (Iron Rider from Guard vs from Rider) gives different bonuses, matching a hand-worked example.
-- [ ] Reclass never changes stats; learned skills and spells are kept.
+- [ ] Reclass never changes stats and always consumes a seal; learned skills, spells and saved class records are kept (leave a class at class level 6, come back, and it is still 6).
 - [ ] Choice screen shows correct previews (test against `promote` on a cloned unit).
 - [ ] Harness: promote via item → class changed, stats as expected.
 - [ ] All gates in the `run-gates` skill pass.

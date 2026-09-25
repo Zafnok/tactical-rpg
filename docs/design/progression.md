@@ -52,6 +52,20 @@ Follow-ups:
 >
 > **Approval:** "I think the revised class tree is ok and we can flavor tune
 > it later when we're closer to shipping"
+>
+> **Going back to an unlocked class / reclass:** "promotion is one way. The
+> rare full class change costs some rare resource and is also not freely
+> swappable. But stat growth from completing many classes can accumulate. And
+> if you swap from idk a sword fighting class to a mage and then max the mage
+> then wanna go back to sword then the progress on the sword is also saved for
+> if you wanna return. But it's not free you have to spend the seal of
+> whatever item each time."
+>
+> **Where the Reclass Seal can go:** "C" (any class whose requirements you
+> meet).
+>
+> **Promotion boost:** "A" (a big boost from the gap between the two classes'
+> base stats, FE GBA style).
 
 So:
 
@@ -197,7 +211,7 @@ nothing.
   Caps are always ≤ the hard ceilings in `stats-and-combat.md`.
 - **After a class change into a class with lower caps** (a reclass), stats
   above the new caps are **kept**. They just can't grow while in that class
-  (*Claude's starting rule*: a class change never takes stats away).
+  (Nick: stat growth from many classes accumulates).
 - Gear may go above caps, but never above the hard ceilings
   (`weapons-and-items.md`).
 
@@ -241,7 +255,7 @@ nothing.
      tier, a consumable in the battle pack or used from the between-battle
      menu; price and drops are for the shop/chapter tickets).
 - **The character level doesn't reset** (Nick). EXP stays the same.
-- **Promotion bonus** (FE-style, *Claude's starting rule*): for each stat,
+- **Promotion bonus** (Nick: FE GBA-style big boost): for each stat,
   `bonus = max(0, new_class.base[stat] − old_class.base[stat])`. The bonus is
   added, then clamped to the hard ceiling (not to the class cap). Current HP
   rises by the HP bonus. Mov becomes the new class's Mov.
@@ -256,16 +270,33 @@ nothing.
 
 ## Reclass
 
-Nick chose branching plus reclass (Q2).
+Nick chose branching plus reclass (Q2), and set its rules in the follow-up
+round.
 
-- **Switching to a class already unlocked** is **free**, between battles and
-  in Preparations (*Claude's starting rule*, FFT-style). No item is needed and
-  there are no stat changes. The class record keeps its class level and CP.
-- **Reclass Seal** (*placeholder name*, rare, never sold in Chapter 1): the
-  unit enters the **tier-1 class of another line** (any tier-1 class it
-  hasn't unlocked), unlocking it at class level 1.
-- A reclass **never** changes stats (no bonus, no loss). From then on, level
-  ups use the new class's growths, caps and tier.
+- **Promotion is one-way** (Nick). A unit never drops back a tier by
+  promoting.
+- A **full class change (reclass)** always costs one **Reclass Seal**
+  (*placeholder name*; a rare resource, never sold in Chapter 1). It is
+  **never free**, including a return to a class the unit already unlocked
+  (Nick: "you have to spend the seal of whatever item each time").
+- **Where a seal can take a unit** (Nick chose "any class whose requirements
+  you meet"):
+  - any **tier-1** class (not enemy-only);
+  - any class whose **prerequisite** the unit has **mastered** (a class
+    that lists it in `promotes_to`);
+  - any class the unit has **already unlocked**. Its saved progress comes
+    back (Nick: "the progress on the sword is also saved for if you wanna
+    return").
+- **Class progress is saved** (Nick): every class record keeps its class
+  level and CP after the unit leaves the class. Entering a class for the
+  first time unlocks it at class level 1, with its passives and
+  class-level-1 spells.
+- **Stats accumulate** (Nick: "stat growth from completing many classes can
+  accumulate"):
+  - A reclass never lowers stats and gives no promotion bonus.
+  - Stats above the new class's caps are kept, but can't grow while in that
+    class.
+  - From then on, level ups use the new class's growths, caps and tier.
 - Skills and spells already learned are kept (Nick; `magic.md`).
 - Weapon ranks and slots follow the promotion rules above.
 - **Open certification** (Three Houses style, entering any class by passing an
