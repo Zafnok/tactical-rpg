@@ -13,3 +13,8 @@ workspace = true
 [dependencies]
 trpg-core = { path = "../core" }
 trpg-content = { path = "../content" }
+
+[package.metadata.cargo-machete]
+# Crate-boundary scaffolding (ADR-0004): wired up by later tickets, not yet
+# referenced from src.
+ignored = ["trpg-core", "trpg-content"]

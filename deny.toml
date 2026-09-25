@@ -1,0 +1,79 @@
+# Supply-chain policy for cargo-deny.
+#
+# The [licenses] allow list is exactly the "Code" list from ADR-0013
+# (docs/adr/0013-licensing-and-third-party-policy.md): permissive licenses
+# only, no copyleft, no non-commercial, nothing that costs money. Never add a
+# denied license here. An unknown/custom license needs a [[licenses.clarify]]
+# or [licenses.exceptions] entry with a comment explaining why it is safe to
+# ship commercially, and must be mentioned in the PR that adds it.
+
+[graph]
+all-features = false
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+db-path = "$CARGO_HOME/advisory-dbs"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# cargo-deny 0.20 dropped the old vulnerability/unmaintained/unsound severity
+# knobs in favor of denying every RUSTSEC advisory unless it's ignored here,
+# with a reason. Known advisories in macroquad's own dependency tree, with no
+# fixed version available upstream, are ignored below; revisit whenever
+# upgrading macroquad.
+ignore = [
+    { id = "RUSTSEC-2025-0035", reason = "macroquad soundness issues (mutable statics); no fix upstream, no safe alternative engine chosen yet; revisit on macroquad upgrade" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser (via fontdue via macroquad) is unmaintained; no fix upstream; revisit on macroquad upgrade" },
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Unlicense",
+    "OFL-1.1", # only used if a font crate needs it (ADR-0013)
+]
+confidence-threshold = 0.9
+exceptions = []
+
+[licenses.private]
+# Our own crates are proprietary (LICENSE) and publish = false.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Our own workspace crates depend on each other by path with no version
+# requirement, which cargo-deny otherwise flags as a wildcard; this allows
+# that specific, harmless pattern without opening up real "*" dependencies.
+allow-wildcard-paths = true
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[sources.allow-org]
+github = []
+gitlab = []
+bitbucket = []
