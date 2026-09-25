@@ -28,6 +28,10 @@ Source: ticket 0015
 > unit info, W can be show danger zone, shift+space can be auto end"
 >
 > **Q6. Left-handed layout.** "A mirroring what I already said for 5"
+>
+> **Claude's three small calls** (Esc also cancels; literal finger mirror for
+> previous/next unit; Rewind on R / U): "I think the small calls you made
+> make sense"
 
 ## Rules
 
@@ -59,10 +63,10 @@ needed). Key choices are Nick's; the defaults below are his.
 | Enemy danger zone on/off | `W` | `O` | |
 | End turn | `Space` | `Space` | Double-tap: see below |
 | Auto-end on/off | `Shift+Space` | `Shift+Space` | Replaces the `Shift+e` placeholder in `turn-structure.md` |
-| Rewind (ticket 0307) | `R` | `U` | *Claude's starting rule*: `R` was already planned; `U` is its mirror |
+| Rewind (ticket 0307) | `R` | `U` | Proposed by Claude, approved by Nick: `R` was already planned; `U` is its mirror |
 | Map menu | `Cancel` with nothing to cancel, or `Confirm` on an empty tile | same | Unchanged from before |
 
-*Claude's starting rules (tunable, Nick may veto):*
+*Proposed by Claude, approved by Nick:*
 
 - `Esc` also works as Cancel in both layouts (and so opens the map menu when
   there's nothing to cancel), since players reach for it by habit.
