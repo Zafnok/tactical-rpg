@@ -704,6 +704,7 @@ dependencies = [
  "proptest",
  "trpg-content",
  "trpg-core",
+ "trpg-ui",
 ]
 
 [[package]]

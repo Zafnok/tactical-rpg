@@ -1,10 +1,9 @@
 //! Translation from macroquad key codes to `trpg-ui`'s hardware-agnostic
-//! [`Key`], and feeding a frame's keyboard events into [`InputState`].
+//! [`Key`], and collecting a frame's keyboard events as [`RawKeyEvent`]s.
 
-use macroquad::prelude::{
-    KeyCode, get_frame_time, get_keys_pressed, get_keys_released, is_key_down,
-};
-use trpg_ui::input::{Action, Chord, InputState, Key};
+use macroquad::prelude::{KeyCode, get_keys_pressed, get_keys_released, is_key_down};
+use trpg_ui::RawKeyEvent;
+use trpg_ui::input::{Chord, Key};
 
 /// The game key for a macroquad key code; `None` for keys the game ignores.
 pub fn to_key(code: KeyCode) -> Option<Key> {
@@ -70,17 +69,18 @@ pub fn to_key(code: KeyCode) -> Option<Key> {
     })
 }
 
-/// Feeds this frame's key presses and releases into `input` and returns the
-/// actions for the frame.
-pub fn poll(input: &mut InputState) -> Vec<Action> {
+/// This frame's key releases, then presses (with the current Shift state).
+pub fn poll() -> Vec<RawKeyEvent> {
     let shift = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
-    for key in get_keys_released().into_iter().filter_map(to_key) {
-        input.key_up(key);
-    }
-    for key in get_keys_pressed().into_iter().filter_map(to_key) {
-        input.key_down(Chord { key, shift });
-    }
-    input.update(get_frame_time())
+    let released = get_keys_released()
+        .into_iter()
+        .filter_map(to_key)
+        .map(RawKeyEvent::Up);
+    let pressed = get_keys_pressed()
+        .into_iter()
+        .filter_map(to_key)
+        .map(|key| RawKeyEvent::Down(Chord { key, shift }));
+    released.chain(pressed).collect()
 }
 
 #[cfg(test)]
