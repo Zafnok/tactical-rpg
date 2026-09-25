@@ -342,6 +342,11 @@ mod tests {
     #[test]
     fn png_size_reads_header() {
         assert_eq!(png_size(&png_header(256, 288)), Some((256, 288)));
+        // Distinct bytes, so any byte-order slip shows.
+        assert_eq!(
+            png_size(&png_header(0x0102_0304, 0x0506_0708)),
+            Some((0x0102_0304, 0x0506_0708))
+        );
         assert_eq!(png_size(&png_header(256, 288)[..23]), None);
         let mut bad = png_header(1, 1);
         bad[0] = 0;

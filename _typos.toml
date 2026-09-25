@@ -11,3 +11,12 @@ pn = "pn"
 # Verbatim quote of Nick's spoken words in docs/design/magic.md; preserved
 # as said, not a real typo to fix.
 beginnning = "beginnning"
+
+[files]
+# Vendored third-party font data (hex bitmaps, codepoint names) and the atlas
+# generated from it: not our prose, and never edited by hand.
+extend-exclude = [
+    "assets-src/fonts/*.bdf",
+    "assets/fonts/atlas.ron",
+    "assets/fonts/Terminus-LICENSE.txt",
+]

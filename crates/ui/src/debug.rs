@@ -9,6 +9,8 @@ use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 const GLYPHS_PER_ROW: usize = 48;
 /// Width of one palette swatch column (`██ name`).
 const SWATCH_W: i32 = 24;
+/// Swatch columns across the console.
+const SWATCH_COLUMNS: i32 = 4;
 /// First row of the bottom half.
 const BOTTOM: i32 = 16;
 
@@ -31,13 +33,15 @@ pub fn glyph_sampler(palette: &Palette, glyphs: &[char]) -> GlyphBuffer {
     let colors: Vec<_> = palette.iter().collect();
     let title = format!("Palette ({})", colors.len());
     b.print(1, BOTTOM, &title, c(UiColor::TextHighlight), black);
-    let columns = (i32::from(CONSOLE_W) - 2) / SWATCH_W;
     let mut swatch_rows = 0;
     for (i, &(name, rgb)) in (0..).zip(&colors) {
-        let (x, y) = (1 + i % columns * SWATCH_W, BOTTOM + 1 + i / columns);
+        let (x, y) = (
+            1 + i % SWATCH_COLUMNS * SWATCH_W,
+            BOTTOM + 1 + i / SWATCH_COLUMNS,
+        );
         b.print(x, y, "██", rgb, black);
         b.print(x + 3, y, name, dim, black);
-        swatch_rows = i / columns + 1;
+        swatch_rows = i / SWATCH_COLUMNS + 1;
     }
 
     let y = BOTTOM + 2 + swatch_rows;
@@ -143,6 +147,7 @@ mod tests {
         let rows = atlas_glyphs().len().div_ceil(GLYPHS_PER_ROW);
         assert!(rows < usize::try_from(BOTTOM).unwrap());
         assert!(2 + 2 * GLYPHS_PER_ROW <= usize::from(CONSOLE_W));
+        assert!(SWATCH_COLUMNS * SWATCH_W < i32::from(CONSOLE_W));
     }
 
     #[test]
