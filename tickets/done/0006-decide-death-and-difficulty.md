@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0006 — Decide: unit death, difficulty and undo
@@ -69,10 +69,27 @@ Update `docs/design/README.md`; adjust 0305, 0307, 0801, 0802 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q4.
-- [ ] `docs/design/death-and-difficulty.md` written.
-- [ ] Design README updated; downstream tickets adjusted.
-- [ ] Ticket archived.
+- [x] Nick answered Q1–Q4.
+- [x] `docs/design/death-and-difficulty.md` written.
+- [x] Design README updated; downstream tickets adjusted.
+- [x] Ticket archived.
 
 ## Completion notes
 
+Nick answered in the project thread on 2026-09-25: 1D, 2A (charges vary by the
+map's intended difficulty; restarting a battle refunds them), 3B (one
+difficulty now; Hard/Merciless later), 4A. Recorded in
+`docs/design/death-and-difficulty.md`.
+
+- Claude-chosen starting values (tunable): rewind charges easy 2 / normal 3 /
+  hard 5; 3 save slots.
+- Lord falling is game over in both Classic and Casual (stated back to Nick,
+  not vetoed).
+- Placeholder rules for deferred sub-questions (mode fixed per playthrough,
+  Classic-dead unit's items go to the stock, no cost for a Casual retreat) are
+  listed in the design doc's open sub-questions.
+- Downstream tickets adjusted: 0305 (fall/loss rules, `rewind_charges` in
+  `BattleSetup`), 0307 (no longer conditional; charge and restart rules), 0705
+  (Casual retreat lines), 0801 (mode select, `rewind_charges` in chapter files,
+  `Restart battle` in the map menu, fallen handling in `apply_result`), 0802
+  (3 slots, mode on the slot picker, suspend deleted on Continue).

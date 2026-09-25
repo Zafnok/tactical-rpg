@@ -14,7 +14,7 @@ here.
 | Combat Arts | `weapons-and-items.md` (arts section) | 0014 | ⏳ awaiting Nick |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 |
 | Level ups, classes, class tree | [`progression.md`](progression.md) | 0005 | ✅ decided 2026-09-25 |
-| Death, rewind, difficulty, saving | `death-and-difficulty.md` | 0006 | ⏳ awaiting Nick |
+| Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting & tone | `setting-and-tone.md` (+ `docs/story/beats.md`) | 0007 | ⏳ awaiting Nick |
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
 | Chapter 1 scope | `chapter-1.md` | 0009 | ⏳ awaiting Nick |
