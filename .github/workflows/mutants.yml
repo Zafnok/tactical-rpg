@@ -1,0 +1,98 @@
+name: Mutants
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutants-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  pr:
+    if: github.event_name == 'pull_request'
+    name: mutants (diff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install macroquad system libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        with:
+          tool: cargo-mutants
+      - name: Compute diff against base
+        run: git diff origin/${{ github.base_ref }}...HEAD -- '*.rs' > git.diff
+      - name: Check for Rust changes
+        id: diffcheck
+        run: |
+          if [ -s git.diff ]; then
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run cargo mutants on diff
+        if: steps.diffcheck.outputs.has_diff == 'true'
+        run: cargo mutants --in-diff git.diff --in-place -vV
+      - name: Upload mutants.out
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutants-pr-${{ github.run_id }}
+          path: mutants.out
+          if-no-files-found: ignore
+
+  weekly-baseline:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: mutants (full, baseline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install macroquad system libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        with:
+          tool: cargo-mutants
+      - name: Run baseline once
+        run: cargo mutants --baseline=run --list
+
+  weekly:
+    needs: weekly-baseline
+    name: mutants (full, shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install macroquad system libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        with:
+          tool: cargo-mutants
+      - name: Run cargo mutants shard
+        continue-on-error: true
+        run: cargo mutants --shard ${{ matrix.shard }}/4 --baseline=skip
+      - name: Upload mutants.out
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutants-weekly-shard-${{ matrix.shard }}-${{ github.run_id }}
+          path: mutants.out
+          if-no-files-found: ignore

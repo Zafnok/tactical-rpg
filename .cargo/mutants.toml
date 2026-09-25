@@ -1,0 +1,2 @@
+exclude_globs = ["crates/app/**"]
+timeout_multiplier = 3.0
