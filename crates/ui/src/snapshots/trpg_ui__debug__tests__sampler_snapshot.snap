@@ -1,0 +1,121 @@
+---
+source: crates/ui/src/debug.rs
+expression: snap
+---
+ Glyphs (547)                                                                                       
+    ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O   
+  P Q R S T U V W X Y Z [ \ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~     
+  ¡ ¢ £ ¤ ¥ ¦ § ¨ © ª « ¬ ­ ® ¯ ° ± ² ³ ´ µ ¶ · ¸ ¹ º » ¼ ½ ¾ ¿ À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð   
+  Ñ Ò Ó Ô Õ Ö × Ø Ù Ú Û Ü Ý Þ ß à á â ã ä å æ ç è é ê ë ì í î ï ð ñ ò ó ô õ ö ÷ ø ù ú û ü ý þ ÿ ˇ   
+  Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω Ϊ Ϋ ά έ ή ί ΰ α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ   
+  ς σ τ υ φ χ ψ ω ‐ ‑ ‒ – — ― ‖ ‗ ‘ ’ ‚ ‛ “ ” „ ‟ † ‡ • … ‰ ′ ″ ‹ › ‼ ‾ ← ↑ → ↓ ↔ ↕ ↤ ↦ ↨ ↲ ↳ ↵ ↻   
+  ⇋ ⇌ ⇐ ⇑ ⇒ ⇓ ⇔ ⇕ ∀ ∃ ∄ ∅ ∆ ∇ ∈ ∉ ∊ ∋ ∌ ∍ − ∓ ∔ ∕ ∖ ∙ √ ∞ ∟ ∥ ∧ ∨ ∩ ∪ ≈ ≠ ≡ ≤ ≥ ≪ ≫ ⊂ ⊃ ⊆ ⊇ ⊥ ⋂ ⋃   
+  ⌀ ⌂ ⌈ ⌉ ⌊ ⌋ ⌐ ⌙ ⌠ ⌡ ⎛ ⎜ ⎝ ⎞ ⎟ ⎠ ⎡ ⎢ ⎣ ⎤ ⎥ ⎦ ⎧ ⎨ ⎩ ⎫ ⎬ ⎭ ⎮ ⎯ ⎺ ⎻ ⎼ ⎽ ⏐ ─ ━ │ ┃ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐   
+  ┑ ┒ ┓ └ ┕ ┖ ┗ ┘ ┙ ┚ ┛ ├ ┝ ┞ ┟ ┠ ┡ ┢ ┣ ┤ ┥ ┦ ┧ ┨ ┩ ┪ ┫ ┬ ┭ ┮ ┯ ┰ ┱ ┲ ┳ ┴ ┵ ┶ ┷ ┸ ┹ ┺ ┻ ┼ ┽ ┾ ┿ ╀   
+  ╁ ╂ ╃ ╄ ╅ ╆ ╇ ╈ ╉ ╊ ╋ ═ ║ ╒ ╓ ╔ ╕ ╖ ╗ ╘ ╙ ╚ ╛ ╜ ╝ ╞ ╟ ╠ ╡ ╢ ╣ ╤ ╥ ╦ ╧ ╨ ╩ ╪ ╫ ╬ ╭ ╮ ╯ ╰ ╱ ╲ ╳ ╴   
+  ╵ ╶ ╷ ╸ ╹ ╺ ╻ ╼ ╽ ╾ ╿ ▀ ▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ ▐ ░ ▒ ▓ ▖ ▗ ▘ ▙ ▚ ▛ ▜ ▝ ▞ ▟ ■ ▬ ▮ ▲ ▶ ► ▼   
+  ◀ ◄ ◆ ◊ ○ ● ◘ ◙ ☺ ☻ ☼ ♀ ♂ ♠ ♣ ♥ ♦ ♪ ♫                                                             
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ Palette (27)                                                                                       
+ ██ ally                 ██ attack_range         ██ black                ██ cursor                  
+ ██ danger_zone          ██ enemy                ██ exp_bar              ██ forest                  
+ ██ grass                ██ heal_range           ██ hp_high              ██ hp_low                  
+ ██ hp_mid               ██ mountain             ██ move_range           ██ neutral                 
+ ██ panel_bg             ██ panel_border         ██ panel_border_focus   ██ player                  
+ ██ road                 ██ stone                ██ text                 ██ text_dim                
+ ██ text_highlight       ██ water                ██ white                                           
+                                                                                                    
+ The quick brown fox jumps over the lazy dog. 0123456789 ÀÉÎÕÜ àéîõü ß ¿¡ «» ← ↑ → ↓                
+ ┌─ Unit ───────────────────────────────┐  ╔═ Ranges ═════════════════════════════════════════════╗ 
+ │ Aldo vs Brigand                      │  ║     move        attack        heal        danger     ║ 
+ │ HP ■■■■■■■■■■  ░▒▓█▀▄▌▐              │  ║ .. ♣♣ ≈≈ ^^ ▓▓  A· Bˇ C! D• []                       ║ 
+ │                                      │  ║                                                      ║ 
+ │                                      │  ║                                                      ║ 
+ └──────────────────────────────────────┘  ╚══════════════════════════════════════════════════════╝ 
+--- colours ---
+abbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+abbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+accaddddaaaaaaaaaaaaaaaaaeeaddddddddddddaaaaaaaaaffadddddaaaaaaaaaaaaaaaaggaddddddaaaaaaaaaaaaaaaaaa
+ahhadddddddddddaaaaaaaaaaiiadddddaaaaaaaaaaaaaaaajjadddddddaaaaaaaaaaaaaakkaddddddaaaaaaaaaaaaaaaaaa
+alladddddaaaaaaaaaaaaaaaammaddddddddddaaaaaaaaaaannadddddddaaaaaaaaaaaaaaooaddddddaaaaaaaaaaaaaaaaaa
+appaddddddaaaaaaaaaaaaaaaqqaddddddddaaaaaaaaaaaaarraddddddddddaaaaaaaaaaassadddddddaaaaaaaaaaaaaaaaa
+attaddddddddaaaaaaaaaaaaauuaddddddddddddaaaaaaaaavvaddddddddddddddddddaaawwaddddddaaaaaaaaaaaaaaaaaa
+axxaddddaaaaaaaaaaaaaaaaayyadddddaaaaaaaaaaaaaaaaaaaddddaaaaaaaaaaaaaaaaaddaddddddddaaaaaaaaaaaaaaaa
+abbaddddddddddddddaaaaaaazzadddddaaaaaaaaaaaaaaaaAAadddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aBBCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaDDCCCCCCCCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDa
+aBEFFFFEGGEHHHHHHHEEEEEEEEEEEEEEEEEEEEEEBaaDEIIIIIIIIIIIIEJJJJJJJJJJJJEKKKKKKKKKKKKELLLLLLLLLLLLEEDa
+aBEEEEMMMMMMNNNOEEPPPPPPPPEEEEEEEEEEEEEEBaaDEQQERRESSETTEUUEEFFEVVEWWEXXEYYEEEEEEEEEEEEEEEEEEEEEEEDa
+aBEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEBaaDEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEDa
+aBEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEBaaDEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEDa
+aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:ally bg:black
+d = fg:text_dim bg:black
+e = fg:attack_range bg:black
+f = fg:black bg:black
+g = fg:cursor bg:black
+h = fg:danger_zone bg:black
+i = fg:enemy bg:black
+j = fg:exp_bar bg:black
+k = fg:forest bg:black
+l = fg:grass bg:black
+m = fg:heal_range bg:black
+n = fg:hp_high bg:black
+o = fg:hp_low bg:black
+p = fg:hp_mid bg:black
+q = fg:mountain bg:black
+r = fg:move_range bg:black
+s = fg:neutral bg:black
+t = fg:panel_bg bg:black
+u = fg:panel_border bg:black
+v = fg:panel_border_focus bg:black
+w = fg:player bg:black
+x = fg:road bg:black
+y = fg:stone bg:black
+z = fg:water bg:black
+A = fg:white bg:black
+B = fg:panel_border bg:panel_bg
+C = fg:text_highlight bg:panel_bg
+D = fg:panel_border_focus bg:panel_bg
+E = fg:text bg:panel_bg
+F = fg:player bg:panel_bg
+G = fg:text_dim bg:panel_bg
+H = fg:enemy bg:panel_bg
+I = fg:text bg:move_range
+J = fg:text bg:attack_range
+K = fg:text bg:heal_range
+L = fg:text bg:danger_zone
+M = fg:hp_high bg:panel_bg
+N = fg:hp_mid bg:panel_bg
+O = fg:hp_low bg:panel_bg
+P = fg:exp_bar bg:panel_bg
+Q = fg:grass bg:panel_bg
+R = fg:forest bg:panel_bg
+S = fg:water bg:panel_bg
+T = fg:mountain bg:panel_bg
+U = fg:stone bg:panel_bg
+V = fg:#802d28 bg:panel_bg
+W = fg:ally bg:panel_bg
+X = fg:neutral bg:panel_bg
+Y = fg:cursor bg:panel_bg

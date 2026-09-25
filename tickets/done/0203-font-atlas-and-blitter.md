@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0202"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0203 — Font, atlas, blitter, glyph sampler
@@ -76,11 +76,11 @@ showing the sampler.
 
 ## Acceptance criteria
 
-- [ ] Font licence permits commercial redistribution; licence file and README in `assets/fonts/`.
-- [ ] All `REQUIRED_GLYPHS` present in the atlas (content validation test).
-- [ ] Running the app shows the crisp (non-blurry) sampler, integer-scaled and centred at several window sizes.
-- [ ] `layout()` unit-tested for exact-fit, oversize and undersize windows (scale never 0).
-- [ ] Sampler snapshot committed. Screenshot in the PR.
+- [x] Font licence permits commercial redistribution; licence file and README in `assets/fonts/`.
+- [x] All `REQUIRED_GLYPHS` present in the atlas (content validation test).
+- [x] Running the app shows the crisp (non-blurry) sampler, integer-scaled and centred at several window sizes.
+- [x] `layout()` unit-tested for exact-fit, oversize and undersize windows (scale never 0).
+- [x] Sampler snapshot committed. Screenshot in the PR.
 
 ## Tests required
 
@@ -90,3 +90,34 @@ showing the sampler.
 
 ## Completion notes
 
+- **Font: Terminus 8×16 (`ter-u16n`, OFL-1.1)**, licence checked in the
+  4.49.1 release tarball. It covers every required glyph on its own, so no
+  Unifont fallback was needed. The reasons are in `assets/fonts/README.md`,
+  the licence is in `assets/fonts/Terminus-LICENSE.txt`, and it's listed in
+  `THIRD_PARTY_ASSETS.md`. The source BDF lives in a new `assets-src/fonts/`,
+  kept outside `assets/` so its 180 KB isn't embedded in the game.
+- **Atlas:** `cargo xtask font-atlas` (hand-written BDF parser, `png` crate)
+  writes 547 glyphs (ASCII, Latin-1, Greek, punctuation, arrows, maths, box
+  drawing, blocks, shapes, symbols) as a 256×288 PNG plus `atlas.ron`. An
+  xtask test fails if the committed atlas is stale.
+- **Loader:** `trpg_content::font` has `FontAtlasDef`, `REQUIRED_GLYPHS`,
+  `glyph_rect` and validation (missing glyphs, duplicate indices, PNG size read
+  from the header). `bundle::bytes` was added, and `Content` gained `font`.
+- **Blitter:** `crates/app/src/render.rs`; `layout()` is in
+  `trpg_ui::console`; the sampler is `trpg_ui::debug::glyph_sampler`.
+- **Deviations:**
+  - The window is now `high_dpi`, and `layout()` gets the *physical*
+    framebuffer size. Without this, Windows display scaling (175% on this
+    machine) stretched the console by a non-integer factor and blurred it.
+  - The default window is 1640×1064, a little more than exactly 2× (the
+    framebuffer can come out a pixel short, which would drop to 1×).
+  - `·` and `¤` appear in `REQUIRED_GLYPHS` once, under Latin-1.
+  - I added `■` because existing UI code (the HP bar) uses it.
+  - The ticket asked for a `REQUIRED_GLYPHS` const; it is a `&str`.
+  - Recorded in ADR-0016 (atlas format, blitting, DPI rule).
+- **Verified by hand:** crisp at 2× (default window and 2476×1236,
+  letterboxed and centred) and at 1× cropped evenly (676×386). WASM build
+  passes; the browser run is 0206. Screenshot:
+  `docs/screenshots/0203-glyph-sampler.png`.
+- **For Nick (0011):** the app opens on the glyph sampler: every glyph, every
+  palette colour, sample text and two sample panels.

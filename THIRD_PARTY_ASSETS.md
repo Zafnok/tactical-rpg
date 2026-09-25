@@ -11,4 +11,4 @@ committed next to the item.
 
 | Item | Source URL | Version | License | License file | Used for | Added by ticket |
 | ---- | ---------- | ------- | ------- | ------------ | -------- | --------------- |
-| *(none yet)* | | | | | | |
+| Terminus Font (`ter-u16n`, 8×16), converted to `assets/fonts/atlas.png` | https://terminus-font.sourceforge.net/ | 4.49.1 | OFL-1.1 | [`assets/fonts/Terminus-LICENSE.txt`](assets/fonts/Terminus-LICENSE.txt) | The game's only font (every glyph on screen); source BDF in `assets-src/fonts/` | 0203 |
