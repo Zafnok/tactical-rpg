@@ -5,7 +5,7 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: in-progress
 blocked_by: ["0102"]
 nick_input: none
 completed:
