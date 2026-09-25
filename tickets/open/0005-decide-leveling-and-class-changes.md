@@ -79,12 +79,19 @@ units learn skills and equip a few. **C. No skills for now.**
 
 Based on the answers above and 0003/0004, **propose** a starter class tree.
 From 0003 (`docs/design/weapons-and-items.md`): weapon kinds are Sword, Spear,
-Axe, Bow, Gauntlet (+ magic from 0004), each with a trait and no triangle, so
+Axe, Bow, Gauntlet, each with a trait and no triangle, so
 the tree should cover them (a gauntlet "punching class" speed specialist was
 Nick's own example in 0001); armoured classes should have high Def and low Res
 (Nick: "encouraged to use magic users on those enemies"); spears need
 `Mounted` targets and bows `Flying` ones to matter
-(about 6–8 base classes, each with 1–2 promotions) as an ASCII tree, e.g.:
+(about 6–8 base classes, each with 1–2 promotions) as an ASCII tree.
+From 0004 (`docs/design/magic.md`): magic is **innate spells** (uses per
+battle, outside the loadout). Include a **black-magic line** and a
+**white-magic (healer) line** with **at least 3 tiers**: tiers 1–2 carry 3
+weapons *and* spells; tier 3+ has **0 weapon slots** and fights with spells
+only. Propose each class's spell list `(level, spell)` from `magic.md`'s
+starter spells (Fire, Frost, Force, Heal, Mend), and the Fire/Frost Elemental
+enemy classes (affinities are fixed in `magic.md`). Example:
 
 ```
 Lord ─────────► Great Lord
@@ -103,13 +110,15 @@ Ask Nick to approve, rename or cut.
 EXP for hit/kill scaled by level difference, 100 EXP = 1 level, *tunable*); level
 cap per tier; growth mechanics exactly (roll procedure incl. safety net);
 per-class growth modifiers (if any); promotion rules (level requirement, item,
-stat bonuses); skills (if any) with exact effects; the approved class tree with,
+stat bonuses); skills (if any) with exact effects; unit EXP for healing
+(Nick: healing gives EXP) and for tile casts (`magic.md`: same as a heal); the approved class tree with,
 for each class: move, movement type (foot / mounted / armoured / flying),
 usable weapon kinds with starting and maximum weapon rank (E…S), allowed
 armour weights (Light/Medium/Heavy), tags (`Mounted`, `Flying`, `Armored`),
+`weapon_slots` (3 or 0), spell list `(level, spell)`, affinities (elementals),
 base stats, stat caps, growth rates or modifiers.
 
-Update `docs/design/README.md`; adjust 0302, 0601–0603, 0803 if needed.
+Update `docs/design/README.md`; adjust 0302, 0309, 0601–0603, 0803 if needed.
 
 ## Acceptance criteria
 

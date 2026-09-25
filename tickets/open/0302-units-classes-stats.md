@@ -17,8 +17,7 @@ completed:
 
 Implements the stat list and class structure Nick chose. Source of truth:
 `docs/design/stats-and-combat.md` (0001), `docs/design/progression.md` (0005),
-`docs/design/weapons-and-items.md` (0003), `docs/design/magic.md` (0004, if
-done). Do **not** invent stats or classes not in those docs.
+`docs/design/weapons-and-items.md` (0003), `docs/design/magic.md` (0004). Do **not** invent stats or classes not in those docs.
 
 ## Nick input
 
@@ -48,7 +47,11 @@ real story characters (07xx creates them).
    `weapons-and-items.md`), allowed armour weights (Light/Medium/Heavy, if
    0005 limits them), `tags: UnitTags` (`Mounted`, `Flying`, `Armored`; used
    by weapon effectiveness), `promotes_to: Vec<ClassId>`,
-   `skills` (only if design has class skills; ids only, effects come later).
+   `skills` (only if design has class skills; ids only, effects come later),
+   and from `magic.md`: `weapon_slots: u8` (3, or 0 for tier-3+ magic
+   classes), `spells: Vec<(u8 /* level */, SpellId)>` (ids only; spell
+   definitions, uses and id validation are 0309), `affinities: Vec<(Element, Affinity)>`.
+   Character defs get `personal_spells: Vec<(u8, SpellId)>` (0–2 entries).
 3. `core::unit`:
    - `Faction { Player, Enemy, Ally, Neutral }` with `is_hostile_to(other)`
      (Player+Ally friendly; Enemy hostile to both; Neutral per design default:
@@ -60,7 +63,8 @@ real story characters (07xx creates them).
    (`test_lord`, `test_knight`, `test_archer` — whatever classes exist) and 2
    generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
 5. `content` loaders + validation: unknown class/movement/weapon ids;
-   promotion targets must exist and be a higher tier; base ≤ caps; growths
+   promotion targets must exist and be a higher tier; `weapon_slots ≤ 3`;
+   at most 2 personal spells; one affinity per element per class; base ≤ caps; growths
    0..=255; level in 1..=max; every class reachable in the tree.
 6. `Unit::from_character(def, class_table, level, faction, pos) -> Unit`.
 

@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0501", "0706", "0707", "0801"]
+blocked_by: ["0009", "0410", "0411", "0501", "0706", "0707", "0801"]
 nick_input: sign-off
 completed:
 ---

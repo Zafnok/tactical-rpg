@@ -58,7 +58,9 @@ appears (first enemy in range, first level up). Feel: no hand-holding.
 
 Pick any: a talk-to-recruit enemy (FE staple), a village to visit for an item,
 a mid-battle reinforcement wave, a treasure chest, an on-map shop (armoury,
-vendor or blacksmith; Nick chose FE on-map shops in 0003), none.
+vendor or blacksmith; Nick chose FE on-map shops in 0003), a terrain-magic
+moment (a forest to burn or water to freeze, 0004 `magic.md`), an elemental
+enemy with a battle note (0004: uncommon), none.
 **Recommendation:** one talk-recruit — it shows off two-portrait dialogue mid-battle.
 
 ### Q5. Preparations and the battle pack
