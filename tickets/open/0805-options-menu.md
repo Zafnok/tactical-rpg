@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0405", "0207"]
+blocked_by: ["0405", "0207", "0801"]
 nick_input: none
 completed:
 ---
@@ -42,11 +42,16 @@ screen reachable from title and map menu, key rebinding UI.
    captures next chord (Esc cancels capture); conflicts: show which action has
    it and ask to swap; "Reset to defaults". The effective keymap = defaults +
    overrides, validated by the same code as 0204.
-5. Enable `Options` in the map menu and title.
+5. **Game mode** (only when a campaign is loaded, per
+   `docs/design/death-and-difficulty.md`): shows `Classic` or `Casual`; in
+   Classic, `Switch to Casual` asks for confirmation ("This can't be undone")
+   and calls `Campaign::downgrade_mode()` (0801). No way back to Classic.
+6. Enable `Options` in the map menu and title.
 
 ## Acceptance criteria
 
 - [ ] Every setting changes behaviour (Harness test per setting where observable).
+- [ ] Classic → Casual switch works with a confirm; Casual never offers Classic (Harness test).
 - [ ] Rebinding works, persists across restart (MemoryStorage round-trip test), conflicts handled.
 - [ ] Snapshots of both screens.
 

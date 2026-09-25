@@ -78,18 +78,21 @@ Update `docs/design/README.md`; adjust 0305, 0307, 0801, 0802 if needed.
 
 Nick answered in the project thread on 2026-09-25: 1D, 2A (charges vary by the
 map's intended difficulty; restarting a battle refunds them), 3B (one
-difficulty now; Hard/Merciless later), 4A. Recorded in
+difficulty now; Hard/Merciless later), 4A. Claude first filled several levers
+with its own values; Nick asked to decide them himself, so a second round of
+questions settled: dead unit's gear → stock; no cost for a Casual retreat;
+Classic → Casual only (same for Hard → Normal later); charge tiers 2/3/5/8
+(easy/normal/hard/finale); rewind to any earlier action; `Restart battle` in
+the map menu; 30 save slots; unused charges → small EXP bonus for every
+deployed unit; lord death is game over in both modes. All recorded verbatim in
 `docs/design/death-and-difficulty.md`.
 
-- Claude-chosen starting values (tunable): rewind charges easy 2 / normal 3 /
-  hard 5; 3 save slots.
-- Lord falling is game over in both Classic and Casual (stated back to Nick,
-  not vetoed).
-- Placeholder rules for deferred sub-questions (mode fixed per playthrough,
-  Classic-dead unit's items go to the stock, no cost for a Casual retreat) are
-  listed in the design doc's open sub-questions.
+- The unused-charge EXP bonus: Nick gave a range ("between" 5 and 10 per
+  charge). Starting value 7, to be confirmed with Nick in the 0804 playtest.
 - Downstream tickets adjusted: 0305 (fall/loss rules, `rewind_charges` in
-  `BattleSetup`), 0307 (no longer conditional; charge and restart rules), 0705
-  (Casual retreat lines), 0801 (mode select, `rewind_charges` in chapter files,
-  `Restart battle` in the map menu, fallen handling in `apply_result`), 0802
-  (3 slots, mode on the slot picker, suspend deleted on Continue).
+  `BattleSetup`), 0307 (no longer conditional; charge, reach and restart
+  rules), 0705 (Casual retreat lines), 0801 (mode select, chapter difficulty
+  tier, `Restart battle`, fallen handling and unused-charge EXP in
+  `apply_result`, `downgrade_mode`; now blocked by 0307), 0802 (30 slots, mode
+  on the slot picker), 0804 (confirm the EXP bonus), 0805 (Classic → Casual
+  switch; now blocked by 0801).

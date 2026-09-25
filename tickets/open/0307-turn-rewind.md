@@ -40,10 +40,12 @@ a `Rewind` action + key binding (`r` by default, added to `keymap.ron`).
    replaying gives identical outcomes — **document that rewinding + doing the
    same thing gives the same result** (like Turnwheel); doing something different
    changes the RNG consumption naturally.
-2. Charges start at `BattleSetup.rewind_charges` (set per map by the chapter
-   file); a rewind costs one charge regardless of distance and may go back to
-   any earlier command, either side's. Charges don't carry between battles;
-   restarting a battle (0801) starts a fresh `BattleHistory` with full charges.
+2. Charges start at `BattleSetup.rewind_charges` (from the map's difficulty
+   tier: easy 2, normal 3, hard 5, finale 8; 0801); a rewind costs one charge
+   regardless of distance and may go back to any earlier command, enemy
+   commands included. Charges don't carry between battles (unused ones become
+   an EXP bonus, 0801); restarting a battle (0801) starts a fresh
+   `BattleHistory` with full charges. Expose `charges_left()`.
 3. `Action::Rewind` in `trpg-ui` and `"r"` in `keymap.ron`.
 4. `RewindScreen` (overlay): lists past actions newest-first as readable lines
    (`Turn 2 · Ana attacked Brigand (hit, 7 dmg)`), `j/k` to choose,

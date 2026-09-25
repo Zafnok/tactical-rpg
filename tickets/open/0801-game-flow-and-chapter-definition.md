@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0405", "0408", "0502", "0705"]
+blocked_by: ["0405", "0408", "0502", "0705", "0307"]
 nick_input: none
 completed:
 ---
@@ -48,7 +48,7 @@ replacing the title's placeholder and debug Quick Battle wiring.
      triggers: [ … ],                                          // 0705 trigger list
      victory_scenes: ["ch01_victory", "ch01_tbc"],
      next: Some("ch02") | None,
-     rewind_charges: 3,                                        // per map, by intended difficulty (0006: easy 2 / normal 3 / hard 5)
+     difficulty: Normal,                                       // Easy | Normal | Hard | Finale → rewind charges 2 / 3 / 5 / 8 (0006)
      seed: 12345,
    )
    ```
@@ -61,7 +61,11 @@ replacing the title's placeholder and debug Quick Battle wiring.
    `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
    weapon ranks, durability), handles fallen player units per
    `death-and-difficulty.md` (Classic: removed from the roster, equipped items
-   to the stock; Casual: kept), returns unused pack items to the stock and adds gold.
+   to the stock; Casual: kept, full HP next chapter), gives every deployed
+   player unit (standing or retreated) 7 EXP per unused rewind charge (value
+   in a content constant, *tunable* within 5–10 per the design), returns
+   unused pack items to the stock and adds gold. `Campaign::downgrade_mode()`
+   allows Classic → Casual only.
 4. `ui::flow`: `New Game` → `ModeSelectScreen` (Classic / Casual, one line
    explaining each) → intro scenes → (`PreparationsScreen` from 0408 if
    `preparations: true`, else the default pack) → `BattleScreen` → on `BattleEnded`
@@ -78,7 +82,9 @@ replacing the title's placeholder and debug Quick Battle wiring.
 - [ ] Harness: New Game on the test chapter → skip scenes → win via scripted commands → victory scene → "To be continued" → title.
 - [ ] Defeat path → Game Over → Retry restarts the chapter with identical state and full rewind charges.
 - [ ] Map-menu `Restart battle` → confirm → same result as Retry.
-- [ ] `apply_result`: a fallen unit is removed in Classic and kept in Casual (tests).
+- [ ] `apply_result`: a fallen unit is removed (gear to stock) in Classic and kept in Casual (tests).
+- [ ] `apply_result`: unused-charge EXP goes to every deployed unit, including Casual retreats, and not to undeployed units (tests).
+- [ ] Chapter `difficulty` maps to 2 / 3 / 5 / 8 charges (test).
 - [ ] Validator errors tested.
 - [ ] Campaign round-trips through serde.
 

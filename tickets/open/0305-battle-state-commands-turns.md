@@ -36,7 +36,7 @@ serde on state, replay test.
 ## Implementation steps
 
 1. `BattleSetup { map, terrain: Arc<TerrainTable>, classes: Arc<ClassTable>, units: Vec<Unit>, objective: Objective, rewind_charges: u8, seed: u64 }`
-   (`rewind_charges` is used by 0307).
+   (`rewind_charges` comes from the chapter's difficulty tier, 0801; used by 0307).
    `BattleState::new(setup) -> (BattleState, Vec<Event>)` (emits the first `PhaseStarted`).
 2. State: `turn: u32`, `phase: Faction` (or the design's equivalent), units,
    `rng: SimRng`, `outcome: Option<Outcome>`. Derive `Serialize/Deserialize`

@@ -17,9 +17,38 @@ Source: ticket 0006
 > **Q4. Saving** "4A" (FE: save between chapters + a suspend save mid-battle
 > that's deleted on load).
 
-Claude then stated the recorded rules back (lord falling is game over in both
-modes; per-map charges starting at 2 / 3 / 5; restart refunds all charges;
-3 save slots) and Nick did not veto them.
+Follow-ups (Nick asked to decide every lever himself: "don't decide these game
+design levers yourself. Let's go through them."):
+
+> **Classic: a dead unit's gear** "1B" (it goes back to the stock).
+>
+> **Casual: cost of retreating** "A" (nothing beyond missing the rest of that
+> battle).
+>
+> **Switching mode after New Game** "3A, and same with Hard->Normal if we
+> implement hard mode in the future." (Classic → Casual only, one way.)
+>
+> **Charges per map** "4C but more tiers of map difficulty like 2 on easy maps,
+> 3 on normal, 5 on hard, 8 on big and hard (i.e. finale)"
+>
+> **How far back a rewind goes** "5A" (any earlier action in the battle,
+> enemy actions included).
+>
+> **Restarting** "6A" (from the map menu at any time).
+>
+> **Save slots** "7C" then "let's say 30 save slots"
+>
+> **Unused charges** "8C but rather than gold maybe a small level xp bonus to
+> each surviving unit (not crazy, it shouldn't need to be expected to never use
+> them, but just a way to reward good play)"
+>
+> **Size of that bonus** "Again I don't know about exact numbers. But I think
+> probably something small, not enough to be meta-gamey. A or B, probably in
+> between the two. C is overstepping" (A = 5 EXP per charge, B = 10, C = 20.)
+>
+> **Who gets the bonus** "11B" (every deployed unit, including Casual retreats).
+>
+> **Lord falls in Casual** "9A" (game over in both modes).
 
 ## Falling units
 
@@ -29,14 +58,16 @@ A unit falls when its HP reaches 0.
 
 | Mode | What happens to a fallen player unit |
 | ---- | ------------------------------------ |
-| **Classic** | Gone for good. It plays its death quote (0705), leaves the map, and is removed from the roster when the battle's result is applied. |
-| **Casual** | Retreats. It plays its retreat line (same trigger slot as a death quote), leaves the map, and is back in the roster for the next chapter. |
+| **Classic** | Dies. It plays its death quote (0705), leaves the map, and is removed from the roster when the battle's result is applied. Its equipped weapons and items go to the stock. |
+| **Casual** | Retreats. It plays a retreat line (same trigger slot as a death quote), leaves the map, and is back in the roster at full HP for the next chapter. It keeps all EXP and weapon progress earned before falling. No other cost. |
 
-- Within a battle both modes behave the same: the unit leaves the map, can't
-  act, can't be targeted, and doesn't block tiles. The difference only matters
-  when the campaign applies the battle result.
-- The mode is stored in the campaign (and therefore in every save) and is shown
-  on the save slot picker.
+- Within a battle both modes behave the same: the fallen unit leaves the map,
+  can't act, can't be targeted and doesn't block tiles. The difference only
+  matters when the campaign applies the battle result.
+- **Mode changes:** Classic → Casual is allowed at any time (options menu);
+  Casual → Classic never. If harder difficulties are added later, the same
+  one-way rule applies (e.g. Hard → Normal only).
+- The mode is stored in the campaign, so it's part of every save.
 - Enemy, ally and neutral units that fall are always removed; the mode only
   affects the player's own units.
 
@@ -56,54 +87,62 @@ standard FE "cancel your move before you choose an action".
 
 - **Cancel before commit:** a moved unit can be put back freely until an action
   is chosen (`turn-structure.md`). Free and unlimited; it isn't a rewind.
-- **Rewind charges:** each map sets its own number of charges, based on how hard
-  the battle is meant to be. Starting values (*tunable*, chosen by Claude):
+- **Rewind charges per map**, by the map's difficulty tier (Nick):
 
-  | Map difficulty | Charges |
-  | -------------- | ------- |
+  | Map tier | Charges |
+  | -------- | ------- |
   | Easy | 2 |
   | Normal | 3 |
   | Hard | 5 |
+  | Finale (big and hard) | 8 |
 
-  Chapter files store the number directly (`rewind_charges`), not the
-  difficulty label, so any map can be given any count.
-- A rewind jumps back to **any earlier action** in the current battle (either
-  side's) and costs **1 charge**, however far back it goes.
+  Each chapter file names its tier; the game looks up the charge count.
+- A rewind jumps back to **any earlier action** in the current battle, enemy
+  actions included, and costs **1 charge** however far back it goes.
 - Luck is part of the saved state: repeating the same actions after a rewind
   gives the same results. Doing something different changes the outcome.
-- Charges are per battle. Unused charges don't carry over to the next map.
-- **Restarting a battle refunds every charge.** A restart (Game Over → `Retry`,
-  or `Restart battle` in the map menu, with a confirm) puts the battle back at
-  its first turn with the map's full charge count.
+- **Restart:** `Restart battle` in the map menu (with a confirm), available at
+  any time, and `Retry` on Game Over both put the battle back at its first turn
+  and **refund every charge**.
 - Rewind works the same in Classic and Casual.
+
+### Unused charges
+
+Charges don't carry over to the next map. Instead, each unused charge gives a
+**small EXP bonus** when the battle is won:
+
+- Every **deployed** player unit gets it: units still standing *and* units that
+  retreated in Casual. (Classic-dead units are gone; undeployed units get
+  nothing.)
+- Size: Nick wants it small, "not enough to be meta-gamey", **between 5 and 10
+  EXP per unused charge** (100 EXP = 1 level). Starting value: **7 EXP per
+  charge**, to be tuned in the Chapter 1 playtest (0804) within Nick's 5–10
+  range.
+- The bonus is added after the battle's normal EXP, following the award rules
+  in `progression.md` (max 100 per award, level cap).
 
 ## Difficulty
 
 **One difficulty, tuned well.** There is no difficulty picker. Hard or Merciless
-modes may be added later (the roadmap lists difficulty modes as post-Chapter 1).
-When that happens, a new decision ticket is needed.
+may be added later, with a new decision ticket; a downgrade then works like
+Classic → Casual (one way only).
 
 ## Saving
 
 FE style: chapter saves plus a one-time suspend.
 
-- **3 save slots** (*tunable*, chosen by Claude). After every chapter victory:
-  "Save your progress?", then a slot picker showing chapter title, mode, roster
-  size and playtime, with an overwrite confirm.
+- **30 save slots** (Nick). After every chapter victory: "Save your progress?",
+  then a slot picker showing chapter title, mode, roster size and playtime,
+  with an overwrite confirm.
 - `Load Game` on the title screen starts the saved campaign at the beginning of
   its next chapter.
 - **Suspend:** `Suspend` in the map menu saves the whole battle (including rewind
   history and charges left) to a single suspend save and returns to the title.
   The title then shows `Continue`. Continuing **deletes** the suspend save, so it
   can't be reloaded to undo a turn.
-- No saving anywhere else mid-battle.
+- No other saving mid-battle.
 
 ## Open sub-questions (deferred)
 
-- Can the mode be changed after New Game (e.g. Classic → Casual, like modern FE)?
-  Until decided: no, the mode is fixed for the playthrough.
-- What happens to a Classic-dead unit's equipped items (lost, or sent to the
-  convoy)? Until decided: they go to the stock.
-- Whether a Casual retreat has any cost (e.g. no EXP for that battle). Until
-  decided: none.
-- Harder difficulty modes: after Chapter 1 (see Difficulty).
+- Exact unused-charge EXP within 5–10: set at the Chapter 1 playtest (0804).
+- Harder difficulty modes: after Chapter 1.

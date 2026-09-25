@@ -16,7 +16,7 @@ completed:
 ## Context
 
 Saving rules from `docs/design/death-and-difficulty.md` (0006): FE-style
-chapter saves in 3 slots plus a one-time suspend save. Storage from
+chapter saves in 30 slots plus a one-time suspend save. Storage from
 0207. Determinism (0305) makes battle saves exact.
 
 ## Nick input
@@ -34,7 +34,7 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
 
 1. `SaveFile { version: u32, saved_at_playtime: u64, campaign: Campaign, battle: Option<BattleSave> }`
    where `BattleSave` = `BattleHistory` (0307) if it exists, else `BattleState`.
-   RON-serialised via `Storage` keys `slot_1..slot_3` (3 slots per design) and
+   RON-serialised via `Storage` keys `slot_01..slot_30` (30 slots per design) and
    `suspend`.
 2. `SAVE_VERSION` const; loading a different version shows "This save is from
    an incompatible version" (no crash). Corrupt data → same style of message.

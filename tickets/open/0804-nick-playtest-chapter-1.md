@@ -37,7 +37,10 @@ difficulty, story, looks, controls.
 3. For each piece of feedback, apply the `write-ticket` skill's
    "Turning Nick's playtest feedback into tickets" section. Ask at most one
    clarifying question per unclear item.
-4. Put a summary in Completion notes: feedback verbatim + ticket numbers created.
+4. Ask Nick whether the unused-rewind-charge EXP bonus (starting at 7 per
+   charge, his range 5–10, `death-and-difficulty.md`) felt right, and record
+   the value he picks.
+5. Put a summary in Completion notes: feedback verbatim + ticket numbers created.
 
 ## Acceptance criteria
 
