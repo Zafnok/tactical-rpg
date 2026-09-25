@@ -47,8 +47,8 @@ real story characters (07xx creates them).
    `weapons-and-items.md`), allowed armour weights (Light/Medium/Heavy, if
    0005 limits them), `tags: UnitTags` (`Mounted`, `Flying`, `Armored`; used
    by weapon effectiveness), `promotes_to: Vec<ClassId>`,
-   `passives: Vec<SkillId>` (learned on unlock) and `active: Option<SkillId>`
-   (learned on mastery) — ids only, effects are 0311; `enemy_only: bool`;
+   `active: Option<SkillId>` (usable from unlock; permanent on mastery) and
+   `passives: Vec<SkillId>` (learned on mastery) — ids only, effects are 0311; `enemy_only: bool`;
    and from `magic.md`: `weapon_slots: u8` (3, or 0 for tier-3+ magic
    classes), `spells: Vec<(u8 /* class level */, SpellId)>` (ids only; spell
    definitions, uses and id validation are 0309), `affinities: Vec<(Element, Affinity)>`.

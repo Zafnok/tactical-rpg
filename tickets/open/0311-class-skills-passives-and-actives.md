@@ -16,9 +16,10 @@ completed:
 ## Context
 
 Ticket 0005 (`docs/design/progression.md`, *Skills*) decided that unlocking
-a class teaches its **passive** skills and mastering it teaches its
-**active** skill. Both are kept for good, and a higher rank of a skill family
-replaces the lower one. 0302 stores skill ids on classes, and 0601 records
+a class gives its **active** skill, and mastering it teaches its
+**passive** skills. Passives are kept for good. An active is usable only while
+in its class, until that class is mastered; after that it is permanent. A
+higher rank of a skill family replaces the lower one. 0302 stores skill ids on classes, and 0601 records
 `SkillLearned`. This ticket gives the skills their effects in `core`,
 through `Command` → `Event`s
 ([ADR-0004](../../docs/adr/0004-crate-architecture.md)). The combat
@@ -69,8 +70,10 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
    - a family's ranks are unique;
    - every class `passives`/`active` id exists;
    - `uses ≥ 1` for actives.
-3. `Unit::active_skills()` gives the highest rank per family among the
-   unit's learned skills. `learn_skill()` follows the superseding rules,
+3. `Unit::usable_skills(class_table)` = learned passives + the current
+   class's active + the actives of every **mastered** class (from
+   `class_records`), keeping the highest rank per family. An unmastered
+   class's active is not usable after a reclass away from it (test). `learn_skill()` follows the superseding rules,
    including "learning a lower rank does nothing".
 4. Forecast integration: gather the passive and chosen-active modifiers of
    both sides into 0304's `CombatantInput` before its formulas run. Keep the
@@ -97,6 +100,7 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
 - [ ] `skills.ron` matches `progression.md` (a test checks at least 5 skills, including one per condition type).
 - [ ] Each tier 1–2 skill has a unit test proving its effect in a forecast or on the state.
 - [ ] Superseding: White Magic 2 replaces White Magic 1, and learning 1 after 2 changes nothing (test).
+- [ ] Active availability: current class's active usable at class level 1; after reclassing away from an unmastered class it is gone; after mastery it is usable in any class (tests).
 - [ ] Uses refill every battle, and an active at 0 uses can't be chosen (state unchanged).
 - [ ] Timed effects expire at the right phase boundary, and refresh instead of stacking.
 - [ ] "+1 strike" never gives more than 4 strikes (property test).

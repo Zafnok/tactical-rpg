@@ -47,12 +47,14 @@ player-faction units.
    it is missing (and to `ScriptedRng`). Capped or 0% stats never gain; gains never pass the cap.
 4. `grant_exp(unit, amount, rng) -> Vec<Event>`: adds EXP; crossing 100 →
    `LeveledUp { unit, new_level, gains }` (current HP rises with HP gains); at
-   the level cap (40, data) EXP is `--` and no EXP is gained.
+   the level cap (a data value; placeholder 99, `progression.md`) EXP is `--` and no EXP is gained.
 5. `grant_class_points(unit, amount) -> Vec<Event>`: to the current class
    record only; class level = `1 + cp / cp_per_class_level[tier]` (a per-tier data table), capped at 10 (data);
    crossing a class level emits `ClassLeveledUp`, learns class spells for that
    class level (0309's `learn_new_spells`, if it exists), and at 10 emits
-   `ClassMastered` + `SkillLearned` for the class's active.
+   `ClassMastered` + `SkillLearned` for each of the class's passives (its
+   active becomes permanent; 0311's `usable_skills` reads mastery from
+   `class_records`).
 6. Hook into `apply()` after combat / heal / tile cast / non-combat active
    resolution, for player-faction units only: EXP and CP per the tables.
    Ally-faction units' EXP goes into the battle's `exp_pool`, which is split

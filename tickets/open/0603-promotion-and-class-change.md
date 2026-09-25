@@ -41,7 +41,7 @@ prices/drops (chapter and shop data).
    **character level and EXP do not reset**. Bonus per stat =
    `max(0, new.base − old.base)` (clamped to the hard ceiling), current HP
    rises by the HP bonus, new class record at class level 1 → learn its
-   passives and class-level-1 spells (`SkillLearned` / `SpellLearned`),
+   active is usable at once, plus class-level-1 spells (`SpellLearned`),
    weapon ranks raised to the new class's start ranks, extra weapons to
    stock if the slots shrink (0309's helper). Event `Promoted { unit, from, to, gains }`.
 2. `reclass(unit, target_class, classes)` per `progression.md`: always
@@ -55,7 +55,7 @@ prices/drops (chapter and shop data).
    action), plus the same actions from the between-battle unit menu /
    Preparations (0408) if it exists; otherwise note it as a follow-up ticket.
 4. **Choice screen:** two (or N) columns, each: class name, map glyph, move,
-   weapons, passives gained, and every stat `current → promoted` with gains
+   weapons, the active gained, and every stat `current → promoted` with gains
    highlighted; `h/l` switch column, `f` choose, confirm dialog, `d` cancel.
    Reclass uses the same screen, listing every class the seal can reach
    (unlocked classes show their saved class level).

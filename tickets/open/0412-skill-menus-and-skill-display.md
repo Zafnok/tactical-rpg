@@ -42,7 +42,7 @@ skill quick?
 ## Implementation steps
 
 1. Unit info screen: a `Skills` block listing only the active ranks
-   (`Unit::active_skills()`), with `P`/`A` markers and uses for actives.
+   (`Unit::usable_skills()`), with `P`/`A` markers and uses for actives.
 2. Attack flow: after choosing a target, `s` cycles through the usable
    combat actives (`none → Keen Edge → …`). The forecast updates, and a
    skill name line appears.

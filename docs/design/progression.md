@@ -85,6 +85,21 @@ Follow-ups:
 >
 > **Who gains EXP:** "A and any xp earned by green units will be spread
 > across the participating battle army at battle end"
+>
+> **Level pace:** "B and level cap can be quite high TBD. If we go for dragon
+> ball numbers maybe even fast 2 levels is not accurate maybe your level
+> would be in the millions as well. But we can say level can go faster than
+> avg."
+>
+> **Skills (revised):** "specifics I don't care about for right now but I
+> would somewhat like to change this. I'm thinking the active can be
+> unlocked at the start and passive at the end. However you cannot bring the
+> active with you when you reclass unless you master the class. Exact skills
+> we can fine tune after playtesting."
+>
+> **Class stat numbers:** "B numbers are meaningless without playtesting."
+> (Claude's numbers are starting values, judged in the Chapter 1
+> playtest.)
 
 So:
 
@@ -97,11 +112,17 @@ So:
   that class.
 - **Promotion and reclass:** you promote by branching, FE-style. A rarer
   reclass also exists. Open certification (Three Houses) is out.
-- **Skills:**
-  - **Unlocking** a class teaches its **passive** skills.
-  - **Mastering** a class (its top class level) teaches its **active** skill.
-  - Both are **kept** after a class change. A higher rank of the same passive
-    replaces the lower one.
+- **Skills** (Nick revised Q3 in the final round):
+  - **Unlocking** a class gives its **active** skill.
+  - **Mastering** a class (its top class level) teaches its **passive**
+    skills.
+  - Passives are **kept** after a class change. A higher rank of the same
+    passive replaces the lower one.
+  - An active **stays behind** when the unit leaves the class, unless the
+    unit mastered that class.
+- **Level pace:** faster than FE, about **2 character levels per battle**.
+  The level cap is **high and not decided yet**; it may be huge if the
+  number scale goes "Dragon Ball" (ticket 0013).
 - **Tiers:** every line, martial and magic alike, has the same number of
   tiers. Chapter 1 needs tiers 1–3. Nick plans 6–10 tiers eventually, so every
   rule here must work for any number of tiers.
@@ -109,8 +130,10 @@ So:
   closer to shipping, and must not copy Fire Emblem's.
 
 Numbers marked *tunable* are starting values Claude chose, which balance
-tickets may change without asking. Rules marked *Claude's starting rule* fill
-a gap in Nick's answers, and Nick may veto them. Unmarked rules are Nick's.
+tickets may change without asking. Nick: numbers "are meaningless without
+playtesting", so he judges them in the Chapter 1 playtest (0804). Rules marked
+*Claude's starting rule* fill a gap in Nick's answers, and Nick may veto them.
+Unmarked rules are Nick's.
 All stat numbers are FE-sized, like `stats-and-combat.md`, and get rescaled
 with the rest in ticket 0013.
 
@@ -118,9 +141,13 @@ with the rest in ticket 0013.
 
 - Every unit has a **character level**, starting at 1, which **never resets**
   (Nick). It is the level shown as `Lv` and the one used in EXP maths.
-- **Level cap:** 40 for the Chapter 1 build (*tunable*). It will go up when
-  tiers above 3 exist. At the cap, EXP is shown as `--` and no more unit EXP
-  is gained. Class points are still earned.
+- **Level cap:** high and **not decided yet** (Nick). It may be very large
+  if the number scale goes "Dragon Ball" (0013). It is a data value; the
+  Chapter 1 build uses **99** as a placeholder (*tunable*). At the cap, EXP
+  is shown as `--` and no more unit EXP is gained. Class points are still
+  earned.
+- **Pace** (Nick): levels come **faster than FE**. The awards below are
+  sized for about **2 levels per battle** for an active unit (*tunable*).
 - **100 EXP = 1 level.** EXP carries over past 100. A single award is at most
   100, so it gives at most one level.
 - **Only Player-faction units** gain EXP and class points (Nick, FE rule).
@@ -136,18 +163,18 @@ with the rest in ticket 0013.
 - **Level-up stats** use the unit's **current class** (its growths, caps and
   tier) at the moment of the level up.
 
-### EXP formulas (*tunable*, shaped like FE GBA)
+### EXP formulas (*tunable*: FE GBA's shape, doubled for Nick's faster pace)
 
 `d = target.level - unit.level` (character levels, signed).
 
 | Event | EXP |
 | ----- | --- |
-| Took part in a combat (attacked or countered), dealt no damage and killed nobody | `1` |
-| Dealt damage (≥ 1 HP) and the target survived | `clamp((31 + d) / 3, 1, 100)` |
-| Killed the target | `clamp((31 + d) / 3 + max(0, 20 + 3 * d) + (target is boss ? 40 : 0), 1, 100)` |
-| Healed an ally with a spell | `12` |
-| Tile cast (fire/ice on terrain, `magic.md`) | `12` (same as a heal, as `magic.md` asked) |
-| Used an active skill that isn't a combat (e.g. a buff) | `10` |
+| Took part in a combat (attacked or countered), dealt no damage and killed nobody | `2` |
+| Dealt damage (≥ 1 HP) and the target survived | `clamp(2 * ((31 + d) / 3), 2, 100)` |
+| Killed the target | `clamp(2 * ((31 + d) / 3 + max(0, 20 + 3 * d)) + (target is boss ? 40 : 0), 2, 100)` |
+| Healed an ally with a spell | `24` |
+| Tile cast (fire/ice on terrain, `magic.md`) | `24` (same as a heal, as `magic.md` asked) |
+| Used an active skill that isn't a combat (e.g. a buff) | `20` |
 
 - `/` rounds toward zero, as in `stats-and-combat.md`.
 - One combat gives one award, no matter how many strikes it has. A kill
@@ -162,14 +189,14 @@ Examples:
 
 | Case | d | EXP |
 | ---- | - | --- |
-| Hit, equal levels | 0 | 10 |
-| Hit, enemy 5 levels higher | +5 | 12 |
-| Kill, equal levels | 0 | 10 + 20 = 30 |
-| Kill, enemy 5 levels higher | +5 | 12 + 35 = 47 |
-| Kill, enemy 5 levels lower | −5 | 8 + 5 = 13 |
-| Kill, enemy 10 levels lower | −10 | 7 + 0 = 7 |
-| Kill a boss, equal levels | 0 | 10 + 20 + 40 = 70 |
-| Missed every strike | any | 1 |
+| Hit, equal levels | 0 | 2 × 10 = 20 |
+| Hit, enemy 5 levels higher | +5 | 2 × 12 = 24 |
+| Kill, equal levels | 0 | 2 × (10 + 20) = 60 |
+| Kill, enemy 5 levels higher | +5 | 2 × (12 + 35) = 94 |
+| Kill, enemy 5 levels lower | −5 | 2 × (8 + 5) = 26 |
+| Kill, enemy 10 levels lower | −10 | 2 × (7 + 0) = 14 |
+| Kill a boss, equal levels | 0 | 60 + 40 = 100 |
+| Missed every strike | any | 2 |
 
 ## Growths and level ups
 
@@ -280,11 +307,11 @@ nothing.
   needs `(n − 1) × cp_per_class_level[tier]` total CP in that class.
 - **Mastered** = class level 10. After that, CP for that class stop counting.
 - What class levels do:
-  - **Class level 1 (unlock):** learn the class's **passive skills** (Nick's
-    "big power jump on unlocking").
+  - **Class level 1 (unlock):** gain the class's **active skill** (Nick).
   - **Class spells** at their listed class level (see *Spells*).
-  - **Class level 10 (mastery):** learn the class's **active skill** (Nick's
-    "reward on mastery"), and the class's promotions open up.
+  - **Class level 10 (mastery):** learn the class's **passive skills** for
+    good, **keep its active for good** (Nick), and open up the class's
+    promotions.
 - Pace: the battle counts above assume about 15 CP per battle for an active
   unit. Chapter 1 is shorter than that, so no unit masters a class in it.
 
@@ -305,7 +332,7 @@ nothing.
   added, then clamped to the hard ceiling (not to the class cap). Current HP
   rises by the HP bonus. Mov becomes the new class's Mov.
 - The new class is unlocked: its record starts at class level 1, so its
-  passives are learned at once, plus any class-level-1 spells.
+  active is gained at once, plus any class-level-1 spells.
 - **Weapon ranks:** for each weapon kind the new class can use,
   `rank = max(current rank, class start rank)`. Ranks in kinds the new class
   can't use are kept (for later reclasses) but unusable.
@@ -334,7 +361,7 @@ round.
     return").
 - **Class progress is saved** (Nick): every class record keeps its class
   level and CP after the unit leaves the class. Entering a class for the
-  first time unlocks it at class level 1, with its passives and
+  first time unlocks it at class level 1, with its active and
   class-level-1 spells.
 - **Stats accumulate** (Nick: "stat growth from completing many classes can
   accumulate"):
@@ -349,11 +376,23 @@ round.
 
 ## Skills
 
-Nick: passives when a class is unlocked, an active when it is mastered, and
-you keep both.
+Nick (revised in the final round): the **active** comes when a class is
+**unlocked**, and the **passives** when it is **mastered**. An active stays
+behind when you leave an unmastered class.
 
-- A **passive skill** is always on. A unit has **every** passive it has ever
-  learned, with no equip limit (Nick: keeping them is "OK").
+- **Actives, by class:**
+  - A unit can use the active of its **current class** as soon as the class
+    is unlocked (class level 1).
+  - When it **masters** a class, that class's active becomes **permanent**:
+    usable in any class from then on.
+  - When a unit leaves a class it has **not** mastered (by reclass), that
+    active **stays behind**. It can't be used until the unit returns to the
+    class (with a Reclass Seal; its saved progress comes back) or masters it.
+  - Promotion always happens from a mastered class, so a promoted unit keeps
+    its old class's active and gains the new class's active too.
+- **Passives, by class:** learned when the class is **mastered**, and
+  **kept** for good after any class change (Nick: keeping them is "OK").
+  A passive is always on, with no equip limit.
 - **Superseding (Nick):**
   - Skills belong to a **family** and have a **rank**, e.g. `White Magic 1`
     and `White Magic 2`.
@@ -363,9 +402,9 @@ you keep both.
 - An **active skill** is used on purpose:
   - It has **uses per battle**, which refill at the start of each battle, like
     spells (`magic.md`). It never costs weapon durability.
-  - A unit keeps every active it has learned. **Combat actives** are chosen
-    from the attack menu as an option for that attack. **Non-combat actives**
-    are an action of their own and end the action.
+  - **Combat actives** are chosen from the attack menu as an option for that
+    attack. **Non-combat actives** are an action of their own and end the
+    action.
   - Combat actives are used only **when attacking** on your own turn, never
     chosen on counters (Nick, like Three Houses arts).
   - **Stance riders** (Nick, like Fortune's Weave's "Guarding Strike"): a
@@ -380,9 +419,9 @@ you keep both.
   the skill is used. They end at the start of the owner's side's next phase,
   before anyone acts. The same effect doesn't stack with itself; using it
   again refreshes it.
-- Skill numbers are all *tunable*. The skill *list* is Claude's proposal
-  (Nick approved the system and the tree). Flavour names change with the
-  class names later.
+- **The skill list below is placeholder content** (Nick: "exact skills we
+  can fine tune after playtesting"). It exists so Chapter 1 has something to
+  play with. Skills, numbers and flavour names get tuned after the playtest.
 
 ### Skill list: tiers 1–2
 
@@ -390,33 +429,33 @@ you keep both.
 add to the numbers in the combat formulas (`stats-and-combat.md`,
 `weapons-and-items.md`) and show in the forecast.
 
-| Class | Passive (unlock) | Active (mastery) |
-| ----- | ---------------- | ---------------- |
-| Swordsman | **Sword Focus 1**: Sw equipped → crit +10 | **Keen Edge** (2/battle, combat): this combat hit +30, crit +10 |
-| Brawler | **Light Feet 1**: Gt equipped → attack speed +2 | **Flurry** (1/battle, combat): this combat the attacker gets +1 strike (max 4) |
-| Raider | **Axe Focus 1**: Ax equipped → hit +10 | **Heavy Blow** (2/battle, combat): might +5; the attacker gets 1 strike only |
-| Archer | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) | **Long Shot** (2/battle, combat): Bw max range +1 for this attack |
-| Guard | **Steadfast 1**: Def +2 while not in its own phase | **Brace** (2/battle, action): Def and Res +5 until its next phase |
-| Rider | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking | **Lance Rush** (2/battle, combat): might +5 |
-| Flier | **Sky Dodge 1**: avoid +10 against bows | **Swoop** (2/battle, combat): after this attack, may move 1 tile |
-| Mage | **Black Magic 1**: attack spells might +1 | **Overcast** (1/battle, combat, spell only): spell might +5 |
-| Cleric | **White Magic 1**: heal spells +2 HP (Nick's example) | **Sanctuary** (1/battle, action): heals every adjacent ally by `Mag + 5`; ends the action |
-| Duelist | **Sword Focus 2**: Sw equipped → crit +20 | **Blade Flurry** (1/battle, combat, Sw): +1 strike (max 4) |
-| Shadowblade | **Evasion 1**: avoid +10 | **Deadly Blow** (1/battle, combat): crit ×2 for this combat (clamped to 100) |
-| Striker | **Light Feet 2**: Gt equipped → attack speed +4 | **Hundred Fists** (1/battle, combat, Gt): +1 strike (max 4) and hit +10 |
-| Grappler | **Iron Grip**: Gt equipped → Def +3 | **Shove** (2/battle, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); it fails if the tile is blocked |
-| Berserker | **Fury**: crit +15 while HP ≤ 50% | **Rampage** (1/battle, combat): might +8, and its avoid −20 for this combat |
-| Vanguard | **Axe Focus 2**: Ax equipped → hit +20 | **War Cry** (1/battle, action): adjacent allies Str +2 until the start of this unit's next phase |
-| Marksman | **Bow Focus**: Bw equipped → hit +10, crit +5 | **Long Shot 2** (2/battle, combat): Bw max range +2 |
-| Outrider | **Skirmish** (learned again, no effect if already known) + **Charge 1** | **Volley** (1/battle, combat, Bw): +1 strike (max 4) |
-| Bulwark | **Steadfast 2**: Def +4 while not in its own phase | **Fortify** (1/battle, action): Def and Res +8 until its next phase |
-| Iron Rider | **Charge 1** + **Steadfast 1** | **Trample** (2/battle, combat): might +4, and the target's terrain Def/avoid is ignored |
-| Lancer | **Charge 2**: damage +4 after moving ≥ 4 tiles | **Piercing Lance** (2/battle, combat, Sp): ignore 5 of the target's Def |
-| Sky Lancer | **Sky Dodge 2**: avoid +20 against bows | **Swoop** |
-| Sky Warden | **Sky Guard**: Def +3 | **Dive** (1/battle, combat): might +6 |
-| Sorcerer | **Black Magic 2**: attack spells might +3 | **Overcast** |
-| Mystic | **Black Magic 1** + **White Magic 1** | **Siphon** (1/battle, combat, spell): the caster heals by half the damage dealt (rounded down) |
-| Priest | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) | **Sanctuary 2** (1/battle, action): heals every ally within 2 tiles by `Mag + 5` |
+| Class | Active (unlock) | Passive (mastery) |
+| ----- | --------------- | ----------------- |
+| Swordsman | **Keen Edge** (2/battle, combat): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
+| Brawler | **Flurry** (1/battle, combat): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
+| Raider | **Heavy Blow** (2/battle, combat): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
+| Archer | **Long Shot** (2/battle, combat): Bw max range +1 for this attack | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) |
+| Guard | **Brace** (2/battle, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
+| Rider | **Lance Rush** (2/battle, combat): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
+| Flier | **Swoop** (2/battle, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
+| Mage | **Overcast** (1/battle, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
+| Cleric | **Sanctuary** (1/battle, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
+| Duelist | **Blade Flurry** (1/battle, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
+| Shadowblade | **Deadly Blow** (1/battle, combat): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
+| Striker | **Hundred Fists** (1/battle, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
+| Grappler | **Shove** (2/battle, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); it fails if the tile is blocked | **Iron Grip**: Gt equipped → Def +3 |
+| Berserker | **Rampage** (1/battle, combat): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
+| Vanguard | **War Cry** (1/battle, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
+| Marksman | **Long Shot 2** (2/battle, combat): Bw max range +2 | **Bow Focus**: Bw equipped → hit +10, crit +5 |
+| Outrider | **Volley** (1/battle, combat, Bw): +1 strike (max 4) | **Skirmish** (learned again, no effect if already known) + **Charge 1** |
+| Bulwark | **Fortify** (1/battle, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
+| Iron Rider | **Trample** (2/battle, combat): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
+| Lancer | **Piercing Lance** (2/battle, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
+| Sky Lancer | **Swoop** | **Sky Dodge 2**: avoid +20 against bows |
+| Sky Warden | **Dive** (1/battle, combat): might +6 | **Sky Guard**: Def +3 |
+| Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
+| Mystic | **Siphon** (1/battle, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
+| Priest | **Sanctuary 2** (1/battle, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
 
 - **Skills learned twice:** a unit that learns an active it already knows
   (e.g. Swoop from both flier lines, Overcast from Mage and Sorcerer) gets
@@ -634,8 +673,8 @@ A generic unit of class `C` at character level `L` has
 talent and no randomness (Nick: fixed average stats, so a map plays the
 same way every time and you can plan exactly). Its weapon ranks are the class's start ranks
 unless the chapter data says otherwise. Its class level is 1, with the
-class's level-1 passives. Chapter data may give a generic enemy extra skills
-or spells.
+class's active (it hasn't mastered anything). Chapter data may give a
+generic enemy extra skills or spells.
 
 ### Named characters
 

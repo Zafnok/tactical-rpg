@@ -16,8 +16,8 @@ completed:
 ## Context
 
 `docs/design/progression.md` (ticket 0005) sets the skill system and
-fills in skills for tiers 1–2: passives when a class is unlocked, an active
-when it is mastered, and families with ranks that supersede. Tier-3 classes
+fills in placeholder skills for tiers 1–2: an active when a class is
+unlocked, passives when it is mastered, and families with ranks that supersede. Tier-3 classes
 (Blade Dancer … Oracle) and the elemental enemies have no skills yet,
 because Chapter 1 can't reach tier 3. Nick's own example belongs here: an
 Oracle learning **White Magic 2/3** ("+3 or +4") that replaces the lower
