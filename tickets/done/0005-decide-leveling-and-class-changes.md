@@ -174,7 +174,7 @@ Decided with Nick on 2026-09-25 and recorded in
   - Skills flipped: active on unlock, passives on mastery.
   - The skill list and stat numbers are placeholders, to be judged in the
     playtest.
-- **Claude filled in** (Nick may veto): how the ally-EXP split works (even
+- **Claude filled in, and Nick approved ("These are fine."): how the ally-EXP split works (even
   split, remainder lost; deployed, alive and uncapped units only), the
   99-level placeholder cap, and the CP-per-tier values 10/17/25.
 - **Downstream tickets adjusted:** 0302 (class record, talent, generic
