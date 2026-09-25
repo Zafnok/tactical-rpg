@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0101"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0102 — CI: format, lint, test on 3 OSes, WASM build, docs
@@ -60,10 +60,10 @@ branch protection (0106), releases (0107).
 
 ## Acceptance criteria
 
-- [ ] All five jobs run on the PR and pass; test matrix passes on all three OSes.
-- [ ] All actions pinned by SHA with version comments.
-- [ ] Workflow has `permissions: contents: read` at top level.
-- [ ] Deliberately breaking formatting in a scratch commit makes `fmt` fail
+- [x] All five jobs run on the PR and pass; test matrix passes on all three OSes.
+- [x] All actions pinned by SHA with version comments.
+- [x] Workflow has `permissions: contents: read` at top level.
+- [x] Deliberately breaking formatting in a scratch commit makes `fmt` fail
       (verify, then revert before merging).
 
 ## Tests required
@@ -72,3 +72,23 @@ The workflow itself is the test. Record the run URL in Completion notes.
 
 ## Completion notes
 
+Added `.github/workflows/ci.yml` with five jobs (`fmt`, `clippy`, `test`
+matrix, `wasm`, `docs`) as specified. All third-party actions
+(`actions/checkout@v7.0.1`, `Swatinem/rust-cache@v2.9.2`) pinned by full
+commit SHA with version comments — used the latest release tags rather than
+the older `v4.2.2` example in this ticket's step 3, since that checkout
+version is well past end of life. `libasound2-dev libx11-dev libxi-dev
+libgl1-mesa-dev` installed only on the Ubuntu jobs that compile `trpg-app`
+(`clippy`, `test (ubuntu-latest)`, `docs`; skipped on the `wasm` job, whose
+wasm32 target doesn't link native X11/GL). `Cargo.lock` was already
+committed by 0101.
+
+Verified locally first (`cargo fmt --check`, `clippy -D warnings`, `test`,
+`doc -D warnings`, wasm build all green), then verified on GitHub Actions via
+PR #7: pushed a scratch commit that broke formatting in `trpg-core`,
+confirmed `fmt` failed while `clippy`/`test`×3/`wasm`/`docs` still passed
+(run https://github.com/Zafnok/tactical-rpg/actions/runs/36161394154), then
+reverted it. Final green run on all three OSes:
+https://github.com/Zafnok/tactical-rpg/actions/runs/36161461858.
+
+No deviations from the ticket's scope.
