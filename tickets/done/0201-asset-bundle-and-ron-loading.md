@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0101"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0201 — Embedded asset bundle, RON loading, palette data
@@ -67,11 +67,11 @@ all-assets test.
 
 ## Acceptance criteria
 
-- [ ] `trpg_content::load_embedded()` succeeds on the repo's assets.
-- [ ] A malformed RON file yields an error with the correct file, line and column (unit test with an inline string).
-- [ ] Missing required colour and bad hex values each yield a clear error; multiple errors are reported together.
-- [ ] `crates/content/README.md` documents the pattern.
-- [ ] No I/O besides the embedded bundle; no macroquad dependency.
+- [x] `trpg_content::load_embedded()` succeeds on the repo's assets.
+- [x] A malformed RON file yields an error with the correct file, line and column (unit test with an inline string).
+- [x] Missing required colour and bad hex values each yield a clear error; multiple errors are reported together.
+- [x] `crates/content/README.md` documents the pattern.
+- [x] No I/O besides the embedded bundle; no macroquad dependency.
 
 ## Tests required
 
@@ -81,3 +81,22 @@ all-assets test.
 
 ## Completion notes
 
+- `trpg-content` now has `bundle` (embedded `assets/` via `include_dir`),
+  `error` (`ContentError` / `ContentErrors`), `ron_loader` (`load_ron` +
+  `parse_ron` for inline strings), `palette` (`PaletteDef`, `parse_hex`,
+  `format_hex`, `REQUIRED_COLORS`) and `Content` / `load_embedded()`.
+- `assets/data/palette.ron` holds a starting palette: all required UI colours
+  plus terrain placeholders (`grass, forest, water, mountain, stone, road`).
+  Faction colours follow ADR-0012 (player blue, enemy red, ally green,
+  neutral yellow). Nick tunes these in 0011.
+- Deviations:
+  - Added `crates/content/build.rs` (`rerun-if-changed=../../assets`) because
+    `include_dir!` doesn't make cargo rebuild when an asset changes on stable.
+  - Bad-hex errors carry the line of the offending key (found by text search,
+    since RON's typed parse doesn't give per-value positions); missing-colour
+    errors have no line (there's nothing to point at).
+  - RON positions use the end of the error span: the start can point at the
+    whitespace before the bad token.
+- Dependencies added (workspace versions): `serde`, `ron`, `include_dir`,
+  `thiserror`; dev `proptest`. All MIT and/or Apache-2.0.
+- No follow-up tickets. Nothing to play yet.

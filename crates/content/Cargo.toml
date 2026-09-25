@@ -12,6 +12,13 @@ workspace = true
 
 [dependencies]
 trpg-core = { path = "../core" }
+serde.workspace = true
+ron.workspace = true
+include_dir.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
 
 [package.metadata.cargo-machete]
 # Crate-boundary scaffolding (ADR-0004): wired up by later tickets, not yet

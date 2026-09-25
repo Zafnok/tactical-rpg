@@ -1,0 +1,47 @@
+// Named colours (ADR-0012). Code refers to these names, never raw RGB.
+// Values are "#RRGGBB". Starting set; Nick tunes it in ticket 0011.
+// Every name in trpg_content::palette::REQUIRED_COLORS must be present.
+{
+    // Basics
+    "black": "#000000",
+    "white": "#ffffff",
+
+    // Text
+    "text": "#d8d4c8",
+    "text_dim": "#7f7a6e",
+    "text_highlight": "#ffe28a",
+
+    // Panels (UI chrome)
+    "panel_bg": "#12141c",
+    "panel_border": "#4a5068",
+    "panel_border_focus": "#c8b060",
+
+    // Factions: player blue, enemy red, ally green, neutral yellow
+    "player": "#5b9bff",
+    "enemy": "#ff5a50",
+    "ally": "#5fd068",
+    "neutral": "#f0d050",
+
+    // Overlay background tints
+    "move_range": "#1c3a78",
+    "attack_range": "#7a2020",
+    "heal_range": "#1e6030",
+    "danger_zone": "#4a0e12",
+
+    // Cursor
+    "cursor": "#fff4b0",
+
+    // Bars
+    "hp_high": "#58d060",
+    "hp_mid": "#e8c040",
+    "hp_low": "#e84838",
+    "exp_bar": "#b070f0",
+
+    // Terrain placeholders
+    "grass": "#5a9a3c",
+    "forest": "#2e6b2a",
+    "water": "#3470c8",
+    "mountain": "#8a7a68",
+    "stone": "#9a9a9a",
+    "road": "#b89a6a",
+}
