@@ -9,8 +9,8 @@ Planned features include unit progression with level ups and class changes, a
 main story plus personal character stories, and dialogue scenes with two ASCII
 character portraits on screen.
 
-**Status:** architecture and backlog only. No game code exists yet. Work
-happens one ticket at a time; see the [roadmap](docs/ROADMAP.md).
+**Status:** workspace skeleton only, no game logic yet. Work happens one
+ticket at a time; see the [roadmap](docs/ROADMAP.md).
 
 ## Targets
 

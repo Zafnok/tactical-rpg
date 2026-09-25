@@ -45,12 +45,17 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `docs/design/` | Nick's game-design decisions (filled by `00xx` tickets) |
 | `docs/story/` | Story beats, bible, characters, outline, ledger (ADR-0011) |
 | `.claude/skills/` | `work-ticket`, `write-ticket`, `write-adr`, `ask-nick`, `story-writing`, `ascii-art`, `run-gates` |
-| `crates/` | *(created by ticket 0101)* `core`, `content`, `ui`, `app` |
+| `crates/` | `core` (`trpg-core`), `content` (`trpg-content`), `ui` (`trpg-ui`), `app` (`trpg-app`, binary `tactical-rpg`), `xtask` (repo tooling) |
 | `assets/` | *(created by later tickets)* data, maps, dialogue, portraits, fonts |
 
 ## Environment
 
 - Nick's machine: Windows 11, Rust with the **GNU** host toolchain; **no MSVC**.
   Never require MSVC locally. CI builds with MSVC on GitHub runners.
+- Local builds need a full MSYS2 mingw-w64 toolchain (`winget install -e --id
+  MSYS2.MSYS2` then `pacman -S mingw-w64-x86_64-gcc`): rustup's self-contained
+  GNU linker ships without some import libraries (e.g. `imm32`, needed by
+  macroquad). `.cargo/config.toml` points the `x86_64-pc-windows-gnu` linker
+  at the MSYS2 install.
 - Use `cargo install --locked <tool>` (cargo-binstall fails to build here).
 - Git remote: `https://github.com/Zafnok/tactical-rpg` (public).

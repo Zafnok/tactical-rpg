@@ -1,0 +1,21 @@
+[package]
+name = "trpg-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "tactical-rpg"
+path = "src/main.rs"
+
+[dependencies]
+trpg-core = { path = "../core" }
+trpg-content = { path = "../content" }
+trpg-ui = { path = "../ui" }
+macroquad.workspace = true
