@@ -19,4 +19,7 @@ extend-exclude = [
     "assets-src/fonts/*.bdf",
     "assets/fonts/atlas.ron",
     "assets/fonts/Terminus-LICENSE.txt",
+    # Vendored macroquad JS loader (ticket 0206): minified third-party code,
+    # never edited by hand.
+    "web/mq_js_bundle.js",
 ]

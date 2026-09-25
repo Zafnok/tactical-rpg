@@ -5,6 +5,7 @@
 
 mod font_atlas;
 mod tickets;
+mod web;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -12,7 +13,9 @@ use std::process::ExitCode;
 
 const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
-ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md";
+ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
+font-atlas <font.bdf> <out-dir>    build the font atlas from a BDF font\n  \
+web [--release]                    build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
     ExitCode::from(dispatch(env::args().skip(1)))
@@ -24,6 +27,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
     match args.next().as_deref() {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
+        Some("web") => web(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -72,6 +76,26 @@ fn font_atlas(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("font-atlas: {e}");
+            1
+        }
+    }
+}
+
+fn web(args: &[String]) -> u8 {
+    let options = match web::parse_args(args) {
+        Ok(options) => options,
+        Err(e) => {
+            eprintln!("{e}");
+            return 2;
+        }
+    };
+    match web::run(&repo_root(), options) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("web: {e}");
             1
         }
     }
@@ -180,6 +204,15 @@ mod tests {
     #[test]
     fn font_atlas_reports_failure() {
         assert_eq!(font_atlas(&args(&["no/such/font.bdf", "out"])), 1);
+    }
+
+    #[test]
+    fn web_fails_fast_on_bad_args() {
+        // Only checks argument parsing: a real `--release`/no-args run
+        // spawns `cargo build`, which is exercised by `web::tests` and
+        // manually, not here.
+        assert_eq!(web(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["web", "--bogus"]).into_iter()), 2);
     }
 
     #[test]
