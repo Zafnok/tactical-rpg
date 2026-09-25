@@ -180,9 +180,12 @@ mod tests {
     }
 
     #[test]
-    fn ticket_lint_fails_when_pr_branch_names_an_open_ticket() {
-        // 0107 is a real ticket in tickets/open/ as of this writing.
-        assert_eq!(ticket_lint(&args(&["--pr-branch", "t0107-x"])), 1);
+    fn ticket_lint_fails_when_pr_branch_names_an_unknown_ticket() {
+        // Ticket 9999 will never exist (see tickets/README.md's numbering),
+        // unlike a real open/done ticket id, whose status changes as tickets
+        // are worked — this exercises the wrapper's non-zero exit path
+        // without depending on the repo's current ticket state.
+        assert_eq!(ticket_lint(&args(&["--pr-branch", "t9999-ghost"])), 1);
     }
 
     #[test]
