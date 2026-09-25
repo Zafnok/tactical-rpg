@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0101 — Cargo workspace skeleton with empty crates and xtask
@@ -91,13 +91,13 @@ window, and an empty `xtask` tooling crate (later tickets add commands to it).
 
 ## Acceptance criteria
 
-- [ ] `cargo build --workspace` and `cargo test --workspace` succeed on the GNU host.
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings` is clean.
-- [ ] `cargo build -p trpg-app --target wasm32-unknown-unknown` succeeds.
-- [ ] `cargo run -p trpg-app` opens a window titled `tactical-rpg`.
-- [ ] `cargo xtask` prints a usage line.
-- [ ] Crate dependency directions match ADR-0004 (no `core` → anything).
-- [ ] No game logic added.
+- [x] `cargo build --workspace` and `cargo test --workspace` succeed on the GNU host.
+- [x] `cargo clippy --workspace --all-targets -- -D warnings` is clean.
+- [x] `cargo build -p trpg-app --target wasm32-unknown-unknown` succeeds.
+- [x] `cargo run -p trpg-app` opens a window titled `tactical-rpg`.
+- [x] `cargo xtask` prints a usage line.
+- [x] Crate dependency directions match ADR-0004 (no `core` → anything).
+- [x] No game logic added.
 
 ## Tests required
 
@@ -105,3 +105,40 @@ None beyond compiling (there is no logic yet).
 
 ## Completion notes
 
+Built the workspace as specified: `rust-toolchain.toml`, root `Cargo.toml`
+(workspace lints/profiles), `clippy.toml`, `rustfmt.toml`, the four game
+crates (`trpg-core`, `trpg-content`, `trpg-ui`, `trpg-app`) each with only a
+crate-doc `lib.rs`/`main.rs`, and `xtask` with the `cargo xtask` alias.
+
+**Deviation — MSYS2 mingw-w64 toolchain now required locally.** Discovered
+mid-ticket: rustup's self-contained `x86_64-pc-windows-gnu` linker (the
+`rust-mingw-*` component) ships without `libimm32.a`. `miniquad` (via
+`macroquad`) links `imm32` directly for IME support, so
+`cargo build -p trpg-app` failed to link with "cannot find -limm32" — this
+blocks every future ticket that touches `app`, not just this one. Tried a
+`build.rs` workaround generating a minimal import library at build time
+(first via `dlltool`, which needs an assembler that isn't bundled either;
+then a hand-rolled short-form COFF import object, which linked but produced
+a corrupt import table that segfaulted at runtime) — rejected both as too
+fragile to ship. Asked Nick; he chose to install a full MSYS2 mingw-w64
+toolchain (`winget install -e --id MSYS2.MSYS2`, then
+`pacman -S mingw-w64-x86_64-gcc`), which ships a complete import library set.
+`.cargo/config.toml` now points the `x86_64-pc-windows-gnu` target's linker
+and `ar` at the MSYS2 install; documented as a setup step in `CLAUDE.md`. All
+other tooling (rustc, cargo, clippy, rustfmt) is still plain rustup — MSYS2
+supplies only the linker/lib set.
+
+Also fixed two clippy findings in `xtask`'s stub `main` (`single_match_else`,
+`print_stdout` — the latter allowed at the crate root since a CLI tool
+printing usage to stdout is its whole job) that only surfaced once the crate
+actually compiled.
+
+Ran the `run-gates` skill: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`, and
+`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` are all clean.
+`cargo deny`, `cargo machete`, `typos` and mutation testing are not wired up
+yet (ADR-0008: after tickets 0103/0105).
+
+No follow-up tickets needed — the MSYS2 requirement is captured directly in
+`CLAUDE.md`'s Environment section for future sessions.

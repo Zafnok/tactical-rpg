@@ -1,0 +1,14 @@
+[package]
+name = "trpg-content"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+trpg-core = { path = "../core" }
