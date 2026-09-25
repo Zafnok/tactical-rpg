@@ -28,7 +28,7 @@ now, and comments. Offer him the text version in the PR description summary.
 ## Scope
 
 **In:** `assets/dialogue/ch01.dlg` (or several files): opening/intro, pre-battle,
-in-battle lines (boss engage, talk-recruit if in `chapter-1.md`, turn events),
+in-battle lines (boss engage, turn events; `chapter-1.md` has no talk-recruit),
 death quotes for every Chapter 1 playable character and the boss, victory
 scene, "to be continued" tease. Ledger update.
 
@@ -44,7 +44,7 @@ scene, "to be continued" tease. Ledger update.
    text boxes total (players want to play); in-battle lines 1–4 boxes each;
    victory ≤ ~20 boxes.
 3. Scene ids: `ch01_intro`, `ch01_prebattle`, `ch01_boss_engage`,
-   `ch01_talk_<a>_<b>`, `ch01_death_<char>`, `ch01_victory`, `ch01_tbc`
+   `ch01_death_<char>`, `ch01_victory`, `ch01_tbc`
    (list them at the top of the file in a comment for 0803).
 4. Validate with the content test (speakers, expressions, lengths).
 5. **Critique pass** per the skill's checklist; revise.
