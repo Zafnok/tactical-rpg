@@ -17,7 +17,7 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus | 0401–0412 |
 | `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase | 0501–0502 |
 | `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass | 0601–0603 |
-| `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script | 0701–0707 |
+| `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script, lead reply choices | 0701–0708 |
 | `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options | 0801–0805 |
 | `09xx` | M8 Release | itch.io, Windows polish, Steam readiness | 0901–0903 |
 
@@ -47,10 +47,10 @@ parallel sessions/worktrees):
  3  0202  0204  0301  0103 0104 0105
  4  0203  0302  0106
  5  0205  0206  0303  0304  0702   (0011 look sign-off)
- 6  0207  0305  0401  0703  0707  0107  0108
+ 6  0207  0305  0401  0703  0107  0108
  7  0306  0402  0704  0706  0208
- 8  0403  0309  0601  0308
- 9  0404  0407  0408  0409  0310  0311  0501
+ 8  0403  0309  0601  0308  0708
+ 9  0404  0407  0408  0409  0310  0311  0501  0707
 10  0405  0602  0307  0410
 11  0502  0705  0406  0412
 12  0801

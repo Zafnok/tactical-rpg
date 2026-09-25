@@ -1,0 +1,637 @@
+//! The [`GlyphBuffer`] virtual console every screen draws into (ADR-0003).
+//!
+//! Positions are `i32` so callers can draw partly (or wholly) off-buffer:
+//! every primitive clips to the buffer and never panics.
+
+use crate::color::Rgb;
+
+/// One console cell: a glyph with foreground and background colours.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Cell {
+    /// The character drawn in the cell.
+    pub glyph: char,
+    /// Glyph colour.
+    pub fg: Rgb,
+    /// Background colour.
+    pub bg: Rgb,
+}
+
+impl Cell {
+    /// Builds a cell.
+    pub const fn new(glyph: char, fg: Rgb, bg: Rgb) -> Self {
+        Self { glyph, fg, bg }
+    }
+}
+
+/// A rectangle of cells. A non-positive `w` or `h` means empty.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Rect {
+    /// Left column.
+    pub x: i32,
+    /// Top row.
+    pub y: i32,
+    /// Width in cells.
+    pub w: i32,
+    /// Height in cells.
+    pub h: i32,
+}
+
+impl Rect {
+    /// Builds a rectangle.
+    pub const fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
+        Self { x, y, w, h }
+    }
+
+    /// Whether the rectangle has no cells.
+    pub const fn is_empty(&self) -> bool {
+        self.w <= 0 || self.h <= 0
+    }
+
+    /// Whether cell `(x, y)` lies inside.
+    pub fn contains(&self, x: i32, y: i32) -> bool {
+        let (x, y) = (i64::from(x), i64::from(y));
+        let (left, top) = (i64::from(self.x), i64::from(self.y));
+        x >= left && y >= top && x < left + i64::from(self.w) && y < top + i64::from(self.h)
+    }
+
+    /// The overlap of two rectangles, or `None` if they don't overlap.
+    pub fn intersect(&self, other: &Rect) -> Option<Rect> {
+        let x0 = self.x.max(other.x);
+        let y0 = self.y.max(other.y);
+        let x1 =
+            (i64::from(self.x) + i64::from(self.w)).min(i64::from(other.x) + i64::from(other.w));
+        let y1 =
+            (i64::from(self.y) + i64::from(self.h)).min(i64::from(other.y) + i64::from(other.h));
+        // The overlap is no wider than either input, so it fits in i32.
+        let w = i32::try_from(x1 - i64::from(x0)).ok()?;
+        let h = i32::try_from(y1 - i64::from(y0)).ok()?;
+        let r = Rect::new(x0, y0, w, h);
+        (!r.is_empty()).then_some(r)
+    }
+}
+
+/// Border style for [`GlyphBuffer::draw_box`] (ADR-0012: single for panels,
+/// double for focus/modal).
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub enum BoxStyle {
+    /// `┌─┐│└┘`
+    Single,
+    /// `╔═╗║╚╝`
+    Double,
+}
+
+impl BoxStyle {
+    /// Glyphs: top-left, top-right, bottom-left, bottom-right, horizontal, vertical.
+    const fn glyphs(self) -> [char; 6] {
+        match self {
+            BoxStyle::Single => ['┌', '┐', '└', '┘', '─', '│'],
+            BoxStyle::Double => ['╔', '╗', '╚', '╝', '═', '║'],
+        }
+    }
+}
+
+/// The part of `start..start + len` inside `0..limit`.
+fn clip_span(start: i32, len: i32, limit: u16) -> std::ops::Range<i32> {
+    let limit = i64::from(limit);
+    let lo = i64::from(start).clamp(0, limit);
+    let hi = (i64::from(start) + i64::from(len)).clamp(lo, limit);
+    // Both lie in 0..=u16::MAX, so they fit in i32.
+    let fit = |v: i64| i32::try_from(v).unwrap_or(0);
+    fit(lo)..fit(hi)
+}
+
+/// A grid of [`Cell`]s, row-major.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct GlyphBuffer {
+    width: u16,
+    height: u16,
+    cells: Vec<Cell>,
+}
+
+impl GlyphBuffer {
+    /// A `width × height` buffer with every cell set to `fill`.
+    pub fn new(width: u16, height: u16, fill: Cell) -> Self {
+        Self {
+            width,
+            height,
+            cells: vec![fill; usize::from(width) * usize::from(height)],
+        }
+    }
+
+    /// Width in cells.
+    pub fn width(&self) -> u16 {
+        self.width
+    }
+
+    /// Height in cells.
+    pub fn height(&self) -> u16 {
+        self.height
+    }
+
+    /// The whole buffer as a rectangle.
+    pub fn bounds(&self) -> Rect {
+        Rect::new(0, 0, i32::from(self.width), i32::from(self.height))
+    }
+
+    /// Index of `(x, y)` in `cells`, or `None` if out of bounds.
+    fn index(&self, x: i32, y: i32) -> Option<usize> {
+        let x = u16::try_from(x).ok().filter(|&x| x < self.width)?;
+        let y = u16::try_from(y).ok().filter(|&y| y < self.height)?;
+        Some(usize::from(y) * usize::from(self.width) + usize::from(x))
+    }
+
+    /// The cell at `(x, y)`, or `None` if out of bounds.
+    pub fn get(&self, x: i32, y: i32) -> Option<&Cell> {
+        self.index(x, y).map(|i| &self.cells[i])
+    }
+
+    /// Mutable access to the cell at `(x, y)`, or `None` if out of bounds.
+    fn get_mut(&mut self, x: i32, y: i32) -> Option<&mut Cell> {
+        self.index(x, y).map(|i| &mut self.cells[i])
+    }
+
+    /// Sets the cell at `(x, y)`; out of bounds is silently ignored.
+    pub fn set(&mut self, x: i32, y: i32, cell: Cell) {
+        if let Some(c) = self.get_mut(x, y) {
+            *c = cell;
+        }
+    }
+
+    /// Calls `f` on every cell of `rect` that lies inside the buffer.
+    fn for_each_in(&mut self, rect: Rect, mut f: impl FnMut(i32, i32, &mut Cell)) {
+        for y in clip_span(rect.y, rect.h, self.height) {
+            for x in clip_span(rect.x, rect.w, self.width) {
+                if let Some(c) = self.get_mut(x, y) {
+                    f(x, y, c);
+                }
+            }
+        }
+    }
+
+    /// Writes `text` left to right from `(x, y)`, one `char` per cell,
+    /// clipped to the buffer. Returns how many cells were written.
+    pub fn print(&mut self, x: i32, y: i32, text: &str, fg: Rgb, bg: Rgb) -> u16 {
+        self.print_with(x, y, text, |c, glyph| *c = Cell::new(glyph, fg, bg))
+    }
+
+    /// Like [`print`](Self::print) but keeps each cell's background.
+    pub fn print_fg(&mut self, x: i32, y: i32, text: &str, fg: Rgb) -> u16 {
+        self.print_with(x, y, text, |c, glyph| {
+            c.glyph = glyph;
+            c.fg = fg;
+        })
+    }
+
+    fn print_with(
+        &mut self,
+        x: i32,
+        y: i32,
+        text: &str,
+        mut f: impl FnMut(&mut Cell, char),
+    ) -> u16 {
+        let mut written = 0;
+        for (i, glyph) in text.chars().enumerate() {
+            let Some(cx) = i32::try_from(i).ok().and_then(|i| x.checked_add(i)) else {
+                break;
+            };
+            if cx >= i32::from(self.width) {
+                break;
+            }
+            if let Some(c) = self.get_mut(cx, y) {
+                f(c, glyph);
+                written += 1;
+            }
+        }
+        written
+    }
+
+    /// Sets every cell of `rect` to `cell`.
+    pub fn fill_rect(&mut self, rect: Rect, cell: Cell) {
+        self.for_each_in(rect, |_, _, c| *c = cell);
+    }
+
+    /// Draws the border of `rect` in `style`; the interior is untouched.
+    pub fn draw_box(&mut self, rect: Rect, style: BoxStyle, fg: Rgb, bg: Rgb) {
+        if rect.is_empty() {
+            return;
+        }
+        let [tl, tr, bl, br, horiz, vert] = style.glyphs();
+        let right = i64::from(rect.x) + i64::from(rect.w) - 1;
+        let bottom = i64::from(rect.y) + i64::from(rect.h) - 1;
+        self.for_each_in(rect, |x, y, c| {
+            let left_edge = x == rect.x;
+            let right_edge = i64::from(x) == right;
+            let top_edge = y == rect.y;
+            let bottom_edge = i64::from(y) == bottom;
+            let glyph = match (top_edge, bottom_edge, left_edge, right_edge) {
+                (true, _, true, _) => tl,
+                (true, _, _, true) => tr,
+                (_, true, true, _) => bl,
+                (_, true, _, true) => br,
+                (true, _, _, _) | (_, true, _, _) => horiz,
+                (_, _, true, _) | (_, _, _, true) => vert,
+                _ => return,
+            };
+            *c = Cell::new(glyph, fg, bg);
+        });
+    }
+
+    /// Tints the background of every cell in `rect` towards `color` by `t`
+    /// (`0` = unchanged, `1` = `color`); used for range overlays.
+    pub fn blend_bg(&mut self, rect: Rect, color: Rgb, t: f32) {
+        self.for_each_in(rect, |_, _, c| c.bg = c.bg.lerp(color, t));
+    }
+
+    /// Scales foreground and background of every cell in `rect` by `factor`
+    /// (e.g. to dim an inactive portrait).
+    pub fn dim(&mut self, rect: Rect, factor: f32) {
+        self.for_each_in(rect, |_, _, c| {
+            c.fg = c.fg.scale(factor);
+            c.bg = c.bg.scale(factor);
+        });
+    }
+
+    /// Copies all of `other` so its top-left lands at `(dest_x, dest_y)`,
+    /// clipped to this buffer.
+    pub fn blit(&mut self, other: &GlyphBuffer, dest_x: i32, dest_y: i32) {
+        let target = Rect::new(
+            dest_x,
+            dest_y,
+            i32::from(other.width),
+            i32::from(other.height),
+        );
+        self.for_each_in(target, |x, y, c| {
+            // In-bounds of `target`, so the source offsets are in `other`.
+            if let Some(src) = other.get(x - dest_x, y - dest_y) {
+                *c = *src;
+            }
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    const FG: Rgb = Rgb::new(200, 200, 200);
+    const BG: Rgb = Rgb::new(0, 0, 0);
+    const RED: Rgb = Rgb::new(255, 0, 0);
+    const BLUE: Rgb = Rgb::new(0, 0, 255);
+    const BLANK: Cell = Cell::new(' ', FG, BG);
+
+    fn buf(w: u16, h: u16) -> GlyphBuffer {
+        GlyphBuffer::new(w, h, BLANK)
+    }
+
+    /// The glyphs of row `y` as a string.
+    fn row(b: &GlyphBuffer, y: i32) -> String {
+        (0..i32::from(b.width()))
+            .map(|x| b.get(x, y).unwrap().glyph)
+            .collect()
+    }
+
+    fn glyph(b: &GlyphBuffer, x: i32, y: i32) -> char {
+        b.get(x, y).unwrap().glyph
+    }
+
+    #[test]
+    fn new_and_size() {
+        let b = buf(3, 2);
+        assert_eq!((b.width(), b.height()), (3, 2));
+        assert_eq!(b.bounds(), Rect::new(0, 0, 3, 2));
+        assert_eq!(b.get(2, 1), Some(&BLANK));
+    }
+
+    #[test]
+    fn get_out_of_bounds() {
+        let b = buf(3, 2);
+        for (x, y) in [(3, 0), (0, 2), (-1, 0), (0, -1), (i32::MAX, i32::MIN)] {
+            assert_eq!(b.get(x, y), None, "({x}, {y})");
+        }
+    }
+
+    #[test]
+    fn set_in_and_out_of_bounds() {
+        let mut b = buf(3, 2);
+        let c = Cell::new('@', RED, BLUE);
+        b.set(1, 1, c);
+        assert_eq!(b.get(1, 1), Some(&c));
+        assert_eq!(b.get(1, 0), Some(&BLANK));
+        let before = b.clone();
+        b.set(3, 1, c);
+        b.set(-1, 0, c);
+        b.set(0, 2, c);
+        assert_eq!(b, before);
+    }
+
+    #[test]
+    fn rect_contains_edges() {
+        let r = Rect::new(1, 2, 3, 4);
+        assert!(r.contains(1, 2));
+        assert!(r.contains(3, 5));
+        assert!(!r.contains(0, 2));
+        assert!(!r.contains(1, 1));
+        assert!(!r.contains(4, 2));
+        assert!(!r.contains(1, 6));
+        assert!(!Rect::new(0, 0, 0, 5).contains(0, 0));
+        assert!(Rect::new(i32::MAX, 0, i32::MAX, 1).contains(i32::MAX, 0));
+    }
+
+    #[test]
+    fn rect_is_empty() {
+        assert!(Rect::new(0, 0, 0, 1).is_empty());
+        assert!(Rect::new(0, 0, 1, 0).is_empty());
+        assert!(Rect::new(0, 0, -1, 1).is_empty());
+        assert!(!Rect::new(0, 0, 1, 1).is_empty());
+    }
+
+    #[test]
+    fn rect_intersect() {
+        let a = Rect::new(0, 0, 4, 4);
+        assert_eq!(
+            a.intersect(&Rect::new(2, 1, 5, 2)),
+            Some(Rect::new(2, 1, 2, 2))
+        );
+        assert_eq!(
+            a.intersect(&Rect::new(-2, -3, 3, 5)),
+            Some(Rect::new(0, 0, 1, 2))
+        );
+        assert_eq!(a.intersect(&Rect::new(4, 0, 1, 1)), None);
+        assert_eq!(a.intersect(&Rect::new(0, 4, 1, 1)), None);
+        assert_eq!(a.intersect(&Rect::new(1, 1, 0, 1)), None);
+        assert_eq!(Rect::new(1, 1, -5, 3).intersect(&a), None);
+        assert_eq!(a.intersect(&a), Some(a));
+        let huge = Rect::new(i32::MIN, i32::MIN, i32::MAX, i32::MAX);
+        assert_eq!(huge.intersect(&a), None);
+        let huge = Rect::new(-5, -5, i32::MAX, i32::MAX);
+        assert_eq!(huge.intersect(&a), Some(a));
+    }
+
+    #[test]
+    fn clip_span_cases() {
+        assert_eq!(clip_span(2, 3, 10), 2..5);
+        assert_eq!(clip_span(-2, 5, 10), 0..3);
+        assert_eq!(clip_span(8, 5, 10), 8..10);
+        assert_eq!(clip_span(12, 5, 10), 10..10);
+        assert_eq!(clip_span(3, -5, 10), 3..3);
+        assert_eq!(clip_span(i32::MIN, i32::MAX, 10), 0..0);
+        assert_eq!(clip_span(i32::MAX, i32::MAX, u16::MAX), 65535..65535);
+    }
+
+    #[test]
+    fn print_writes_and_counts() {
+        let mut b = buf(5, 2);
+        assert_eq!(b.print(1, 1, "abc", RED, BLUE), 3);
+        assert_eq!(row(&b, 1), " abc ");
+        assert_eq!(b.get(1, 1), Some(&Cell::new('a', RED, BLUE)));
+        assert_eq!(row(&b, 0), "     ");
+    }
+
+    #[test]
+    fn print_clips_right_left_and_rows() {
+        let mut b = buf(5, 2);
+        assert_eq!(b.print(3, 0, "wxyz", RED, BG), 2);
+        assert_eq!(row(&b, 0), "   wx");
+        assert_eq!(b.print(-2, 1, "abcd", RED, BG), 2);
+        assert_eq!(row(&b, 1), "cd   ");
+        let before = b.clone();
+        assert_eq!(b.print(0, 2, "abc", RED, BG), 0);
+        assert_eq!(b.print(0, -1, "abc", RED, BG), 0);
+        assert_eq!(b.print(5, 0, "abc", RED, BG), 0);
+        assert_eq!(b.print(i32::MAX, 0, "abc", RED, BG), 0);
+        assert_eq!(b.print(i32::MIN, 0, "abc", RED, BG), 0);
+        assert_eq!(b, before);
+    }
+
+    #[test]
+    fn print_one_char_per_cell() {
+        let mut b = buf(4, 1);
+        assert_eq!(b.print(0, 0, "é♣≈", RED, BG), 3);
+        assert_eq!(row(&b, 0), "é♣≈ ");
+    }
+
+    #[test]
+    fn print_fg_keeps_bg() {
+        let mut b = buf(3, 1);
+        b.set(1, 0, Cell::new('x', FG, BLUE));
+        assert_eq!(b.print_fg(0, 0, "ab", RED), 2);
+        assert_eq!(b.get(0, 0), Some(&Cell::new('a', RED, BG)));
+        assert_eq!(b.get(1, 0), Some(&Cell::new('b', RED, BLUE)));
+        assert_eq!(b.get(2, 0), Some(&BLANK));
+        assert_eq!(b.print_fg(2, 0, "yz", RED), 1);
+    }
+
+    #[test]
+    fn fill_rect_fills_and_clips() {
+        let mut b = buf(4, 3);
+        let c = Cell::new('#', RED, BLUE);
+        b.fill_rect(Rect::new(1, 1, 2, 1), c);
+        assert_eq!(row(&b, 0), "    ");
+        assert_eq!(row(&b, 1), " ## ");
+        assert_eq!(row(&b, 2), "    ");
+        b.fill_rect(Rect::new(-1, -1, 2, 2), c);
+        assert_eq!(row(&b, 0), "#   ");
+        b.fill_rect(Rect::new(3, 2, 10, 10), c);
+        assert_eq!(row(&b, 2), "   #");
+    }
+
+    #[test]
+    fn draw_box_single_and_double() {
+        let mut b = buf(5, 4);
+        b.draw_box(Rect::new(0, 0, 5, 4), BoxStyle::Single, RED, BLUE);
+        assert_eq!(row(&b, 0), "┌───┐");
+        assert_eq!(row(&b, 1), "│   │");
+        assert_eq!(row(&b, 2), "│   │");
+        assert_eq!(row(&b, 3), "└───┘");
+        assert_eq!(b.get(0, 0), Some(&Cell::new('┌', RED, BLUE)));
+        assert_eq!(b.get(1, 1), Some(&BLANK));
+        let mut b = buf(4, 3);
+        b.draw_box(Rect::new(1, 0, 3, 3), BoxStyle::Double, RED, BLUE);
+        assert_eq!(row(&b, 0), " ╔═╗");
+        assert_eq!(row(&b, 1), " ║ ║");
+        assert_eq!(row(&b, 2), " ╚═╝");
+    }
+
+    #[test]
+    fn draw_box_clipped_keeps_corners_of_real_rect() {
+        let mut b = buf(3, 3);
+        b.draw_box(Rect::new(-1, -1, 3, 3), BoxStyle::Single, RED, BLUE);
+        assert_eq!(row(&b, 0), " │ ");
+        assert_eq!(row(&b, 1), "─┘ ");
+        assert_eq!(row(&b, 2), "   ");
+        let mut b = buf(3, 3);
+        b.draw_box(Rect::new(1, 1, 5, 5), BoxStyle::Double, RED, BLUE);
+        assert_eq!(row(&b, 0), "   ");
+        assert_eq!(row(&b, 1), " ╔═");
+        assert_eq!(row(&b, 2), " ║ ");
+    }
+
+    #[test]
+    fn draw_box_corners_each_quadrant() {
+        let mut b = buf(2, 2);
+        b.draw_box(Rect::new(0, 0, 2, 2), BoxStyle::Single, RED, BLUE);
+        assert_eq!(
+            [
+                glyph(&b, 0, 0),
+                glyph(&b, 1, 0),
+                glyph(&b, 0, 1),
+                glyph(&b, 1, 1)
+            ],
+            ['┌', '┐', '└', '┘']
+        );
+    }
+
+    #[test]
+    fn draw_box_degenerate() {
+        let mut b = buf(3, 3);
+        b.draw_box(Rect::new(0, 0, 0, 3), BoxStyle::Single, RED, BLUE);
+        assert_eq!(b, buf(3, 3));
+        b.draw_box(Rect::new(0, 0, 1, 3), BoxStyle::Single, RED, BLUE);
+        assert_eq!(
+            [glyph(&b, 0, 0), glyph(&b, 0, 1), glyph(&b, 0, 2)],
+            ['┌', '│', '└']
+        );
+        b.draw_box(Rect::new(0, 0, 3, 1), BoxStyle::Single, RED, BLUE);
+        assert_eq!(row(&b, 0), "┌─┐");
+    }
+
+    #[test]
+    fn blend_bg_tints_only_rect() {
+        let mut b = buf(3, 1);
+        b.set(0, 0, Cell::new('x', RED, Rgb::new(0, 0, 100)));
+        b.blend_bg(Rect::new(0, 0, 2, 1), Rgb::new(100, 0, 0), 0.5);
+        assert_eq!(b.get(0, 0), Some(&Cell::new('x', RED, Rgb::new(50, 0, 50))));
+        assert_eq!(b.get(1, 0), Some(&Cell::new(' ', FG, Rgb::new(50, 0, 0))));
+        assert_eq!(b.get(2, 0), Some(&BLANK));
+    }
+
+    #[test]
+    fn dim_scales_fg_and_bg() {
+        let mut b = GlyphBuffer::new(
+            2,
+            1,
+            Cell::new('a', Rgb::new(200, 100, 50), Rgb::new(10, 20, 40)),
+        );
+        b.dim(Rect::new(1, 0, 5, 5), 0.5);
+        assert_eq!(b.get(0, 0).unwrap().fg, Rgb::new(200, 100, 50));
+        assert_eq!(
+            b.get(1, 0),
+            Some(&Cell::new('a', Rgb::new(100, 50, 25), Rgb::new(5, 10, 20)))
+        );
+    }
+
+    #[test]
+    fn blit_copies_and_clips() {
+        let mut src = buf(2, 2);
+        src.print(0, 0, "ab", RED, BLUE);
+        src.print(0, 1, "cd", RED, BLUE);
+        let mut b = buf(3, 3);
+        b.blit(&src, 1, 1);
+        assert_eq!(row(&b, 0), "   ");
+        assert_eq!(row(&b, 1), " ab");
+        assert_eq!(row(&b, 2), " cd");
+        assert_eq!(b.get(1, 1), Some(&Cell::new('a', RED, BLUE)));
+        let mut b = buf(3, 3);
+        b.blit(&src, -1, -1);
+        assert_eq!(row(&b, 0), "d  ");
+        assert_eq!(row(&b, 1), "   ");
+        let mut b = buf(3, 3);
+        b.blit(&src, 2, 0);
+        assert_eq!(row(&b, 0), "  a");
+        assert_eq!(row(&b, 1), "  c");
+        let before = b.clone();
+        b.blit(&src, i32::MAX, i32::MIN);
+        b.blit(&src, 3, 0);
+        assert_eq!(b, before);
+    }
+
+    fn marked(w: u16, h: u16) -> GlyphBuffer {
+        let mut b = buf(w, h);
+        for y in 0..i32::from(h) {
+            for x in 0..i32::from(w) {
+                let g = char::from_u32(0x100 + u32::try_from(y * 64 + x).unwrap()).unwrap();
+                b.set(x, y, Cell::new(g, FG, BG));
+            }
+        }
+        b
+    }
+
+    /// Asserts every cell outside `target` is unchanged.
+    fn unchanged_outside(before: &GlyphBuffer, after: &GlyphBuffer, target: Rect) {
+        for y in 0..i32::from(before.height()) {
+            for x in 0..i32::from(before.width()) {
+                if !target.contains(x, y) {
+                    assert_eq!(before.get(x, y), after.get(x, y), "cell ({x}, {y}) changed");
+                }
+            }
+        }
+    }
+
+    fn coord() -> impl Strategy<Value = i32> {
+        prop_oneof![-20..40i32, any::<i32>()]
+    }
+
+    fn rect() -> impl Strategy<Value = Rect> {
+        (coord(), coord(), coord(), coord()).prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
+    }
+
+    proptest! {
+        #[test]
+        fn print_only_touches_its_row_span(
+            w in 0u16..30, h in 0u16..10, x in coord(), y in coord(), text in "\\PC{0,40}",
+        ) {
+            let before = marked(w, h);
+            let mut after = before.clone();
+            let n = after.print(x, y, &text, RED, BLUE);
+            let len = i32::try_from(text.chars().count()).unwrap();
+            let target = Rect::new(x, y, len, 1);
+            unchanged_outside(&before, &after, target);
+            let inside = target.intersect(&before.bounds()).map_or(0, |r| r.w);
+            prop_assert_eq!(i32::from(n), inside);
+        }
+
+        #[test]
+        fn fill_rect_only_touches_rect(w in 0u16..30, h in 0u16..10, r in rect()) {
+            let before = marked(w, h);
+            let mut after = before.clone();
+            let c = Cell::new('#', RED, BLUE);
+            after.fill_rect(r, c);
+            unchanged_outside(&before, &after, r);
+            if let Some(i) = r.intersect(&before.bounds()) {
+                prop_assert_eq!(after.get(i.x, i.y), Some(&c));
+                prop_assert_eq!(after.get(i.x + i.w - 1, i.y + i.h - 1), Some(&c));
+            }
+        }
+
+        #[test]
+        fn blit_only_touches_dest(
+            w in 0u16..30, h in 0u16..10, sw in 0u16..20, sh in 0u16..8, x in coord(), y in coord(),
+        ) {
+            let before = marked(w, h);
+            let mut after = before.clone();
+            let src = GlyphBuffer::new(sw, sh, Cell::new('s', RED, BLUE));
+            after.blit(&src, x, y);
+            unchanged_outside(&before, &after, Rect::new(x, y, i32::from(sw), i32::from(sh)));
+        }
+
+        #[test]
+        fn other_primitives_only_touch_rect(w in 0u16..30, h in 0u16..10, r in rect(), t in any::<f32>()) {
+            let before = marked(w, h);
+            let mut after = before.clone();
+            after.draw_box(r, BoxStyle::Double, RED, BLUE);
+            after.blend_bg(r, RED, t);
+            after.dim(r, t);
+            unchanged_outside(&before, &after, r);
+        }
+
+        #[test]
+        fn get_and_set_never_panic(w in 0u16..30, h in 0u16..10, x in coord(), y in coord()) {
+            let mut b = marked(w, h);
+            let inside = b.bounds().contains(x, y);
+            prop_assert_eq!(b.get(x, y).is_some(), inside);
+            b.set(x, y, BLANK);
+        }
+    }
+}

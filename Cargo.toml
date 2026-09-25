@@ -17,6 +17,7 @@ ron = "0.12"
 include_dir = "0.7"
 thiserror = "2"
 proptest = "1"
+insta = "1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

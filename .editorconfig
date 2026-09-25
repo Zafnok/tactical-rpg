@@ -18,3 +18,7 @@ trim_trailing_whitespace = false
 [assets/**]
 # ASCII maps and portraits: trailing spaces are meaningful columns.
 trim_trailing_whitespace = false
+
+[*.snap]
+# insta snapshots of the GlyphBuffer: trailing spaces are meaningful columns.
+trim_trailing_whitespace = false

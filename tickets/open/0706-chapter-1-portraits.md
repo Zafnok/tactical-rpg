@@ -26,7 +26,8 @@ expression) and approves or comments; iterate on the ones he dislikes.
 
 ## Scope
 
-**In:** one `.portrait` per Chapter 1 speaking character, all required
+**In:** one `.portrait` per Chapter 1 speaking character (the player-gendered
+lead gets **two**: `lead_m` and `lead_f`, per `setting-and-tone.md`), all required
 expressions (+ any extra ones listed in the character sheet), palette entries
 they need.
 

@@ -130,13 +130,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Ticket hygiene is cheap and tickets are docs, so this always runs (never
+  # gated on `needs.changes`; ADR-0014) rather than being skipped on
+  # docs-only PRs, which is exactly the case it needs to check.
+  tickets:
+    name: tickets
+    runs-on: ubuntu-latest
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Run ticket lint
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            cargo xtask ticket-lint --pr-branch "$HEAD_REF"
+          else
+            cargo xtask ticket-lint
+          fi
+
   # Single required check for this workflow. Matrix jobs skipped by `if:`
   # report one check with an unexpanded name, never the per-leg names, so
   # branch protection requires this job instead (ADR-0014).
   ci-result:
     name: ci-result
     if: always()
-    needs: [changes, fmt, clippy, test, wasm, docs, coverage]
+    needs: [changes, fmt, clippy, test, wasm, docs, coverage, tickets]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any needed job failed or was cancelled
