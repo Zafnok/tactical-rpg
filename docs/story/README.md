@@ -8,7 +8,7 @@ real arcs → outline → per-chapter beat sheets → scripts in `assets/dialogu
 
 | File | What | Created by | Status |
 | ---- | ---- | ---------- | ------ |
-| `beats.md` | Nick's beats, verbatim. **Canon.** | 0007 | ⏳ |
+| [`beats.md`](beats.md) | Nick's beats, verbatim. **Canon.** | 0007 | ✅ 2026-09-25 |
 | `bible.md` | World, factions, themes, tone, magic rules, glossary | 0701 | ⏳ |
 | `characters/<id>.md` | One sheet per character: want/need/flaw/arc, voice, portrait brief | 0701 | ⏳ |
 | `outline.md` | Acts and chapters; which arcs each chapter advances | 0701 | ⏳ |

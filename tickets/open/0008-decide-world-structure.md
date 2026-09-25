@@ -20,6 +20,13 @@ option." Chapter 1 is built as a linear chapter regardless (0801); this
 decision shapes the long-term roadmap (10xx tickets) and the story outline
 (0701). Run with the `ask-nick` skill.
 
+In 0007 Nick also said the game starts in European-style kingdoms "with
+potential for additional continents that might feel different (i.e. ... travel
+to Asia and encounter wuxia inspired encounters...)"
+([`setting-and-tone.md`](../../docs/design/setting-and-tone.md)). Ask how
+travel between continents fits the structure he picks (e.g. a later act moves
+to a new continent, or the world map expands).
+
 ## Nick input
 
 **Decision.** Nick can also answer "decide later" — record that.

@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0405", "0408", "0502", "0705", "0307"]
+blocked_by: ["0405", "0408", "0502", "0705", "0307", "0708"]
 nick_input: none
 completed:
 ---
@@ -26,7 +26,7 @@ None.
 ## Scope
 
 **In:** `assets/chapters/*.ron` format + loader/validator, `core::campaign::Campaign`,
-`ui::flow` (chapter sequencing), Classic/Casual mode select, map-menu `Restart battle`, Game Over screen, "To be continued" screen,
+`ui::flow` (chapter sequencing), Classic/Casual mode select, lead gender select, map-menu `Restart battle`, Game Over screen, "To be continued" screen,
 replacing the title's placeholder and debug Quick Battle wiring.
 
 **Out:** saving (0802), Chapter 1 content itself (0803), world map (future).
@@ -55,7 +55,7 @@ replacing the title's placeholder and debug Quick Battle wiring.
 2. Validator: positions in bounds, on terrain passable for that unit's movement
    type, no overlaps; all ids exist (characters, templates, items, scenes);
    objective target exists.
-3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
+3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual */, lead: LeadProfile /* 0708 */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
    (serde). `Campaign::new_game()` with the starting roster;
    `Campaign::battle_setup(&ChapterDef) -> BattleSetup`;
    `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
@@ -68,7 +68,11 @@ replacing the title's placeholder and debug Quick Battle wiring.
    unused pack items to the stock and adds gold. `Campaign::downgrade_mode()`
    allows Classic → Casual only.
 4. `ui::flow`: `New Game` → `ModeSelectScreen` (Classic / Casual, one line
-   explaining each) → intro scenes → (`PreparationsScreen` from 0408 if
+   explaining each) → `LeadSelectScreen` (pick the lead's gender, showing the
+   `lead_m`/`lead_f` portraits; plus a name entry only if 0701 recorded that
+   Nick wants renaming, otherwise the default name from the lead's sheet;
+   `setting-and-tone.md`) → intro scenes, with dialogue rendered using
+   `campaign.lead` → (`PreparationsScreen` from 0408 if
    `preparations: true`, else the default pack) → `BattleScreen` → on `BattleEnded`
    victory → victory scenes → (0802 save prompt hook) → next chapter or
    `ToBeContinuedScreen` → title. Defeat → `GameOverScreen` (`Retry chapter` / `Title`). Add
@@ -87,7 +91,8 @@ replacing the title's placeholder and debug Quick Battle wiring.
 - [ ] `apply_result`: unused-charge EXP goes to every deployed unit, including Casual retreats, and not to undeployed units (tests).
 - [ ] Chapter `difficulty` maps to 2 / 3 / 5 / 8 charges (test).
 - [ ] Validator errors tested.
-- [ ] Campaign round-trips through serde.
+- [ ] Harness: New Game → pick the female lead → the test chapter's intro renders her name and pronouns (0708 tokens).
+- [ ] Campaign (including `lead`) round-trips through serde.
 
 ## Tests required
 
