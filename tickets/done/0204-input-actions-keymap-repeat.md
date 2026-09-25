@@ -86,11 +86,11 @@ translation of macroquad keys.
 
 - `trpg-content::keymap`: `Key` (letters, digits, arrows, Enter/Escape/Space/
   Tab/Backspace, F1–F12), `Chord { key, shift }` with `parse`/`Display`/
-  `FromStr`, `Action` (ADR-0006 set + `ToggleAutoEnd`, `is_repeatable()` for
-  the eight cursor actions), `RepeatDef`, and the validating `KeymapDef`
+  `FromStr`, `Action` (ADR-0006 set + `ToggleAutoEnd`, minus the jump actions;
+  `is_repeatable()` for the four cursor actions), `RepeatDef`, and the validating `KeymapDef`
   loader. `Content` now carries `keymap`.
-- `assets/data/keymap.ron`: the ADR-0006 defaults, `ToggleAutoEnd` on
-  `Shift+e`, `repeat: (delay_ms: 170, interval_ms: 55)`.
+- `assets/data/keymap.ron`: Nick's right-handed layout (see below),
+  `repeat: (delay_ms: 170, interval_ms: 55)`.
 - `trpg-ui::input`: `Keymap::from_def`, `InputState` (`key_down`, `key_up`,
   `update(dt)`, `is_held`), `MAX_REPEATS_PER_UPDATE = 5`. `trpg-ui` still
   has no macroquad dependency.
@@ -118,4 +118,13 @@ translation of macroquad keys.
     cursor never catches up after a lag spike.
   - Time is accumulated in whole microseconds (each `dt` rounded) so
     millisecond timings stay exact despite `f32` error.
-- No follow-up tickets. Nothing new to play; repeat feel is judged in 0804.
+- **Changed after Nick picked the keys (ticket 0015, same PR):** he chose
+  the bindings himself (`docs/design/controls.md`). `keymap.ron` is now the
+  right-handed layout (arrows move; `f` confirm, `d`/`Escape` cancel, `a`/`s`
+  previous/next unit, `e` info, `w` danger zone, `Space` end turn,
+  `Shift+Space` auto-end), and the four `CursorJump*` actions were removed
+  (no fast-cursor key for now). ADR-0015 supersedes ADR-0006. Re-checked in a
+  debug run: holding Right for 0.5 s logs 8 `CursorRight`; `Space`,
+  `Shift+Space`, `f d a s e w` log their actions.
+- Follow-up ticket: 0208 (left-handed layout, both layouts in data,
+  first-launch picker). Nothing new to play; repeat feel is judged in 0804.

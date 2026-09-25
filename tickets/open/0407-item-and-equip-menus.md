@@ -39,7 +39,7 @@ selection for items, a heal number popup, help-bar text.
    an adjacent ally; `Equip` enabled when the unit has ≥ 2 usable weapons.
 2. **Item:** a Menu listing the pack grouped by id (`Potion ×3`, one-line
    effect), header `Pack 4/6`. Choosing one → target mode (self + adjacent
-   allies, `hjkl`/`Tab` cycle, preview line `HP 12 → 22`) → Confirm sends
+   allies, cursor keys/`NextUnit`/`PrevUnit` cycle, preview line `HP 12 → 22`) → Confirm sends
    `Act { UseItem }`. Cancel steps back one level.
 3. **Equip:** a Menu of the 3 weapon slots with Mt/Hit/Crit/Wt/Rng and
    durability `12/20` (`(broken)` in the warning colour at 0), a marker on the

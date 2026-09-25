@@ -16,7 +16,7 @@ completed:
 ## Context
 
 The remaining battle-screen essentials so a full player turn can be played and
-ended. Bindings from [ADR-0006](../../docs/adr/0006-input-actions-and-virtual-cursor.md).
+ended. Bindings from `docs/design/controls.md` ([ADR-0015](../../docs/adr/0015-input-actions-and-keymap-layouts.md)).
 
 ## Nick input
 
@@ -35,7 +35,7 @@ None.
    HP, every stat from the design with its cap shown dim (`Str 7/20`), move,
    movement type, loadout (3 weapons with stats and durability, armour,
    accessory), weapon ranks, class tags (Mounted/Flying/Armored), skills if designed.
-   `j/k` or `Tab` cycles units of the same faction; `d` closes. Leave a 24×12
+   Up/Down or `NextUnit`/`PrevUnit` cycles units of the same faction; `d` closes. Leave a 24×12
    portrait area on the left (placeholder box until 0703 exists).
 2. **Danger zone** (`DangerZone` toggle): union of hostile threat areas (0303
    `danger_zone`) blended with `danger_zone` bg under other overlays;
@@ -46,11 +46,12 @@ None.
    cursor), `Objective` (objective text, turn number), `Options` (disabled
    placeholder), `Suspend` (disabled placeholder), `End Turn`.
 4. **End turn** (per `docs/design/turn-structure.md`): from menu or `EndTurn`
-   key → if units still ready, confirm dialog
+   key (`Space`; per `docs/design/controls.md` a second `Space` on the prompt
+   confirms, so double-tap `Space` ends the turn) → if units still ready, confirm dialog
    `End turn with N units ready? f yes / d no` → `Command::EndPhase`; no
    confirmation when no units are ready. **Auto-end:** when ON (default) and
    the last ready player unit acts, issue `EndPhase` immediately. The
-   `ToggleAutoEnd` key (0204, default `Shift+e`) flips it, shows a brief
+   `ToggleAutoEnd` key (0204, default `Shift+Space`) flips it, shows a brief
    `Auto-end: ON/OFF` toast, and the help bar shows its state. Keep the flag
    in the battle screen's context until 0805 persists it in `Settings`.
 5. **Phase banner:** on `PhaseStarted`, a centred double-box banner

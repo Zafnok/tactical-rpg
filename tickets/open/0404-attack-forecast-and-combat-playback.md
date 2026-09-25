@@ -38,7 +38,7 @@ driven by `CombatResolved`/`UnitFell` events, fall animation.
 1. Action menu `Attack` enabled when any hostile is in range from `dest` with
    any usable weapon. If several weapons can reach, first show a weapon list
    (Menu) with each weapon's stats.
-2. **Targeting:** cursor snaps between valid targets (`hjkl` and `Tab` both
+2. **Targeting:** cursor snaps between valid targets (cursor keys and `NextUnit`/`PrevUnit` both
    cycle, ordered by `(y, x)`); `Cancel` returns to action menu.
 3. **Forecast panel** (replaces side panel while targeting), both sides:
    ```

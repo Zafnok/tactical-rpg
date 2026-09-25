@@ -202,14 +202,6 @@ pub enum Action {
     CursorUp,
     /// Move the cursor one tile right.
     CursorRight,
-    /// Move the cursor several tiles left.
-    CursorJumpLeft,
-    /// Move the cursor several tiles down.
-    CursorJumpDown,
-    /// Move the cursor several tiles up.
-    CursorJumpUp,
-    /// Move the cursor several tiles right.
-    CursorJumpRight,
     /// Confirm / select.
     Confirm,
     /// Cancel / back. Screens with nothing to cancel open the menu instead.
@@ -234,15 +226,11 @@ pub enum Action {
 
 impl Action {
     /// Every action, in declaration order.
-    pub const ALL: [Action; 18] = [
+    pub const ALL: [Action; 14] = [
         Self::CursorLeft,
         Self::CursorDown,
         Self::CursorUp,
         Self::CursorRight,
-        Self::CursorJumpLeft,
-        Self::CursorJumpDown,
-        Self::CursorJumpUp,
-        Self::CursorJumpRight,
         Self::Confirm,
         Self::Cancel,
         Self::Info,
@@ -257,15 +245,11 @@ impl Action {
 
     /// The name used in keymap files (the variant name).
     pub fn name(self) -> &'static str {
-        const NAMES: [&str; 18] = [
+        const NAMES: [&str; 14] = [
             "CursorLeft",
             "CursorDown",
             "CursorUp",
             "CursorRight",
-            "CursorJumpLeft",
-            "CursorJumpDown",
-            "CursorJumpUp",
-            "CursorJumpRight",
             "Confirm",
             "Cancel",
             "Info",
@@ -285,18 +269,11 @@ impl Action {
         Self::ALL.into_iter().find(|a| a.name() == name)
     }
 
-    /// Whether holding the key re-emits the action (the eight cursor moves).
+    /// Whether holding the key re-emits the action (the four cursor moves).
     pub fn is_repeatable(self) -> bool {
         matches!(
             self,
-            Self::CursorLeft
-                | Self::CursorDown
-                | Self::CursorUp
-                | Self::CursorRight
-                | Self::CursorJumpLeft
-                | Self::CursorJumpDown
-                | Self::CursorJumpUp
-                | Self::CursorJumpRight
+            Self::CursorLeft | Self::CursorDown | Self::CursorUp | Self::CursorRight
         )
     }
 }
@@ -534,9 +511,9 @@ mod tests {
             .into_iter()
             .filter(|a| a.is_repeatable())
             .collect();
-        assert_eq!(repeatable, Action::ALL[..8].to_vec());
+        assert_eq!(repeatable, Action::ALL[..4].to_vec());
         assert!(
-            Action::ALL[..8]
+            Action::ALL[..4]
                 .iter()
                 .all(|a| a.name().starts_with("Cursor"))
         );
@@ -617,10 +594,7 @@ mod tests {
     fn shift_makes_a_distinct_chord() {
         let src = source_with("", "")
             .replace("\"CursorLeft\": []", "\"CursorLeft\": [\"h\"]")
-            .replace(
-                "\"CursorJumpLeft\": []",
-                "\"CursorJumpLeft\": [\"Shift+h\"]",
-            );
+            .replace("\"Info\": []", "\"Info\": [\"Shift+h\"]");
         let k = KeymapDef::from_source("k.ron", &src).unwrap_or_default();
         assert_eq!(k.bindings.len(), 2);
     }
@@ -671,21 +645,29 @@ mod tests {
     }
 
     #[test]
-    fn embedded_keymap_matches_adr_0006() {
+    fn embedded_keymap_is_the_right_handed_layout() {
+        // docs/design/controls.md, right-handed layout.
         let k = KeymapDef::load().unwrap_or_default();
         let get = |s: &str| {
             Chord::parse(s)
                 .ok()
                 .and_then(|c| k.bindings.get(&c).copied())
         };
-        assert_eq!(get("l"), Some(Action::CursorRight));
+        assert_eq!(get("Left"), Some(Action::CursorLeft));
+        assert_eq!(get("Down"), Some(Action::CursorDown));
+        assert_eq!(get("Up"), Some(Action::CursorUp));
         assert_eq!(get("Right"), Some(Action::CursorRight));
-        assert_eq!(get("Shift+j"), Some(Action::CursorJumpDown));
         assert_eq!(get("f"), Some(Action::Confirm));
+        assert_eq!(get("d"), Some(Action::Cancel));
         assert_eq!(get("Escape"), Some(Action::Cancel));
-        assert_eq!(get("Shift+Tab"), Some(Action::PrevUnit));
-        assert_eq!(get("Shift+e"), Some(Action::ToggleAutoEnd));
+        assert_eq!(get("a"), Some(Action::PrevUnit));
+        assert_eq!(get("s"), Some(Action::NextUnit));
+        assert_eq!(get("e"), Some(Action::Info));
+        assert_eq!(get("w"), Some(Action::DangerZone));
+        assert_eq!(get("Space"), Some(Action::EndTurn));
+        assert_eq!(get("Shift+Space"), Some(Action::ToggleAutoEnd));
         assert_eq!(get("F12"), Some(Action::Debug));
+        assert_eq!(k.bindings.len(), 14);
         assert_eq!(
             k.repeat,
             RepeatDef {

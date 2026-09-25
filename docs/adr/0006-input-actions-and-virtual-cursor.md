@@ -1,6 +1,6 @@
 # ADR-0006: Input actions, vim-style keymap, virtual cursor
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0015
 - **Date:** 2026-09-25
 
 ## Context

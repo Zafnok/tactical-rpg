@@ -62,14 +62,14 @@ debug screen for the glyph sampler, `Harness`, `app` loop using `Game`,
 5. `TitleScreen`: centred title text `tactical-rpg`, subtitle `an ASCII tactics game`,
    menu `New Game`, `Quit`. `New Game` pushes a `PlaceholderScreen`
    ("Coming soon — press d to go back"). `Quit` → `Transition::Quit`.
-   Help line at the bottom: `hjkl move · f select · d back`.
+   Help line at the bottom: `arrows move · f select · d back` (key names read from the keymap).
 6. Debug: `Action::Debug` (F12) in **debug builds only** (`cfg(debug_assertions)`)
    pushes `GlyphSamplerScreen` (wraps 0203's sampler; `Cancel` pops).
 7. `trpg-ui::harness::Harness` (behind `#[cfg(any(test, feature = "harness"))]`
    so integration tests in `tests/` can use it via the feature):
    - `Harness::new()` → `Game` with embedded content, starting at the title.
-   - `h.keys("j j f")`: whitespace-separated chords (`f`, `Shift+l`, `Enter`),
-     each a press + release with a 1-frame update; `h.hold("l", 0.5)` holds for
+   - `h.keys("Down Down f")`: whitespace-separated chords (`f`, `Shift+Space`, `Enter`),
+     each a press + release with a 1-frame update; `h.hold("Right", 0.5)` holds for
      simulated seconds; `h.wait(0.2)`.
    - `h.top_screen() -> &'static str`, `h.snapshot() -> String`
      (0202's format), `h.quit_requested() -> bool`.

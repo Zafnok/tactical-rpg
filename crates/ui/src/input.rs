@@ -177,23 +177,41 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use Action::{Confirm, CursorDown, CursorJumpLeft, CursorLeft, CursorRight, CursorUp};
+    use Action::{Confirm, CursorDown, CursorLeft, CursorRight, CursorUp, Info};
 
     fn chord(s: &str) -> Chord {
         Chord::parse(s).unwrap_or(Chord::plain(Key::F1))
     }
 
+    /// A fixed test keymap, independent of the shipped defaults.
+    fn test_def(delay_ms: u32, interval_ms: u32) -> KeymapDef {
+        let bindings = [
+            ("h", CursorLeft),
+            ("Left", CursorLeft),
+            ("j", CursorDown),
+            ("k", CursorUp),
+            ("l", CursorRight),
+            ("f", Confirm),
+            ("Shift+h", Info),
+        ]
+        .into_iter()
+        .map(|(c, a)| (chord(c), a))
+        .collect();
+        KeymapDef {
+            bindings,
+            repeat: RepeatDef {
+                delay_ms,
+                interval_ms,
+            },
+        }
+    }
+
     fn default_state() -> InputState {
-        InputState::new(Keymap::from_def(&KeymapDef::load().unwrap_or_default()))
+        state_with(170, 55)
     }
 
     fn state_with(delay_ms: u32, interval_ms: u32) -> InputState {
-        let mut def = KeymapDef::load().unwrap_or_default();
-        def.repeat = RepeatDef {
-            delay_ms,
-            interval_ms,
-        };
-        InputState::new(Keymap::from_def(&def))
+        InputState::new(Keymap::from_def(&test_def(delay_ms, interval_ms)))
     }
 
     /// Seconds for `ms` milliseconds.
@@ -205,9 +223,9 @@ mod tests {
     fn keymap_lookup_with_and_without_shift() {
         let km = default_state().keymap().clone();
         assert_eq!(km.action(chord("h")), Some(CursorLeft));
-        assert_eq!(km.action(chord("Shift+h")), Some(CursorJumpLeft));
+        assert_eq!(km.action(chord("Shift+h")), Some(Info));
         assert_eq!(km.action(chord("Left")), Some(CursorLeft));
-        assert_eq!(km.action(chord("Shift+Left")), Some(CursorJumpLeft));
+        assert_eq!(km.action(chord("Shift+Left")), None);
         assert_eq!(km.action(chord("Shift+f")), None);
         assert_eq!(km.action(chord("z")), None);
         assert_eq!(km.repeat(), RepeatDef::default());
