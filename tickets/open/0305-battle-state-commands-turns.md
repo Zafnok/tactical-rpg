@@ -35,7 +35,8 @@ serde on state, replay test.
 
 ## Implementation steps
 
-1. `BattleSetup { map, terrain: Arc<TerrainTable>, classes: Arc<ClassTable>, units: Vec<Unit>, objective: Objective, seed: u64 }`.
+1. `BattleSetup { map, terrain: Arc<TerrainTable>, classes: Arc<ClassTable>, units: Vec<Unit>, objective: Objective, rewind_charges: u8, seed: u64 }`
+   (`rewind_charges` comes from the chapter's difficulty tier, 0801; used by 0307).
    `BattleState::new(setup) -> (BattleState, Vec<Event>)` (emits the first `PhaseStarted`).
 2. State: `turn: u32`, `phase: Faction` (or the design's equivalent), units,
    `rng: SimRng`, `outcome: Option<Outcome>`. Derive `Serialize/Deserialize`
@@ -56,7 +57,7 @@ serde on state, replay test.
    `dest`.
 5. Events (serde, `PartialEq`): `PhaseStarted { turn, phase }`,
    `UnitMoved { unit, path }`, `CombatResolved { attacker, defender, forecast, outcome }`,
-   `UnitFell { unit }` (per 0006: removed/retreated/injured), `UnitActed { unit }`,
+   `UnitFell { unit }` (the unit leaves the map; Classic vs Casual only matters to the campaign, 0801), `UnitActed { unit }`,
    `BattleEnded { outcome: Outcome }`.
 6. Turn flow per `turn-structure.md`: phases are `Player → Enemy → Other`
    (`Other` = `Ally` + `Neutral` factions), then `turn += 1`. Use a `Phase`
@@ -74,8 +75,8 @@ serde on state, replay test.
    (`Seize` is a `UnitAction` only available on that tile — add it),
    `Survive { turns }` (win when turn `N`'s last phase ends), plus an optional
    `turn_limit: Option<u32>` on the non-Survive objectives (lose if not done
-   when turn `N`'s last phase ends). Loss: any `is_lord` player unit falls (if
-   the design says so), or all player units fall. Checked after every command
+   when turn `N`'s last phase ends). Loss (both modes, `death-and-difficulty.md`): any `is_lord` player
+   unit falls, or all player units on the map fall. Checked after every command
    and at every phase boundary.
 9. Design for skill-granted post-action movement (turn-structure.md): no
    Canto, but leave `UnitAction`/`Event` open to an action ending with a

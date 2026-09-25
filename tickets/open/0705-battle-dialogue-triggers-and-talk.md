@@ -36,7 +36,9 @@ recruitment, death quotes, boss-battle quotes.
 1. `core::battle::Trigger` (data, serde): `TurnStart { turn, phase }`,
    `UnitEntersArea { unit_or_faction, rect }`, `CombatStart { unit }` (e.g.
    boss engaged; fires once per pair or once total — flag), `UnitFell { unit }`
-   (death quote, plays *before* the unit is removed visually), `Talk { a, b }`.
+   (death quote, plays *before* the unit is removed visually; a player unit
+   may have separate Classic death / Casual retreat scenes per
+   `docs/design/death-and-difficulty.md`, picked by the campaign's mode), `Talk { a, b }`.
    Each trigger references a scene id and has `once: bool`.
 2. Evaluation in `core`: after each command, return triggered scene ids as an
    `Event::SceneTriggered { scene }` (ordered, deterministic). Fired-once state

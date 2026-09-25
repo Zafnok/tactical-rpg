@@ -1,6 +1,6 @@
 ---
 id: "0307"
-title: Turn rewind (if Nick chose it in 0006)
+title: Turn rewind
 type: feature
 milestone: M2 Core rules
 model: opus-5.5
@@ -15,13 +15,10 @@ completed:
 
 ## Context
 
-Ticket 0006 recommends limited rewind charges (FE Three Houses' Divine Pulse /
-Echoes' Turnwheel). Our deterministic engine makes this cheap: store the
-initial state + command list and replay up to any point.
-
-**First step: read `docs/design/death-and-difficulty.md`.** If Nick chose *no
-rewind*, set `status: done`, write "Not needed: Nick chose no rewind in 0006"
-in Completion notes, archive the ticket, and open a PR with just that change.
+Nick chose limited rewind charges in 0006 (FE Three Houses' Divine Pulse /
+Echoes' Turnwheel); rules in `docs/design/death-and-difficulty.md`. Our
+deterministic engine makes this cheap: store the initial state + command list
+and replay up to any point.
 
 ## Nick input
 
@@ -43,7 +40,12 @@ a `Rewind` action + key binding (`r` by default, added to `keymap.ron`).
    replaying gives identical outcomes — **document that rewinding + doing the
    same thing gives the same result** (like Turnwheel); doing something different
    changes the RNG consumption naturally.
-2. Charges per design; a rewind costs one charge regardless of distance.
+2. Charges start at `BattleSetup.rewind_charges` (from the map's difficulty
+   tier: easy 2, normal 3, hard 5, finale 8; 0801); a rewind costs one charge
+   regardless of distance and may go back to any earlier command, enemy
+   commands included. Charges don't carry between battles (unused ones become
+   an EXP bonus, 0801); restarting a battle (0801) starts a fresh
+   `BattleHistory` with full charges. Expose `charges_left()`.
 3. `Action::Rewind` in `trpg-ui` and `"r"` in `keymap.ron`.
 4. `RewindScreen` (overlay): lists past actions newest-first as readable lines
    (`Turn 2 · Ana attacked Brigand (hit, 7 dmg)`), `j/k` to choose,
