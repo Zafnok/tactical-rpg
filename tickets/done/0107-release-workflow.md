@@ -122,3 +122,13 @@ packaging layout.
   `cargo deny check`, `cargo machete`, `typos`, `cargo xtask ticket-lint` —
   all pass. No `core`/`content`/`ui` code changed, so the mutation-testing
   gate has nothing to mutate for this diff.
+- **PR review fix:** CodeQL's `zizmor` scan flagged all five
+  `Swatinem/rust-cache` steps as a cache-poisoning risk (a `push: tags` +
+  `workflow_dispatch` workflow reading/writing a mutable cache). Removed
+  caching from `release.yml` entirely rather than adding `lookup-only`
+  workarounds: this workflow runs rarely (once per release) and its output
+  ships to players, so an uncached, from-scratch build is worth the extra
+  minutes and removes the risk outright. Confirmed with `zizmor
+  --no-online-audits` locally (0 errors after the fix; one unrelated,
+  informational `superfluous-actions` suggestion about
+  `softprops/action-gh-release` remains, not a finding worth acting on).
