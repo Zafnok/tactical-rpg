@@ -141,8 +141,14 @@ Workflows are the tests. Link run URLs in Completion notes.
 - zizmor's online audits (which need a live GitHub token to check things like
   workflow permissions against the API) return a 401 in this sandboxed
   session with no repo token; `--no-online-audits` passes cleanly locally.
-  The PR's own `zizmor` job will run with a real `GITHUB_TOKEN` and cover
-  those checks in CI.
+  The PR's own `zizmor` job ran with a real `GITHUB_TOKEN` and did catch two
+  things offline mode couldn't: `crate-ci/typos@v1.9.0` was pinned to the
+  annotated tag's own object SHA instead of the commit it points to (fixed:
+  `f8073dcfa028f88fc0f67b209523a5ab07ab7b51`), and Dependabot needed an
+  explicit `cooldown: default-days: 7` on both ecosystems. Both fixed and
+  pushed; re-verified the SHA fix against `git ls-remote --tags` for every
+  other pinned action, all of which were already using the correct
+  dereferenced commit.
 - **Not done — needs Nick:** the repo-settings step (Settings → Code security:
   Secret Protection, Push protection, Dependabot alerts) requires either Nick
   clicking those toggles, or Nick telling a session "go ahead" to run the
