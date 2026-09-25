@@ -26,6 +26,9 @@ Source: ticket 0009
 > **Q5. Preparations and pack.** "No prep, fixed pack" (the offered option:
 > default loadouts, pack of 3 Potions with cap 3, 0 starting gold, 1000 gold
 > for clearing the map; Preparations first appears in Chapter 2.)
+>
+> **Map difficulty tier** (on Claude's proposal of Easy): "We can have it be a
+> normal map so it gives 3."
 
 ## What a chapter is (Nick, for later chapters)
 
@@ -44,8 +47,7 @@ belongs to world structure (0008) and game flow (0801 / later tickets).
 - **No turn limit.**
 - **Loss:** the lord falls → game over (`death-and-difficulty.md`, both modes).
   No other loss conditions (no ally or neutral units to protect).
-- **Map difficulty tier: Easy** → 2 rewind charges (*Claude's choice*,
-  *tunable*; it's the opening tutorial map).
+- **Map difficulty tier: Normal** → 3 rewind charges (Nick).
 
 ### Player roster (6 units, fixed, all deployed)
 

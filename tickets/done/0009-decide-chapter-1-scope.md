@@ -92,7 +92,7 @@ Nick answered Q1–Q5 on 2026-09-25; recorded in `docs/design/chapter-1.md`.
 
 - **Q1:** Rout, no turn limit. Nick also said a chapter is a story beat, which
   can hold several battles (e.g. overworld skirmishes before a climax).
-  Chapter 1 is a single battle. The multi-battle idea is noted for 0008 / 0801.
+  Chapter 1 is a single battle. The multi-battle idea is added to 0008's questions and 0801's Out scope.
 - **Q2:** the bigger option: 6 units (lord + Rider, Archer, Cleric, Guard,
   Mage), 12–14 enemies + boss, about 24×16, 20–30 min. Nick added that **the lord
   has a unique starting class/tree**, which is new design work, so I created
@@ -103,8 +103,9 @@ Nick answered Q1–Q5 on 2026-09-25; recorded in `docs/design/chapter-1.md`.
   updated to drop the talk-recruit scene and the extras.
 - **Q5:** no Preparations; fixed pack of 3 Potions (cap 3); 0 starting gold;
   1000 gold clear reward (tunable).
-- Claude's choices (tunable): map difficulty tier Easy (2 rewind charges); the
-  enemy mix (mostly Brigand/Raider/Archer); a rough ASCII layout sketch for 0803.
+- Map difficulty tier: Normal (3 rewind charges); Nick changed it from my Easy
+  proposal.
+- Claude's choices (tunable): the enemy mix (mostly Brigand/Raider/Archer); a rough ASCII layout sketch for 0803.
 - Pointers in `magic.md` and `weapons-and-items.md` updated. Also updated the
   design README (with a 0016 row) and ROADMAP (Nick's queue).
 - No changes were needed in 0408/0409: Preparations and shops are still built

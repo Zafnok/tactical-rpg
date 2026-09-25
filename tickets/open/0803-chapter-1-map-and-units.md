@@ -46,7 +46,7 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
    Cleric, Guard, Mage; tier-3 skills aren't designed yet, ticket 1001).
    Loadouts, starting weapon ranks, the pack cap, default pack and gold per
    `chapter-1.md` and `weapons-and-items.md` (`preparations: false`,
-   objective `Rout`, no turn limit, difficulty `Easy`).
+   objective `Rout`, no turn limit, difficulty `Normal`).
 3. **Enemies:** count/mix per `chapter-1.md`; AI mix (mostly `Aggressive`, a
    `Guard` group near the boss, boss `Stationary`), sensible loadouts (mix
    weapon kinds so Nick's per-type traits show: a mounted enemy for spears,

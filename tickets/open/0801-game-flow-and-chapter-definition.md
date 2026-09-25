@@ -29,7 +29,9 @@ None.
 `ui::flow` (chapter sequencing), Classic/Casual mode select, lead gender select, map-menu `Restart battle`, Game Over screen, "To be continued" screen,
 replacing the title's placeholder and debug Quick Battle wiring.
 
-**Out:** saving (0802), Chapter 1 content itself (0803), world map (future).
+**Out:** saving (0802), Chapter 1 content itself (0803), world map (future),
+chapters with several battles (Nick: a chapter is a story beat; follow-ups come
+from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
 
 ## Implementation steps
 
