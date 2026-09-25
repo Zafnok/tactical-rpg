@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0201"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0202 — GlyphBuffer virtual console
@@ -73,10 +73,10 @@ constants; `insta` set up.
 
 ## Acceptance criteria
 
-- [ ] All drawing primitives clip safely (no panic for any coordinates).
-- [ ] Snapshot format as specified; deterministic across runs and OSes.
-- [ ] Test asserting `UiColor` names == `REQUIRED_COLORS` from 0201.
-- [ ] No macroquad dependency in `trpg-ui`.
+- [x] All drawing primitives clip safely (no panic for any coordinates).
+- [x] Snapshot format as specified; deterministic across runs and OSes.
+- [x] Test asserting `UiColor` names == `REQUIRED_COLORS` from 0201.
+- [x] No macroquad dependency in `trpg-ui`.
 
 ## Tests required
 
@@ -86,4 +86,25 @@ constants; `insta` set up.
 - Snapshot: sample box (insta).
 
 ## Completion notes
+
+- Added `trpg-ui` modules `color` (`Rgb` with `lerp`/`scale`/`to_hex`,
+  `UiColor` enum, `Palette`), `console` (size constants), `glyph_buffer`
+  (`Cell`, `Rect`, `BoxStyle`, `GlyphBuffer` with every primitive listed) and
+  `snapshot` (`GlyphBuffer::to_snapshot`). `insta` is a workspace
+  dev-dependency (Apache-2.0; `cargo deny` passes).
+- `Palette::new(&PaletteDef)` is fallible (returns the missing `UiColor`
+  names) because `PaletteDef::default()` is empty; a palette loaded by
+  `trpg_content` always succeeds. `palette.get(UiColor)` is infallible;
+  `lookup(name)` is the `Option` path for data-driven names. `name_of(rgb)`
+  does the snapshot reverse lookup: `UiColor` names win ties, then
+  alphabetical.
+- `Rect` uses `i32` for position *and* size; a non-positive `w`/`h` is empty.
+  `intersect` returns `Option<Rect>`.
+- `draw_box` draws only the border (the interior is left alone; fill first
+  if needed). When clipped, corners stay at the real rectangle's corners.
+- Snapshot details beyond the spec: control characters in glyphs print as
+  `U+FFFD` so rows keep their width; past 62 colour pairs keys continue with
+  CJK ideographs (then `?`). `.editorconfig` keeps trailing spaces in
+  `*.snap` files.
+- Deviation: none of substance. No follow-up tickets.
 
