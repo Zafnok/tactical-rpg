@@ -40,11 +40,11 @@ player-faction units.
 1. `exp_for_combat(unit_level, target_level, outcome: {NoDamage, Damaged, Killed}, target_is_boss) -> u8`,
    `exp_for_heal()`, `exp_for_tile_cast()`, `exp_for_active_skill()` exactly
    per the table in `progression.md`.
-2. `growth(unit, class, stat)` = `min(100, class growth + 20 if talent)`.
+2. `growth(unit, class, stat)` = `class growth + 20 if talent` (it can exceed 100: `growth / 100` sure points plus a roll for 1 more).
 3. `level_up(unit, class, min_gains_table, rng) -> StatGains`: the exact
    6-step procedure in `progression.md`. Always 7 `roll()` calls, then safety
    net picks via `roll_below(total)`. Add `roll_below(n)` to the RNG trait if
-   it is missing (and to `ScriptedRng`). Capped or 0% stats never gain.
+   it is missing (and to `ScriptedRng`). Capped or 0% stats never gain; gains never pass the cap.
 4. `grant_exp(unit, amount, rng) -> Vec<Event>`: adds EXP; crossing 100 →
    `LeveledUp { unit, new_level, gains }` (current HP rises with HP gains); at
    the level cap (40, data) EXP is `--` and no EXP is gained.
@@ -55,21 +55,25 @@ player-faction units.
    `ClassMastered` + `SkillLearned` for the class's active.
 6. Hook into `apply()` after combat / heal / tile cast / non-combat active
    resolution, for player-faction units only: EXP and CP per the tables.
+   Ally-faction units' EXP goes into the battle's `exp_pool`, which is split
+   at battle end among the eligible player units (`progression.md`), with
+   `ExpGained` events per unit (possibly several `LeveledUp`).
    Document the RNG consumption order.
 7. Update replay tests (event logs now include EXP/CP events).
 
 ## Acceptance criteria
 
 - [ ] EXP formula matches the design doc's example table (all 8 rows).
-- [ ] Growth procedure matches the design; seeded tests with `ScriptedRng` prove each branch (gain, no gain, capped, 0% growth, talent +20, safety net with 0 and 1 natural gains at tier 1 and tier 3, net limited by the number of eligible stats), including the worked example in `progression.md`.
+- [ ] Growth procedure matches the design; seeded tests with `ScriptedRng` prove each branch (gain, no gain, capped, 0% growth, talent +20, growth > 100 giving +1 and +2, a +2 clamped by the cap, safety net with 0 and 1 natural gains at tier 1 and tier 3, net limited by the number of eligible stats), including the worked example in `progression.md`.
 - [ ] Level cap respected; class level cap and mastery respected; CP go to the current class only.
+- [ ] Ally EXP pool: split evenly with the remainder dropped; capped, dead and undeployed units excluded (tests).
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
 - Unit: as above.
-- Property: after any number of level-ups, no stat gains past its class cap (stats already above the cap after a reclass never grow); each stat gains at most +1 per level; gains per level ≥ `min(min_gains[tier], eligible stats)`; total level ≤ cap; class level ≤ 10.
-- Statistical (seeded): with a `min_gains` of 0, average gains over 10k level-ups ≈ growth rates (±2%); with the real table, each stat's average is ≥ its growth rate − 2%.
+- Property: after any number of level-ups, no stat gains past its class cap (stats already above the cap after a reclass never grow); each stat gains at most `ceil(growth / 100)` per level; gains per level ≥ `min(min_gains[tier], eligible stats)`; total level ≤ cap; class level ≤ 10.
+- Statistical (seeded): with a `min_gains` of 0, average gains over 10k level-ups ≈ growth rates (±2%, including one growth above 100%); with the real table, each stat's average is ≥ its growth rate − 2%.
 
 ## Completion notes
 

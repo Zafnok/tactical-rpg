@@ -75,8 +75,11 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
 4. Forecast integration: gather the passive and chosen-active modifiers of
    both sides into 0304's `CombatantInput` before its formulas run. Keep the
    formulas themselves unchanged. "+1 strike" is added after the
-   attack-speed strike count and clamped to 4. Combat actives apply only to
-   the attacker.
+   attack-speed strike count and clamped to 4. Combat actives are chosen
+   only when attacking. A combat active may carry a **stance rider**: a
+   timed effect applied when it is used, which lasts until the unit's next
+   phase, so it also applies to counters in the enemy phase
+   (`progression.md`).
 5. `SkillState { uses_left }` refills in `BattleState::new`, like
    `SpellState` (0309). `UnitAction::Attack { …, active: Option<SkillId> }`
    and `UnitAction::UseSkill { skill, target }` (Brace, Fortify, War Cry,

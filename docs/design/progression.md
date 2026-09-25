@@ -73,6 +73,18 @@ Follow-ups:
 > **Promotion item:** "B" (a separate seal per tier, rarer at higher tiers).
 >
 > **Generic enemy stats:** "A" (fixed average stats, not random level ups).
+>
+> **Actives on counters:** "A, but in fortunes weave at least there are
+> skills that give bonuses when enemies attack, but you pre-select them. For
+> example I think Guarding Strike gives a bonus for both rounds of combat.
+> Not a counter or something you select during enemy turn but it lasts for
+> your turn and theirs."
+>
+> **More than +1 per stat per level:** "B but number scale can change this"
+> (growths above 100% can give +2).
+>
+> **Who gains EXP:** "A and any xp earned by green units will be spread
+> across the participating battle army at battle end"
 
 So:
 
@@ -111,8 +123,16 @@ with the rest in ticket 0013.
   is gained. Class points are still earned.
 - **100 EXP = 1 level.** EXP carries over past 100. A single award is at most
   100, so it gives at most one level.
-- **Only Player-faction units** gain EXP and class points (FE rule, *Claude's
-  starting rule*). Enemies and allies keep their data levels.
+- **Only Player-faction units** gain EXP and class points (Nick, FE rule).
+  Enemies and allies keep their data levels.
+- **Allied (green) units' EXP is shared out** (Nick). An Ally-faction unit
+  earns EXP by the same formulas, but it goes into a battle **EXP pool**
+  instead of to that unit. At the end of the battle (on a win), the pool is
+  split evenly among the player units that took part: deployed and alive
+  at the end, and not at the level cap. Each one gets
+  `pool / number of those units`, rounded down, and the remainder is lost.
+  This can give more than one level up at once. Each level up is rolled
+  separately.
 - **Level-up stats** use the unit's **current class** (its growths, caps and
   tier) at the moment of the level up.
 
@@ -156,7 +176,7 @@ Examples:
 ### Growth rates
 
 ```
-growth(stat) = min(100, class.growth[stat] + (stat == character.talent ? 20 : 0))
+growth(stat) = class.growth[stat] + (stat == character.talent ? 20 : 0)
 ```
 
 - Growth rates exist for HP, Str, Mag, Dex, Spd, Def, Res. **Mov never grows**;
@@ -164,8 +184,10 @@ growth(stat) = min(100, class.growth[stat] + (stat == character.talent ? 20 : 0)
 - **Talent** (Nick): each named character has exactly one talent stat (not
   Mov), which gets +20% growth in every class. Generic units have none. The
   story cast (0701) picks each character's talent.
-- A growth rate is capped at 100%, so a stat gains at most **+1 per level**
-  (*Claude's starting rule*).
+- **Growths above 100% can give more than +1** (Nick). A stat gets
+  `growth / 100` points for sure, plus 1 more with a `growth % 100` percent
+  chance. For example, 120% gives +1 for sure and +2 with a 20% chance.
+  Nick noted that the number-scale decision (ticket 0013) may change this.
 
 ### Minimum gains per level up (Nick's "blessed N")
 
@@ -190,14 +212,18 @@ in `stats-and-combat.md`. `roll_below(n)` gives a uniform integer in
 2. A stat is **eligible** if its value is below its current class cap and its
    `growth > 0`.
 3. **Rolls:** for each stat in order, call `r = roll()`. This happens for
-   **every** stat, eligible or not, so RNG use is always 7 calls. The stat
-   gains +1 iff it is eligible and `r < growth`.
+   **every** stat, eligible or not, so RNG use is always 7 calls. If the
+   stat is eligible it gains `growth / 100 + (r < growth % 100 ? 1 : 0)`
+   points, clamped so it doesn't pass its cap. A stat that gains ≥ 1 point
+   counts as **one gain** for the safety net.
 4. **Safety net:** `need = min(min_gains[class.tier], number of eligible
    stats)`. While `gains < need`:
    - `candidates` = the eligible stats that haven't gained, in stat order.
    - `total = sum of their growths`, then `r = roll_below(total)`.
    - Walk `candidates` adding up growths; the first stat whose running sum
      is `> r` gains +1.
+   (Only stats with 0 points so far are candidates, and those have growth
+   below 100%.)
    The net therefore favours the stats the class is good at, but stays random.
 5. Apply the gains. If HP gained, current HP rises by the same amount.
 6. Learn anything new (see *Skills*, *Spells*). Class skills and spells come
@@ -340,8 +366,14 @@ you keep both.
   - A unit keeps every active it has learned. **Combat actives** are chosen
     from the attack menu as an option for that attack. **Non-combat actives**
     are an action of their own and end the action.
-  - Combat actives work only **when attacking**, never on counters
-    (*Claude's starting rule*, like Three Houses arts).
+  - Combat actives are used only **when attacking** on your own turn, never
+    chosen on counters (Nick, like Three Houses arts).
+  - **Stance riders** (Nick, like Fortune's Weave's "Guarding Strike"): a
+    combat active may also give a bonus that **lasts from this attack until
+    the start of the unit's next phase**. That covers the enemy's turn, so it
+    also helps in the unit's defending combats (counters) then. It's picked
+    when attacking, never during the enemy's turn. It uses the timed-effect
+    rules below.
   - Actives are separate from Combat Arts (weapon skills that spend
     durability, ticket 0014), which Combat Arts may reuse or merge with.
 - **Timed effects**, "until the start of the unit's next phase", start when
