@@ -15,6 +15,12 @@ pub fn file(path: &str) -> Option<&'static str> {
     ASSETS.get_file(path)?.contents_utf8()
 }
 
+/// Returns the raw bytes of the embedded file at `path` (relative to
+/// `assets/`, `/`-separated), e.g. an image, or `None` if it is missing.
+pub fn bytes(path: &str) -> Option<&'static [u8]> {
+    ASSETS.get_file(path).map(include_dir::File::contents)
+}
+
 /// Lists the paths (relative to `assets/`, `/`-separated, sorted) of every
 /// file directly inside directory `dir`. A missing directory yields an empty
 /// list. Use `""` for the bundle root.
@@ -51,6 +57,17 @@ mod tests {
     #[test]
     fn missing_file_is_none() {
         assert_eq!(file("data/does_not_exist.ron"), None);
+    }
+
+    #[test]
+    fn reads_binary_file() {
+        let png = bytes("fonts/atlas.png").unwrap_or_default();
+        assert!(png.starts_with(b"\x89PNG"));
+        assert_eq!(bytes("fonts/nope.png"), None);
+        assert_eq!(
+            bytes("data/palette.ron").map(<[u8]>::len),
+            file("data/palette.ron").map(str::len)
+        );
     }
 
     #[test]

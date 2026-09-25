@@ -46,7 +46,8 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `docs/story/` | Story beats, bible, characters, outline, ledger (ADR-0011) |
 | `.claude/skills/` | `work-ticket`, `write-ticket`, `write-adr`, `ask-nick`, `story-writing`, `ascii-art`, `run-gates` |
 | `crates/` | `core` (`trpg-core`), `content` (`trpg-content`), `ui` (`trpg-ui`), `app` (`trpg-app`, binary `tactical-rpg`), `xtask` (repo tooling) |
-| `assets/` | *(created by later tickets)* data, maps, dialogue, portraits, fonts |
+| `assets/` | Everything embedded in the game: `data/`, `fonts/` (later: maps, dialogue, portraits) |
+| `assets-src/` | Inputs to asset tools (e.g. the font BDF for `cargo xtask font-atlas`); not embedded |
 
 ## Environment
 

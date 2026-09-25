@@ -11,4 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+trpg-content = { path = "../content" }
+png = "0.17"
+ron.workspace = true
 serde_norway = "0.9.42"

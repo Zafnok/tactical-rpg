@@ -161,6 +161,11 @@ impl Palette {
         self.named.get(name).copied()
     }
 
+    /// Every named colour, alphabetically.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, Rgb)> {
+        self.named.iter().map(|(n, &c)| (n.as_str(), c))
+    }
+
     /// The name of a colour with exactly this RGB value, if any. When several
     /// names share a value, [`UiColor`] names win (in [`UiColor::ALL`]
     /// order), then the alphabetically first other name.
@@ -251,6 +256,10 @@ pub(crate) mod tests {
         }
         assert_eq!(p.lookup("grass"), def.get("grass").map(Rgb::from));
         assert_eq!(p.lookup("no_such_colour"), None);
+        let all: Vec<(&str, Rgb)> = p.iter().collect();
+        assert_eq!(all.len(), def.colors.len());
+        assert!(all.windows(2).all(|w| w[0].0 < w[1].0));
+        assert!(all.iter().all(|&(n, c)| p.lookup(n) == Some(c)));
     }
 
     #[test]

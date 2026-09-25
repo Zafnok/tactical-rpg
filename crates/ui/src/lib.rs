@@ -2,6 +2,7 @@
 
 pub mod color;
 pub mod console;
+pub mod debug;
 pub mod glyph_buffer;
 pub mod input;
 pub mod snapshot;

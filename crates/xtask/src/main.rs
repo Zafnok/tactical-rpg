@@ -3,6 +3,7 @@
 //! A CLI tool prints to stdout by design, so `print_stdout` is allowed here.
 #![allow(clippy::print_stdout)]
 
+mod font_atlas;
 mod tickets;
 
 use std::env;
@@ -22,6 +23,7 @@ fn main() -> ExitCode {
 fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
     match args.next().as_deref() {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
+        Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -56,6 +58,23 @@ fn ticket_lint(args: &[String]) -> u8 {
         eprintln!("  {error}");
     }
     1
+}
+
+fn font_atlas(args: &[String]) -> u8 {
+    let [font, out_dir] = args else {
+        eprintln!("usage: cargo xtask font-atlas <font.bdf> <out-dir>");
+        return 2;
+    };
+    match font_atlas::run(Path::new(font), Path::new(out_dir)) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("font-atlas: {e}");
+            1
+        }
+    }
 }
 
 fn parse_pr_branch(args: &[String]) -> Result<Option<String>, String> {
@@ -150,6 +169,17 @@ mod tests {
     #[test]
     fn dispatch_with_unknown_command_fails() {
         assert_eq!(dispatch(args(&["bogus"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn font_atlas_needs_two_args() {
+        assert_eq!(font_atlas(&args(&["only-one"])), 2);
+        assert_eq!(dispatch(args(&["font-atlas"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn font_atlas_reports_failure() {
+        assert_eq!(font_atlas(&args(&["no/such/font.bdf", "out"])), 1);
     }
 
     #[test]
