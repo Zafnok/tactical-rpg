@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0001 — Decide: unit stats and combat math
@@ -95,12 +95,27 @@ Update `docs/design/README.md`. If the answer changes the steps of tickets
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q3 (or described his own system).
-- [ ] `docs/design/stats-and-combat.md` exists with stat list, exact formulas,
+- [x] Nick answered Q1–Q3 (or described his own system).
+- [x] `docs/design/stats-and-combat.md` exists with stat list, exact formulas,
       RNG procedure, terrain defaults, three worked examples.
-- [ ] `docs/design/README.md` table updated.
-- [ ] Downstream tickets adjusted if needed.
-- [ ] Ticket archived to `tickets/done/`.
+- [x] `docs/design/README.md` table updated.
+- [x] Downstream tickets adjusted if needed.
+- [x] Ticket archived to `tickets/done/`.
 
 ## Completion notes
 
+Nick picked **Streamlined FE** stats (HP, Str, Mag, Dex, Spd, Def, Res, Mov),
+**FE true hit (2RN)**, and his own take on doubling: up to **4 strikes**, with
+3x/4x very rare. Recorded in `docs/design/stats-and-combat.md` with exact
+formulas, the roll procedure, *tunable* terrain defaults and three worked
+examples (one with a scripted-roll resolution trace).
+
+- Strike thresholds `diff ≥ 4 / 14 / 24` → 2 / 3 / 4 strikes are **placeholders**:
+  Nick deferred the number scale (small vs FE-sized vs huge) to after the
+  playtest. New ticket **0013** decides it; 0302 now uses one `StatValue` alias.
+- Luck's crit-avoid role goes to Dex (`crit − defender.Dex / 4`, *tunable*).
+- `as_bonus` hook left at 0; how gear / weapon skill feed it is now a
+  follow-up question added to ticket 0003.
+- Downstream edits: 0003 (attack-speed sub-question), 0304 (strike order up
+  to 4, 2RN procedure, boundary tests), 0302 (`StatValue` alias). 0405, 0601
+  needed no change.

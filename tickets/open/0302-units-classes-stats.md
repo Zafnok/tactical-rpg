@@ -36,8 +36,11 @@ real story characters (07xx creates them).
 ## Implementation steps
 
 1. `core::stats`: `StatKind` enum with exactly the stats in the design doc;
-   `Stats` struct with one integer field per stat (use `u8` or `i16`; values
-   are small) and `get(kind)`/`set(kind)`; `Growths` (percent per stat) if the
+   `Stats` struct with one integer field per stat, all of one type alias
+   `pub type StatValue = i32;` used everywhere stats, HP and damage are
+   stored (the number scale is undecided until ticket 0013 and may grow
+   to huge values; changing the alias must be the only edit needed), and
+   `get(kind)`/`set(kind)`; `Growths` (percent per stat) if the
    design uses growths.
 2. `core::class::ClassDef`: `id`, `name`, `tier`, `movement_type: MovementTypeId`,
    `move_points`, `base: Stats`, `caps: Stats`, growth modifiers (if design
