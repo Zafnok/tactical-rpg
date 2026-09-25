@@ -62,8 +62,9 @@ replacing the title's placeholder and debug Quick Battle wiring.
    weapon ranks, durability), handles fallen player units per
    `death-and-difficulty.md` (Classic: removed from the roster, equipped items
    to the stock; Casual: kept, full HP next chapter), gives every deployed
-   player unit (standing or retreated) 7 EXP per unused rewind charge (value
-   in a content constant, *tunable* within 5–10 per the design), returns
+   player unit (standing or retreated) 7% of one level's EXP per unused
+   rewind charge (per the design; express it as a percentage of the
+   EXP-per-level constant, not a fixed number), returns
    unused pack items to the stock and adds gold. `Campaign::downgrade_mode()`
    allows Classic → Casual only.
 4. `ui::flow`: `New Game` → `ModeSelectScreen` (Classic / Casual, one line

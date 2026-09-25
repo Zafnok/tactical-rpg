@@ -87,8 +87,9 @@ the map menu; 30 save slots; unused charges → small EXP bonus for every
 deployed unit; lord death is game over in both modes. All recorded verbatim in
 `docs/design/death-and-difficulty.md`.
 
-- The unused-charge EXP bonus: Nick gave a range ("between" 5 and 10 per
-  charge). Starting value 7, to be confirmed with Nick in the 0804 playtest.
+- The unused-charge EXP bonus is 7% of a level per charge (Nick: a share of a
+  level, not a fixed number, so it scales if the EXP scale changes); he may
+  revisit it after seeing numbers on screen (0804).
 - Downstream tickets adjusted: 0305 (fall/loss rules, `rewind_charges` in
   `BattleSetup`), 0307 (no longer conditional; charge, reach and restart
   rules), 0705 (Casual retreat lines), 0801 (mode select, chapter difficulty

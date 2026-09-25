@@ -46,6 +46,12 @@ design levers yourself. Let's go through them."):
 > probably something small, not enough to be meta-gamey. A or B, probably in
 > between the two. C is overstepping" (A = 5 EXP per charge, B = 10, C = 20.)
 >
+> Then: "The one thing I want to adjust is that the 7 is more like a
+> percentage of level up than a fixed number. If we decide to go dragon ball
+> scaling maybe it takes 1M xp to lv up and each charge gives 70K. But for now
+> until I get a feel for numbers in the display then we can go with grounded
+> numbers i.e. 7"
+>
 > **Who gets the bonus** "11B" (every deployed unit, including Casual retreats).
 >
 > **Lord falls in Casual** "9A" (game over in both modes).
@@ -114,10 +120,12 @@ Charges don't carry over to the next map. Instead, each unused charge gives a
 - Every **deployed** player unit gets it: units still standing *and* units that
   retreated in Casual. (Classic-dead units are gone; undeployed units get
   nothing.)
-- Size: Nick wants it small, "not enough to be meta-gamey", **between 5 and 10
-  EXP per unused charge** (100 EXP = 1 level). Starting value: **7 EXP per
-  charge**, to be tuned in the Chapter 1 playtest (0804) within Nick's 5–10
-  range.
+- Size (Nick): small, "not enough to be meta-gamey", and defined as a
+  **share of one level**, not a fixed number: **7% of the EXP needed for a
+  level per unused charge**. With today's 100 EXP per level that is **7 EXP**;
+  if the EXP scale grows (e.g. 1,000,000 per level) the bonus scales with it
+  (70,000). The percentage may be revisited once Nick sees the numbers on
+  screen (0804).
 - The bonus is added after the battle's normal EXP, following the award rules
   in `progression.md` (max 100 per award, level cap).
 
@@ -144,5 +152,6 @@ FE style: chapter saves plus a one-time suspend.
 
 ## Open sub-questions (deferred)
 
-- Exact unused-charge EXP within 5–10: set at the Chapter 1 playtest (0804).
+- Whether 7% of a level per unused charge feels right: check at the Chapter 1
+  playtest (0804).
 - Harder difficulty modes: after Chapter 1.
