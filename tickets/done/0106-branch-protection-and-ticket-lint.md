@@ -114,9 +114,13 @@ repo merge settings.
   take a value from `tickets/README.md`, `done/` files have `status: done`
   and a `completed:` date while `open/` files don't have `status: done`,
   every `blocked_by` id exists, and (with `--pr-branch t<NNNN>-…`) ticket
-  `NNNN` is in `done/`. 21 unit tests cover each rule (including failing
-  cases) with in-memory frontmatter, plus one end-to-end test that runs the
-  full checker against this repo's real `tickets/` tree. `xtask` was already
+  `NNNN` is in `done/`. 39 tests total (unit tests for each rule including
+  failing cases, an end-to-end test against this repo's real `tickets/`
+  tree, a couple of tests against real temp directories for the filesystem
+  walk, and a small `tests/cli.rs` that runs the built binary as a
+  subprocess) get `cargo mutants --in-diff` on this ticket's diff to 100%
+  caught (83/83 viable mutants; one `Default`-derive mutant is a compile
+  error, reported `unviable`). `xtask` was already
   covered by the `coverage` job's `cargo llvm-cov --workspace --exclude
   trpg-app` (only `trpg-app` is excluded) and wasn't noisy, so it stays in
   both Sonar coverage and `cargo mutants` scope, as the ticket allows.

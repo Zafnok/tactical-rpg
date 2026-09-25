@@ -467,6 +467,17 @@ completed:
     }
 
     #[test]
+    fn flags_blocked_by_that_is_not_a_list() {
+        let fm = VALID_FRONTMATTER.replace("blocked_by: [\"0102\"]", "blocked_by: \"0102\"");
+        let t = parse_ticket("p".to_string(), Folder::Open, "0106-x.md", &fm);
+        assert!(
+            t.errors
+                .iter()
+                .any(|e| e.contains("must be a list of ticket id strings"))
+        );
+    }
+
+    #[test]
     fn flags_id_filename_mismatch() {
         let t = parse_ticket(
             "tickets/open/0107-x.md".to_string(),
@@ -605,5 +616,93 @@ completed:
             .expect("xtask is at <repo>/crates/xtask");
         let errors = run(repo_root, None);
         assert!(errors.is_empty(), "ticket-lint errors: {errors:#?}");
+    }
+
+    // -- reading a directory for real (not just in-memory frontmatter) --
+
+    fn make_temp_tickets_dir(unique: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "xtask-ticket-lint-test-{unique}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("tickets/open")).unwrap();
+        fs::create_dir_all(root.join("tickets/done")).unwrap();
+        root
+    }
+
+    #[test]
+    fn read_ticket_files_skips_non_md_and_readme() {
+        let root = make_temp_tickets_dir("read-skips");
+        let dir = root.join("tickets/open");
+        fs::write(dir.join("0100-a.md"), "a").unwrap();
+        fs::write(dir.join("notes.txt"), "not a ticket").unwrap();
+        fs::write(dir.join("README.md"), "not a ticket either").unwrap();
+
+        let files = read_ticket_files(&dir).unwrap();
+
+        assert_eq!(
+            files.into_iter().map(|(name, _)| name).collect::<Vec<_>>(),
+            vec!["0100-a.md".to_string()]
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn run_reports_real_errors_from_a_directory_tree() {
+        let root = make_temp_tickets_dir("run-real-errors");
+        let open_dir = root.join("tickets/open");
+        fs::write(open_dir.join("notes.txt"), "ignored, wrong extension").unwrap();
+        fs::write(
+            open_dir.join("0200-bad.md"),
+            "---\nid: \"0200\"\n---\n\n# body\n",
+        )
+        .unwrap();
+
+        let errors = run(&root, None);
+
+        assert!(!errors.is_empty());
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("missing required key `title`")),
+            "errors: {errors:#?}"
+        );
+        assert!(
+            !errors.iter().any(|e| e.contains("notes.txt")),
+            "notes.txt should have been skipped, not linted: {errors:#?}"
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    // -- scalar_string / string_list on raw YAML values --
+
+    fn mapping_from(yaml: &str) -> serde_norway::Mapping {
+        match serde_norway::from_str::<Value>(yaml).unwrap() {
+            Value::Mapping(m) => m,
+            other => panic!("expected a mapping, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn scalar_string_reads_every_scalar_kind() {
+        let map = mapping_from("s: hello\nn: 42\nb: true\nl: [1, 2]\n");
+        assert_eq!(scalar_string(&map, "s"), Some("hello".to_string()));
+        assert_eq!(scalar_string(&map, "n"), Some("42".to_string()));
+        assert_eq!(scalar_string(&map, "b"), Some("true".to_string()));
+        assert_eq!(scalar_string(&map, "l"), None);
+        assert_eq!(scalar_string(&map, "missing"), None);
+    }
+
+    #[test]
+    fn string_list_requires_a_sequence_of_strings() {
+        let map = mapping_from("l: [\"a\", \"b\"]\nmixed: [\"a\", 1]\nnot_a_list: x\n");
+        assert_eq!(
+            string_list(&map, "l"),
+            Some(vec!["a".to_string(), "b".to_string()])
+        );
+        assert_eq!(string_list(&map, "mixed"), None);
+        assert_eq!(string_list(&map, "not_a_list"), None);
+        assert_eq!(string_list(&map, "missing"), None);
     }
 }
