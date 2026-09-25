@@ -1,52 +1,42 @@
-# tactical-rpg (working title)
+# tactical-rpg *(working title)*
 
 An ASCII-art tactical RPG in the spirit of Fire Emblem, drawn with coloured
-glyphs the way Dwarf Fortress and Rogue did it, controlled entirely from the
-keyboard with a virtual cursor and vim-style movement keys.
+glyphs the way Dwarf Fortress and Rogue do it, and played entirely from the
+keyboard: a virtual cursor, vim-style movement keys, one hand steering and one
+hand acting.
 
-Written in Rust. Ships as a native executable (Windows first, then Linux and
-macOS) and as a browser build.
+Planned features include unit progression with level ups and class changes, a
+main story plus personal character stories, and dialogue scenes with two ASCII
+character portraits on screen.
 
-> The game does not have a name yet. Everything is called `tactical-rpg`
-> until that decision is made.
+**Status:** architecture and backlog only. No game code exists yet. Work
+happens one ticket at a time; see the [roadmap](docs/ROADMAP.md).
 
-## Status
+## Targets
 
-Scaffold only. The three crates compile and are empty; every feature is a
-ticket. See the [roadmap](docs/ROADMAP.md) and the
-[issues](https://github.com/Zafnok/tactical-rpg/issues).
+- Windows executable first (itch.io, later Steam), then Linux and macOS.
+- Browser build (WASM).
 
-## Play
+## How this repo works
 
-- Browser: deployed from `main` to GitHub Pages once the first feature lands.
-- Desktop: download from [Releases](https://github.com/Zafnok/tactical-rpg/releases)
-  once the first tag exists.
+| Where | What |
+| ----- | ---- |
+| [`tickets/`](tickets/README.md) | The backlog. Each ticket is a Markdown file; finished ones move to `tickets/done/` |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Milestones and the path to a playable Chapter 1 |
+| [`docs/adr/`](docs/adr/README.md) | Technical decisions (Rust, macroquad glyph renderer, testing, CI…) |
+| [`docs/design/`](docs/design/README.md) | Game-design decisions, made by Nick |
+| [`docs/story/`](docs/story/README.md) | Story beats, bible and characters |
+| [`CLAUDE.md`](CLAUDE.md) + [`.claude/skills/`](.claude/skills) | Instructions for the AI sessions that build the game |
 
-## Build
+Code is written by Claude, one ticket per pull request. CI (tests on three
+OSes, mutation testing, coverage, SonarCloud, security scanners) is the code
+review. Nick owns the game design and plays the builds.
 
-```bash
-cargo run -p tactical-rpg        # desktop
-cargo wasm                       # browser build, see docs/DEV_SETUP.md
-cargo test --workspace
-```
+## License
 
-## Layout
-
-| Path | What |
-| ---- | ---- |
-| `crates/core` | Game rules: pure, deterministic, no I/O |
-| `crates/ui` | Virtual console, input actions, screens |
-| `crates/app` | Window, font, raw input (macroquad); desktop and WASM |
-| `assets/` | Game content as data (maps, units, dialogue) |
-| `web/` | Browser shell page and vendored loader |
-| `docs/DESIGN.md` | Game design decisions (Nick's) and open questions |
-| `docs/adr/` | Technical decisions |
-| `docs/story/` | Story bible and beats |
-| `.claude/skills/` | Workflows for AI sessions working the backlog |
-
-## How work happens
-
-GitHub Issues are the backlog. One issue becomes one branch and one PR; CI
-(format, clippy, tests on three OSes, mutation testing, licence and advisory
-checks, CodeQL, SonarCloud) is the review. Game-design questions are labelled
-`needs-nick` and answered by Nick. See [CONTRIBUTING.md](CONTRIBUTING.md).
+**Source-available, not open source.** Copyright (c) 2026 Nick Wentz, all
+rights reserved. You may read and learn from the code, use it in
+non-commercial teaching, make free non-commercial mods, and stream or post
+videos of the game (monetised is fine). You may not redistribute or sell it or
+games made from it. See [`LICENSE`](LICENSE) for the exact terms, and
+[`THIRD_PARTY_ASSETS.md`](THIRD_PARTY_ASSETS.md) for third-party material.

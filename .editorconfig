@@ -8,9 +8,13 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-[*.{yml,yaml,json,toml,ron,md,html}]
+[*.{yml,yaml,json,md}]
 indent_size = 2
 
-[*.snap]
+[*.md]
+# Two trailing spaces are a Markdown line break.
 trim_trailing_whitespace = false
-insert_final_newline = false
+
+[assets/**]
+# ASCII maps and portraits: trailing spaces are meaningful columns.
+trim_trailing_whitespace = false

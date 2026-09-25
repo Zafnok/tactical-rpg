@@ -1,0 +1,77 @@
+---
+id: "0009"
+title: "Decide: Chapter 1 scope (objective, roster, map, tutorial)"
+type: design-decision
+milestone: Design decisions
+model: opus-5.5
+effort: medium
+status: todo
+blocked_by: ["0007"]
+nick_input: decision
+completed:
+---
+
+# 0009 — Decide: Chapter 1 scope
+
+## Context
+
+Nick hopes Chapter 1 is playable within a few days of starting tickets. This
+decision pins down exactly what "Chapter 1" contains so the content ticket
+(0803) and the story script (0707) have a fixed target. Blocked by 0007 so the
+proposal can fit the setting. Run with the `ask-nick` skill.
+
+## Nick input
+
+**Decision.**
+
+## Questions to ask
+
+### Q1. Objective
+
+**A. Rout** — defeat all enemies (FE's most common; easy to learn).
+**B. Defeat the boss / seize** — kill the boss or stand the lord on the throne.
+Feel: rush vs. clear dilemma.
+**C. Defend / survive N turns** — hold a position against waves.
+**D. Escape** — get the lord to an exit tile.
+**Recommendation:** B (defeat boss) — teaches focus, short map, room for a boss
+conversation.
+
+### Q2. Size
+
+Propose, and let Nick adjust:
+- **Player units:** 4 (e.g. lord, a mounted unit, an archer, a healer — final
+  classes from 0005).
+- **Enemies:** 8–10 + 1 boss.
+- **Map:** about 20×14 tiles (fits nearly on one screen at our tile size).
+- **Length:** 10–20 minutes for a first-time player.
+
+### Q3. Teaching
+
+**A. Guided tutorial map (FE Blazing Blade's Lyn prologue)** — forced steps
+("move here, now attack").
+**B. Contextual hints** — a help bar and one-time tips when something new
+appears (first enemy in range, first level up). Feel: no hand-holding.
+**C. None.**
+**Recommendation:** B.
+
+### Q4. Extras in Chapter 1
+
+Pick any: a talk-to-recruit enemy (FE staple), a village to visit for an item,
+a mid-battle reinforcement wave, a treasure chest, none.
+**Recommendation:** one talk-recruit — it shows off two-portrait dialogue mid-battle.
+
+## What to record
+
+`docs/design/chapter-1.md`: Nick's words; objective and loss conditions; roster
+(slots with class, not names yet unless the story has them); enemy count and
+mix; map size and rough layout idea (an ASCII sketch at tile resolution is
+welcome); teaching approach; extras. Adjust tickets 0707, 0801, 0803 if needed.
+
+## Acceptance criteria
+
+- [ ] Nick answered Q1–Q4.
+- [ ] `docs/design/chapter-1.md` written.
+- [ ] Design README updated; downstream tickets adjusted; ticket archived.
+
+## Completion notes
+
