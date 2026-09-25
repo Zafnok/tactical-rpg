@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: crate-ci/typos@7ad296c72fa8265059cc03d1eda562fbdfcd6df2 # v1.9.0
+      - uses: crate-ci/typos@f8073dcfa028f88fc0f67b209523a5ab07ab7b51 # v1.9.0
 
   zizmor:
     name: zizmor
