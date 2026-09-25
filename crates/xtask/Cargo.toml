@@ -11,3 +11,4 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+serde_norway = "0.9.42"
