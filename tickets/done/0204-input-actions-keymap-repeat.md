@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0201"]
 nick_input: none
-completed:
+completed: 2026-09-25
 ---
 
 # 0204 — Input actions, keymap, key repeat
@@ -68,10 +68,10 @@ translation of macroquad keys.
 
 ## Acceptance criteria
 
-- [ ] Default keymap loads and validates; conflicts/typos produce clear errors (tests).
-- [ ] Repeat timing exact per the spec (tests with fake `dt`).
-- [ ] App logs `CursorRight` repeating when holding `l` in a debug run.
-- [ ] `trpg-ui` still has no macroquad dependency.
+- [x] Default keymap loads and validates; conflicts/typos produce clear errors (tests).
+- [x] Repeat timing exact per the spec (tests with fake `dt`).
+- [x] App logs `CursorRight` repeating when holding `l` in a debug run.
+- [x] `trpg-ui` still has no macroquad dependency.
 
 ## Tests required
 
@@ -84,3 +84,38 @@ translation of macroquad keys.
 
 ## Completion notes
 
+- `trpg-content::keymap`: `Key` (letters, digits, arrows, Enter/Escape/Space/
+  Tab/Backspace, F1–F12), `Chord { key, shift }` with `parse`/`Display`/
+  `FromStr`, `Action` (ADR-0006 set + `ToggleAutoEnd`, `is_repeatable()` for
+  the eight cursor actions), `RepeatDef`, and the validating `KeymapDef`
+  loader. `Content` now carries `keymap`.
+- `assets/data/keymap.ron`: the ADR-0006 defaults, `ToggleAutoEnd` on
+  `Shift+e`, `repeat: (delay_ms: 170, interval_ms: 55)`.
+- `trpg-ui::input`: `Keymap::from_def`, `InputState` (`key_down`, `key_up`,
+  `update(dt)`, `is_held`), `MAX_REPEATS_PER_UPDATE = 5`. `trpg-ui` still
+  has no macroquad dependency.
+- `app`: `keys.rs` maps macroquad `KeyCode` → `Key` (keypad Enter counts as
+  Enter; everything else unknown is ignored), feeds releases then presses,
+  and debug builds log each action. If content fails to load, the window
+  shows the errors instead of the game.
+- Verified in a debug run (Xvfb + xdotool): holding `l` for 0.5 s logged 8
+  `CursorRight` (press, first repeat at 170 ms, then every 55 ms);
+  `Shift+l` logged `CursorJumpRight`.
+- Deviations / decisions:
+  - `Key`, `Chord` and `Action` are defined in `trpg-content` and re-exported
+    from `trpg-ui::input`: the loader must parse chords and action names to
+    validate the file, and `ui` depends on `content`, not the reverse.
+    Screens still only see `trpg_ui::input::Action` (ADR-0006 intent kept).
+  - Extra validation: every action must appear in the file (`[]` = unbound),
+    so a forgotten action is caught; `interval_ms: 0` is rejected; a chord
+    listed twice for the same action is an error too.
+  - `Menu` has no default key: per the ADR it's opened by `Cancel` with
+    nothing to cancel or `Confirm` on an empty tile (screen logic).
+  - Releasing the repeating key hands repeat back to the most recent
+    repeatable key still held, after a fresh delay (no immediate emit).
+    The ticket didn't specify this; it avoids a "dead" held key.
+  - Repeats beyond the per-update cap are dropped, not carried over, so the
+    cursor never catches up after a lag spike.
+  - Time is accumulated in whole microseconds (each `dt` rounded) so
+    millisecond timings stay exact despite `f32` error.
+- No follow-up tickets. Nothing new to play; repeat feel is judged in 0804.

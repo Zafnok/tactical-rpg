@@ -1,0 +1,36 @@
+// Default key bindings (ADR-0006). Screens only see the action names on the
+// left; each maps to a list of key chords. Every action must be listed (use []
+// to leave one unbound) and a chord may be bound to only one action.
+//
+// Chords: lowercase letters "a".."z", digits "0".."9", "Up" "Down" "Left"
+// "Right" "Enter" "Escape" "Space" "Tab" "Backspace" "F1".."F12", optionally
+// prefixed by "Shift+". "Shift+h" and "h" are different chords.
+(
+    bindings: {
+        // Right hand steers: hjkl or arrows. Held keys repeat.
+        "CursorLeft": ["h", "Left"],
+        "CursorDown": ["j", "Down"],
+        "CursorUp": ["k", "Up"],
+        "CursorRight": ["l", "Right"],
+        "CursorJumpLeft": ["Shift+h", "Shift+Left"],
+        "CursorJumpDown": ["Shift+j", "Shift+Down"],
+        "CursorJumpUp": ["Shift+k", "Shift+Up"],
+        "CursorJumpRight": ["Shift+l", "Shift+Right"],
+
+        // Left hand acts: a s d f.
+        "Confirm": ["f", "Space", "Enter"],
+        // Escape opens the map menu on screens with nothing to cancel.
+        "Cancel": ["d", "Escape", "Backspace"],
+        "Info": ["s", "i"],
+        "DangerZone": ["a"],
+        "NextUnit": ["Tab", "n"],
+        "PrevUnit": ["Shift+Tab", "p"],
+        "EndTurn": ["e"],
+        // Opened by Cancel with nothing to cancel, or Confirm on an empty tile.
+        "Menu": [],
+        "ToggleAutoEnd": ["Shift+e"],
+        "Debug": ["F12"],
+    },
+    // Held cursor keys: first repeat after delay_ms, then every interval_ms.
+    repeat: (delay_ms: 170, interval_ms: 55),
+)

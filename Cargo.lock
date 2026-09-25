@@ -624,6 +624,7 @@ version = "0.1.0"
 name = "trpg-ui"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "trpg-content",
  "trpg-core",
 ]
