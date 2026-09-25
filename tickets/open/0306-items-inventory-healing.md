@@ -31,25 +31,27 @@ Extends the command/event system from 0305.
 
 **In:** `assets/data/items.ron`, `core::item`, `Loadout`, `BattlePack`,
 party `Stock` type, equip rules, weapon ranks + weapon EXP, durability state and
-the broken flag, `UnitAction::{UseItem, Equip}` (+ `Heal` if 0004 has healing
-magic/staves), real weapon ranges feeding 0303's attack tiles, and building
+the broken flag, `UnitAction::{UseItem, Equip}`, real weapon ranges feeding 0303's attack tiles, and building
 0304's `CombatantInput` from a unit (gear-adjusted stats, equipped weapon,
 armour weight, rank).
 
-**Out:** Combat Arts (0014 → its own ticket), gold/shops/villages/chests (0308),
+**Out:** spells, spell uses, healing magic and equipping a spell (0309;
+`magic.md`: spells are innate, not items, so there are no tomes or staves in
+`items.ron`), Combat Arts (0014 → its own ticket), gold/shops/villages/chests (0308),
 Preparations screen (0408), item menus UI (0407), trading (not in the design).
 
 ## Implementation steps
 
 1. `items.ron`: every weapon, armour, accessory and consumable listed in
-   `weapons-and-items.md` (and tomes/staves from `magic.md`) with exact numbers;
+   `weapons-and-items.md` with exact numbers;
    weapon kinds with their traits as data (`trait: SwordFollowUp | Effective(tag, mult) | AxeMinDamage(5) | GauntletAvoid(15) | None`),
    `rank_speed` table, rank EXP thresholds, broken penalties.
 2. `core::item`: `ItemId`, `ItemDef` (enum `Weapon(WeaponDef)`, `Armour { weight_class, bonus: Stats, weight }`,
    `Accessory { bonus: Stats }`, `Consumable { effect }` …),
    `WeaponInstance { def: ItemId, durability_left }` with `is_broken()`.
 3. `Loadout { weapons: [Option<WeaponInstance>; 3], equipped: Option<usize>, armour: Option<ItemId>, accessory: Option<ItemId> }`
-   on `Unit`. `Unit::effective_stats()` = permanent stats + armour + accessory,
+   on `Unit`. Only the first `class.weapon_slots` entries (0302; 0 for
+   tier-3+ magic classes per `magic.md`) may hold weapons; validate this. `Unit::effective_stats()` = permanent stats + armour + accessory,
    clamped to the hard ceilings. `Unit::attack_ranges()` = ranges of usable
    weapons in the loadout — replace 0303's parameters with this in callers.
 4. Weapon usability: class weapon kinds (0005) and `rank ≥ weapon.rank`.
@@ -79,7 +81,7 @@ Preparations screen (0408), item menus UI (0407), trading (not in the design).
 ## Tests required
 
 - Unit: per action; equip rules; rank thresholds and weapon EXP; durability to 0 → `ItemBroke`; pack use.
-- Property: loadout never holds > 3 weapons; pack size only shrinks during battle except via item gains; HP stays within 0..=max after any heal/consumable; effective stats ≤ hard ceilings.
+- Property: loadout never holds > `weapon_slots` (≤ 3) weapons; pack size only shrinks during battle except via item gains; HP stays within 0..=max after any heal/consumable; effective stats ≤ hard ceilings.
 - Extend 0305's random-command property test to include `UseItem` and `Equip`.
 
 ## Completion notes

@@ -41,7 +41,11 @@ outline. Follow the `story-writing` skill strictly.
 2. **bible.md:** world premise (1 paragraph), geography (5–8 named places, one
    line each), history (the event the story grows from), factions (3–5, what each
    wants), themes (2–3), tone rules (what jokes are OK, how dark it gets), rules
-   of magic/tech consistent with `magic.md`, glossary.
+   of magic/tech consistent with `magic.md`, glossary. **Nick deferred "what
+   is magic in this world?" to this ticket** (0004 Q3): propose 2–3 options
+   at gate 1 and record his pick. It must fit the mechanics (innate spells
+   with uses per battle, black and white magic, fire/ice terrain effects,
+   uncommon elementals).
 3. **Cast:** 8–12 characters for Act 1: the lord/protagonist, 4–6 playable
    companions (covering the Chapter 1 roster classes), 1 antagonist with an
    understandable motive, 1–2 recurring secondary villains/rivals, 1–2 NPCs.
@@ -49,7 +53,9 @@ outline. Follow the `story-writing` skill strictly.
    secret/pressure, arc (start → end), relationships (who they clash/bond
    with and why), voice notes + 3 sample lines, **portrait brief** (silhouette,
    hair, clothing, colours — used by 0706), expression list (at least the five
-   standard ones).
+   standard ones), and for spellcasters **1–2 personal signature spells**
+   (name, element, one-line effect; `magic.md`: numbers are set by 0005 or a
+   balance ticket, not here).
 4. **Gate 1:** send Nick a one-page summary (premise, factions in a line each,
    cast in a line each). Revise until he approves. Record his feedback verbatim
    at the bottom of `bible.md`.

@@ -13,8 +13,8 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `00xx` | Design decisions | Nick's answers recorded in `docs/design/` | 0001–0014 |
 | `01xx` | M0 Foundation | Workspace, CI on 3 OSes, security scanners, SonarCloud, mutation gate, release + Pages pipelines | 0101–0108 |
 | `02xx` | M1 Engine | Coloured glyph console in a window and browser, input with vim keys, screens + test harness | 0201–0207 |
-| `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops — pure and heavily tested | 0301–0308 |
-| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops | 0401–0409 |
+| `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic — pure and heavily tested | 0301–0310 |
+| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes | 0401–0411 |
 | `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase | 0501–0502 |
 | `06xx` | M5 Progression | EXP, level-up screen, promotion | 0601–0603 |
 | `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script | 0701–0707 |
@@ -31,7 +31,7 @@ Design answers unblock most of the rules work. Suggested order:
 4. Anytime, low priority: **0010** supports · **0012** title (after the story bible)
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
-preparations, 0409 shops, 0502 enemy
+preparations, 0409 shops, 0410 spells, 0411 battle notes, 0502 enemy
 phase, 0602 level up, 0701 story gates, 0704 dialogue, 0706 portraits, 0707
 script, 0804 playtest). Setup steps (accounts/secrets): 0103, 0104, 0106,
 0108, 0901, later 0903.
@@ -49,13 +49,14 @@ parallel sessions/worktrees):
  5  0205  0206  0303  0304  0702   (0011 look sign-off)
  6  0207  0305  0401  0703  0707  0107  0108
  7  0306  0402  0704  0706
- 8  0403  0501  0601  0308
- 9  0404  0407  0408  0409
-10  0405  0602  0307
+ 8  0403  0309  0601  0308
+ 9  0404  0407  0408  0409  0310  0501
+10  0405  0602  0307  0410
 11  0502  0705  0406
 12  0801
-13  0802  0803
-14  0804  ◄── Nick plays Chapter 1
+13  0802  0411
+14  0803
+15  0804  ◄── Nick plays Chapter 1
 ```
 
 The `01xx` gates (0103–0106) aren't needed by the game itself but should land

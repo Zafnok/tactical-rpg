@@ -88,7 +88,8 @@ crit_damage = damage * 3
 ```
 
 Weapon-type traits, effectiveness, broken weapons and gauntlet avoid are in
-`weapons-and-items.md` (0003); magic rules from 0004.
+`weapons-and-items.md` (0003); spells, elemental affinities and healing in
+`magic.md` (0004).
 
 ### Hit
 
@@ -278,6 +279,6 @@ vs. defender Spd 16 (diff 24) → 4 strikes.
   class skills that add more: 0005.
 - **Weapon traits / effectiveness:** decided in `weapons-and-items.md` (0003):
   no weapon triangle.
-- **Magic specifics** (healing formula, magic weapons at range): 0004.
+- **Magic specifics** (spells, uses, elements, healing): decided in `magic.md` (0004).
 - **Skills** that add strikes (e.g. brave weapons) or ignore thresholds: not
   planned yet; would need a new decision ticket.

@@ -6,7 +6,7 @@ milestone: M4 Enemy AI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0305", "0306"]
+blocked_by: ["0305", "0306", "0309"]
 nick_input: none
 completed:
 ---
@@ -39,12 +39,13 @@ reinforcements this turn are already acted and must be skipped.
 1. `AiBehavior` enum on `Unit` (set by chapter data): `Aggressive` (charge the
    nearest target), `Guard` (attack only if a target is in its threat area this
    turn, else hold), `Stationary` (never move; attack only from its tile —
-   bosses on thrones), `Healer` (if the design has healers: heal the most
-   injured ally in reach, else keep distance behind allies). Any unit
+   bosses on thrones), `Healer` (heal spells from `magic.md`/0309: heal the
+   most injured ally in reach, else keep distance behind allies). Any unit
    carrying its own consumable (0306) uses it on itself instead of acting
    when below 40% HP and no attack scores a kill (*tunable*).
 2. **Attack choice:** for each stoppable dest × each target in range × each
-   usable weapon, score with `forecast`:
+   usable weapon or attack spell with uses left (0309; tile casts are not
+   used by AI v1), score with `forecast`:
    `score = w_dmg * expected_damage + w_kill * P(kill) + w_lord * is_lord(target)
    - w_risk * expected_counter_damage + w_terrain * terrain_bonus(dest)`, where
    expected values use the displayed hit% (and doubling). Weights in `ai.ron`

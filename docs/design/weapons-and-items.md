@@ -79,7 +79,7 @@ from facing another weapon type.
 | Axe | Minimum damage, lower accuracy | A hit always deals at least **5** damage: `damage = max(damage, 5)` before crit. Axes have lower base `hit` in their stats. |
 | Bow | Good against flyers, ranged | Effective against **Flying**: weapon might ×3. Standard bows have range **2 only** (cannot attack or counter an adjacent unit). |
 | Gauntlet | Evasive, light | While a gauntlet is **equipped**, the wielder's avoid is **+15**. Gauntlets are the lightest weapons (easiest to strike 2/3/4 times). |
-| Magic | Hits Res | Already in `stats-and-combat.md` (magical damage uses Mag vs Res). Tomes, spells, their traits and weight: ticket 0004. |
+| Magic | Hits Res | Not a weapon: magic is **innate spells** with uses per battle, outside the loadout. See `magic.md` (0004). |
 
 **Armoured units** have no special weapon rule: armoured *classes* have high
 Def and low Res (Nick: "encouraged to use magic users on those enemies").
@@ -156,7 +156,7 @@ Every weapon has:
 
 | Field | Meaning |
 | ----- | ------- |
-| `kind` | Sword, Spear, Axe, Bow, Gauntlet (+ magic kinds from 0004) |
+| `kind` | Sword, Spear, Axe, Bow, Gauntlet (spells are not weapons; see `magic.md`) |
 | `rank` | Minimum weapon rank to wield it (E…S) |
 | `might`, `hit`, `crit` | As used by the combat formulas |
 | `weight` | Feeds `burden` |
@@ -184,7 +184,7 @@ rank in that kind is ≥ the weapon's `rank`.
 | Iron Gauntlets | Gauntlet | E | 3 | 95 | 5 | 1 | 1 | 20 | 400 |
 | Steel Gauntlets | Gauntlet | D | 5 | 85 | 5 | 2 | 1 | 25 | 560 |
 
-All are Physical. Magic weapons: 0004. Which of these appear in Chapter 1 is
+All are Physical. Magic is innate spells, not weapons (`magic.md`). Which of these appear in Chapter 1 is
 up to the Chapter 1 roster/enemies (0803).
 
 ## Weapon ranks (weapon skill)
@@ -223,7 +223,7 @@ Nick's shape:
 
 | Slot | Count | Notes |
 | ---- | ----- | ----- |
-| Weapons | **3** | One is **equipped** at a time |
+| Weapons | **3** (0 for tier-3+ magic classes, `magic.md`) | One is **equipped** at a time |
 | Armour | 1 | Optional |
 | Accessory | 1 | Optional |
 
