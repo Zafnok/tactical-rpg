@@ -1,7 +1,11 @@
+# Normalise text to LF everywhere. ASCII maps and portraits depend on exact
+# column alignment, so line endings must never be rewritten per-platform.
 * text=auto eol=lf
-*.rs text eol=lf
-*.snap text eol=lf
-*.ron text eol=lf
-*.ps1 text eol=crlf
-*.png binary
+
+*.png  binary
+*.ico  binary
+*.ttf  binary
+*.otf  binary
 *.wasm binary
+*.ogg  binary
+*.wav  binary

@@ -1,14 +1,25 @@
-/target
-/dist
+# Rust build output
+/target/
 **/*.rs.bk
-*.snap.new
-mutants.out*
+
+# Distribution / packaging output
+/dist/
+
+# Test & quality tooling output
+/mutants.out/
+/mutants.out.old/
 lcov.info
 *.profraw
-clippy-report.json
-.scannerwork/
+*.profdata
+
+# Local environment
+.env
+.claude/settings.local.json
+
+# OS / editor noise
 .DS_Store
 Thumbs.db
+desktop.ini
 .idea/
-.vscode/*
-!.vscode/extensions.json
+.vscode/
+*.swp

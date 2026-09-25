@@ -1,0 +1,73 @@
+---
+id: "0302"
+title: Units, classes and stats model with data files
+type: feature
+milestone: M2 Core rules
+model: opus-5.5
+effort: medium
+status: todo
+blocked_by: ["0001", "0003", "0005", "0301"]
+nick_input: answer-first
+completed:
+---
+
+# 0302 — Units, classes and stats
+
+## Context
+
+Implements the stat list and class structure Nick chose. Source of truth:
+`docs/design/stats-and-combat.md` (0001), `docs/design/progression.md` (0005),
+`docs/design/weapons-and-items.md` (0003), `docs/design/magic.md` (0004, if
+done). Do **not** invent stats or classes not in those docs.
+
+## Nick input
+
+**Answer first:** tickets 0001, 0003, 0005.
+
+## Scope
+
+**In:** `core::stats`, `core::class`, `core::unit`, `assets/data/classes.ron`,
+`assets/data/characters.ron` (placeholder characters only), loaders and
+validators.
+
+**Out:** inventory/items (0306), level-up logic (0601), promotion logic (0603),
+real story characters (07xx creates them).
+
+## Implementation steps
+
+1. `core::stats`: `StatKind` enum with exactly the stats in the design doc;
+   `Stats` struct with one integer field per stat (use `u8` or `i16`; values
+   are small) and `get(kind)`/`set(kind)`; `Growths` (percent per stat) if the
+   design uses growths.
+2. `core::class::ClassDef`: `id`, `name`, `tier`, `movement_type: MovementTypeId`,
+   `move_points`, `base: Stats`, `caps: Stats`, growth modifiers (if design
+   has them), usable weapon types (ids from the weapons design), `promotes_to: Vec<ClassId>`,
+   `skills` (only if design has class skills; ids only, effects come later).
+3. `core::unit`:
+   - `Faction { Player, Enemy, Ally, Neutral }` with `is_hostile_to(other)`
+     (Player+Ally friendly; Enemy hostile to both; Neutral per design default:
+     hostile to nobody).
+   - `UnitId(u32)`, `Unit { id, character: Option<CharacterId>, name, class, level, exp, stats, hp, faction, pos: Pos, acted: bool, is_lord: bool }`.
+     Stats stored are *current permanent* stats (base + growth gains), always ≤ class caps.
+4. `assets/data/classes.ron`: the class tree from `progression.md` with its
+   numbers. `assets/data/characters.ron`: 3 placeholder player characters
+   (`test_lord`, `test_knight`, `test_archer` — whatever classes exist) and 2
+   generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
+5. `content` loaders + validation: unknown class/movement/weapon ids;
+   promotion targets must exist and be a higher tier; base ≤ caps; growths
+   0..=255; level in 1..=max; every class reachable in the tree.
+6. `Unit::from_character(def, class_table, level, faction, pos) -> Unit`.
+
+## Acceptance criteria
+
+- [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes).
+- [ ] All validation errors covered by tests.
+- [ ] Data files load in the all-assets test.
+
+## Tests required
+
+- Unit: validators, `Faction::is_hostile_to` truth table, `from_character`.
+- Property: any `Unit` created via `from_character` has every stat ≤ its class cap and `hp == stats.hp`.
+
+## Completion notes
+
