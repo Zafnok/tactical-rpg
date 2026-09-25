@@ -56,11 +56,12 @@ None (all rules are in `magic.md`).
    Load and validate it in `content`: ids unique, ranges `min ≤ max`,
    `uses ≥ 1`, and every class and character spell id exists.
 2. `Unit::known_spells(class_table)`: the union of class spells whose level
-   ≤ the unit's level (in any class it has been, per the `learned` list below)
-   and personal spells whose level is ≤ the unit's level. Store learned spells
+   ≤ the unit's **class level** in that class (from `class_records`, for any
+   class it has unlocked; `progression.md`) and personal spells whose level
+   is ≤ the unit's **character level**. Store learned spells
    on the unit as `learned: BTreeSet<SpellId>`, so a class change keeps them.
-   Add a `learn_new_spells()` helper that 0601/0603 call after a level up
-   or promotion. Test it directly.
+   Add a `learn_new_spells()` helper that 0601/0603 call after a level up,
+   class level up, promotion or reclass. Test it directly.
 3. `SpellState { uses_left: BTreeMap<SpellId, u8> }` on the battle unit,
    filled to each spell's `uses` in `BattleState::new` (and by 0801's
    `battle_setup`, if that exists by now).

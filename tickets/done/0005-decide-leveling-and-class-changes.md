@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0001"]
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0005 — Decide: level ups, class changes and the class tree
@@ -122,10 +122,65 @@ Update `docs/design/README.md`; adjust 0302, 0309, 0601–0603, 0803 if needed.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q3 and approved a class tree (Q4).
-- [ ] `docs/design/progression.md` written with exact formulas and the class table.
-- [ ] Design README updated; downstream tickets adjusted.
-- [ ] Ticket archived.
+- [x] Nick answered Q1–Q3 and approved a class tree (Q4).
+- [x] `docs/design/progression.md` written with exact formulas and the class table.
+- [x] Design README updated; downstream tickets adjusted.
+- [x] Ticket archived.
 
 ## Completion notes
 
+Decided with Nick on 2026-09-25 and recorded in
+[`docs/design/progression.md`](../../docs/design/progression.md).
+
+- **Q1:** growth comes from the class, plus one personal **talent** stat at
+  +20%. There is a per-tier minimum number of gains per level up ("blessed
+  N") that goes up with the tier. The exact steps are left open (starting
+  values 2/2/3 for tiers 1–3).
+- **Q2:** branching promotion plus reclass. The character level **never
+  resets**. There is also a per-class **class level** raised by class
+  points; mastering a class opens its promotions. Open certification was
+  rejected.
+- **Q3 (revised by Nick in the final round):** unlocking a class gives its
+  active, and mastering it teaches its passives. Passives are kept for good;
+  an active stays behind when you reclass out of a class you haven't
+  mastered. A higher rank of a skill family
+  replaces the lower one (Nick's White Magic 1 → 2 example).
+- **Q4:** Nick approved the revised tree: 9 starter lines, 16 tier-2 classes
+  and 16 tier-3 classes. Martial lines have as many tiers as magic lines.
+  Names are generic placeholders, with no Fire Emblem-specific names
+  (Nick). Nick expects 6–10 tiers eventually, so every rule takes the tier
+  as a number.
+- **Deviation:**
+  - The first tree preview inside the question pop-up didn't show for
+    Nick, so the tree was shown as plain text instead.
+  - The first tree gave only the magic lines a tier 3. Nick asked for tier 3
+    on every line and for generic names.
+- **Follow-up rounds:** at first Claude filled several game levers in by
+  itself. Nick asked to decide them, so they were put to him in three more
+  rounds. His decisions:
+  - Promotion is one-way. Every reclass costs a Reclass Seal. Class progress
+    is saved, and stats carry over.
+  - The seal can reach any class whose requirements the unit meets.
+  - Promotion gives a big boost from the base-stat gap (FE GBA style).
+  - Mastery pace rises with tier. There's a separate seal per tier.
+    Generic enemies have fixed average stats.
+  - Actives are used only when attacking, plus stance riders (Fortune's
+    Weave's Guarding Strike).
+  - Growths above 100% can give +2 (may change with the number scale).
+  - Only player units gain EXP. Green units' EXP is pooled and split at the
+    end of the battle.
+  - Faster levels (about 2 per battle), with the level cap high and still
+    to be decided.
+  - Skills flipped: active on unlock, passives on mastery.
+  - The skill list and stat numbers are placeholders, to be judged in the
+    playtest.
+- **Claude filled in, and Nick approved ("These are fine."): how the ally-EXP split works (even
+  split, remainder lost; deployed, alive and uncapped units only), the
+  99-level placeholder cap, and the CP-per-tier values 10/17/25.
+- **Downstream tickets adjusted:** 0302 (class record, talent, generic
+  units, validation), 0309 (spells by class level), 0601 (class points,
+  class levels, safety net), 0602 (class-progress banners), 0603 (no reset,
+  mastery, seals, reclass; now also blocked by 0306), 0803 (talent, generic
+  units, blocked by 0412). ROADMAP updated.
+- **Follow-up tickets created:** 0311 (class skills in core), 0412 (skill UI),
+  1001 (tier-3 class skills).

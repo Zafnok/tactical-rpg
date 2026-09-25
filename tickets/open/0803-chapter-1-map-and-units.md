@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0410", "0411", "0501", "0706", "0707", "0801"]
+blocked_by: ["0009", "0410", "0411", "0412", "0501", "0706", "0707", "0801"]
 nick_input: sign-off
 completed:
 ---
@@ -39,7 +39,10 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
    defensible tile (throne/fort/gate). Sketch it in the PR description.
 2. **Roster:** real Chapter 1 characters from the story (replace
    `// PLACEHOLDER` entries; keep test fixtures in `tests/fixtures/` instead of
-   shipped data). Stats per `progression.md` class bases + personal modifiers.
+   shipped data). Each character's base stats, **talent** stat, starting
+   weapon ranks and class records per `progression.md`; generic enemies use
+   its generic-unit formula. Classes come from its class tree (which ones is
+   `chapter-1.md`'s call; tier-3 skills aren't designed yet, ticket 1001).
    Loadouts, starting weapon ranks, the pack cap, default pack and gold per
    `chapter-1.md` and `weapons-and-items.md`.
 3. **Enemies:** count/mix per `chapter-1.md`; AI mix (mostly `Aggressive`, a
