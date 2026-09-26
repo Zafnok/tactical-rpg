@@ -1,7 +1,8 @@
 # Progression: level ups, classes and the class tree
 
 Decided: 2026-09-25
-Source: ticket 0005 (fliers moved to tier 3+ by ticket 0017, 2026-09-25)
+Source: ticket 0005 (fliers moved to tier 3+ by ticket 0017, 2026-09-25;
+the lord's line added by ticket 0016, 2026-09-25)
 
 ## Nick's words
 
@@ -114,6 +115,26 @@ progression to make that work."):
 >
 > **Enemy fliers:** "they can show up earlier, but in small numbers, or for
 > elite enemies (i.e. boss or sub-boss)"
+
+The lord's line (ticket 0016, 2026-09-25; Chapter 1 said the lord "has a
+unique starting class/tree"):
+
+> **Weapons and role:** "1A" (a sword foot soldier who is good at everything,
+> like FE's Eliwood / Lyn / Marth).
+>
+> **Shape of the line:** "2B" (a unique tier 1 that branches into two
+> lord-only tier-2 classes, like Fates' Corrin).
+>
+> **Reclassing:** "3B" (the lord can reclass out and back like anyone, using
+> seals; nobody else can ever enter the lord's line; mastery works as
+> normal).
+>
+> **Signature:** "since they have unique class line that is where they would
+> get their signature ability. nothing else on top."
+>
+> **Names and numbers:** "I think the names for the tiered classes are ok but
+> warlord should probably be reserved for one of the broader class lines cuz
+> it doesn't sound like a unique class tier 3. rest sound ok tho"
 
 So:
 
@@ -367,7 +388,8 @@ round.
   (Nick: "you have to spend the seal of whatever item each time").
 - **Where a seal can take a unit** (Nick chose "any class whose requirements
   you meet"):
-  - any **tier-1** class (not enemy-only);
+  - any **tier-1** class (not enemy-only, and not lord-only unless the unit
+    is the lord; see *The lord's line*);
   - any class whose **prerequisite** the unit has **mastered** (a class
     that lists it in `promotes_to`);
   - any class the unit has **already unlocked**. Its saved progress comes
@@ -471,6 +493,14 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
 | Mystic | **Siphon** (+1 spell use, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
 | Priest | **Sanctuary 2** (5 dur, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
+| Exile *(lord)* | **Inspire** (3 dur, action): allies within 2 tiles get hit +10 and avoid +10 until the start of this unit's next phase | **Leadership 1**: allies within 2 tiles of the lord get hit +10 |
+| Blade Heir *(lord)* | **Crest Strike** (3 dur, combat, Sw): might +4 and hit +15 | **Resolve**: while HP ≤ 50%, Str and Spd +3 |
+| Commander *(lord)* | **Rally** (5 dur, action): allies within 2 tiles get Str +3 and Def +3 until the start of this unit's next phase | **Leadership 2**: allies within 2 tiles of the lord get hit +10 and avoid +10 (supersedes 1) |
+
+The lord's classes carry the lord's **signature abilities** (Nick: "nothing
+else on top"), so their skills lean towards leading the army. Like every
+skill here, they are placeholders to tune after the playtest. Ally auras
+("within 2 tiles") count Manhattan distance and don't include the lord.
 
 ### Flying line skills (tiers 3–4)
 
@@ -532,6 +562,10 @@ Mage (Sw · Fire) ────┬─► Sorcerer (Sw) ────────�
 Cleric (Gt · Heal) ──┼────────┘  (shared promotion)
                      └─► Priest (Gt) ─────────────► Oracle       spells only
 
+Lord-only (see "The lord's line"):
+Exile (Sw) ──────────┬─► Blade Heir     Sw Gt     ──► Sovereign      Sw Gt
+                     └─► Commander      Sw Sp     ──► Grand Marshal  Sw Sp Ax
+
 Enemy-only: Brigand (Ax) · Fire Elemental · Frost Elemental
 
 [M] Mounted (spears hit ×2)   [F] Flying (bows hit ×3)   [A] Armored (high Def, low Res)
@@ -574,6 +608,45 @@ Flier [F] (Sp) ──────┬─► Sky Lancer [F] Sp Sw     ──► St
   An early enemy flier uses the tier-3 Flier class, so it's naturally strong
   (tier-3 base stats, see *Generic units*), even at a low character level.
 
+### The lord's line (Nick, ticket 0016)
+
+- **Only the lord** (the unit with `is_lord`) can ever be in the lord's
+  classes: Exile, Blade Heir, Commander, Sovereign and Grand Marshal (Nick,
+  "3B"). The data marks them `lord_only`. No other unit can start in them,
+  promote into them or reach them with a Reclass Seal. Generic units never
+  use them.
+- **Role** (Nick, "1A"): a **sword foot soldier who is good at everything**.
+  The lord starts as a tier-1 **Exile** (swords only, Mov 5, on foot).
+  "Exile" matches the story (a disgraced or exiled noble,
+  `setting-and-tone.md`) and avoids Fire Emblem's "Lord".
+- **Shape** (Nick, "2B"): the Exile branches into two **lord-only** tier-2
+  classes, and each goes on to its own lord-only tier 3:
+  - **Blade Heir** (fast; swords, plus gauntlets) → **Sovereign**.
+  - **Commander** (tough; swords and spears, can wear heavy armour) →
+    **Grand Marshal** (adds axes). Nick asked to keep the name "Warlord" for
+    one of the shared lines, so this tier 3 is *Grand Marshal* instead
+    (*Claude's placeholder*; Nick may rename it).
+- **Promotion** works as for every class: master the current class, use the
+  tier's seal, get the base-stat-gap bonus.
+- **Reclassing** (Nick, "3B"): the lord can use a Reclass Seal like anyone
+  else, to go to any class the normal rules allow, and come back to the
+  lord's classes the same way (a seal each time; saved progress returns).
+  Mastery, class records, kept stats, skills and spells all work as normal.
+  The lord's death is still game over in any class
+  (`death-and-difficulty.md`).
+- **Signature** (Nick): the lord's signature abilities **are** the skills of
+  the lord's classes (actives on unlock, passives on mastery, as for every
+  class). There is **no** extra personal skill, spell or weapon on top.
+  Named characters may still have personal spells (`magic.md`), but **the
+  lord has none**.
+- **Numbers** (Nick: "rest sound ok"): the Exile is a bit sturdier and
+  slower than the Swordsman, with better Res (so enemy mages don't easily
+  kill the lead) and slightly higher total growths (300 against the
+  Swordsman's 280), the usual small lord advantage. All numbers are
+  *tunable* and judged in the Chapter 1 playtest.
+- **Tier-3 skills** for Sovereign and Grand Marshal come with the other
+  tier-3 skills (ticket 1001).
+
 - **Martial classes aren't constrained** (Nick): they have the same number of
   tiers as magic, and keep **3 weapon slots at every tier**. Only the magic
   lines' tier-3+ classes have 0 weapon slots (`magic.md`).
@@ -608,6 +681,7 @@ that class.
 | Rider | 7 | mounted | Mounted | Sw E/C, Sp D/C | L M | 3 | — | Iron Rider, Lancer |
 | Mage | 5 | foot | — | Sw E/D | L | 3 | (1, Fire), (5, Frost) | Sorcerer, Mystic |
 | Cleric | 5 | foot | — | Gt E/D | L | 3 | (1, Heal) | Mystic, Priest |
+| Exile *(lord)* | 5 | foot | — | Sw D/C | L M | 3 | — | Blade Heir, Commander |
 | Brigand *(enemy)* | 5 | foot | — | Ax D/C | L | 3 | — | — |
 | Fire Elemental *(enemy)* | 4 | foot | — | — | — | 0 | (1, Fire) | — |
 | Frost Elemental *(enemy)* | 4 | foot | — | — | — | 0 | (1, Frost) | — |
@@ -634,6 +708,8 @@ affinities yet. Enemy-only classes can't be promoted into or reclassed into.
 | Sorcerer | 5 | foot | — | Sw D/C | L | 3 | (1, Force) | Archmage |
 | Mystic | 5 | foot | — | Sw D/C, Gt D/C | L | 3 | (1, Fire), (1, Heal), (5, Mend) | Arcanist |
 | Priest | 5 | foot | — | Gt D/C | L | 3 | (1, Mend) | Oracle |
+| Blade Heir *(lord)* | 6 | foot | — | Sw C/A, Gt D/B | L | 3 | — | Sovereign |
+| Commander *(lord)* | 5 | foot | — | Sw C/A, Sp D/B | L M H | 3 | — | Grand Marshal |
 
 ### Tier 3
 
@@ -654,6 +730,10 @@ affinities yet. Enemy-only classes can't be promoted into or reclassed into.
 | Archmage | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Force) | — |
 | Arcanist | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Heal), (1, Mend) | — |
 | Oracle | 5 | foot | — | — | L | **0** | (1, Heal), (1, Mend) | — |
+| Sovereign *(lord)* | 6 | foot | — | Sw A/S, Gt B/A | L | 3 | — | — |
+| Grand Marshal *(lord)* | 5 | foot | — | Sw A/S, Sp B/A, Ax C/B | L M H | 3 | — | — |
+
+*(lord)* = `lord_only`: only the lord can be in this class (ticket 0016).
 
 Tier-3 spell lists only use the five starter spells for now. New spells for
 higher tiers are added when tiers above 3 are designed.
@@ -719,6 +799,11 @@ data (0701 / 0803). Order: `HP Str Mag Dex Spd Def Res`.
 | Archmage | 25 3 14 9 9 3 11 | 50 16 40 32 32 16 34 | 55 15 70 50 50 15 50 |
 | Arcanist | 26 3 13 9 9 3 12 | 52 16 38 32 32 16 36 | 60 15 60 45 50 15 55 |
 | Oracle | 25 3 12 8 9 3 14 | 50 16 36 30 32 16 40 | 60 15 55 45 45 15 65 |
+| Exile *(lord)* | 19 6 1 7 7 4 3 | 42 22 12 24 24 20 18 | 75 45 15 50 55 30 30 |
+| Blade Heir *(lord)* | 25 9 1 11 12 6 5 | 50 27 14 32 33 24 24 | 75 45 15 55 60 25 30 |
+| Commander *(lord)* | 28 10 1 9 9 9 5 | 54 29 14 28 28 30 24 | 85 50 15 45 45 40 30 |
+| Sovereign *(lord)* | 31 12 2 15 16 8 7 | 58 33 16 40 40 28 28 | 75 45 15 55 60 25 30 |
+| Grand Marshal *(lord)* | 35 14 2 11 11 12 7 | 64 36 16 34 32 38 28 | 85 50 15 45 45 40 30 |
 
 Design intent behind the numbers:
 - **Armoured classes** (Guard, Bulwark, Iron Rider, Bastion, Juggernaut) have
@@ -763,7 +848,8 @@ ranks, class records (usually just the starting class at class level 1), and
 - **Other flier parents** besides Lancer (e.g. a flying branch for another
   line): Nick may add them later (ticket 0017 started with Lancer only).
 - **Flavour names** for every class, skill and seal: closer to shipping
-  (Nick). They must not copy Fire Emblem names.
+  (Nick). They must not copy Fire Emblem names. The name **Warlord** is kept
+  for one of the shared (non-lord) lines (Nick, ticket 0016).
 - **Number scale:** all stats, caps and EXP numbers rescale with ticket 0013.
 - **How Combat Arts relate to actives:** decided in `combat-arts.md` (0014).
 - **Where the tier seals and Reclass Seals come from** (shops, chests, story):

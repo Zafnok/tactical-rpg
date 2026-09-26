@@ -50,6 +50,10 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
 - Skirmish/Swoop post-action 1-tile move, via 0305's post-action move hook
   (`turn-structure.md`).
 - Shove, using the push rule in `magic.md`.
+- The lord's skills (ticket 0016): **ally auras** (Leadership 1/2: a passive
+  that gives *other* allies within 2 tiles of the lord a bonus) and
+  area buffs (Inspire, Rally: allies within 2 tiles, timed until the start
+  of the lord's next phase).
 
 **Out (do not do):**
 - UI (0412).
@@ -67,7 +71,9 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
    - `PassiveEffect` is a small enum covering the table, e.g.
      `StatWhile { stat, amount, condition }`,
      `CombatMod { hit, crit, might, avoid, attack_speed, condition }`,
-     `HealBonus(n)`, `SpellMight(n)`, `PostActionMove(n)`.
+     `HealBonus(n)`, `SpellMight(n)`, `PostActionMove(n)`,
+     `AllyAura { radius, mods }` (the lord's Leadership: applies to other
+     allied units within `radius` tiles of the skill's owner).
    - Conditions: `WeaponKindEquipped(kind)`, `NotOwnPhase`,
      `HpAtMostHalf`, `MovedAtLeast(n)`, `AgainstWeaponKind(kind)`,
      `Always`.

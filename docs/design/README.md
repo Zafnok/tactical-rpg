@@ -19,7 +19,7 @@ here.
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
 | Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
-| The lord's unique class line | `progression.md` (lord section) | 0016 | ⏳ awaiting Nick |
+| The lord's unique class line | [`progression.md`](progression.md) (*The lord's line*) | 0016 | ✅ decided 2026-09-25 |
 | Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |
 | Look & feel | [`look-and-feel.md`](look-and-feel.md) | 0011 | ✅ decided 2026-09-25 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |

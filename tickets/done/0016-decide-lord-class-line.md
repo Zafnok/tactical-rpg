@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0005", "0009"]
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0016 — Decide: the lord's unique class line
@@ -56,8 +56,32 @@ otherwise note in 0302 that the tree includes them.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q5.
-- [ ] `progression.md` and `chapter-1.md` updated.
-- [ ] Design README updated; downstream tickets adjusted; ticket archived.
+- [x] Nick answered Q1–Q5.
+- [x] `progression.md` and `chapter-1.md` updated.
+- [x] Design README updated; downstream tickets adjusted; ticket archived.
 
 ## Completion notes
+
+Nick answered in two rounds (2026-09-25):
+
+- **Q1 "1A":** a sword foot soldier who is good at everything (FE Eliwood/Lyn/Marth).
+- **Q2 "2B":** a unique tier 1 (**Exile**) branching into two lord-only tier-2
+  classes (**Blade Heir**, **Commander**), each with its own lord-only tier 3
+  (**Sovereign**, **Grand Marshal**).
+- **Q3 "3B":** the lord reclasses out and back with seals like anyone else;
+  nobody else can enter the lord's line; mastery works as normal.
+- **Q4:** the signature abilities *are* the lord classes' own skills,
+  "nothing else on top" (no extra skill, personal spell or weapon).
+- **Q5:** names and numbers OK, except "Warlord", which Nick reserved for a
+  shared line. Claude renamed the lord's tier 3 **Grand Marshal**
+  (placeholder; Nick may rename it).
+
+Recorded in `progression.md` (*The lord's line*, tree, class tables,
+stats, tier-1–2 skills) and `chapter-1.md`'s roster row. The lord classes'
+skills (Inspire / Leadership, Crest Strike / Resolve, Rally / Leadership 2)
+and all the numbers are Claude's placeholders, as for every other class.
+
+0302 isn't done, so no new ticket was needed. Downstream tickets adjusted:
+0302 (the tree includes the `lord_only` line, plus validation), 0311 (ally
+aura passive and area buffs), 0603 (reclass targets for `lord_only`), 1001
+(Sovereign and Grand Marshal skills).

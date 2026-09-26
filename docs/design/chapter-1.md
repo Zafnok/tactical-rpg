@@ -53,7 +53,7 @@ belongs to world structure (0008) and game flow (0801 / later tickets).
 
 | Slot | Class | Notes |
 | ---- | ----- | ----- |
-| Lord | **Unique lord class** (tier 1 of the lord's own line) | Nick: the lord has a unique starting class/tree. Designed in ticket **0016**. |
+| Lord | **Exile** (tier 1 of the lord-only line) | Nick: the lord has a unique starting class/tree. Sword foot soldier, good at everything; see *The lord's line* in `progression.md` (ticket 0016). |
 | 2 | Rider | mounted |
 | 3 | Archer | ranged |
 | 4 | Cleric | healer (Heal) |
@@ -130,7 +130,5 @@ belongs to world structure (0008) and game flow (0801 / later tickets).
 
 ## Open sub-questions (deferred)
 
-- **The lord's unique class line** (weapons, movement, tiers, how it
-  relates to reclassing, any signature skill): ticket **0016**.
 - **Multi-battle chapters** (skirmishes before a climax): 0008 / later.
 - **Which extras Chapter 2 and 3 introduce**: decided with those chapters.
