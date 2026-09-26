@@ -2,8 +2,8 @@
 //
 // Rules (move_cost, defense, avoid, heal_percent) are game design:
 // all come from docs/design/terrain.md and are TUNABLE. Healing tiles are
-// deferred there, so heal_percent is 0 everywhere. village / fort / gate /
-// throne are placeholders until Nick decides on building tiles.
+// deferred there, so heal_percent is 0 everywhere. `fort` is the only
+// building tile for now.
 //
 // Look (glyphs, fg, bg) is placeholder until ticket 0011: `glyphs` is exactly
 // two characters (a map tile is two cells wide, ADR-0012) that the font atlas
@@ -66,24 +66,9 @@
             defense: 0, avoid: 10, heal_percent: 0,
         ),
         (
-            id: "village", name: "Village", glyphs: "¤¤", fg: "road", bg: "black",
-            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
-            defense: 0, avoid: 10, heal_percent: 0,
-        ),
-        (
             id: "fort", name: "Fort", glyphs: "[]", fg: "fort", bg: "black",
             move_cost: { "foot": Some(2), "mounted": Some(2), "armored": Some(2), "flying": Some(1) },
             defense: 2, avoid: 20, heal_percent: 0,
-        ),
-        (
-            id: "gate", name: "Gate", glyphs: "][", fg: "stone", bg: "black",
-            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
-            defense: 3, avoid: 20, heal_percent: 0,
-        ),
-        (
-            id: "throne", name: "Throne", glyphs: "♦♦", fg: "text_highlight", bg: "black",
-            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
-            defense: 3, avoid: 30, heal_percent: 0,
         ),
         (
             id: "door", name: "Door", glyphs: "▐▌", fg: "wood", bg: "black",

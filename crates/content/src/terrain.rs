@@ -534,10 +534,7 @@ mod tests {
             ("peak", 2, 40, 0),
             ("water", 0, 10, 0),
             ("sea", 0, 10, 0),
-            ("village", 0, 10, 0),
             ("fort", 2, 20, 0),
-            ("gate", 3, 20, 0),
-            ("throne", 3, 30, 0),
         ];
         for &(id, def, avoid, heal) in expected {
             let rules = t.display.id_of(id).and_then(|i| t.rules.get(i));
@@ -571,9 +568,6 @@ mod tests {
             ("road", open),
             ("bridge", open),
             ("floor", open),
-            ("village", open),
-            ("gate", open),
-            ("throne", open),
             ("forest", [Some(2), Some(3), Some(2), Some(1)]),
             ("mountain", [Some(3), Some(5), None, Some(1)]),
             ("peak", [None, None, None, Some(3)]),

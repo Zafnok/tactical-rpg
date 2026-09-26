@@ -94,10 +94,10 @@ small test map.
   `TerrainRules`, `TerrainTable` with `get` / `movement_type` / `move_cost`),
   `map::BattleMap`. No glyphs, colours or files in `core`.
 - **assets/data/terrain.ron**: movement types `foot, mounted, armored, flying`
-  (as in `progression.md`). 16 terrains: the 13 the ticket lists plus
-  `village`, `gate`, `throne`, because `stats-and-combat.md` already gives
-  their numbers. Def/Avoid/Heal % match that doc's table (pinned by
-  `embedded_terrain_matches_design_doc`).
+  (as in `progression.md`). The 13 terrains the ticket lists (`fort` is the
+  only building). Values pinned to `terrain.md` by
+  `embedded_terrain_matches_design_doc` and
+  `embedded_move_costs_match_design_doc`.
 - **Nick revisited the player-facing choices** (recorded in the new
   `docs/design/terrain.md`): heavy FE GBA-style movement costs, but mountains
   cost 3 on foot and 5 mounted (horses can climb them now); foot units can
@@ -105,10 +105,11 @@ small test map.
   `embedded_move_costs_match_design_doc`. Terrain Def/Avoid: FE GBA style
   (unchanged numbers), fliers get no terrain bonus. **Healing tiles are
   deferred** (Nick wants to design them with capturing later), so
-  `heal_percent` is 0 on every terrain. Nick hasn't signed off on the
-  building tiles (village, fort, gate, throne): they stay in the data as
-  placeholders while he decides. The terrain tables moved from
-  `stats-and-combat.md` into `terrain.md`.
+  `heal_percent` is 0 on every terrain. Building tiles: only `fort` for the
+  first playtest; village / gate / throne are deferred (maybe with
+  capturing later), and 0308, 0409, 0501, 0803 and `weapons-and-items.md`
+  were updated to match. The terrain tables moved from `stats-and-combat.md`
+  into `terrain.md`.
 - **Deviation, cost format**: `move_cost` is a map keyed by movement type name
   (`{ "foot": Some(2), ..., "flying": None }`) rather than a bare list, so the
   file is readable without counting positions. The loader still produces the

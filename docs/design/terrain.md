@@ -1,7 +1,6 @@
 # Terrain
 
-Decided: 2026-09-26 (movement costs, combat bonuses; healing deferred;
-building tiles still under review)
+Decided: 2026-09-26 (healing tiles and capturing deferred)
 Source: ticket 0301 (Nick revisited the player-facing choices of that ticket)
 
 ## Nick's words
@@ -33,6 +32,12 @@ Source: ticket 0301 (Nick revisited the player-facing choices of that ticket)
 > I ever explicitly signed off on a fort, gate, or throne tile type either."
 >
 > **Q6. Do fliers get terrain bonuses** (no like FE GBA / yes): "3A"
+>
+> **Q7. Building tiles** (the FE set: fort, gate, throne, village / buildings
+> only later as a capturable layer like Advance Wars / just one "fort" tile
+> for now): "we can go w C for now. make a note that we might allow capturing
+> later and the other building type tiles might come around then or even
+> without capturing. but let's keep it simple for the first playtest."
 
 ## Rules
 
@@ -50,7 +55,7 @@ rest are FE GBA values Nick accepted ("rest of numbers seem ok"). All
 
 | Terrain | Foot | Mounted | Armored | Flying |
 | ------- | ---- | ------- | ------- | ------ |
-| plain, road, bridge, floor, village, gate, throne | 1 | 1 | 1 | 1 |
+| plain, road, bridge, floor | 1 | 1 | 1 | 1 |
 | forest | 2 | 3 | 2 | 1 |
 | mountain | **3** | **5** | – | 1 |
 | peak | – | – | – | **3** |
@@ -83,15 +88,22 @@ Numbers are FE GBA values, *tunable*:
 | mountain | +2 | +30 |
 | peak | +2 | +40 |
 | water, sea | 0 | +10 |
+| fort | +2 | +20 |
 | thicket, wall, door | — | — |
 
-"—" = impassable, so it never matters in combat. Buildings (village, fort,
-gate, throne) are under review (see open sub-questions); until Nick decides,
-the data keeps FE GBA placeholders for them: village 0/+10, fort +2/+20,
-gate +3/+20, throne +3/+30.
+"—" = impassable, so it never matters in combat.
 
 - **Fliers get no terrain Def/Avoid bonus** (Nick, Q6): they fly above the
   trees. This balances their mobility.
+
+### Building tiles
+
+**One building tile for now: `fort`** (Nick, Q7), a defensive building for
+bosses and chokepoints: costs above, +2 Def / +20 Avoid, no healing. Kept
+simple for the first playtest. **No village, gate or throne tiles yet.**
+
+Later (Nick): capturing may be added, and more building tiles (village,
+gate, throne, …) may come with it, or even without capturing.
 
 ### Healing tiles
 
@@ -104,8 +116,6 @@ keeps a `heal_percent` field, set to 0 on every terrain.
 
 - **Fliers as late-game classes** (Nick: "tier 3+"): moving the Flier line
   out of tier 1 changes the class tree. Ticket 0017 asks this.
-- **Building tiles** (Nick: "I don't think I ever explicitly signed off on a
-  fort, gate, or throne tile type"): whether village, fort, gate and throne
-  exist, and what they do. Asked next.
-- **Capturing and healing tiles** together (Nick, Q5), later.
+- **Capturing, healing tiles and more building tiles** (village, gate,
+  throne, …) (Nick, Q5 and Q7), after the first playtest.
 - Weather (Nick: "no weather for now").
