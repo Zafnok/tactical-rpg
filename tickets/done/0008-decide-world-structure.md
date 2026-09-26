@@ -124,6 +124,10 @@ into two tickets so each fits one PR:
 - **1007** World map: nodes, travel, towns, save and camp.
 - **1008** World map skirmishes: fixed and random, with markers and level cap.
 
+On this PR, Claude also split 0801's chapter file into a **battle file** and a
+**chapter file**, so world-map battles and skirmishes are data-only additions
+(Nick asked that new battles be easy to add from data).
+
 Recorded the save answer in `death-and-difficulty.md` and the camp answer in
 `supports.md`, and updated `chapter-1.md`, `setting-and-tone.md`,
 `weapons-and-items.md`, `ROADMAP.md`, and tickets 0308, 0409, 0701, 0801,
