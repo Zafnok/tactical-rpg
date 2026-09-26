@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0001", "0201"]
 nick_input: none
-completed:
+completed: 2026-09-26
 ---
 
 # 0301 — Battle map, terrain, `.map` format
@@ -76,10 +76,10 @@ small test map.
 
 ## Acceptance criteria
 
-- [ ] Terrain values match `docs/design/stats-and-combat.md`.
-- [ ] Parser reports all errors with correct line/column (tests for each error kind).
-- [ ] `test_small.map` loads; all-assets test passes.
-- [ ] `core` has no knowledge of glyphs/colours/files.
+- [x] Terrain values match `docs/design/stats-and-combat.md`.
+- [x] Parser reports all errors with correct line/column (tests for each error kind).
+- [x] `test_small.map` loads; all-assets test passes.
+- [x] `core` has no knowledge of glyphs/colours/files.
 
 ## Tests required
 
@@ -88,3 +88,37 @@ small test map.
 
 ## Completion notes
 
+- **core**: `geom` (`Pos`, `Dir` in fixed order Right/Down/Left/Up, `Grid<T>`
+  with private fields so `cells.len() == width * height` always holds; built
+  with `Grid::from_cells`), `terrain` (`MovementTypeId`, `TerrainId`,
+  `TerrainRules`, `TerrainTable` with `get` / `movement_type` / `move_cost`),
+  `map::BattleMap`. No glyphs, colours or files in `core`.
+- **assets/data/terrain.ron**: movement types `foot, mounted, armored, flying`
+  (as in `progression.md`). 16 terrains: the 13 the ticket lists plus
+  `village`, `gate`, `throne`, because `stats-and-combat.md` already gives
+  their numbers. Def/Avoid/Heal % are exactly the design doc's table (a test,
+  `embedded_terrain_matches_design_doc`, pins them). The design doc has no
+  movement costs, so every cost is FE7's and the file says so once at the top
+  (`TUNABLE`) instead of on every line. Shallow `water` uses FE7 "river"
+  costs (foot 5, mounted/armored impassable, flying 1).
+- **Deviation, cost format**: `move_cost` is a map keyed by movement type name
+  (`{ "foot": Some(2), ..., "flying": None }`) rather than a bare list, so the
+  file is readable without counting positions. The loader still produces the
+  `Vec<Option<u8>>` indexed by `MovementTypeId`, and reports missing and
+  unknown movement types. A cost of `Some(0)` is rejected (would break
+  pathfinding); `heal_percent` over 100 is rejected; glyphs must be in the
+  font atlas's required set.
+- **Palette**: added placeholder terrain colours `thicket, peak, sea, wood,
+  floor, fort` (Nick tunes the look in 0011). The debug palette sampler
+  snapshot changed only by listing them.
+- **.map format** documented in `assets/maps/README.md`. `parse_map` reports
+  every error with line/column; also rejects a header without `---` and an
+  empty first row; tolerates CRLF and trailing blank lines.
+- **Deviation**: `print_map` returns `Option<String>` (`None` if a tile's
+  terrain has no legend character) instead of `String`. The parser returns a
+  `MapDef { map, legend }` so a map can be printed back with its own legend.
+- `Content` now has `terrain` and `maps` (keyed by file stem). Terrain colour
+  checks are skipped when the palette failed to load, and maps are skipped
+  when terrain failed, so one broken file doesn't produce a flood of errors.
+- Follow-ups: none.
+- For Nick: nothing visible yet; the map is first drawn in 0401.

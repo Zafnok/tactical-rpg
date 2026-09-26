@@ -1,0 +1,31 @@
+(
+    // Small map for tests: uses every legend entry. Not a real chapter map.
+    name: "Test Field",
+    legend: {
+        '.': "plain",
+        ':': "road",
+        'T': "forest",
+        '%': "thicket",
+        '^': "mountain",
+        'A': "peak",
+        '~': "water",
+        'S': "sea",
+        '#': "wall",
+        '+': "door",
+        '_': "floor",
+        'F': "fort",
+        '=': "bridge",
+        'V': "village",
+        'G': "gate",
+        'K': "throne",
+    },
+)
+---
+SSS~~..TT%%^^A
+SS~~..:::TT^^^
+S~~==:::..TT..
+.~~.:.V.....F.
+..:::....####.
+.T:..F...#_K+.
+TT:......#__#.
+T%:......##G#.
