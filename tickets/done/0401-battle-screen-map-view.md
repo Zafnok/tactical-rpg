@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0205", "0301", "0302"]
 nick_input: none
-completed:
+completed: 2026-09-26
 ---
 
 # 0401 — Battle screen: map view and camera
@@ -67,9 +67,9 @@ snapshots and the app renderer (needed for unit HP bars).
 
 ## Acceptance criteria
 
-- [ ] Quick Battle shows the map with units, correct 2-glyph tiles and colours.
-- [ ] Camera tests cover: small map centred, large map clamped at all four edges, margin respected.
-- [ ] Snapshot of the Quick Battle screen committed.
+- [x] Quick Battle shows the map with units, correct 2-glyph tiles and colours.
+- [x] Camera tests cover: small map centred, large map clamped at all four edges, margin respected.
+- [x] Snapshot of the Quick Battle screen committed.
 
 ## Tests required
 
@@ -81,3 +81,43 @@ snapshots and the app renderer (needed for unit HP bars).
 
 ## Completion notes
 
+Done. What was built:
+
+- **Overlays (ADR-0018):** `GlyphBuffer` now carries `Overlay { rect: PxRect,
+  color, layer: Under | Over }` in console pixels, clipped to the buffer and
+  offset by `blit`. Snapshots list them after the legend (section left out
+  when empty, so older snapshots are unchanged). The app renderer draws
+  `Under` after backgrounds and `Over` after glyphs, scaled like cells.
+  Overlays belong to their cells: `fill_rect` and `blit` remove the overlay
+  parts under the cells they replace. That's why a full-screen clear also
+  clears them, and why a later menu drawn on top won't show HP bars through it.
+- **Battle screen** in `ui::screens::battle` (next to the other screens, per
+  the ui README, not `ui::battle`): `layout` constants, `Camera` (`follow`
+  with a margin, `centred_on`) and `tile_to_cell`, terrain and unit drawing,
+  an empty side-panel box and the help line (key names from the keymap).
+- **Map labels:** `Unit.map_label` (core), set at creation from an optional
+  `map_label` override in `characters.ron` (characters and generics, checked
+  to be exactly two letters) or else the first two letters of the name (the
+  class name for generics). `trpg_content::check_map_labels` reports two
+  **named** units of one faction sharing a label. Generic units may share
+  labels (three Brigands are three `Br`s, as in the design doc). The
+  placeholder characters (all "Test …") got overrides `Lo`, `Kn`, `Ar`.
+- **Quick Battle** (debug builds only): a third title item between New Game
+  and Quit. It opens `test_small.map` with the three test characters against
+  two Brigands and a Raider; the knight and one brigand are wounded and the
+  archer has acted. `d` goes back. A new `Ctx::debug_tools` flag (replacing
+  `Game`'s own debug flag) controls it and F12. The test harness turns it on,
+  so tests don't depend on the build profile.
+
+Deviations:
+
+- `BattleState` doesn't exist yet (0305, not a blocker of this ticket), so
+  the screen holds a small `BattleScene { map, units }` stand-in. 0305 swaps
+  it in; only the screen reads it.
+- `BattleScreen::new(scene)` takes no `content`: drawing reads content from
+  `Ctx`. The camera starts centred on the first player unit; 0402 moves it
+  with the cursor.
+
+Nick: the Quick Battle item only exists in debug builds, so it isn't on the
+Pages (release) build. 0402's sign-off says "debug build or Pages link", so
+0402 may want to decide how Nick reaches it.

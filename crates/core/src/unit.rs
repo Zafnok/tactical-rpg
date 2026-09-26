@@ -84,6 +84,8 @@ pub struct CharacterDef {
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// Personal spells learned at a character level (0–2).
     pub personal_spells: Vec<(Level, SpellId)>,
+    /// Overrides the default [map label](default_map_label) (two letters).
+    pub map_label: Option<String>,
 }
 
 /// A unit on the battle map.
@@ -118,6 +120,28 @@ pub struct Unit {
     pub is_lord: bool,
     /// Weapon rank per kind (kept for kinds the current class can't use).
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
+    /// The two letters drawn for the unit on the map (ADR-0018).
+    pub map_label: String,
+}
+
+/// Letters in a map label.
+pub const MAP_LABEL_LEN: usize = 2;
+
+/// The default map label for a unit called `name` (a character's name, or
+/// the class name for generic units): its first two letters, e.g. `"Al"`
+/// for `"Aldo"`. Non-letters are skipped; a name with fewer letters is
+/// padded with spaces.
+pub fn default_map_label(name: &str) -> String {
+    let letters = name.chars().filter(|c| c.is_alphabetic());
+    letters
+        .chain(std::iter::repeat(' '))
+        .take(MAP_LABEL_LEN)
+        .collect()
+}
+
+/// Whether `label` is a valid map label override: exactly two letters.
+pub fn is_valid_map_label(label: &str) -> bool {
+    label.chars().count() == MAP_LABEL_LEN && label.chars().all(char::is_alphabetic)
 }
 
 /// Why a unit could not be created.
@@ -164,6 +188,10 @@ impl Unit {
         Ok(Unit {
             character: Some(def.id.clone()),
             name: def.name.clone(),
+            map_label: def
+                .map_label
+                .clone()
+                .unwrap_or_else(|| default_map_label(&def.name)),
             level: def.level,
             is_lord: def.is_lord,
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
@@ -222,6 +250,7 @@ impl Unit {
             acted: false,
             is_lord: false,
             weapon_ranks,
+            map_label: default_map_label(&class.name),
         }
     }
 }
@@ -313,6 +342,7 @@ mod tests {
                 (WeaponKind::Bow, WeaponRank::B),
             ]),
             personal_spells: vec![],
+            map_label: None,
         }
     }
 
@@ -368,8 +398,39 @@ mod tests {
                 // Raised to the class start rank.
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
+            map_label: "He".into(),
         };
         assert_eq!(unit, Ok(expected));
+    }
+
+    #[test]
+    fn from_character_uses_the_label_override() {
+        let classes = table(vec![class("brigand")]);
+        let mut def = character("brigand");
+        def.map_label = Some("Xy".into());
+        let unit = Unit::from_character(UnitId(0), &def, &classes, Faction::Player, POS);
+        assert_eq!(unit.map(|u| u.map_label), Ok("Xy".to_owned()));
+    }
+
+    #[test]
+    fn default_map_labels() {
+        assert_eq!(default_map_label("Aldo"), "Al");
+        assert_eq!(default_map_label("Test Lord"), "Te");
+        assert_eq!(default_map_label("  O'Brien"), "OB");
+        assert_eq!(default_map_label("Éla"), "Él");
+        assert_eq!(default_map_label("X"), "X ");
+        assert_eq!(default_map_label(""), "  ");
+    }
+
+    #[test]
+    fn map_label_validity() {
+        assert!(is_valid_map_label("Al"));
+        assert!(is_valid_map_label("éZ"));
+        assert!(!is_valid_map_label("A"));
+        assert!(!is_valid_map_label("Abc"));
+        assert!(!is_valid_map_label("A1"));
+        assert!(!is_valid_map_label("A "));
+        assert!(!is_valid_map_label(""));
     }
 
     #[test]
@@ -451,6 +512,7 @@ mod tests {
                 (WeaponKind::Axe, WeaponRank::D),
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
+            map_label: "Br".into(),
         };
         assert_eq!(unit, Ok(expected));
     }

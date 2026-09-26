@@ -2,8 +2,13 @@
 //!
 //! Positions are `i32` so callers can draw partly (or wholly) off-buffer:
 //! every primitive clips to the buffer and never panics.
+//!
+//! Besides cells, a buffer holds [`Overlay`]s: coloured rectangles in console
+//! pixels for what whole cells can't draw (HP bars, the path line;
+//! ADR-0018).
 
 use crate::color::Rgb;
+use crate::console::{CELL_H_PX, CELL_W_PX};
 
 /// One console cell: a glyph with foreground and background colours.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
@@ -70,6 +75,79 @@ impl Rect {
     }
 }
 
+/// A rectangle in console pixels (the logical space before scaling: a cell
+/// is [`CELL_W_PX`] × [`CELL_H_PX`]). Same shape as a cell [`Rect`].
+pub type PxRect = Rect;
+
+/// When an [`Overlay`] is drawn relative to the cells' glyphs.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub enum Layer {
+    /// After cell backgrounds, before glyphs (e.g. the path line).
+    Under,
+    /// After glyphs (e.g. HP bars).
+    Over,
+}
+
+impl Layer {
+    /// Lowercase name, as in snapshots.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Layer::Under => "under",
+            Layer::Over => "over",
+        }
+    }
+}
+
+/// A solid rectangle drawn on top of the cell grid (ADR-0018).
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Overlay {
+    /// Where, in console pixels.
+    pub rect: PxRect,
+    /// Fill colour.
+    pub color: Rgb,
+    /// Under or over the glyphs.
+    pub layer: Layer,
+}
+
+impl Overlay {
+    /// Builds an overlay.
+    pub const fn new(rect: PxRect, color: Rgb, layer: Layer) -> Self {
+        Self { rect, color, layer }
+    }
+}
+
+/// The pixel rectangle covered by cells `x..x + w`, `y..y + h`, or `None`
+/// if it doesn't fit in `i32` (only far off any buffer).
+fn cells_to_px(x: i64, y: i64, w: i64, h: i64) -> Option<PxRect> {
+    let (cw, ch) = (i64::from(CELL_W_PX), i64::from(CELL_H_PX));
+    let fit = |v: i64| i32::try_from(v).ok();
+    Some(Rect::new(
+        fit(x * cw)?,
+        fit(y * ch)?,
+        fit(w * cw)?,
+        fit(h * ch)?,
+    ))
+}
+
+/// The parts of `r` outside `hole` (up to four rectangles).
+fn subtract(r: Rect, hole: Rect) -> Vec<Rect> {
+    let Some(i) = r.intersect(&hole) else {
+        return vec![r];
+    };
+    // Every edge below lies within `r`, so none of this overflows.
+    let (r_right, r_bottom) = (r.x + r.w, r.y + r.h);
+    let (i_right, i_bottom) = (i.x + i.w, i.y + i.h);
+    [
+        Rect::new(r.x, r.y, r.w, i.y - r.y),
+        Rect::new(r.x, i_bottom, r.w, r_bottom - i_bottom),
+        Rect::new(r.x, i.y, i.x - r.x, i.h),
+        Rect::new(i_right, i.y, r_right - i_right, i.h),
+    ]
+    .into_iter()
+    .filter(|p| !p.is_empty())
+    .collect()
+}
+
 /// Border style for [`GlyphBuffer::draw_box`] (ADR-0012: single for panels,
 /// double for focus/modal).
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
@@ -106,6 +184,8 @@ pub struct GlyphBuffer {
     width: u16,
     height: u16,
     cells: Vec<Cell>,
+    /// In drawing order; each lies inside [`pixel_bounds`](Self::pixel_bounds).
+    overlays: Vec<Overlay>,
 }
 
 impl GlyphBuffer {
@@ -115,7 +195,52 @@ impl GlyphBuffer {
             width,
             height,
             cells: vec![fill; usize::from(width) * usize::from(height)],
+            overlays: Vec::new(),
         }
+    }
+
+    /// The whole buffer in console pixels.
+    pub fn pixel_bounds(&self) -> PxRect {
+        Rect::new(
+            0,
+            0,
+            i32::from(self.width) * i32::from(CELL_W_PX),
+            i32::from(self.height) * i32::from(CELL_H_PX),
+        )
+    }
+
+    /// The overlays, in drawing order (within a layer, later ones on top).
+    pub fn overlays(&self) -> &[Overlay] {
+        &self.overlays
+    }
+
+    /// Adds `overlay`, clipped to the buffer; one wholly outside (or empty)
+    /// is dropped.
+    pub fn add_overlay(&mut self, overlay: Overlay) {
+        if let Some(rect) = overlay.rect.intersect(&self.pixel_bounds()) {
+            self.overlays.push(Overlay { rect, ..overlay });
+        }
+    }
+
+    /// Removes the overlay parts over the cells of `rect`: the cells there
+    /// were just replaced, and overlays belong to the cells they were drawn
+    /// with.
+    fn cut_overlays(&mut self, rect: Rect) {
+        let Some(hole) = rect
+            .intersect(&self.bounds())
+            .and_then(|r| cells_to_px(r.x.into(), r.y.into(), r.w.into(), r.h.into()))
+        else {
+            return;
+        };
+        self.overlays = self
+            .overlays
+            .iter()
+            .flat_map(|o| {
+                subtract(o.rect, hole)
+                    .into_iter()
+                    .map(move |rect| Overlay { rect, ..*o })
+            })
+            .collect();
     }
 
     /// Width in cells.
@@ -205,9 +330,10 @@ impl GlyphBuffer {
         written
     }
 
-    /// Sets every cell of `rect` to `cell`.
+    /// Sets every cell of `rect` to `cell`, removing overlays over it.
     pub fn fill_rect(&mut self, rect: Rect, cell: Cell) {
         self.for_each_in(rect, |_, _, c| *c = cell);
+        self.cut_overlays(rect);
     }
 
     /// Draws the border of `rect` in `style`; the interior is untouched.
@@ -252,7 +378,8 @@ impl GlyphBuffer {
     }
 
     /// Copies all of `other` so its top-left lands at `(dest_x, dest_y)`,
-    /// clipped to this buffer.
+    /// clipped to this buffer. Overlays already under the copied area are
+    /// removed, and `other`'s overlays come along, offset and clipped.
     pub fn blit(&mut self, other: &GlyphBuffer, dest_x: i32, dest_y: i32) {
         let target = Rect::new(
             dest_x,
@@ -266,6 +393,26 @@ impl GlyphBuffer {
                 *c = *src;
             }
         });
+        self.cut_overlays(target);
+        let bounds = self.pixel_bounds();
+        let (ox, oy) = (
+            i64::from(dest_x) * i64::from(CELL_W_PX),
+            i64::from(dest_y) * i64::from(CELL_H_PX),
+        );
+        for o in &other.overlays {
+            // Clip in i64 first: the offset can push `x` past `i32`.
+            let (x, y) = (i64::from(o.rect.x) + ox, i64::from(o.rect.y) + oy);
+            let (w, h) = (i64::from(o.rect.w), i64::from(o.rect.h));
+            let (x0, y0) = (x.max(0), y.max(0));
+            let x1 = (x + w).min(i64::from(bounds.w));
+            let y1 = (y + h).min(i64::from(bounds.h));
+            if x1 <= x0 || y1 <= y0 {
+                continue;
+            }
+            let fit = |v: i64| i32::try_from(v).unwrap_or(0);
+            let rect = Rect::new(fit(x0), fit(y0), fit(x1 - x0), fit(y1 - y0));
+            self.overlays.push(Overlay { rect, ..*o });
+        }
     }
 }
 
@@ -547,6 +694,101 @@ mod tests {
         assert_eq!(b, before);
     }
 
+    fn over(x: i32, y: i32, w: i32, h: i32) -> Overlay {
+        Overlay::new(Rect::new(x, y, w, h), RED, Layer::Over)
+    }
+
+    #[test]
+    fn overlays_are_added_and_clipped() {
+        let mut b = buf(3, 2);
+        assert_eq!(b.pixel_bounds(), Rect::new(0, 0, 24, 32));
+        assert!(b.overlays().is_empty());
+        b.add_overlay(over(2, 14, 16, 2));
+        b.add_overlay(Overlay::new(Rect::new(-4, 30, 10, 5), BLUE, Layer::Under));
+        b.add_overlay(over(20, 0, 10, 1));
+        b.add_overlay(over(24, 0, 1, 1));
+        b.add_overlay(over(0, 0, 0, 1));
+        b.add_overlay(over(i32::MAX, i32::MIN, i32::MAX, 1));
+        assert_eq!(
+            b.overlays(),
+            [
+                over(2, 14, 16, 2),
+                Overlay::new(Rect::new(0, 30, 6, 2), BLUE, Layer::Under),
+                over(20, 0, 4, 1),
+            ]
+        );
+        assert_eq!(Layer::Under.name(), "under");
+        assert_eq!(Layer::Over.name(), "over");
+    }
+
+    #[test]
+    fn blit_offsets_and_clips_overlays() {
+        let mut src = buf(2, 2);
+        src.add_overlay(over(0, 14, 16, 2));
+        src.add_overlay(over(8, 16, 8, 16));
+        let mut b = buf(3, 3);
+        b.blit(&src, 1, 1);
+        assert_eq!(b.overlays(), [over(8, 30, 16, 2), over(16, 32, 8, 16)]);
+        let mut b = buf(3, 3);
+        b.blit(&src, -1, -1);
+        // First: x 0..16 → -8..8, y 14..16 → -2..0: gone. Second: 0..8, 0..16.
+        assert_eq!(b.overlays(), [over(0, 0, 8, 16)]);
+        let mut b = buf(3, 3);
+        b.blit(&src, 2, 2);
+        assert_eq!(b.overlays(), [over(16, 46, 8, 2)]);
+        let mut b = buf(3, 3);
+        b.blit(&src, i32::MAX, i32::MIN);
+        b.blit(&src, i32::MIN, i32::MAX);
+        assert!(b.overlays().is_empty());
+    }
+
+    #[test]
+    fn replacing_cells_removes_their_overlays() {
+        let mut b = buf(4, 2);
+        b.add_overlay(over(0, 14, 32, 2));
+        b.add_overlay(Overlay::new(Rect::new(0, 0, 32, 32), BLUE, Layer::Under));
+        b.fill_rect(Rect::new(1, 0, 2, 1), BLANK);
+        assert_eq!(
+            b.overlays(),
+            [
+                over(0, 14, 8, 2),
+                over(24, 14, 8, 2),
+                Overlay::new(Rect::new(0, 16, 32, 16), BLUE, Layer::Under),
+                Overlay::new(Rect::new(0, 0, 8, 16), BLUE, Layer::Under),
+                Overlay::new(Rect::new(24, 0, 8, 16), BLUE, Layer::Under),
+            ]
+        );
+        // Off-buffer and empty fills leave overlays alone.
+        let before = b.clone();
+        b.fill_rect(Rect::new(5, 0, 2, 2), BLANK);
+        b.fill_rect(Rect::new(0, 0, 0, 2), BLANK);
+        assert_eq!(b, before);
+        // Blitting over cells replaces their overlays with the source's.
+        let src = buf(1, 1);
+        b.blit(&src, 0, 1);
+        assert!(b.overlays().iter().all(|o| o.rect.y < 16 || o.rect.x >= 8));
+        b.fill_rect(b.bounds(), BLANK);
+        assert!(b.overlays().is_empty());
+    }
+
+    #[test]
+    fn subtract_cases() {
+        let r = Rect::new(0, 0, 10, 10);
+        assert_eq!(subtract(r, Rect::new(20, 0, 5, 5)), [r]);
+        assert!(subtract(r, Rect::new(-1, -1, 20, 20)).is_empty());
+        assert_eq!(
+            subtract(r, Rect::new(2, 3, 4, 5)),
+            [
+                Rect::new(0, 0, 10, 3),
+                Rect::new(0, 8, 10, 2),
+                Rect::new(0, 3, 2, 5),
+                Rect::new(6, 3, 4, 5),
+            ]
+        );
+        assert_eq!(cells_to_px(1, 2, 3, 4), Some(Rect::new(8, 32, 24, 64)));
+        assert_eq!(cells_to_px(i64::from(i32::MAX), 0, 1, 1), None);
+    }
+
     fn marked(w: u16, h: u16) -> GlyphBuffer {
         let mut b = buf(w, h);
         for y in 0..i32::from(h) {
@@ -624,6 +866,22 @@ mod tests {
             after.blend_bg(r, RED, t);
             after.dim(r, t);
             unchanged_outside(&before, &after, r);
+        }
+
+        #[test]
+        fn overlays_stay_inside_the_buffer(
+            w in 0u16..30, h in 0u16..10, r in rect(), x in coord(), y in coord(), f in rect(),
+        ) {
+            let mut src = buf(4, 3);
+            src.add_overlay(over(r.x, r.y, r.w, r.h));
+            let mut b = buf(w, h);
+            b.add_overlay(over(r.x, r.y, r.w, r.h));
+            b.blit(&src, x, y);
+            b.fill_rect(f, BLANK);
+            let px = b.pixel_bounds();
+            for o in b.overlays() {
+                prop_assert_eq!(o.rect.intersect(&px), Some(o.rect));
+            }
         }
 
         #[test]

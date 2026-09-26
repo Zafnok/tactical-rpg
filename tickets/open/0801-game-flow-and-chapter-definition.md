@@ -56,7 +56,11 @@ from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
    ```
 2. Validator: positions in bounds, on terrain passable for that unit's movement
    type, no overlaps; all ids exist (characters, templates, items, scenes);
-   objective target exists.
+   objective target exists. Map labels: build the chapter's units and run
+   `trpg_content::check_map_labels` (added in 0401, not yet called on real
+   chapter data). Two named units of one faction on a map must not share a
+   two-letter label (ADR-0018; fix with a `map_label` override in
+   `characters.ron`). Generic units may share labels.
 3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual */, lead: LeadProfile /* 0708 */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
    (serde). `Campaign::new_game()` with the starting roster;
    `Campaign::battle_setup(&ChapterDef) -> BattleSetup`;
@@ -81,7 +85,11 @@ from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
    `Restart battle` (with confirm) to the map menu. Both restarts rebuild the
    battle from its setup, which refunds all rewind charges.
 5. Title menu: `New Game`, `Quit` (+ debug-only `Quick Battle`, F12 tools).
-   Remove `PlaceholderScreen`.
+   Remove `PlaceholderScreen`. Today's wiring (0401):
+   `TitleScreen::with_quick_battle()` is chosen by `Game::start` when
+   `Ctx::debug_tools` is on, and it pushes a `BattleScreen` built by
+   `ui::screens::battle::quick_battle`. Keep that item working, but route it
+   through the new flow (e.g. via `assets/chapters/test.ron`).
 6. A tiny test chapter `assets/chapters/test.ron` (on `test_small.map`) used by tests.
 
 ## Acceptance criteria

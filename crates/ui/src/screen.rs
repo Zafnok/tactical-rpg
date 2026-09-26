@@ -108,6 +108,10 @@ pub struct Ctx {
     /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
     /// the platform implementation with [`Ctx::with_storage`].
     pub storage: Box<dyn Storage>,
+    /// Whether debug tools are offered: the glyph sampler key and the title
+    /// screen's Quick Battle. On in debug builds; the test harness turns it
+    /// on everywhere so tests don't depend on the build profile.
+    pub debug_tools: bool,
 }
 
 impl Ctx {
@@ -123,6 +127,7 @@ impl Ctx {
             keymap,
             layout: None,
             storage: Box::new(MemoryStorage::new()),
+            debug_tools: cfg!(debug_assertions),
         })
     }
 
@@ -283,8 +288,11 @@ pub(crate) mod tests {
 
     /// The context for the embedded content, with the right-handed layout
     /// already chosen.
+    /// Debug tools are on whatever the build profile, as in the harness.
     pub(crate) fn ctx() -> Ctx {
-        Ctx::embedded().unwrap().with_layout(Layout::RightHanded)
+        let mut ctx = Ctx::embedded().unwrap().with_layout(Layout::RightHanded);
+        ctx.debug_tools = true;
+        ctx
     }
 
     type Log = Rc<RefCell<Vec<String>>>;

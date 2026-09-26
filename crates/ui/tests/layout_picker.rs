@@ -73,7 +73,7 @@ fn the_choice_persists_across_restart() {
 fn left_handed_wasd_moves_and_j_confirms() {
     let mut h = Harness::new();
     h.keys("s j");
-    // Title menu: `s` moves to Quit, `w` back to New Game, `j` confirms.
+    // Title menu: `s` moves down, `w` back to New Game, `j` confirms.
     h.keys("s w j");
     assert_eq!(h.top_screen(), "placeholder");
     // The help text names the left-handed keys.
@@ -84,7 +84,7 @@ fn left_handed_wasd_moves_and_j_confirms() {
     // Right-handed keys do nothing now.
     h.keys("f Down");
     assert_eq!(h.top_screen(), "title");
-    h.keys("s j");
+    h.keys("s s j");
     assert!(h.quit_requested());
 }
 
@@ -96,6 +96,6 @@ fn right_handed_arrows_move_and_f_confirms() {
     assert_eq!(h.top_screen(), "title", "j does nothing right-handed");
     h.keys("f");
     assert_eq!(h.top_screen(), "placeholder");
-    h.keys("d Down f");
+    h.keys("d Down Down f");
     assert!(h.quit_requested());
 }

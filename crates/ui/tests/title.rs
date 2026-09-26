@@ -20,9 +20,9 @@ fn title_renders() {
 }
 
 #[test]
-fn down_then_select_quits() {
+fn down_twice_then_select_quits() {
     let mut h = title();
-    h.keys("Down f");
+    h.keys("Down Down f");
     assert!(h.quit_requested());
 }
 
@@ -66,10 +66,11 @@ fn back_on_the_title_does_nothing() {
 #[test]
 fn holding_down_repeats_and_wraps() {
     // Held for 0.3 s: the press plus repeats at 170, 225 and 280 ms makes
-    // four moves over two items, back on New Game.
+    // four moves over three items (the harness has debug tools on, so Quick
+    // Battle is there), wrapping round to Quick Battle.
     let mut h = title();
     h.hold("Down", 0.3).wait(0.5).keys("f");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "battle");
 }
 
 #[test]

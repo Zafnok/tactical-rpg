@@ -25,6 +25,13 @@ Must feel snappy.
 link) and says whether cursor speed and key layout feel right. Feedback becomes
 `tuning` tickets.
 
+> **Heads-up from 0401:** the title's `Quick Battle` item exists only when
+> `Ctx::debug_tools` is on, which is `cfg!(debug_assertions)`. The Pages site
+> is a **release** build (`cargo xtask web --release`), so right now Nick
+> can't reach Quick Battle from the Pages link. Step 7 fixes this before
+> asking for sign-off. Later sign-offs (0404, 0408, 0410, 0414, 0502) all rely
+> on it.
+
 ## Scope
 
 **In:** cursor state and drawing, movement/clamp, camera follow, cursor
@@ -35,6 +42,14 @@ context help bar.
 
 ## Implementation steps
 
+0. **Where things are (from 0401):** the screen is `ui::screens::battle`
+   (`BattleScreen`, and `quick_battle` builds the debug scene). Submodules:
+   `layout` (map viewport `x 0..70`, `y 0..30`, side panel `x 70..100`,
+   help row 31), `camera` (`Camera::follow(target, w, h, margin)`,
+   `Camera::centred_on`, `tile_to_cell`, the only place tiles become cells)
+   and `units` (labels, HP bars). `BattleScreen::follow(pos)` already wraps
+   the camera with the 3-tile margin. The help line is `BattleScreen::help`.
+   The side panel is drawn as an empty box.
 1. `Cursor { pos: Pos, blink_t: f32 }` in `BattleScreen`. `CursorLeft/…` move 1
    tile, clamped to map bounds (no jump actions: `docs/design/controls.md`). Camera follows (0401).
 2. Draw per `docs/design/look-and-feel.md` / ADR-0018: `[` and `]` in the
@@ -51,6 +66,14 @@ context help bar.
    acted, ordered by `(y, x)`; wraps; moves cursor + camera.
 5. Help bar reflects context (e.g. over own ready unit: `f select · e info · s next unit`, key names read from the keymap).
 6. On battle start, cursor starts on the first player lord (or first player unit).
+   The camera currently starts `centred_on` the first player unit
+   (`BattleScreen::new`). Centre it on the cursor's start instead.
+7. **Make Quick Battle reachable from the Pages build** (see the heads-up
+   above). Pick a way that keeps it out of the shipped game, e.g. a cargo
+   feature (`debug-tools`) that turns `Ctx::debug_tools` on, enabled only by
+   the Pages workflow and never by `release.yml` or itch/Steam builds. If
+   the choice adds a build flavour, record it in an ADR. Check the Pages link
+   shows `Quick Battle` before asking Nick to sign off.
 
 ## Acceptance criteria
 
@@ -58,6 +81,7 @@ context help bar.
 - [ ] Cursor never leaves the map; camera scrolls at the 3-tile margin.
 - [ ] Panel shows correct terrain and unit data.
 - [ ] Harness tests below pass; snapshots committed.
+- [ ] Quick Battle is on the title menu of the Pages build and absent from release builds (step 7).
 
 ## Tests required
 
