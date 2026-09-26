@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0001", "0003", "0004", "0302"]
 nick_input: answer-first
-completed:
+completed: 2026-09-26
 ---
 
 # 0304 — RNG, combat forecast, combat resolution
@@ -79,9 +79,9 @@ state (0305), UI (0404).
 
 ## Acceptance criteria
 
-- [ ] Worked examples from `stats-and-combat.md`, `weapons-and-items.md` and `magic.md` (M1–M2) reproduce exactly.
-- [ ] Changing any formula constant makes at least one test fail (mutation gate will verify).
-- [ ] RNG is serializable and deterministic across platforms (test: fixed seed → fixed first 10 outputs, hard-coded).
+- [x] Worked examples from `stats-and-combat.md`, `weapons-and-items.md` and `magic.md` (M1–M2) reproduce exactly.
+- [x] Changing any formula constant makes at least one test fail (mutation gate will verify).
+- [x] RNG is serializable and deterministic across platforms (test: fixed seed → fixed first 10 outputs, hard-coded).
 
 ## Tests required
 
@@ -91,3 +91,49 @@ state (0305), UI (0404).
 
 ## Completion notes
 
+**Done.** New modules: `trpg_core::rng` (`SimRng`, `RandomSource`,
+`ScriptedRng`) and `trpg_core::combat` (`CombatRules`, `WeaponStats`,
+`WeaponTrait`, `DamageType`, `CombatantInput`, `forecast`, `SideForecast`,
+`Forecast`, `resolve`, `roll_hit`, `Strike`, `Side`, `CombatHp`,
+`CombatOutcome`). New ADR-0019 (in-crate PCG32; serde derives in `core`).
+
+What the next tickets should know (API differences from the plan):
+
+- **Constants are a `CombatRules` value** (thresholds `[4, 14, 24]`,
+  `rank_speed`, ×6/5, min 5, +15, broken /2 and −20, crit ×3, Weak ×3,
+  Resist /2, the Dex/Spd factors). `CombatRules::default()` holds the design
+  values; `forecast` and `resolve` take `&CombatRules` as their first
+  argument. It derives serde, so a balance ticket (e.g. 0013) can load it from
+  data instead of editing `Default`.
+- **`forecast` returns `Option<Forecast>`**: `None` when the attacker has no
+  weapon or the target is outside its range (the UI/AI should only offer
+  valid targets anyway).
+- **`resolve(rules, &forecast, CombatHp, CombatHp, rng)`**: `CombatHp` is
+  current + max HP, because an Absorb hit heals up to max HP.
+- **`WeaponStats.kind` is `Option<WeaponKind>`** (the existing enum; there is
+  no `WeaponKindId`). `None` = spell or typeless weapon: rank speed 0. Build a
+  weapon's `trait_` with `CombatRules::type_trait(kind)`.
+- **Values use `StatValue`** (not `u16`) for damage and HP, per
+  `stats-and-combat.md`'s "one stat value type everywhere". `hit`/`crit` are
+  `u8` in `0..=100`, `strikes` is `u8`.
+- **`Strike` has an extra `healed: bool`** (Absorb). `damage` is the strike's
+  damage (crit included) if it hit, else 0; for Absorb it is the heal before
+  the max-HP cap. `target_hp_after` is the result.
+- **Fliers** get no terrain Def/Avoid inside the combat maths
+  (`CombatantInput.tags.flying`), so callers pass the real tile.
+- `SimRng::roll_percent` caps rejection redraws at 16 (never reached in
+  practice) so mutation testing can't hang; see ADR-0019.
+- Added serde derives to `Element`, `Affinity`, `UnitTag`, `WeaponKind`
+  (needed by the combat output types).
+
+Tests: every worked example (stats 1–3 with their boundaries, W1–W4 with
+W2b, M1–M2 with the Resist variant) in one table; Example 1's scripted trace
+(8 rolls); W1's crit (30); M2 healing 20→29 and 25→30; one test per trait and
+affinity rule; burden/rank boundaries and the attack-speed illustration table;
+strike-count thresholds; strike orders A-D-A-A and A-D-D; lethal first strike
+and lethal counter; exact 2RN counts over all 10 000 roll pairs (80 → 9220 etc.)
+and a seeded 100k-roll check (≈92%); chi-square uniformity; PCG reference
+vector; RON round-trip; proptest invariants. `cargo mutants` on the diff:
+145 caught, 0 missed.
+
+No follow-up tickets. Nothing for Nick to play yet (no UI; 0404 shows it).

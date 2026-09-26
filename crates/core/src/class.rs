@@ -4,6 +4,8 @@
 
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::magic::{Affinity, Element, SpellId};
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::MovementTypeId;
@@ -27,7 +29,7 @@ pub type ClassLevel = u8;
 pub type ClassPoints = u32;
 
 /// A unit tag, used by weapon effectiveness.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum UnitTag {
     /// Land cavalry (spears are effective).
     Mounted,
