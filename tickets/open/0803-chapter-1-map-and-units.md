@@ -36,7 +36,7 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
 1. **Map:** design `ch01.map` at the size in `chapter-1.md`, following FE map
    principles: a clear start area, 2–3 lanes/chokepoints, terrain that matters
    (forests for defence, a river with a bridge, a fort), the boss on a
-   defensible tile (throne/fort/gate). Sketch it in the PR description.
+   defensible tile (a fort; `terrain.md` has no gate or throne yet). Sketch it in the PR description.
 2. **Roster:** real Chapter 1 characters from the story (replace
    `// PLACEHOLDER` entries; keep test fixtures in `tests/fixtures/` instead of
    shipped data). Each character's base stats, **talent** stat, starting

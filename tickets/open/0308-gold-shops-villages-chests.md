@@ -22,6 +22,11 @@ loadout, stock and battle pack from 0306 and the command/event system
 from 0305 ([ADR-0004](../../docs/adr/0004-crate-architecture.md): pure
 `core`, changes only via `Command` → `Event`s).
 
+**Villages are on hold:** Nick deferred every building tile except `fort`
+(`docs/design/terrain.md`, 2026-09-26). Unless `terrain.md` has a village by
+the time this ticket is worked, leave villages (and `Visit`) out and say so in
+the Completion notes.
+
 ## Nick input
 
 None.
