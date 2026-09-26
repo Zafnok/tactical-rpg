@@ -72,7 +72,7 @@ impl SimRng {
 
     /// A uniform integer in `0..=99`. Rejection sampling: draws that would
     /// make low values more likely (the top `2^32 mod 100` values) are
-    /// thrown away and redrawn, at most [`MAX_REDRAWS`] times. Each draw is
+    /// thrown away and redrawn, at most 16 times. Each draw is
     /// rejected with chance `96 / 2^32`, so the cap is never reached in
     /// practice; it only guarantees the loop ends.
     pub fn roll_percent(&mut self) -> u8 {
