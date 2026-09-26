@@ -34,6 +34,16 @@ ends with a climactic battle, and some chapters may hold several battles first
 fit the structure he picks (optional or required, repeatable, where they
 trigger), and create follow-up tickets for multi-battle chapters.
 
+Also ask Nick about **saving and camp in multi-battle chapters** (raised in
+0010). Today `death-and-difficulty.md` only offers a save after a chapter
+victory, plus a one-time suspend in battle. A chapter full of skirmishes
+could then go a long time without a save. Ask when saving is allowed (e.g.
+after every battle, or anywhere on the overworld like FE Sacred Stones).
+Also ask where **camp** appears (`supports.md`: support conversations and
+camp events are read at camp, which sits between battles). Record the save
+answer in `death-and-difficulty.md` and the camp answer in `supports.md`.
+Update 0802 (save/load) and 1003 (camp screens) to match.
+
 ## Nick input
 
 **Decision.** Nick can also answer "decide later" — record that.
