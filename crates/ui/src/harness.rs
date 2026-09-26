@@ -6,8 +6,9 @@
 //!
 //! ```
 //! use trpg_ui::harness::Harness;
+//! use trpg_ui::input::Layout;
 //!
-//! let mut h = Harness::new();
+//! let mut h = Harness::with_layout(Layout::RightHanded);
 //! h.keys("f");
 //! assert_eq!(h.top_screen(), "placeholder");
 //! h.keys("d");
@@ -15,8 +16,9 @@
 //! ```
 
 use crate::game::{Game, RawKeyEvent};
-use crate::input::Chord;
-use crate::screen::{Ctx, Screen};
+use crate::input::{Chord, Layout};
+use crate::screen::{Ctx, LAYOUT_KEY, Screen};
+use crate::storage::{MemoryStorage, Storage};
 
 /// Simulated length of one frame, in seconds (60 fps).
 pub const FRAME_DT: f32 = 1.0 / 60.0;
@@ -31,20 +33,38 @@ pub struct Harness {
 }
 
 impl Harness {
-    /// The game with the embedded content, at the title screen.
+    /// A first launch: the embedded content and empty storage, so the
+    /// layout picker is open over the title screen.
     ///
     /// # Panics
     ///
     /// If the embedded content fails to load (the content tests catch that
     /// first).
     pub fn new() -> Self {
-        Self::from_game(Game::start(embedded_ctx()))
+        Self::with_storage(Box::new(MemoryStorage::new()))
     }
 
-    /// The game with the embedded content, showing only `root`, for testing
-    /// a screen on its own.
+    /// A later launch where `layout` was picked before: at the title screen
+    /// with that layout's keys.
+    pub fn with_layout(layout: Layout) -> Self {
+        let mut storage = MemoryStorage::new();
+        if let Err(e) = storage.write(LAYOUT_KEY, layout.name()) {
+            panic!("saving the layout: {e}");
+        }
+        Self::with_storage(Box::new(storage))
+    }
+
+    /// A launch with `storage` (e.g. from [`into_storage`](Self::into_storage)
+    /// of an earlier run), starting as the real game does.
+    pub fn with_storage(storage: Box<dyn Storage>) -> Self {
+        Self::from_game(Game::start(embedded_ctx().with_storage(storage)))
+    }
+
+    /// The game with the embedded content and the right-handed layout,
+    /// showing only `root`, for testing a screen on its own.
     pub fn with_screen(root: Box<dyn Screen>) -> Self {
-        Self::from_game(Game::new(embedded_ctx(), root))
+        let ctx = embedded_ctx().with_layout(Layout::RightHanded);
+        Self::from_game(Game::new(ctx, root))
     }
 
     /// Wraps `game`. Debug screens are always on, so F12 behaves the same
@@ -138,6 +158,12 @@ impl Harness {
     /// The game being driven.
     pub fn game(&self) -> &Game {
         &self.game
+    }
+
+    /// Ends the run, handing back its storage, to start the next launch
+    /// with [`with_storage`](Self::with_storage).
+    pub fn into_storage(self) -> Box<dyn Storage> {
+        self.game.into_ctx().storage
     }
 }
 
@@ -255,8 +281,26 @@ mod tests {
     }
 
     #[test]
+    fn new_is_a_first_launch_and_with_layout_a_later_one() {
+        let h = Harness::default();
+        assert_eq!(h.screens(), ["title", "layout_picker"]);
+        let h = Harness::with_layout(Layout::LeftHanded);
+        assert_eq!(h.screens(), ["title"]);
+        assert_eq!(h.game().ctx().layout(), Some(Layout::LeftHanded));
+    }
+
+    #[test]
+    fn storage_carries_over_between_runs() {
+        let mut h = Harness::new();
+        h.keys("Enter");
+        let h = Harness::with_storage(h.into_storage());
+        assert_eq!(h.screens(), ["title"]);
+        assert_eq!(h.game().ctx().layout(), Some(Layout::RightHanded));
+    }
+
+    #[test]
     fn reports_game_state() {
-        let mut h = Harness::default();
+        let mut h = Harness::with_layout(Layout::RightHanded);
         assert_eq!(h.top_screen(), "title");
         assert_eq!(
             h.snapshot(),
@@ -273,7 +317,8 @@ mod tests {
 
     #[test]
     fn debug_screens_are_always_on() {
-        let game = Game::start(embedded_ctx()).with_debug_screens(false);
+        let ctx = embedded_ctx().with_layout(Layout::RightHanded);
+        let game = Game::start(ctx).with_debug_screens(false);
         let mut h = Harness::from_game(game);
         h.keys("F12");
         assert_eq!(h.top_screen(), "glyph_sampler");
@@ -294,6 +339,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "bad chord in test script")]
     fn bad_chord_panics() {
-        Harness::new().keys("Ctrl+x");
+        Harness::with_layout(Layout::RightHanded).keys("Ctrl+x");
     }
 }

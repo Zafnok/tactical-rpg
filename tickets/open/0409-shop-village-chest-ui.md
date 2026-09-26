@@ -19,6 +19,9 @@ UI for 0308's rules (`docs/design/weapons-and-items.md`, "Money and shops"):
 FE on-map Armoury / Vendor / Blacksmith, villages and chests. The same shop
 screen is reused between chapters through 0308's `ShopSession`.
 
+**Villages are on hold** (`docs/design/terrain.md`, 2026-09-26: no village
+tile yet). Build the village UI only if 0308 implemented villages.
+
 ## Nick input
 
 **Sign-off:** Nick buys, sells and repairs on a test map and comments.

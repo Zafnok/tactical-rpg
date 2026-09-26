@@ -13,8 +13,12 @@ use trpg_content::{Content, ContentErrors};
 
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Keymap};
-use crate::storage::{MemoryStorage, Storage};
+use crate::input::{Action, Keymap, Layout};
+use crate::storage::{MemoryStorage, Storage, StorageError};
+
+/// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
+/// e.g. `LeftHanded`, which is also valid RON for the enum).
+pub const LAYOUT_KEY: &str = "layout";
 
 /// One screen of the game: title, battle map, a menu overlay, …
 pub trait Screen {
@@ -93,8 +97,13 @@ pub struct Ctx {
     pub content: Content,
     /// Named colours, from `content.palette`.
     pub palette: Palette,
-    /// The active key bindings, for help text that names keys.
+    /// The active key bindings, for help text that names keys: the chosen
+    /// layout's, or [`Keymap::layout_picker`] until one is chosen. Change it
+    /// with [`use_layout`](Self::use_layout) or
+    /// [`choose_layout`](Self::choose_layout), never directly.
     pub keymap: Keymap,
+    /// The layout in use; `None` until the player has picked one.
+    layout: Option<Layout>,
     /// Where saves and settings persist (0207): files on native,
     /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
     /// the platform implementation with [`Ctx::with_storage`].
@@ -103,14 +112,16 @@ pub struct Ctx {
 
 impl Ctx {
     /// Builds the shared context from loaded content. Fails with the names
-    /// of any UI colours the palette lacks. Starts with [`MemoryStorage`].
+    /// of any UI colours the palette lacks. Starts with [`MemoryStorage`]
+    /// and no layout chosen (so [`Keymap::layout_picker`] is active).
     pub fn new(content: Content) -> Result<Self, LoadError> {
         let palette = Palette::new(&content.palette).map_err(LoadError::Palette)?;
-        let keymap = Keymap::from_def(&content.keymap);
+        let keymap = Keymap::layout_picker(content.keymap.repeat);
         Ok(Self {
             content,
             palette,
             keymap,
+            layout: None,
             storage: Box::new(MemoryStorage::new()),
         })
     }
@@ -118,6 +129,40 @@ impl Ctx {
     /// The context for the content embedded in the binary.
     pub fn embedded() -> Result<Self, LoadError> {
         Self::new(trpg_content::load_embedded().map_err(LoadError::Content)?)
+    }
+
+    /// The layout in use, or `None` if the player hasn't picked one yet.
+    pub fn layout(&self) -> Option<Layout> {
+        self.layout
+    }
+
+    /// Switches to `layout`'s bindings for this session, without saving.
+    pub fn use_layout(&mut self, layout: Layout) {
+        self.keymap = Keymap::for_layout(&self.content.keymap, layout);
+        self.layout = Some(layout);
+    }
+
+    /// Builder form of [`use_layout`](Self::use_layout).
+    #[must_use]
+    pub fn with_layout(mut self, layout: Layout) -> Self {
+        self.use_layout(layout);
+        self
+    }
+
+    /// The player picked `layout`: switches to it and saves it under
+    /// [`LAYOUT_KEY`]. The switch happens even if saving fails (the player
+    /// is then asked again next launch).
+    pub fn choose_layout(&mut self, layout: Layout) -> Result<(), StorageError> {
+        self.use_layout(layout);
+        self.storage.write(LAYOUT_KEY, layout.name())
+    }
+
+    /// The layout saved by an earlier [`choose_layout`](Self::choose_layout).
+    /// `None` if nothing is saved, or if the saved value can't be read or
+    /// isn't a known layout (the player is simply asked again).
+    pub fn saved_layout(&self) -> Option<Layout> {
+        let saved = self.storage.read(LAYOUT_KEY).ok()??;
+        Layout::from_name(saved.trim())
     }
 
     /// Replaces the storage backend (the harness and tests keep
@@ -236,9 +281,10 @@ pub(crate) mod tests {
     use crate::glyph_buffer::Cell;
     use crate::{Rgb, UiColor};
 
-    /// The context for the embedded content.
+    /// The context for the embedded content, with the right-handed layout
+    /// already chosen.
     pub(crate) fn ctx() -> Ctx {
-        Ctx::embedded().unwrap()
+        Ctx::embedded().unwrap().with_layout(Layout::RightHanded)
     }
 
     type Log = Rc<RefCell<Vec<String>>>;
@@ -423,8 +469,88 @@ pub(crate) mod tests {
     fn ctx_uses_the_content_palette_and_keymap() {
         let c = ctx();
         assert_eq!(c.palette, Palette::new(&c.content.palette).unwrap());
-        assert_eq!(c.keymap, Keymap::from_def(&c.content.keymap));
+        assert_eq!(
+            c.keymap,
+            Keymap::for_layout(&c.content.keymap, Layout::RightHanded)
+        );
+        assert_eq!(c.layout(), Some(Layout::RightHanded));
         assert_eq!(c.palette.get(UiColor::Black), Rgb::new(0, 0, 0));
+    }
+
+    #[test]
+    fn a_new_ctx_has_no_layout_and_the_picker_keys() {
+        let c = Ctx::embedded().unwrap();
+        assert_eq!(c.layout(), None);
+        assert_eq!(c.keymap, Keymap::layout_picker(c.content.keymap.repeat));
+        assert_eq!(c.saved_layout(), None);
+    }
+
+    #[test]
+    fn use_layout_switches_without_saving() {
+        let mut c = ctx();
+        c.use_layout(Layout::LeftHanded);
+        assert_eq!(c.layout(), Some(Layout::LeftHanded));
+        assert_eq!(
+            c.keymap,
+            Keymap::for_layout(&c.content.keymap, Layout::LeftHanded)
+        );
+        assert_eq!(c.storage.read(LAYOUT_KEY), Ok(None));
+    }
+
+    #[test]
+    fn choose_layout_saves_and_saved_layout_reads_it_back() {
+        for layout in Layout::ALL {
+            let mut c = Ctx::embedded().unwrap();
+            assert_eq!(c.choose_layout(layout), Ok(()));
+            assert_eq!(c.layout(), Some(layout));
+            assert_eq!(
+                c.storage.read(LAYOUT_KEY),
+                Ok(Some(layout.name().to_owned()))
+            );
+            assert_eq!(c.saved_layout(), Some(layout));
+        }
+    }
+
+    #[test]
+    fn a_bad_saved_layout_counts_as_none() {
+        let mut c = Ctx::embedded().unwrap();
+        c.storage.write(LAYOUT_KEY, "Vim").unwrap();
+        assert_eq!(c.saved_layout(), None);
+        c.storage
+            .write(
+                LAYOUT_KEY,
+                " LeftHanded
+",
+            )
+            .unwrap();
+        assert_eq!(c.saved_layout(), Some(Layout::LeftHanded));
+    }
+
+    /// A storage whose every operation fails.
+    #[derive(Debug)]
+    struct Failing;
+
+    impl Storage for Failing {
+        fn read(&self, _: &str) -> Result<Option<String>, StorageError> {
+            Err(StorageError::Backend("down".into()))
+        }
+        fn write(&mut self, _: &str, _: &str) -> Result<(), StorageError> {
+            Err(StorageError::Backend("down".into()))
+        }
+        fn delete(&mut self, _: &str) -> Result<(), StorageError> {
+            Err(StorageError::Backend("down".into()))
+        }
+        fn list(&self) -> Result<Vec<String>, StorageError> {
+            Err(StorageError::Backend("down".into()))
+        }
+    }
+
+    #[test]
+    fn a_failed_save_still_switches_layout() {
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(Failing));
+        assert_eq!(c.saved_layout(), None);
+        assert!(c.choose_layout(Layout::LeftHanded).is_err());
+        assert_eq!(c.layout(), Some(Layout::LeftHanded));
     }
 
     #[test]

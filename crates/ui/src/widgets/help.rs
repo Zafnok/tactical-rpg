@@ -13,6 +13,17 @@ pub fn key_name(keymap: &Keymap, action: Action) -> Option<String> {
     keymap.primary(action).map(|c| c.to_string())
 }
 
+/// Every key for `action`, joined with `/` (e.g. `f/j/Enter/Space`), in
+/// [`Keymap::chords_for`] order; `None` if unbound.
+pub fn all_key_names(keymap: &Keymap, action: Action) -> Option<String> {
+    let names: Vec<String> = keymap
+        .chords_for(action)
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    (!names.is_empty()).then(|| names.join("/"))
+}
+
 /// What moves the cursor: `arrows` when the four cursor actions are on the
 /// arrow keys, otherwise their keys in up-left-down-right order (`wasd`).
 /// `None` if any cursor action is unbound.
@@ -50,19 +61,31 @@ pub fn help_line(hints: &[(Option<String>, &str)]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use trpg_content::{Chord, KeymapDef};
+    use trpg_content::{Chord, RepeatDef};
 
     use super::*;
 
     fn keymap(pairs: &[(&str, Action)]) -> Keymap {
-        let def = KeymapDef {
-            bindings: pairs
-                .iter()
-                .map(|&(c, a)| (Chord::parse(c).unwrap(), a))
-                .collect(),
-            repeat: trpg_content::RepeatDef::default(),
-        };
-        Keymap::from_def(&def)
+        Keymap::new(
+            pairs.iter().map(|&(c, a)| (Chord::parse(c).unwrap(), a)),
+            RepeatDef::default(),
+        )
+    }
+
+    #[test]
+    fn all_key_names_lists_every_chord() {
+        let km = keymap(&[
+            ("Space", Action::Confirm),
+            ("f", Action::Confirm),
+            ("Enter", Action::Confirm),
+            ("d", Action::Cancel),
+        ]);
+        assert_eq!(
+            all_key_names(&km, Action::Confirm).as_deref(),
+            Some("f/Enter/Space")
+        );
+        assert_eq!(all_key_names(&km, Action::Cancel).as_deref(), Some("d"));
+        assert_eq!(all_key_names(&km, Action::Info), None);
     }
 
     #[test]

@@ -6,29 +6,62 @@ pub mod bundle;
 pub mod error;
 pub mod font;
 pub mod keymap;
+pub mod map;
 pub mod palette;
 pub mod ron_loader;
+pub mod terrain;
+
+use std::collections::BTreeMap;
 
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
-pub use keymap::{Action, Chord, Key, KeymapDef, RepeatDef};
+pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
+pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
+pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
 
 /// All validated game content.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Content {
     /// Named colours (ADR-0012).
     pub palette: PaletteDef,
-    /// Default key bindings and repeat timings (ADR-0006).
+    /// Key bindings for every layout, and repeat timings (ADR-0015).
     pub keymap: KeymapDef,
     /// Font atlas layout; the image is `bundle::bytes(font::ATLAS_PNG_PATH)`.
     pub font: FontAtlasDef,
+    /// Terrain rules and looks.
+    pub terrain: TerrainDef,
+    /// Battle maps by id (file stem).
+    pub maps: BTreeMap<String, MapDef>,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
-/// loaders and returns every error found, not just the first.
+/// loaders and returns every error found, not just the first. Checks that
+/// depend on another file (terrain colours, map legends) are skipped when that
+/// file failed, so one broken file doesn't flood the report.
 pub fn load_embedded() -> Result<Content, ContentErrors> {
-    assemble(PaletteDef::load(), KeymapDef::load(), FontAtlasDef::load())
+    let palette = PaletteDef::load();
+    let terrain = TerrainDef::load(palette.as_ref().ok());
+    let maps = match &terrain {
+        Ok(t) => map::load_all(&t.display),
+        Err(_) => Ok(BTreeMap::new()),
+    };
+    assemble(
+        palette,
+        KeymapDef::load(),
+        FontAtlasDef::load(),
+        terrain,
+        maps,
+    )
+}
+
+/// Takes a loader's value, or moves its errors into `errors` and returns a
+/// default.
+fn take<T: Default>(result: Result<T, Vec<ContentError>>, errors: &mut Vec<ContentError>) -> T {
+    result.unwrap_or_else(|e| {
+        errors.extend(e);
+        T::default()
+    })
 }
 
 /// Combines each loader's result into [`Content`], collecting the errors of
@@ -37,26 +70,19 @@ fn assemble(
     palette: Result<PaletteDef, Vec<ContentError>>,
     keymap: Result<KeymapDef, Vec<ContentError>>,
     font: Result<FontAtlasDef, Vec<ContentError>>,
+    terrain: Result<TerrainDef, Vec<ContentError>>,
+    maps: Result<BTreeMap<String, MapDef>, Vec<ContentError>>,
 ) -> Result<Content, ContentErrors> {
     let mut errors = Vec::new();
-    let palette = palette.unwrap_or_else(|e| {
-        errors.extend(e);
-        PaletteDef::default()
-    });
-    let keymap = keymap.unwrap_or_else(|e| {
-        errors.extend(e);
-        KeymapDef::default()
-    });
-    let font = font.unwrap_or_else(|e| {
-        errors.extend(e);
-        FontAtlasDef::default()
-    });
+    let content = Content {
+        palette: take(palette, &mut errors),
+        keymap: take(keymap, &mut errors),
+        font: take(font, &mut errors),
+        terrain: take(terrain, &mut errors),
+        maps: take(maps, &mut errors),
+    };
     if errors.is_empty() {
-        Ok(Content {
-            palette,
-            keymap,
-            font,
-        })
+        Ok(content)
     } else {
         Err(ContentErrors(errors))
     }
@@ -66,9 +92,24 @@ fn assemble(
 mod tests {
     use super::*;
 
+    fn ok_terrain() -> Result<TerrainDef, Vec<ContentError>> {
+        TerrainDef::load(PaletteDef::load().ok().as_ref())
+    }
+
+    fn ok_maps() -> Result<BTreeMap<String, MapDef>, Vec<ContentError>> {
+        map::load_all(&ok_terrain().unwrap_or_default().display)
+    }
+
     #[test]
     fn assemble_ok_keeps_content() {
-        let content = assemble(PaletteDef::load(), KeymapDef::load(), FontAtlasDef::load()).ok();
+        let content = assemble(
+            PaletteDef::load(),
+            KeymapDef::load(),
+            FontAtlasDef::load(),
+            ok_terrain(),
+            ok_maps(),
+        )
+        .ok();
         assert_eq!(
             content.as_ref().map(|c| &c.palette),
             PaletteDef::load().ok().as_ref()
@@ -81,37 +122,67 @@ mod tests {
             content.as_ref().map(|c| &c.font),
             FontAtlasDef::load().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.terrain),
+            ok_terrain().ok().as_ref()
+        );
+        assert_eq!(content.as_ref().map(|c| &c.maps), ok_maps().ok().as_ref());
+        assert!(content.is_some_and(|c| c.maps.contains_key("test_small")));
     }
 
     #[test]
     fn assemble_reports_loader_errors() {
-        let errs = vec![ContentError::new("a", "one"), ContentError::new("b", "two")];
-        let keymap_errs = vec![ContentError::new("k", "three")];
-        let font_errs = vec![ContentError::new("f", "four")];
-        let mut all = errs.clone();
-        all.extend(keymap_errs.clone());
-        all.extend(font_errs.clone());
-        assert_eq!(
-            assemble(Err(errs), Err(keymap_errs), Err(font_errs)),
-            Err(ContentErrors(all))
-        );
-        let keymap_only = vec![ContentError::new("k", "only")];
+        let e = |f: &str| vec![ContentError::new(f, "bad")];
         assert_eq!(
             assemble(
-                PaletteDef::load(),
-                Err(keymap_only.clone()),
-                FontAtlasDef::load()
+                Err(e("p")),
+                Err(e("k")),
+                Err(e("f")),
+                Err(e("t")),
+                Err(e("m"))
             ),
-            Err(ContentErrors(keymap_only))
+            Err(ContentErrors(
+                ["p", "k", "f", "t", "m"]
+                    .iter()
+                    .flat_map(|f| e(f))
+                    .collect()
+            ))
         );
-        let font_only = vec![ContentError::new("f", "only")];
-        assert_eq!(
+        let only = |i: usize| {
             assemble(
-                PaletteDef::load(),
-                KeymapDef::load(),
-                Err(font_only.clone())
-            ),
-            Err(ContentErrors(font_only))
+                if i == 0 {
+                    Err(e("p"))
+                } else {
+                    PaletteDef::load()
+                },
+                if i == 1 {
+                    Err(e("k"))
+                } else {
+                    KeymapDef::load()
+                },
+                if i == 2 {
+                    Err(e("f"))
+                } else {
+                    FontAtlasDef::load()
+                },
+                if i == 3 { Err(e("t")) } else { ok_terrain() },
+                if i == 4 { Err(e("m")) } else { ok_maps() },
+            )
+        };
+        for (i, f) in ["p", "k", "f", "t", "m"].iter().enumerate() {
+            assert_eq!(only(i), Err(ContentErrors(e(f))));
+        }
+    }
+
+    #[test]
+    fn embedded_content_loads() {
+        let content = load_embedded();
+        assert!(content.is_ok(), "{content:?}");
+        let content = content.ok();
+        assert_eq!(
+            content.as_ref().map(|c| &c.terrain),
+            ok_terrain().ok().as_ref()
         );
+        assert_eq!(content.as_ref().map(|c| &c.maps), ok_maps().ok().as_ref());
     }
 }

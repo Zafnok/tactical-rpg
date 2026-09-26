@@ -19,9 +19,10 @@ here.
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
 | Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
 | The lord's unique class line | `progression.md` (lord section) | 0016 | ⏳ awaiting Nick |
-| Supports & relationships | `supports.md` | 0010 | ⏳ awaiting Nick |
+| Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |
 | Look & feel | [`look-and-feel.md`](look-and-feel.md) | 0011 | ✅ decided 2026-09-25 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
+| Terrain: movement costs & bonuses | [`terrain.md`](terrain.md) | 0301 | ✅ decided 2026-09-26 (capturing & healing tiles deferred) |
 | Controls & key layouts | [`controls.md`](controls.md) | 0015 | ✅ decided 2026-09-25 |
 | Number scale & strike thresholds | [`stats-and-combat.md`](stats-and-combat.md) | 0013 | ⏳ after playtest 0804 |
 

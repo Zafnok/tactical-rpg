@@ -181,15 +181,24 @@ mod tests {
     fn texts_name_the_layout_keys() {
         let mut c = ctx();
         assert_eq!(TitleScreen::help(&c), "arrows move · f select · d back");
+        c.use_layout(crate::input::Layout::LeftHanded);
+        assert_eq!(TitleScreen::help(&c), "wasd move · j select · k back");
+        assert_eq!(
+            PlaceholderScreen::message(&c),
+            "Coming soon — press k to go back"
+        );
+        c.use_layout(crate::input::Layout::RightHanded);
         assert_eq!(
             PlaceholderScreen::message(&c),
             "Coming soon — press d to go back"
         );
-        c.content
-            .keymap
-            .bindings
-            .retain(|_, a| *a != Action::Cancel);
-        c.keymap = crate::input::Keymap::from_def(&c.content.keymap);
+        c.keymap = crate::input::Keymap::new(
+            crate::input::Action::ALL
+                .iter()
+                .flat_map(|&a| c.keymap.chords_for(a).into_iter().map(move |ch| (ch, a)))
+                .filter(|&(_, a)| a != Action::Cancel),
+            c.keymap.repeat(),
+        );
         assert_eq!(TitleScreen::help(&c), "arrows move · f select");
         assert_eq!(PlaceholderScreen::message(&c), "Coming soon");
     }

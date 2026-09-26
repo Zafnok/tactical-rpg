@@ -6,9 +6,9 @@ use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::GlyphSamplerScreen;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
-use crate::input::{Action, Chord, InputState, Key};
+use crate::input::{Action, Chord, InputState, Key, Layout};
 use crate::screen::{Ctx, FrameInput, Screen, ScreenStack};
-use crate::screens::TitleScreen;
+use crate::screens::{LayoutPickerScreen, TitleScreen};
 
 /// A keyboard event as `app` reports it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +32,9 @@ pub struct FrameOutput<'a> {
 pub struct Game {
     stack: ScreenStack,
     input: InputState,
+    /// The layout whose bindings `input` uses, to notice when a screen
+    /// switches layout in `ctx`.
+    input_layout: Option<Layout>,
     ctx: Ctx,
     buffer: GlyphBuffer,
     quit: bool,
@@ -41,15 +44,37 @@ pub struct Game {
 impl Game {
     /// A game showing `root`. Debug screens (F12) are on in debug builds.
     pub fn new(ctx: Ctx, root: Box<dyn Screen>) -> Self {
+        Self::with_stack(ctx, ScreenStack::new(root))
+    }
+
+    /// A game starting at the title screen. If no layout is in use yet, the
+    /// saved one is loaded from `ctx.storage`; if none is saved (first
+    /// launch), the layout picker opens on top of the title.
+    pub fn start(mut ctx: Ctx) -> Self {
+        if ctx.layout().is_none()
+            && let Some(layout) = ctx.saved_layout()
+        {
+            ctx.use_layout(layout);
+        }
+        let mut stack = ScreenStack::new(Box::new(TitleScreen::new()));
+        if ctx.layout().is_none() {
+            stack.push(Box::new(LayoutPickerScreen::new()));
+        }
+        Self::with_stack(ctx, stack)
+    }
+
+    fn with_stack(ctx: Ctx, stack: ScreenStack) -> Self {
         let input = InputState::new(ctx.keymap.clone());
+        let input_layout = ctx.layout();
         let blank = Cell::new(
             ' ',
             ctx.palette.get(UiColor::Text),
             ctx.palette.get(UiColor::Black),
         );
         let mut game = Self {
-            stack: ScreenStack::new(root),
+            stack,
             input,
+            input_layout,
             ctx,
             buffer: GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank),
             quit: false,
@@ -57,11 +82,6 @@ impl Game {
         };
         game.redraw();
         game
-    }
-
-    /// A game starting at the title screen.
-    pub fn start(ctx: Ctx) -> Self {
-        Self::new(ctx, Box::new(TitleScreen::new()))
     }
 
     /// Turns the debug screens (the [`Action::Debug`] key) on or off.
@@ -105,6 +125,10 @@ impl Game {
         } else {
             let input = FrameInput::new(actions, dt, held);
             self.quit = self.stack.update(&mut self.ctx, &input);
+            if self.ctx.layout() != self.input_layout {
+                self.input_layout = self.ctx.layout();
+                self.input.set_keymap(self.ctx.keymap.clone());
+            }
         }
         self.redraw();
     }
@@ -133,6 +157,11 @@ impl Game {
     /// The shared context.
     pub fn ctx(&self) -> &Ctx {
         &self.ctx
+    }
+
+    /// Ends the game, handing back the shared context (and so its storage).
+    pub fn into_ctx(self) -> Ctx {
+        self.ctx
     }
 
     /// Name of the top screen, or `None` once the last one has closed.
@@ -176,6 +205,56 @@ mod tests {
             (game.buffer().width(), game.buffer().height()),
             (CONSOLE_W, CONSOLE_H)
         );
+    }
+
+    fn first_launch() -> Ctx {
+        Ctx::embedded().unwrap()
+    }
+
+    #[test]
+    fn first_launch_opens_the_picker_over_the_title() {
+        let game = Game::start(first_launch());
+        assert_eq!(game.screens(), ["title", "layout_picker"]);
+        assert_eq!(game.ctx().layout(), None);
+    }
+
+    #[test]
+    fn a_saved_layout_skips_the_picker() {
+        let mut ctx = first_launch();
+        ctx.storage.write("layout", "LeftHanded").unwrap();
+        let game = Game::start(ctx);
+        assert_eq!(game.screens(), ["title"]);
+        assert_eq!(game.ctx().layout(), Some(Layout::LeftHanded));
+        assert_eq!(game.input.keymap(), &game.ctx().keymap);
+    }
+
+    #[test]
+    fn a_layout_in_use_beats_the_saved_one() {
+        let mut ctx = ctx();
+        ctx.storage.write("layout", "LeftHanded").unwrap();
+        let game = Game::start(ctx);
+        assert_eq!(game.screens(), ["title"]);
+        assert_eq!(game.ctx().layout(), Some(Layout::RightHanded));
+    }
+
+    #[test]
+    fn picking_a_layout_switches_the_input_keys() {
+        let mut game = Game::start(first_launch());
+        // Picker keys: `s` moves down, `j` picks.
+        tap(&mut game, Key::S);
+        tap(&mut game, Key::J);
+        assert_eq!(game.screens(), ["title"]);
+        assert_eq!(game.ctx().layout(), Some(Layout::LeftHanded));
+        assert_eq!(game.input.keymap(), &game.ctx().keymap);
+        // Left-handed: `j` confirms, `f` does nothing, `k` backs out.
+        tap(&mut game, Key::F);
+        assert_eq!(game.screens(), ["title"]);
+        tap(&mut game, Key::J);
+        assert_eq!(game.screens(), ["title", "placeholder"]);
+        tap(&mut game, Key::K);
+        assert_eq!(game.screens(), ["title"]);
+        let ctx = game.into_ctx();
+        assert_eq!(ctx.saved_layout(), Some(Layout::LeftHanded));
     }
 
     #[test]

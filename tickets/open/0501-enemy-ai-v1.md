@@ -39,7 +39,7 @@ reinforcements this turn are already acted and must be skipped.
 1. `AiBehavior` enum on `Unit` (set by chapter data): `Aggressive` (charge the
    nearest target), `Guard` (attack only if a target is in its threat area this
    turn, else hold), `Stationary` (never move; attack only from its tile —
-   bosses on thrones), `Healer` (heal spells from `magic.md`/0309: heal the
+   bosses on forts), `Healer` (heal spells from `magic.md`/0309: heal the
    most injured ally in reach, else keep distance behind allies). Any unit
    carrying its own consumable (0306) uses it on itself instead of acting
    when below 40% HP and no attack scores a kill (*tunable*).
