@@ -12,7 +12,7 @@ use crate::terrain::MovementTypeId;
 use crate::weapon::{WeaponKind, WeaponRank};
 
 /// String id of a class, e.g. `"swordsman"`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ClassId(pub String);
 
 /// String id of a skill, e.g. `"keen_edge"`.

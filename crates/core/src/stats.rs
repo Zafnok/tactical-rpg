@@ -1,6 +1,8 @@
 //! The stat list from `docs/design/stats-and-combat.md` and class growth
 //! rates from `docs/design/progression.md`.
 
+use serde::{Deserialize, Serialize};
+
 /// The integer type of every stat, HP and damage value. The number scale is
 /// undecided (ticket 0013) and may grow to huge values; changing this alias
 /// must be the only edit needed.
@@ -56,7 +58,7 @@ impl StatKind {
 }
 
 /// One value per stat.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
 pub struct Stats {
     /// Max HP.
     pub hp: StatValue,

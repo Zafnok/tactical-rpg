@@ -7,8 +7,12 @@ pub mod camera;
 pub mod layout;
 pub mod units;
 
+use std::sync::Arc;
+
 use trpg_content::{Content, check_map_labels};
-use trpg_core::{BattleMap, Faction, Pos, Unit, UnitId};
+use trpg_core::{
+    BattleSetup, BattleState, Command, Faction, Objective, Pos, Unit, UnitAction, UnitId,
+};
 
 use self::camera::{Camera, tile_to_cell};
 use self::layout::{HELP_BAR, HELP_ROW, SIDE_PANEL, VIEW_TILES_H, VIEW_TILES_W};
@@ -18,26 +22,17 @@ use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 
-/// What the battle screen shows: the map and the units on it.
-///
-/// A stand-in until ticket 0305 adds `core`'s battle state (turns, commands,
-/// events); the screen only reads it, so swapping it in is local.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BattleScene {
-    /// The battlefield.
-    pub map: BattleMap,
-    /// Every unit on the map.
-    pub units: Vec<Unit>,
-}
-
 /// Map id of the debug Quick Battle.
 pub const QUICK_BATTLE_MAP: &str = "test_small";
 
+/// Seed of the debug Quick Battle's RNG.
+pub const QUICK_BATTLE_SEED: u64 = 1;
+
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
-/// against generic enemies, one of them wounded and one having acted so both
-/// looks show. Fails with a message if the content lacks something it
-/// needs.
-pub fn quick_battle(content: &Content) -> Result<BattleScene, String> {
+/// against generic enemies (rout), one of them wounded and one having acted
+/// so both looks show. Fails with a message if the content lacks something
+/// it needs.
+pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     let map = content
         .maps
         .get(QUICK_BATTLE_MAP)
@@ -81,22 +76,37 @@ pub fn quick_battle(content: &Content) -> Result<BattleScene, String> {
             .map_err(|e| e.to_string())?;
         units.push(unit);
     }
-    // The knight is wounded (mid HP), the second brigand badly (low HP), and
-    // the archer has acted.
+    // The knight is wounded (mid HP) and the second brigand badly (low HP).
     units[1].hp = units[1].stats.hp * 9 / 20;
     units[4].hp = units[4].stats.hp / 4;
-    units[2].acted = true;
     let errors = check_map_labels(QUICK_BATTLE_MAP, &units);
     if let Some(e) = errors.first() {
         return Err(e.to_string());
     }
-    Ok(BattleScene { map, units })
+    let archer = Command::Act {
+        unit: units[2].id,
+        dest: units[2].pos,
+        action: UnitAction::Wait,
+    };
+    let (mut state, _) = BattleState::new(BattleSetup {
+        map,
+        terrain: Arc::new(content.terrain.rules.clone()),
+        classes: Arc::new(classes.clone()),
+        units,
+        reinforcements: vec![],
+        objective: Objective::Rout { turn_limit: None },
+        rewind_charges: 3,
+        seed: QUICK_BATTLE_SEED,
+    });
+    // The archer has acted: it waits where it stands.
+    state.apply(&archer).map_err(|e| e.to_string())?;
+    Ok(state)
 }
 
-/// The battle screen. Draws the scene; for now Cancel leaves it.
+/// The battle screen. Draws the battle; for now Cancel leaves it.
 #[derive(Debug, Clone)]
 pub struct BattleScreen {
-    scene: BattleScene,
+    state: BattleState,
     camera: Camera,
 }
 
@@ -104,24 +114,25 @@ impl BattleScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "battle";
 
-    /// A screen showing `scene`, the camera centred on the first player unit
+    /// A screen showing `state`, the camera centred on the first player unit
     /// (or on the map's centre if there is none).
-    pub fn new(scene: BattleScene) -> Self {
-        let (w, h) = (scene.map.tiles.width(), scene.map.tiles.height());
-        let target = scene
-            .units
+    pub fn new(state: BattleState) -> Self {
+        let tiles = &state.map().tiles;
+        let (w, h) = (tiles.width(), tiles.height());
+        let target = state
+            .units()
             .iter()
             .find(|u| u.faction == Faction::Player)
             .map_or_else(|| Pos::new(i32::from(w) / 2, i32::from(h) / 2), |u| u.pos);
         Self {
             camera: Camera::centred_on(target, w, h),
-            scene,
+            state,
         }
     }
 
-    /// The scene shown.
-    pub fn scene(&self) -> &BattleScene {
-        &self.scene
+    /// The battle shown.
+    pub fn state(&self) -> &BattleState {
+        &self.state
     }
 
     /// The camera.
@@ -132,7 +143,7 @@ impl BattleScreen {
     /// Scrolls the camera to keep `target` [`Camera::MARGIN`] tiles from the
     /// viewport's edges.
     pub fn follow(&mut self, target: Pos) {
-        let tiles = &self.scene.map.tiles;
+        let tiles = &self.state.map().tiles;
         self.camera
             .follow(target, tiles.width(), tiles.height(), Camera::MARGIN);
     }
@@ -157,8 +168,8 @@ impl BattleScreen {
             for dx in 0..VIEW_TILES_W {
                 let pos = Pos::new(o.x + dx, o.y + dy);
                 let Some(t) = self
-                    .scene
-                    .map
+                    .state
+                    .map()
                     .tiles
                     .get(pos)
                     .and_then(|&id| display.get(id))
@@ -178,7 +189,7 @@ impl BattleScreen {
     }
 
     fn draw_units(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        for unit in &self.scene.units {
+        for unit in self.state.units() {
             if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
                 units::draw_unit(buf, &ctx.palette, unit, x, y);
             }
@@ -229,7 +240,7 @@ impl Screen for BattleScreen {
 #[cfg(test)]
 mod tests {
     use insta::assert_snapshot;
-    use trpg_core::{Grid, TerrainId};
+    use trpg_core::{BattleMap, Grid, Phase, TerrainId};
 
     use super::*;
     use crate::console::{CONSOLE_H, CONSOLE_W};
@@ -237,6 +248,21 @@ mod tests {
 
     fn quick() -> BattleScreen {
         BattleScreen::new(quick_battle(&ctx().content).unwrap())
+    }
+
+    /// A battle on `map` with `units`, using the game's tables.
+    fn battle(c: &Ctx, map: BattleMap, units: Vec<Unit>) -> BattleState {
+        BattleState::new(BattleSetup {
+            map,
+            terrain: Arc::new(c.content.terrain.rules.clone()),
+            classes: Arc::new(c.content.classes.clone()),
+            units,
+            reinforcements: vec![],
+            objective: Objective::Rout { turn_limit: None },
+            rewind_charges: 0,
+            seed: 0,
+        })
+        .0
     }
 
     fn render(screen: &BattleScreen, c: &Ctx) -> GlyphBuffer {
@@ -247,11 +273,14 @@ mod tests {
     }
 
     #[test]
-    fn quick_battle_scene() {
-        let scene = quick_battle(&ctx().content).unwrap();
-        assert_eq!(scene.map.name, "Test Field");
-        let labels: Vec<(&str, Faction)> = scene
-            .units
+    fn quick_battle_state() {
+        let state = quick_battle(&ctx().content).unwrap();
+        assert_eq!(state.map().name, "Test Field");
+        assert_eq!((state.turn(), state.phase()), (1, Phase::Player));
+        assert_eq!(state.objective(), Objective::Rout { turn_limit: None });
+        assert_eq!(state.outcome(), None);
+        let units = state.units();
+        let labels: Vec<(&str, Faction)> = units
             .iter()
             .map(|u| (u.map_label.as_str(), u.faction))
             .collect();
@@ -266,16 +295,16 @@ mod tests {
                 ("Ra", Faction::Enemy),
             ]
         );
-        let ids: Vec<u32> = scene.units.iter().map(|u| u.id.0).collect();
+        let ids: Vec<u32> = units.iter().map(|u| u.id.0).collect();
         assert_eq!(ids, [1, 2, 3, 4, 5, 6]);
-        assert!(scene.units[2].acted);
-        assert_eq!(scene.units.iter().filter(|u| u.acted).count(), 1);
+        assert!(units[2].acted);
+        assert_eq!(units.iter().filter(|u| u.acted).count(), 1);
         let hurt: Vec<usize> = (0..6)
-            .filter(|&i| scene.units[i].hp < scene.units[i].stats.hp)
+            .filter(|&i| units[i].hp < units[i].stats.hp)
             .collect();
         assert_eq!(hurt, [1, 4]);
-        for u in &scene.units {
-            assert!(scene.map.tiles.in_bounds(u.pos));
+        for u in units {
+            assert!(state.map().tiles.in_bounds(u.pos));
         }
     }
 
@@ -325,32 +354,30 @@ mod tests {
 
     #[test]
     fn camera_starts_on_the_first_player_unit() {
+        let c = ctx();
         let s = quick();
         // test_small is smaller than the viewport: centred.
         assert_eq!(s.camera().origin, Pos::new(-10, -11));
-        assert_eq!(s.scene().units.len(), 6);
-        let big = BattleScene {
-            map: BattleMap {
-                name: "Big".into(),
-                tiles: Grid::filled(64, 40, TerrainId(0)),
-            },
-            units: s.scene().units.clone(),
+        assert_eq!(s.state().units().len(), 6);
+        let big = BattleMap {
+            name: "Big".into(),
+            tiles: Grid::filled(64, 40, TerrainId(0)),
+        };
+        let units = s.state().units().to_vec();
+        let camera = |units: Vec<Unit>| {
+            BattleScreen::new(battle(&c, big.clone(), units))
+                .camera()
+                .origin
         };
         // Lord at (3, 5): clamped to the top-left.
-        assert_eq!(
-            BattleScreen::new(big.clone()).camera().origin,
-            Pos::new(0, 0)
-        );
-        let mut far = big.clone();
-        far.units[0].pos = Pos::new(60, 30);
-        assert_eq!(BattleScreen::new(far).camera().origin, Pos::new(29, 10));
-        let mut enemies_only = big;
-        enemies_only.units.retain(|u| u.faction != Faction::Player);
+        assert_eq!(camera(units.clone()), Pos::new(0, 0));
+        let mut far = units.clone();
+        far[0].pos = Pos::new(60, 30);
+        assert_eq!(camera(far), Pos::new(29, 10));
+        let mut enemies_only = units;
+        enemies_only.retain(|u| u.faction != Faction::Player);
         // Map centre (32, 20).
-        assert_eq!(
-            BattleScreen::new(enemies_only).camera().origin,
-            Pos::new(15, 5)
-        );
+        assert_eq!(camera(enemies_only), Pos::new(15, 5));
     }
 
     #[test]
@@ -434,18 +461,16 @@ mod tests {
         let cells = (0..40)
             .flat_map(|y: usize| (0..64).map(move |x: usize| ids[(x / 3 + y / 2) % ids.len()]))
             .collect();
-        let mut units = quick_battle(&c.content).unwrap().units;
+        let mut units = quick_battle(&c.content).unwrap().units().to_vec();
         // The camera starts on the lord at (3, 5), top-left.
         units[5].pos = Pos::new(63, 39);
         units[3].pos = Pos::new(30, 12);
         units[4].pos = Pos::new(28, 9); // Above the viewport: not drawn.
-        let mut s = BattleScreen::new(BattleScene {
-            map: BattleMap {
-                name: "Stripes".into(),
-                tiles: Grid::from_cells(64, 40, cells).unwrap(),
-            },
-            units,
-        });
+        let map = BattleMap {
+            name: "Stripes".into(),
+            tiles: Grid::from_cells(64, 40, cells).unwrap(),
+        };
+        let mut s = BattleScreen::new(battle(&c, map, units));
         assert_eq!(s.camera().origin, Pos::new(0, 0));
         s.follow(Pos::new(63, 39));
         assert_eq!(s.camera().origin, Pos::new(29, 10));

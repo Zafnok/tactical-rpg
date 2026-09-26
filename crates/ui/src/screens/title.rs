@@ -99,8 +99,8 @@ impl Screen for TitleScreen {
                 // The placeholder data always builds (tested); should it
                 // ever not, the item does nothing.
                 Some(QUICK_BATTLE) => {
-                    if let Ok(scene) = quick_battle(&ctx.content) {
-                        return Transition::Push(Box::new(BattleScreen::new(scene)));
+                    if let Ok(state) = quick_battle(&ctx.content) {
+                        return Transition::Push(Box::new(BattleScreen::new(state)));
                     }
                 }
                 Some(QUIT) => return Transition::Quit,

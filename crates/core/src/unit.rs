@@ -4,7 +4,10 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
+use crate::combat::WeaponStats;
 use crate::geom::Pos;
 use crate::magic::SpellId;
 use crate::stats::{StatKind, StatValue, Stats};
@@ -14,7 +17,7 @@ use crate::weapon::{WeaponKind, WeaponRank};
 pub type Level = u32;
 
 /// Which side a unit fights for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Faction {
     /// The player's army.
     Player,
@@ -39,15 +42,15 @@ impl Faction {
 }
 
 /// Identifies a unit within a battle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct UnitId(pub u32);
 
 /// String id of a named character, e.g. `"test_lord"`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CharacterId(pub String);
 
 /// A unit's progress in one class it has unlocked.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ClassRecord {
     /// Class level, from 1.
     pub class_level: ClassLevel,
@@ -89,7 +92,7 @@ pub struct CharacterDef {
 }
 
 /// A unit on the battle map.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Unit {
     /// Battle-unique id.
     pub id: UnitId,
@@ -122,6 +125,10 @@ pub struct Unit {
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
     pub map_label: String,
+    /// The equipped weapon's combat numbers; `None` = can't attack or
+    /// counter. A stand-in until ticket 0306 gives units a loadout (which
+    /// then supplies the equipped weapon).
+    pub weapon: Option<WeaponStats>,
 }
 
 /// Letters in a map label.
@@ -251,6 +258,7 @@ impl Unit {
             is_lord: false,
             weapon_ranks,
             map_label: default_map_label(&class.name),
+            weapon: None,
         }
     }
 }
@@ -399,6 +407,7 @@ mod tests {
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
             map_label: "He".into(),
+            weapon: None,
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -513,6 +522,7 @@ mod tests {
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
             map_label: "Br".into(),
+            weapon: None,
         };
         assert_eq!(unit, Ok(expected));
     }

@@ -1,5 +1,6 @@
 //! Pure, deterministic game rules. See ADR-0004.
 
+pub mod battle;
 pub mod class;
 pub mod combat;
 pub mod geom;
@@ -12,6 +13,10 @@ pub mod terrain;
 pub mod unit;
 pub mod weapon;
 
+pub use battle::{
+    BattleSetup, BattleState, Command, CommandError, Event, Objective, Outcome, Phase,
+    Reinforcement, Turn, UnitAction,
+};
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, SkillId, Tier, UnitTag,
     UnitTags, WeaponProficiency,
@@ -20,7 +25,7 @@ pub use combat::{
     CombatHp, CombatOutcome, CombatRules, CombatantInput, DamageType, Forecast, Side, SideForecast,
     Strike, WeaponStats, WeaponTrait, forecast, resolve, roll_hit,
 };
-pub use geom::{Dir, Grid, Pos};
+pub use geom::{Dir, Grid, GridSizeError, Pos};
 pub use magic::{Affinity, Element, SpellId};
 pub use map::BattleMap;
 pub use movement::{

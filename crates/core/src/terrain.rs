@@ -1,12 +1,16 @@
 //! Terrain rules: movement costs and combat bonuses per terrain type. How a
 //! terrain looks lives in `trpg-content`, not here.
 
+use serde::{Deserialize, Serialize};
+
 /// Index of a movement type (`foot`, `mounted`, …) in [`TerrainTable`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MovementTypeId(pub u8);
 
 /// Index of a terrain in [`TerrainTable`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 pub struct TerrainId(pub u16);
 
 /// The game rules of one terrain type.

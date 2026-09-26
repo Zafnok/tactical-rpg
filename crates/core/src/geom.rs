@@ -1,8 +1,14 @@
 //! Grid geometry: positions, the four directions and a rectangular grid.
 
+use std::fmt;
+
+use serde::{Deserialize, Serialize};
+
 /// A tile position. Signed so neighbour maths can go negative before bounds
 /// checks; `(0, 0)` is the top-left tile, `x` grows right, `y` grows down.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 pub struct Pos {
     /// Column.
     pub x: i32,
@@ -58,8 +64,9 @@ impl Dir {
 }
 
 /// A `width × height` rectangle of cells, stored row-major. The cell count
-/// always equals `width * height`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// always equals `width * height`; deserialising checks it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "RawGrid<T>")]
 pub struct Grid<T> {
     width: u16,
     height: u16,
@@ -143,6 +150,32 @@ impl<T> Grid<T> {
     pub fn positions(&self) -> impl Iterator<Item = Pos> + use<T> {
         let (w, h) = (i32::from(self.width), i32::from(self.height));
         (0..h).flat_map(move |y| (0..w).map(move |x| Pos::new(x, y)))
+    }
+}
+
+/// A [`Grid`] as written in a save, before its cell count is checked.
+#[derive(Deserialize)]
+struct RawGrid<T> {
+    width: u16,
+    height: u16,
+    cells: Vec<T>,
+}
+
+/// A saved grid whose cell count is not `width * height`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GridSizeError;
+
+impl fmt::Display for GridSizeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("the grid's cell count is not width × height")
+    }
+}
+
+impl<T> TryFrom<RawGrid<T>> for Grid<T> {
+    type Error = GridSizeError;
+
+    fn try_from(raw: RawGrid<T>) -> Result<Self, GridSizeError> {
+        Grid::from_cells(raw.width, raw.height, raw.cells).ok_or(GridSizeError)
     }
 }
 
@@ -258,6 +291,17 @@ mod tests {
         for (pos, cell) in g.positions().zip(g.cells()) {
             assert_eq!(g.get(pos), Some(cell));
         }
+    }
+
+    #[test]
+    fn grid_serde_round_trips_and_checks_the_cell_count() {
+        let g = grid(3, 2);
+        let text = ron::to_string(&g).unwrap();
+        assert_eq!(text, "(width:3,height:2,cells:[0,1,2,3,4,5])");
+        assert_eq!(ron::from_str::<Grid<u32>>(&text).unwrap(), g);
+        let bad = ron::from_str::<Grid<u32>>("(width:3,height:2,cells:[0,1])");
+        assert!(bad.unwrap_err().to_string().contains("not width × height"));
+        assert_eq!(ron::from_str::<Pos>("(x:-1,y:4)").unwrap(), Pos::new(-1, 4));
     }
 
     proptest! {
