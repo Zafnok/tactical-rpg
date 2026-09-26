@@ -1,0 +1,39 @@
+// PLACEHOLDER until 0701: test characters and generic enemy templates, so the
+// rules can be built and tested before the real cast exists. The story
+// tickets (07xx) replace this whole file. Loaded by trpg_content::character.
+//
+// characters: named characters.
+//   base is in stat order (HP, Str, Mag, Dex, Spd, Def, Res) (Mov comes from
+//   the class) and must be <= the starting class's caps.
+//   talent: the +20% growth stat (not Mov).
+//   weapon_ranks: (kind, rank); raised to the class's start ranks on entry.
+//   personal_spells: (character level, spell id), at most 2; none for the lord.
+//   is_lord: only the lord may start in a lord-only class.
+// generics: generic unit templates (class + character level); their stats
+//   come from the class (progression.md, "Generic units").
+(
+    characters: [
+        (
+            id: "test_lord", name: "Test Lord", class: "exile", level: 1, is_lord: true,
+            talent: Spd,
+            base: (19, 6, 1, 7, 7, 4, 3),
+            weapon_ranks: [(Sword, D)],
+        ),
+        (
+            id: "test_knight", name: "Test Knight", class: "guard", level: 1,
+            talent: Def,
+            base: (20, 7, 0, 4, 2, 9, 0),
+            weapon_ranks: [(Spear, D)],
+        ),
+        (
+            id: "test_archer", name: "Test Archer", class: "archer", level: 1,
+            talent: Dex,
+            base: (17, 5, 0, 7, 5, 3, 1),
+            weapon_ranks: [(Bow, D)],
+        ),
+    ],
+    generics: [
+        (id: "test_brigand", class: "brigand", level: 1),
+        (id: "test_raider", class: "raider", level: 2),
+    ],
+)

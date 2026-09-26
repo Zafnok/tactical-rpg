@@ -282,7 +282,7 @@ fn fits_ids(len: usize, max_id: usize) -> bool {
 }
 
 /// 1-based line of the first line containing `needle`.
-fn line_of(source: &str, needle: &str) -> Option<u32> {
+pub(crate) fn line_of(source: &str, needle: &str) -> Option<u32> {
     let index = source.lines().position(|l| l.contains(needle))?;
     u32::try_from(index + 1).ok()
 }

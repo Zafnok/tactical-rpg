@@ -3,6 +3,9 @@
 //! [`load_embedded`] loads and validates everything, reporting every error.
 
 pub mod bundle;
+pub mod character;
+pub mod class;
+mod enums;
 pub mod error;
 pub mod font;
 pub mod keymap;
@@ -13,6 +16,9 @@ pub mod terrain;
 
 use std::collections::BTreeMap;
 
+use trpg_core::ClassTable;
+
+pub use character::{CharacterTable, GenericTemplate};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
@@ -33,6 +39,10 @@ pub struct Content {
     pub terrain: TerrainDef,
     /// Battle maps by id (file stem).
     pub maps: BTreeMap<String, MapDef>,
+    /// The class tree and progression tables.
+    pub classes: ClassTable,
+    /// Named characters and generic unit templates.
+    pub characters: CharacterTable,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -46,13 +56,31 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Ok(t) => map::load_all(&t.display),
         Err(_) => Ok(BTreeMap::new()),
     };
+    let classes = class::load(
+        terrain
+            .as_ref()
+            .ok()
+            .map(|t| t.rules.movement_types.as_slice()),
+    );
+    let characters = character::load(classes.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
         FontAtlasDef::load(),
         terrain,
         maps,
+        Loaded {
+            classes,
+            characters,
+        },
     )
+}
+
+/// Loader results for the unit data (kept together to keep [`assemble`]'s
+/// argument list short).
+struct Loaded {
+    classes: Result<ClassTable, Vec<ContentError>>,
+    characters: Result<CharacterTable, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -72,6 +100,7 @@ fn assemble(
     font: Result<FontAtlasDef, Vec<ContentError>>,
     terrain: Result<TerrainDef, Vec<ContentError>>,
     maps: Result<BTreeMap<String, MapDef>, Vec<ContentError>>,
+    units: Loaded,
 ) -> Result<Content, ContentErrors> {
     let mut errors = Vec::new();
     let content = Content {
@@ -80,6 +109,8 @@ fn assemble(
         font: take(font, &mut errors),
         terrain: take(terrain, &mut errors),
         maps: take(maps, &mut errors),
+        classes: take(units.classes, &mut errors),
+        characters: take(units.characters, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -100,6 +131,21 @@ mod tests {
         map::load_all(&ok_terrain().unwrap_or_default().display)
     }
 
+    fn ok_classes() -> Result<ClassTable, Vec<ContentError>> {
+        class::load(Some(&ok_terrain().unwrap_or_default().rules.movement_types))
+    }
+
+    fn ok_characters() -> Result<CharacterTable, Vec<ContentError>> {
+        character::load(ok_classes().ok().as_ref())
+    }
+
+    fn ok_units() -> Loaded {
+        Loaded {
+            classes: ok_classes(),
+            characters: ok_characters(),
+        }
+    }
+
     #[test]
     fn assemble_ok_keeps_content() {
         let content = assemble(
@@ -108,6 +154,7 @@ mod tests {
             FontAtlasDef::load(),
             ok_terrain(),
             ok_maps(),
+            ok_units(),
         )
         .ok();
         assert_eq!(
@@ -127,8 +174,27 @@ mod tests {
             ok_terrain().ok().as_ref()
         );
         assert_eq!(content.as_ref().map(|c| &c.maps), ok_maps().ok().as_ref());
-        assert!(content.is_some_and(|c| c.maps.contains_key("test_small")));
+        assert_eq!(
+            content.as_ref().map(|c| &c.classes),
+            ok_classes().ok().as_ref()
+        );
+        assert_eq!(
+            content.as_ref().map(|c| &c.characters),
+            ok_characters().ok().as_ref()
+        );
+        assert!(
+            content
+                .as_ref()
+                .is_some_and(|c| c.maps.contains_key("test_small"))
+        );
+        assert!(
+            content.is_some_and(
+                |c| !c.classes.classes.is_empty() && !c.characters.characters.is_empty()
+            )
+        );
     }
+
+    const NAMES: [&str; 7] = ["p", "k", "f", "t", "m", "c", "u"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -139,14 +205,13 @@ mod tests {
                 Err(e("k")),
                 Err(e("f")),
                 Err(e("t")),
-                Err(e("m"))
+                Err(e("m")),
+                Loaded {
+                    classes: Err(e("c")),
+                    characters: Err(e("u")),
+                },
             ),
-            Err(ContentErrors(
-                ["p", "k", "f", "t", "m"]
-                    .iter()
-                    .flat_map(|f| e(f))
-                    .collect()
-            ))
+            Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
         );
         let only = |i: usize| {
             assemble(
@@ -167,9 +232,13 @@ mod tests {
                 },
                 if i == 3 { Err(e("t")) } else { ok_terrain() },
                 if i == 4 { Err(e("m")) } else { ok_maps() },
+                Loaded {
+                    classes: if i == 5 { Err(e("c")) } else { ok_classes() },
+                    characters: if i == 6 { Err(e("u")) } else { ok_characters() },
+                },
             )
         };
-        for (i, f) in ["p", "k", "f", "t", "m"].iter().enumerate() {
+        for (i, f) in NAMES.iter().enumerate() {
             assert_eq!(only(i), Err(ContentErrors(e(f))));
         }
     }
@@ -184,5 +253,13 @@ mod tests {
             ok_terrain().ok().as_ref()
         );
         assert_eq!(content.as_ref().map(|c| &c.maps), ok_maps().ok().as_ref());
+        assert_eq!(
+            content.as_ref().map(|c| &c.classes),
+            ok_classes().ok().as_ref()
+        );
+        assert_eq!(
+            content.as_ref().map(|c| &c.characters),
+            ok_characters().ok().as_ref()
+        );
     }
 }
