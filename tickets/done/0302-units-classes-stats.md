@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0001", "0003", "0005", "0301"]
 nick_input: answer-first
-completed:
+completed: 2026-09-26
 ---
 
 # 0302 — Units, classes and stats
@@ -89,10 +89,10 @@ real story characters (07xx creates them).
 
 ## Acceptance criteria
 
-- [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes, one of them a shared promotion such as Iron Rider).
-- [ ] The whole class tree in `progression.md` (tiers 1–3, including the tier-3 Flier, the lord's line, and the enemy-only classes) is in `classes.ron`.
-- [ ] All validation errors covered by tests.
-- [ ] Data files load in the all-assets test.
+- [x] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes, one of them a shared promotion such as Iron Rider).
+- [x] The whole class tree in `progression.md` (tiers 1–3, including the tier-3 Flier, the lord's line, and the enemy-only classes) is in `classes.ron`.
+- [x] All validation errors covered by tests.
+- [x] Data files load in the all-assets test.
 
 ## Tests required
 
@@ -100,4 +100,45 @@ real story characters (07xx creates them).
 - Property: any `Unit` created via `from_character` has every stat ≤ its class cap and `hp == stats.hp`.
 
 ## Completion notes
+
+- **Core** (`trpg-core`): `stats` (`StatValue = i32` alias used for every
+  stat/HP value, `StatKind` with the 8 stats of `stats-and-combat.md`,
+  `Stats` with `get`/`set`, `Growths`), `class` (`ClassDef`, `ClassTable`
+  with the per-tier `min_gains` / `cp_per_class_level` tables, class-level
+  cap, level cap and hard ceilings), `unit` (`Faction::is_hostile_to`,
+  `Unit`, `CharacterDef`, `ClassRecord`, `Unit::from_character`,
+  `Unit::generic`), plus two small id/enum modules: `weapon` (`WeaponKind`,
+  `WeaponRank`) and `magic` (`SpellId`, `Element`, `Affinity`). Weapons and
+  spells themselves stay with 0306 / 0309.
+- **Data**: `assets/data/classes.ron` holds all 45 classes of tiers 1–3
+  (incl. the tier-3 Flier, the lord's line marked `lord_only`, and the three
+  enemy-only classes). A script cross-checked every class's stats, Mov,
+  movement type, weapon ranks, armour, tags, slots, spells and promotions
+  against `progression.md`. `assets/data/characters.ron` has the 3
+  placeholder characters and 2 generic enemy templates, marked
+  `PLACEHOLDER until 0701`.
+- **Validation** (`trpg-content` `class` / `character`): every rule in step 5
+  and a few more from the design docs: caps ≤ hard ceilings, no negative
+  stats, Mov in `0..=15`, tier ≥ 1, duplicate ids, a non-lord class can't
+  promote into a lord-only class, generic templates can't use lord-only
+  classes, talent isn't Mov, the lord has no personal spells, and starting
+  weapon ranks ≤ the class's max rank. Each has a test.
+
+Deviations:
+
+- `Unit::from_character` / `Unit::generic` take a `UnitId` and return
+  `Result<Unit, UnitError>` (unknown class, or a non-lord in a lord-only
+  class). `from_character` has no `level` argument: the character's data
+  level is used, since spawning at another level would need level-up logic
+  (0601).
+- `Unit` also has `weapon_ranks` (the character's starting ranks, raised to
+  the class's start ranks; generics get the class's start ranks), which the
+  ticket's field list left out but the design needs somewhere.
+- `Stats` includes Mov; it's always set from the class's `move_points`.
+- Character levels (incl. personal-spell levels) use `Level = u32` instead
+  of `u8`, because the level cap may become huge (0013).
+- Stat rows in the RON files are tuples `(HP, Str, Mag, Dex, Spd, Def, Res)`.
+- Tier-3 classes other than Flier have no skills yet (ticket 1001).
+
+No follow-up tickets.
 
