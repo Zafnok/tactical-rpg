@@ -16,6 +16,10 @@ Source: ticket 0006
 >
 > **Q4. Saving** "4A" (FE: save between chapters + a suspend save mid-battle
 > that's deleted on load).
+>
+> **Casual retreat, clarified in 0010** (2026-09-25): a chapter can hold
+> several battles, so a retreated unit comes back "for next battle" (Nick:
+> "yes back for next battle").
 
 Follow-ups (Nick asked to decide every lever himself: "don't decide these game
 design levers yourself. Let's go through them."):
@@ -65,7 +69,7 @@ A unit falls when its HP reaches 0.
 | Mode | What happens to a fallen player unit |
 | ---- | ------------------------------------ |
 | **Classic** | Dies. It plays its death quote (0705), leaves the map, and is removed from the roster when the battle's result is applied. Its equipped weapons and items go to the stock. |
-| **Casual** | Retreats. It plays a retreat line (same trigger slot as a death quote), leaves the map, and is back in the roster at full HP for the next chapter. It keeps all EXP and weapon progress earned before falling. No other cost. |
+| **Casual** | Retreats. It plays a retreat line (same trigger slot as a death quote), leaves the map, and is back in the roster at full HP for the **next battle** (story battle or skirmish; a chapter can hold several battles). It keeps all EXP and weapon progress earned before falling. No other cost. |
 
 - Within a battle both modes behave the same: the fallen unit leaves the map,
   can't act, can't be targeted and doesn't block tiles. The difference only
