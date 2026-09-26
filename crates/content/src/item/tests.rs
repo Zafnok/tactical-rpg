@@ -316,6 +316,11 @@ fn kind_and_rule_errors() {
             "it.ron:3: kind Gauntlet has no trait entry",
         ]
     );
+    // Divisors of exactly 1 are fine.
+    let one = RULES
+        .replace("broken_might_divisor: 2", "broken_might_divisor: 1")
+        .replace("exp_damage_divisor: 5", "exp_damage_divisor: 1");
+    assert!(from_source("it.ron", &file(&one, KINDS, "", REST)).is_ok());
     let zero = RULES.replace("(30, 70,", "(0, 70,");
     assert_eq!(
         errors(&file(&zero, KINDS, "", REST)),
