@@ -1,5 +1,5 @@
 ---
-id: "1002"
+id: "1006"
 title: Explore custom 16×16 class icons for units on the map
 type: design-decision
 milestone: Post–Chapter 1
@@ -11,7 +11,7 @@ nick_input: decision
 completed:
 ---
 
-# 1002 — Explore custom class icons
+# 1006 — Explore custom class icons
 
 ## Context
 

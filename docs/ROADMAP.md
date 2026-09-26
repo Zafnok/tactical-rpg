@@ -69,7 +69,7 @@ early so every later PR is checked by them.
   Parked far-future ideas: hub activities (1004), pair abilities (1005).
 - Controller support (needed for Steam Deck) — created by 0903.
 - Class tiers 4 and up; tier-3 class skills (1001).
-- Custom 16×16 class icons vs name initials on the map (1002).
+- Custom 16×16 class icons vs name initials on the map (1006).
 - Audio and music.
 - Colour-blind palette variant; text size options.
 - Difficulty modes; more chapters (story pipeline repeats per chapter).

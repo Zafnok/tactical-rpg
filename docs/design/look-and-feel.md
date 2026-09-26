@@ -99,7 +99,7 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
   stats, weapon, terrain). That's where class and full numbers are read.
 - Class symbols (`†`, `»`, `}`, …) were tried and rejected: the font's symbols
   are too small and generic. Custom-drawn class icons may be explored later
-  (ticket 1002); until then, initials are the rule.
+  (ticket 1006); until then, initials are the rule.
 
 ### Cursor and selection
 
@@ -178,5 +178,5 @@ black.
 
 ## Open sub-questions
 
-- Custom class icons vs initials (ticket 1002, after Chapter 1).
+- Custom class icons vs initials (ticket 1006, after Chapter 1).
 - Combat screen full-body art: style, size, animation (ticket 0413).

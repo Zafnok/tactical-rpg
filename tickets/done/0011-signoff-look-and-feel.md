@@ -116,7 +116,7 @@ conventions changed.
   - 0706: shading guidance.
 - **Follow-up tickets:** 0806 colour themes (C/D/E/G, values recorded in the
   design doc), 0413 combat scene with full-body art (Nick said "probably"; a
-  decision ticket), 1002 custom 16×16 class icons vs initials (post–Chapter 1).
+  decision ticket), 1006 custom 16×16 class icons vs initials (post–Chapter 1).
 - **For Nick:** the portrait face in the screenshots is only a style sample.
   Real characters get drawn and iterated one by one in 0706. There is no
   portrait in the battle side panel; you dropped it.
