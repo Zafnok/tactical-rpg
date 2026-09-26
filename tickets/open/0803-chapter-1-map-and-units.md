@@ -50,7 +50,9 @@ wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
 3. **Enemies:** count/mix per `chapter-1.md`; AI mix (mostly `Aggressive`, a
    `Guard` group near the boss, boss `Stationary`), sensible loadouts (mix
    weapon kinds so Nick's per-type traits show: a mounted enemy for spears,
-   a flyer for bows if the story allows), one boss with
+   optionally one flyer for bows if the story allows; fliers are tier 3, so
+   an early flier is an elite or one of a small number, per the enemy-flier
+   rule in `progression.md`, and must stay beatable), one boss with
    a name and portrait. No elementals, reinforcements, villages, chests,
    shops, talk-recruits or battle notes in Chapter 1 (`chapter-1.md`).
 4. **Triggers:** wire `ch01_*` scene ids from 0707 (intro, prebattle, boss

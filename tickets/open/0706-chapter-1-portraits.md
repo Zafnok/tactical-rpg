@@ -37,9 +37,13 @@ they need.
 
 1. List Chapter 1 speakers from `docs/story/chapters/ch01.md`.
 2. For each: read the portrait brief; sketch silhouette first; author
-   `neutral`; derive other expressions by changing only eyes/brows/mouth cells.
+   `neutral` as 32×32 shaded pixel art per `look-and-feel.md` (light from the
+   upper left; **light shading on young characters**: heavy shade lines read
+   as wrinkles); derive other expressions by changing only brows/eyes/mouth
+   pixels, keeping them expressive (see
+   `docs/screenshots/0011-portrait-expressions.png`).
 3. Render every portrait in the debug viewer (0703) and look at it before
-   moving on (read the screenshot). Fix proportions (cells are 2:1 tall).
+   moving on (read the screenshot). Nick iterates character by character.
 4. One generic `soldier` portrait for unnamed enemies.
 5. Screenshot sheet for Nick (a debug "contact sheet" screen or one
    screenshot per character), revise per feedback.

@@ -1,6 +1,6 @@
 # ADR-0012: Visual style — cells, tiles, colour, portraits
 
-- **Status:** Accepted (look-and-feel details pending Nick's sign-off, ticket 0011)
+- **Status:** Superseded by ADR-0018
 - **Date:** 2026-09-25
 
 ## Context

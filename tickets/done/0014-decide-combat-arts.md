@@ -109,7 +109,7 @@ Downstream edits: `progression.md` skill table and actives rules,
 uses, shared `pay_cost`), 0412 (cost display), 0501 (boss arts out of
 scope → 0503), `ROADMAP.md`.
 
-New tickets: **0312** Combat Arts rules (core), **0413** arts menu and
+New tickets: **0312** Combat Arts rules (core), **0414** arts menu and
 forecast (UI), **0503** boss AI uses arts/actives, **0018** decide
 higher-rank arts and special weapons (after the playtest).
 

@@ -8,11 +8,11 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | Module | What |
 | ------ | ---- |
 | `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console, palette colours, the text snapshot format |
-| `input` | `Action`s, `Keymap`, `InputState` (key repeat) |
-| `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources), `ScreenStack` |
+| `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
+| `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx` and buffer; `frame(events, dt)` |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
-| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen` |
+| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen` |
 | `debug` | Glyph sampler and its screen (F12 in debug builds) |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
@@ -27,8 +27,15 @@ the buffer it returns; tests drive the same `Game` headlessly with the
    Popping the last screen also quits.
 4. The buffer is cleared and the stack draws: from the top-most screen whose
    `is_overlay()` is `false`, up through every overlay above it.
-5. `FrameOutput { buffer, quit }` goes back to `app`. After a quit, frames do
+5. If the screen switched layout (`ctx.choose_layout`), `Game` gives
+   `InputState` the new keymap.
+6. `FrameOutput { buffer, quit }` goes back to `app`. After a quit, frames do
    nothing.
+
+`Game::start` loads the saved layout from `ctx.storage` (key `layout`); on
+first launch there is none, so it opens the layout picker over the title.
+Until a layout is picked, `Keymap::layout_picker` is active (`Up`/`w`,
+`Down`/`s`, and `f`/`j`/`Enter`/`Space` to pick), so either hand works.
 
 In debug builds `Game` handles the `Debug` action (F12) itself and pushes the
 glyph sampler.
@@ -86,10 +93,11 @@ can use `crate::harness::Harness` directly.
 ```rust
 use insta::assert_snapshot;
 use trpg_ui::harness::Harness;
+use trpg_ui::input::Layout;
 
 #[test]
 fn select_opens_the_placeholder() {
-    let mut h = Harness::new();          // embedded content, at the title
+    let mut h = Harness::with_layout(Layout::RightHanded); // at the title
     h.keys("f");                         // press + release, one frame each
     assert_eq!(h.top_screen(), "placeholder");
     assert_snapshot!(h.snapshot());      // GlyphBuffer text snapshot
@@ -105,9 +113,14 @@ fn select_opens_the_placeholder() {
   repeats), then releases it. `wait(0.2)`: time passes with no input. One
   call runs at most `MAX_FRAMES` (2 000, ~33 s); longer ones panic.
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
+- `Harness::new()` is a first launch (empty storage: the layout picker is on
+  top). `Harness::with_layout(layout)` is a later launch with that layout
+  saved. `into_storage()` + `Harness::with_storage(..)` restart with the same
+  storage.
 - `Harness::with_screen(Box::new(MyScreen::new()))` tests a screen on its
-  own.
-- Scripts use the default right-handed layout (`docs/design/controls.md`):
-  arrows move, `f` confirms, `d` cancels.
+  own, with the right-handed layout.
+- Key names in scripts depend on the layout (`docs/design/controls.md`):
+  right-handed arrows move, `f` confirms, `d` cancels; left-handed `wasd`
+  move, `j` confirms, `k` cancels.
 - Debug screens are always on in the Harness, so `F12` works in any build.
 - Snapshots: read every `.snap.new` before `cargo insta accept`.

@@ -1,7 +1,9 @@
 //! The game's screens. Debug-only screens live in [`crate::debug`].
 
+pub mod layout_picker;
 pub mod title;
 
+pub use layout_picker::LayoutPickerScreen;
 pub use title::{PlaceholderScreen, TitleScreen};
 
 use crate::color::Rgb;

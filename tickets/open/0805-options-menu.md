@@ -36,7 +36,11 @@ screen reachable from title and map menu, key rebinding UI.
    Defaults match current behaviour. Loaded at startup into `Ctx`; saved on change.
 2. Wire each setting into its consumer (0704 typewriter, 0404 playback, 0502
    pacing, `app` fullscreen via a `FrameOutput` request flag).
-3. **Options screen:** list of settings; Left/Right changes value; a "Layout" row switches right/left-handed (`docs/design/controls.md`); `f` on "Key
+3. **Options screen:** list of settings; Left/Right changes value; a "Layout" row switches right/left-handed at any time, as often as the
+   player likes (`docs/design/controls.md`): `f` on it opens the same
+   `LayoutPickerScreen` as first launch (0208), with the current layout
+   focused and Cancel allowed there (it backs out without changing anything);
+   picking saves the layout and switches keys immediately; `f` on "Key
    bindings" opens the rebinding screen; "Reset tips"; "Restore defaults".
 4. **Rebinding:** list actions with current chords; `f` → "Press a key…" →
    captures next chord (Esc cancels capture); conflicts: show which action has
@@ -52,6 +56,7 @@ screen reachable from title and map menu, key rebinding UI.
 
 - [ ] Every setting changes behaviour (Harness test per setting where observable).
 - [ ] Classic → Casual switch works with a confirm; Casual never offers Classic (Harness test).
+- [ ] Layout can be switched from Options (both directions, repeatedly); the new keys work at once and persist across restart (Harness test).
 - [ ] Rebinding works, persists across restart (MemoryStorage round-trip test), conflicts handled.
 - [ ] Snapshots of both screens.
 

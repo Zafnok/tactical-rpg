@@ -29,4 +29,4 @@ f = fg:text_dim bg:panel_bg
 g = fg:enemy bg:panel_bg
 h = fg:hp_high bg:panel_bg
 i = fg:text bg:move_range
-j = fg:text bg:#898a8e
+j = fg:text bg:#8e8b89

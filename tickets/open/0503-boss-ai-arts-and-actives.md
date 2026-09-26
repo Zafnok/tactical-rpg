@@ -38,7 +38,7 @@ None. How dangerous bosses feel is judged in the playtest (0804).
 
 **Out (do not do):**
 - Ordinary enemies and Other-phase units using arts or actives (never).
-- UI (0413 shows the names during playback).
+- UI (0414 shows the names during playback).
 
 ## Implementation steps
 

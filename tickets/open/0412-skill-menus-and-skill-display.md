@@ -47,7 +47,7 @@ skill quick?
 2. Attack flow: after choosing a target, `s` cycles through the usable
    combat actives (`none → Keen Edge → …`). The forecast updates, and a
    skill name line appears with the durability change (`Keen Edge (20 → 17)`).
-   Actives the unit can't pay for are skipped. 0413 later merges this
+   Actives the unit can't pay for are skipped. 0414 later merges this
    cycle into one list with Combat Arts.
 3. Action menu `Skill` → list of non-combat actives with their cost and the
    equipped weapon's durability; unaffordable ones dimmed. Picking one

@@ -1,5 +1,5 @@
 ---
-id: "0413"
+id: "0414"
 title: "Combat Arts in the attack flow: arts list, forecast with arts, durability display"
 type: feature
 milestone: M3 Battle UI
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0413 — Combat Arts menu and forecast
+# 0414 — Combat Arts menu and forecast
 
 ## Context
 

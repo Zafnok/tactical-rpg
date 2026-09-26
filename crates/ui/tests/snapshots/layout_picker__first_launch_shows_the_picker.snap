@@ -1,0 +1,79 @@
+---
+source: crates/ui/tests/layout_picker.rs
+expression: h.snapshot()
+---
+                                                                                                    
+                                          Pick your layout                                          
+                                                                                                    
+            ╔═ ► Right-handed ═════════════════════════════════════════════════════════╗            
+            ║                                                                          ║            
+            ║                                                 arrows      move         ║            
+            ║                                                 f           select       ║            
+            ║  [q][w][e][r][t][y][u][i][o][p]       [↑]       d/Escape    back         ║            
+            ║   [a][s][d][f][g][h][j][k][l][;]   [←][↓][→]    a           prev unit    ║            
+            ║                                                 s           next unit    ║            
+            ║         [      Space      ]                     e           unit info    ║            
+            ║                                                 w           danger zone  ║            
+            ║                                                 Space       end turn     ║            
+            ║                                                 Shift+Space auto-end     ║            
+            ║                                                                          ║            
+            ╚══════════════════════════════════════════════════════════════════════════╝            
+                                                                                                    
+            ┌─ Left-handed ────────────────────────────────────────────────────────────┐            
+            │                                                                          │            
+            │                                                 wasd        move         │            
+            │                                                 j           select       │            
+            │  [q][w][e][r][t][y][u][i][o][p]       [↑]       k/Escape    back         │            
+            │   [a][s][d][f][g][h][j][k][l][;]   [←][↓][→]    ;           prev unit    │            
+            │                                                 l           next unit    │            
+            │         [      Space      ]                     i           unit info    │            
+            │                                                 o           danger zone  │            
+            │                                                 Space       end turn     │            
+            │                                                 Shift+Space auto-end     │            
+            │                                                                          │            
+            └──────────────────────────────────────────────────────────────────────────┘            
+                                                                                                    
+                             w/Up s/Down choose · f/j/Enter/Space pick                              
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaccddddddddddddddddccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeggggdggdggggggggggggggggggggggeeeeeeegfgeeeeeeeddddddddeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeegdggdggdggdgggggggggggggggggggeeegfggfggfgeeeedeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeegggggggdddddgggggggeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedddddeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedddddddddddeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaa
+aaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaahheeeeeeeeeeeeehhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeggggfgggggggggggggggggdggdggggeeeeeeegggeeeeeeeddddddddeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeegfggfggfgggggggggggdggdggdggdgeeegggggggggeeeedeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeegggggggdddddgggggggeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedddddeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedddddddddddeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaaheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeehaaaaaaaaaaaa
+aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:panel_border_focus bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:text bg:panel_bg
+f = fg:player bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:panel_border bg:panel_bg
+i = fg:text_dim bg:black

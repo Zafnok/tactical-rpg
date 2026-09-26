@@ -1,6 +1,6 @@
 # Fonts
 
-The game draws every cell with one bitmap font (ADR-0003, ADR-0012).
+The game draws every cell with one bitmap font (ADR-0003, ADR-0018).
 
 ## Choice: Terminus 8×16 (`ter-u16n`, medium weight)
 
@@ -12,7 +12,7 @@ The game draws every cell with one bitmap font (ADR-0003, ADR-0012).
 
 Why Terminus:
 
-- A true 8×16 cell (`FONTBOUNDINGBOX 8 16 0 -4`), matching ADR-0012.
+- A true 8×16 cell (`FONTBOUNDINGBOX 8 16 0 -4`), matching ADR-0018.
 - Covers **every** glyph in `trpg_content::font::REQUIRED_GLYPHS` on its own:
   printable ASCII, Latin-1, all box drawing, blocks, and the CP437 symbols
   (`♣ ♠ ♥ ♦ ≈ · • ˇ ▲ ▼ ◄ ► ← ↑ → ↓ ☺ ☻ ♪ ¤ †`). No fallback font needed.

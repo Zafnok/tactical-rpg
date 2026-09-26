@@ -59,7 +59,10 @@ outline. Follow the `story-writing` skill strictly.
    secret/pressure, arc (start → end), relationships (who they clash/bond
    with and why), voice notes + 3 sample lines, **portrait brief** (silhouette,
    hair, clothing, colours — used by 0706), expression list (at least the five
-   standard ones), and for spellcasters **1–2 personal signature spells**
+   standard ones), **support partners** (the 3–6 other characters this one
+   has a C/B/A support with, including the lead where it fits, and one line
+   on what each support is about: friendship, rivalry, mentorship or family,
+   never romance; see `supports.md`), and for spellcasters **1–2 personal signature spells**
    (name, element, one-line effect; `magic.md`: numbers are set by 0005 or a
    balance ticket, not here).
    **The lead's sheet is different** (Persona-style lead, see "The lead" in

@@ -49,7 +49,7 @@ None. Every rule and number is in `combat-arts.md`.
   active (state unchanged otherwise). The AI choosing them is 0503.
 
 **Out (do not do):**
-- UI (0413).
+- UI (0414).
 - Boss AI (0503).
 - Arts for ranks C–S and special weapons' arts (0018 decides them first).
 - Changes to class actives beyond what 0311 did.
