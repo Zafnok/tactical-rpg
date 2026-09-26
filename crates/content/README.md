@@ -11,6 +11,11 @@ embedded in the binary (ADR-0005). No filesystem I/O, no macroquad.
   (`trpg_core::TerrainTable`) and the look half (`TerrainDisplayTable`).
 - `map` — `.map` battle maps in `assets/maps/` (format in that folder's
   `README.md`): `parse_map`, `print_map`, `load_all`.
+- `class` — the class tree and per-tier tables from `assets/data/classes.ron`
+  → `trpg_core::ClassTable`.
+- `character` — named characters and generic unit templates from
+  `assets/data/characters.ron` → `CharacterTable`.
+- `enums` (private) — serde mirrors of `trpg-core` enums (`core` has no serde).
 - `lib.rs` — `Content` (everything) and `load_embedded()`.
 
 ## Adding a new content type
