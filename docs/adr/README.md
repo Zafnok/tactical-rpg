@@ -27,5 +27,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0016](0016-font-atlas-and-glyph-blitting.md) | Font atlas format and glyph blitting | Accepted |
 | [0017](0017-screen-stack-and-frame-driver.md) | Screen stack, frame driver and test Harness | Accepted |
 | [0018](0018-visual-style-v2.md) | Visual style v2 (after Nick's look sign-off) | Accepted |
+| [0019](0019-simulation-rng-and-serde-in-core.md) | In-crate PCG32 simulation RNG; serde derives in `core` | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

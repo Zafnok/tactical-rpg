@@ -752,6 +752,8 @@ name = "trpg-core"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "ron",
+ "serde",
 ]
 
 [[package]]

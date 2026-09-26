@@ -1,8 +1,10 @@
 //! Weapon kinds and ranks (`docs/design/weapons-and-items.md`). Weapons
 //! themselves (might, hit, durability…) are ticket 0306.
 
+use serde::{Deserialize, Serialize};
+
 /// A weapon kind. Magic is not a weapon (see [`crate::magic`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum WeaponKind {
     /// Stronger follow-up strikes.
     Sword,
