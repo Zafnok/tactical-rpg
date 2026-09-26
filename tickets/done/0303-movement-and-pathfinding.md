@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0302"]
 nick_input: none
-completed:
+completed: 2026-09-26
 ---
 
 # 0303 — Movement range, pathfinding, attack and threat ranges
@@ -62,12 +62,12 @@ from 0002 demand them — then implement them here and say so).
 
 ## Acceptance criteria
 
-- [ ] All property tests below pass with ≥ 1000 cases each.
-- [ ] Hand-made scenario tests (ASCII-drawn in the test source) for: wall
+- [x] All property tests below pass with ≥ 1000 cases each.
+- [x] Hand-made scenario tests (ASCII-drawn in the test source) for: wall
       blocking, forest cost, water impassable for foot, passing through an ally,
       blocked by an enemy, can't stop on ally, flying ignores terrain costs (if the
       terrain data says flying cost is 1 everywhere).
-- [ ] Performance: `reachable` on a 64×64 open map with move 10 in < 1 ms in release (a simple timing test marked `#[ignore]` or a note with measurement).
+- [x] Performance: `reachable` on a 64×64 open map with move 10 in < 1 ms in release (a simple timing test marked `#[ignore]` or a note with measurement).
 
 ## Tests required
 
@@ -82,3 +82,32 @@ from 0002 demand them — then implement them here and say so).
 
 ## Completion notes
 
+- Added `trpg_core::movement` (`crates/core/src/movement.rs`, rules in its
+  module doc; tests in `movement/tests.rs`): `reachable` → `Reach` (cost +
+  prev grids, stoppable `TileSet`, `path_to`), `path_cost`, `attack_tiles`,
+  `threat_area`, `danger_zone`, and the `TileSet` bitset. Added
+  `Grid::filled` and `Grid::get_mut` to `geom`.
+- **Design check:** `turn-structure.md` rules out Canto and split movement;
+  no design doc asks for zones of control or flying over units, so none are
+  implemented.
+- **Deviations:**
+  - The functions also take `&ClassTable`, because a unit's movement type
+    lives on its class. They return `Result<_, MoveError>` (unknown unit,
+    unknown class, unit off the map) instead of panicking.
+  - The budget is the unit's `stats.mov`, which the class sets (equal to the
+    class's move points today), so later Mov modifiers work without changes.
+    A negative Mov counts as 0.
+  - `threat_area` with no weapon ranges is empty: a unit that can't attack
+    threatens nothing (instead of showing its move range as danger).
+  - `path_cost` doesn't check that the path *ends* on a stoppable tile; the
+    arrow may point at any passable tile and the UI decides.
+  - The ticket's "water impassable for foot" scenario follows `terrain.md`:
+    **sea** is impassable for foot; **rivers** can be waded on foot (cost 5).
+    Both are tested, plus mounted/armored/flying costs.
+- **Tests:** ASCII scenario tests for every listed case; 8 property tests at
+  1000 cases each, including a brute-force (Bellman–Ford) oracle for costs
+  and a brute-force check of `attack_tiles`.
+- **Performance:** `reachable` on a 64×64 open map with Mov 10 takes about
+  30 µs in release (`cargo test -p trpg-core --release -- --ignored
+  reachable_is_fast`), well under 1 ms.
+- Nothing for Nick to see yet: the overlays are drawn by 0403.
