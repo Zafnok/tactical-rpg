@@ -9,24 +9,30 @@
 //   weapon_ranks: (kind, rank); raised to the class's start ranks on entry.
 //   personal_spells: (character level, spell id), at most 2; none for the lord.
 //   is_lord: only the lord may start in a lord-only class.
+//   map_label (optional, characters and generics): Some("Xy"), the two letters drawn on
+//     the map, instead of the first two letters of the name (generics: of
+//     the class name). Named units of one side on a map need distinct labels.
 // generics: generic unit templates (class + character level); their stats
 //   come from the class (progression.md, "Generic units").
 (
     characters: [
         (
             id: "test_lord", name: "Test Lord", class: "exile", level: 1, is_lord: true,
+            map_label: Some("Lo"),
             talent: Spd,
             base: (19, 6, 1, 7, 7, 4, 3),
             weapon_ranks: [(Sword, D)],
         ),
         (
             id: "test_knight", name: "Test Knight", class: "guard", level: 1,
+            map_label: Some("Kn"),
             talent: Def,
             base: (20, 7, 0, 4, 2, 9, 0),
             weapon_ranks: [(Spear, D)],
         ),
         (
             id: "test_archer", name: "Test Archer", class: "archer", level: 1,
+            map_label: Some("Ar"),
             talent: Dex,
             base: (17, 5, 0, 7, 5, 3, 1),
             weapon_ranks: [(Bow, D)],

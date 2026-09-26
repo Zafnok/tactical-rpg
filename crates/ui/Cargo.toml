@@ -24,8 +24,3 @@ harness = []
 trpg-ui = { path = ".", features = ["harness"] }
 proptest.workspace = true
 insta.workspace = true
-
-[package.metadata.cargo-machete]
-# Crate-boundary scaffolding (ADR-0004): wired up by later tickets, not yet
-# referenced from src.
-ignored = ["trpg-core"]

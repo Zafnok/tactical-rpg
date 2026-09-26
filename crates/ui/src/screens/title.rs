@@ -1,5 +1,6 @@
 //! The placeholder title screen (the real game flow comes with ticket 0801).
 
+use super::battle::{BattleScreen, quick_battle};
 use super::{centre_x, print_centred};
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
@@ -20,10 +21,12 @@ const SUBTITLE_ROW: i32 = 11;
 /// Top row of the menu box.
 const MENU_ROW: i32 = 14;
 
-/// Menu index of "New Game".
-const NEW_GAME: usize = 0;
-/// Menu index of "Quit".
-const QUIT: usize = 1;
+/// Menu item that starts a new game.
+const NEW_GAME: &str = "New Game";
+/// Debug menu item: straight into a test battle.
+const QUICK_BATTLE: &str = "Quick Battle";
+/// Menu item that quits.
+const QUIT: &str = "Quit";
 
 /// Fills `buf` with blank `text`-on-`black` cells.
 fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
@@ -39,13 +42,26 @@ fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
 #[derive(Debug, Clone)]
 pub struct TitleScreen {
     menu: Menu,
+    /// Menu item labels, in menu order.
+    items: Vec<&'static str>,
 }
 
 impl TitleScreen {
     /// The title screen with `New Game` focused.
     pub fn new() -> Self {
+        Self::with_items(vec![NEW_GAME, QUIT])
+    }
+
+    /// The title screen with a debug `Quick Battle` item after `New Game`,
+    /// which opens a battle on the test map with placeholder units.
+    pub fn with_quick_battle() -> Self {
+        Self::with_items(vec![NEW_GAME, QUICK_BATTLE, QUIT])
+    }
+
+    fn with_items(items: Vec<&'static str>) -> Self {
         Self {
-            menu: Menu::new(vec![MenuItem::new("New Game"), MenuItem::new("Quit")]),
+            menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()),
+            items,
         }
     }
 
@@ -71,15 +87,24 @@ impl Screen for TitleScreen {
         "title"
     }
 
-    fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
+    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         for &action in &input.actions {
-            match self.menu.handle(action) {
-                Some(MenuEvent::Chosen(NEW_GAME)) => {
-                    return Transition::Push(Box::new(PlaceholderScreen));
-                }
-                Some(MenuEvent::Chosen(QUIT)) => return Transition::Quit,
+            let chosen = match self.menu.handle(action) {
+                Some(MenuEvent::Chosen(i)) => self.items.get(i).copied(),
                 // Nothing to back out of on the title screen.
-                Some(MenuEvent::Chosen(_) | MenuEvent::Cancelled) | None => {}
+                Some(MenuEvent::Cancelled) | None => None,
+            };
+            match chosen {
+                Some(NEW_GAME) => return Transition::Push(Box::new(PlaceholderScreen)),
+                // The placeholder data always builds (tested); should it
+                // ever not, the item does nothing.
+                Some(QUICK_BATTLE) => {
+                    if let Ok(scene) = quick_battle(&ctx.content) {
+                        return Transition::Push(Box::new(BattleScreen::new(scene)));
+                    }
+                }
+                Some(QUIT) => return Transition::Quit,
+                _ => {}
             }
         }
         Transition::None
@@ -170,6 +195,27 @@ mod tests {
     }
 
     #[test]
+    fn debug_title_offers_quick_battle() {
+        use Action::{Confirm, CursorDown, CursorUp};
+        let mut t = TitleScreen::with_quick_battle();
+        assert_eq!(t.items, [NEW_GAME, QUICK_BATTLE, QUIT]);
+        assert_eq!(outcome(&mut t, &[Confirm]), "Push(placeholder)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(battle)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
+        assert_eq!(
+            outcome(&mut t, &[CursorUp, CursorUp, Confirm]),
+            "Push(placeholder)"
+        );
+        // Without the test characters, Quick Battle does nothing.
+        let mut c = ctx();
+        c.content.characters.characters.clear();
+        t.menu = TitleScreen::with_quick_battle().menu;
+        let input = FrameInput::new(vec![CursorDown, Confirm], 0.0, vec![]);
+        assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
+        assert_eq!(TitleScreen::new().items, [NEW_GAME, QUIT]);
+    }
+
+    #[test]
     fn placeholder_pops_on_cancel_only() {
         let mut p = PlaceholderScreen;
         assert_eq!(p.name(), "placeholder");
@@ -208,7 +254,11 @@ mod tests {
     fn screens_cover_the_whole_buffer() {
         use crate::console::{CONSOLE_H, CONSOLE_W};
         let c = ctx();
-        let screens: [&dyn Screen; 2] = [&TitleScreen::new(), &PlaceholderScreen];
+        let screens: [&dyn Screen; 3] = [
+            &TitleScreen::new(),
+            &TitleScreen::with_quick_battle(),
+            &PlaceholderScreen,
+        ];
         for screen in screens {
             let stale = Cell::new(
                 'x',
@@ -228,5 +278,6 @@ mod tests {
     #[test]
     fn default_matches_new() {
         assert_eq!(TitleScreen::default().menu, TitleScreen::new().menu);
+        assert_eq!(TitleScreen::default().items, TitleScreen::new().items);
     }
 }

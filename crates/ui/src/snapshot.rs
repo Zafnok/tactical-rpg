@@ -7,12 +7,18 @@
 //! --- legend ---
 //! a = fg:text bg:panel_bg
 //! b = fg:player bg:#1c3a79
+//! --- overlays ---
+//! over  18,46 11x2  hp_mid
 //! ```
 //!
 //! Each distinct (fg, bg) pair gets a key in first-seen order (row-major):
 //! `a-z`, `A-Z`, `0-9`, then further Unicode letters should a screen ever
 //! use more than 62 pairs. Colours print as their palette name when one
 //! matches exactly, else as `#rrggbb`. Lines end in `\n` on every OS.
+//!
+//! The overlays section (ADR-0018) lists each overlay in drawing order as
+//! `layer  x,y wxh  colour`, in console pixels; it is left out when there are
+//! none.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
@@ -64,6 +70,22 @@ impl GlyphBuffer {
         };
         for (k, fg, bg) in legend {
             let _ = writeln!(out, "{k} = fg:{} bg:{}", name(fg), name(bg));
+        }
+        if !self.overlays().is_empty() {
+            out.push_str("--- overlays ---\n");
+        }
+        for o in self.overlays() {
+            let r = o.rect;
+            let _ = writeln!(
+                out,
+                "{:<5} {},{} {}x{}  {}",
+                o.layer.name(),
+                r.x,
+                r.y,
+                r.w,
+                r.h,
+                name(o.color)
+            );
         }
         out
     }
@@ -129,6 +151,35 @@ mod tests {
              a = fg:#010203 bg:panel_bg\n\
              b = fg:text bg:panel_bg\n\
              c = fg:text bg:#010203\n"
+        );
+    }
+
+    #[test]
+    fn overlays_are_listed_after_the_legend() {
+        use crate::glyph_buffer::{Layer, Overlay};
+        let p = game_palette();
+        let text = p.get(UiColor::Text);
+        let mut b = GlyphBuffer::new(3, 1, Cell::new(' ', text, text));
+        b.add_overlay(Overlay::new(
+            Rect::new(18, 14, 5, 2),
+            p.get(UiColor::HpMid),
+            Layer::Over,
+        ));
+        b.add_overlay(Overlay::new(
+            Rect::new(0, 7, 24, 3),
+            Rgb::new(1, 2, 3),
+            Layer::Under,
+        ));
+        assert_eq!(
+            b.to_snapshot(&p),
+            "   \n\
+             --- colours ---\n\
+             aaa\n\
+             --- legend ---\n\
+             a = fg:text bg:text\n\
+             --- overlays ---\n\
+             over  18,14 5x2  hp_mid\n\
+             under 0,7 24x3  #010203\n"
         );
     }
 

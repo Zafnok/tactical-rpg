@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 use trpg_core::{
-    CharacterDef, CharacterId, ClassDef, ClassId, ClassTable, Level, SpellId, StatKind, StatValue,
-    Stats,
+    CharacterDef, CharacterId, ClassDef, ClassId, ClassTable, Faction, Level, Pos, SpellId,
+    StatKind, StatValue, Stats, Unit, UnitError, UnitId, is_valid_map_label,
 };
 
 use crate::bundle;
@@ -30,6 +30,50 @@ pub struct GenericTemplate {
     pub class: ClassId,
     /// The unit's character level.
     pub level: Level,
+    /// Overrides the default map label (the class name's first two letters).
+    pub map_label: Option<String>,
+}
+
+impl GenericTemplate {
+    /// A unit made from this template (see [`Unit::generic`]), with the
+    /// template's map label override applied.
+    pub fn unit(
+        &self,
+        id: UnitId,
+        classes: &ClassTable,
+        faction: Faction,
+        pos: Pos,
+    ) -> Result<Unit, UnitError> {
+        let mut unit = Unit::generic(id, &self.class, classes, self.level, faction, pos)?;
+        if let Some(label) = &self.map_label {
+            unit.map_label.clone_from(label);
+        }
+        Ok(unit)
+    }
+}
+
+/// Checks the map labels of the units placed on one map (`map`, a file
+/// name for the error): two named characters of the same faction must not
+/// share a label (ADR-0018). Generic units may: a map with three Brigands
+/// shows three `Br`s. Returns one error per clash.
+pub fn check_map_labels(map: &str, units: &[Unit]) -> Vec<ContentError> {
+    let mut seen: BTreeMap<(Faction, &str), &str> = BTreeMap::new();
+    let mut errors = Vec::new();
+    for u in units.iter().filter(|u| u.character.is_some()) {
+        match seen.get(&(u.faction, u.map_label.as_str())) {
+            Some(first) => errors.push(ContentError::new(
+                map,
+                format!(
+                    "{first} and {} are both labelled \"{}\" on the map; give one a map_label",
+                    u.name, u.map_label
+                ),
+            )),
+            None => {
+                seen.insert((u.faction, u.map_label.as_str()), u.name.as_str());
+            }
+        }
+    }
+    errors
 }
 
 /// Every named character and generic template, by id.
@@ -62,6 +106,8 @@ struct RawCharacter {
     weapon_ranks: Vec<(RawWeaponKind, RawWeaponRank)>,
     #[serde(default)]
     personal_spells: Vec<(Level, String)>,
+    #[serde(default)]
+    map_label: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -70,6 +116,8 @@ struct RawGeneric {
     id: String,
     class: String,
     level: Level,
+    #[serde(default)]
+    map_label: Option<String>,
 }
 
 /// Loads and validates the embedded character file. Class references are
@@ -119,12 +167,14 @@ pub fn from_source(
             v.err(&g.id, format!("{what}: class \"{}\" is lord-only", g.class));
         }
         v.level(&g.id, &what, g.level);
+        v.map_label(&g.id, &what, g.map_label.as_deref());
         table.generics.insert(
             g.id.clone(),
             GenericTemplate {
                 id: g.id.clone(),
                 class: ClassId(g.class.clone()),
                 level: g.level,
+                map_label: g.map_label.clone(),
             },
         );
     }
@@ -175,6 +225,16 @@ impl<'a> Validator<'a> {
         }
     }
 
+    /// Checks a map label override is exactly two letters.
+    fn map_label(&mut self, id: &str, what: &str, label: Option<&str>) {
+        if let Some(label) = label.filter(|l| !is_valid_map_label(l)) {
+            self.err(
+                id,
+                format!("{what}: map_label \"{label}\" must be exactly two letters"),
+            );
+        }
+    }
+
     fn character(&mut self, c: &RawCharacter) -> CharacterDef {
         let what = format!("character \"{}\"", c.id);
         let talent = StatKind::from(c.talent);
@@ -194,6 +254,7 @@ impl<'a> Validator<'a> {
             self.err(&c.id, format!("{what}: the lord has no personal spells"));
         }
         self.level(&c.id, &what, c.level);
+        self.map_label(&c.id, &what, c.map_label.as_deref());
         let class = self.class(&c.id, &what, &c.class);
         let mov = class.map_or(0, |k| k.move_points);
         let base = Stats::from_growable(c.base, mov);
@@ -216,6 +277,7 @@ impl<'a> Validator<'a> {
                 .iter()
                 .map(|(level, s)| (*level, SpellId(s.clone())))
                 .collect(),
+            map_label: c.map_label.clone(),
         };
         if let Some(class) = class {
             self.against_class(&def, &what, class);
@@ -327,6 +389,7 @@ mod tests {
             base: Stats::from_growable([18, 5, 0, 7, 8, 3, 1], 5),
             weapon_ranks: BTreeMap::from([(WeaponKind::Sword, WeaponRank::D)]),
             personal_spells: vec![(1, SpellId("fire".into())), (10, SpellId("force".into()))],
+            map_label: None,
         };
         assert_eq!(t.characters.get(&expected.id), Some(&expected));
         assert_eq!(
@@ -335,6 +398,7 @@ mod tests {
                 id: "thug".into(),
                 class: ClassId("brigand".into()),
                 level: 99,
+                map_label: None,
             })
         );
     }
@@ -497,6 +561,113 @@ mod tests {
             "",
         );
         assert!(load_src(&src).is_ok());
+    }
+
+    #[test]
+    fn map_label_overrides() {
+        let src = file(
+            &[
+                character("a", "swordsman", "map_label: Some(\"Xy\")"),
+                character("b", "swordsman", "map_label: Some(\"X\")"),
+                character("c", "swordsman", "map_label: Some(\"X1\")"),
+            ],
+            "(id: \"g\", class: \"brigand\", level: 1, map_label: Some(\"Bg\")), \
+             (id: \"h\", class: \"brigand\", level: 1, map_label: Some(\"Bgg\"))",
+        );
+        assert_eq!(
+            errors(&src),
+            [
+                "ch.ron:8: character \"b\": map_label \"X\" must be exactly two letters",
+                "ch.ron:12: character \"c\": map_label \"X1\" must be exactly two letters",
+                "ch.ron:16: generic \"h\": map_label \"Bgg\" must be exactly two letters",
+            ]
+        );
+        let src = file(
+            &[character("a", "swordsman", "map_label: Some(\"Xy\")")],
+            "(id: \"g\", class: \"brigand\", level: 1, map_label: Some(\"Bg\"))",
+        );
+        let t = load_src(&src).unwrap_or_default();
+        let def = t.characters.get(&CharacterId("a".into()));
+        assert_eq!(def.and_then(|d| d.map_label.as_deref()), Some("Xy"));
+        let g = t.generics.get("g");
+        assert_eq!(g.and_then(|g| g.map_label.as_deref()), Some("Bg"));
+    }
+
+    #[test]
+    fn generic_template_units_use_the_label_override() {
+        let classes = classes();
+        let mut t = GenericTemplate {
+            id: "g".into(),
+            class: ClassId("brigand".into()),
+            level: 3,
+            map_label: None,
+        };
+        let make =
+            |t: &GenericTemplate| t.unit(UnitId(4), &classes, Faction::Enemy, Pos::new(1, 2));
+        let expected = Unit::generic(
+            UnitId(4),
+            &t.class,
+            &classes,
+            3,
+            Faction::Enemy,
+            Pos::new(1, 2),
+        );
+        assert_eq!(make(&t), expected);
+        assert_eq!(make(&t).map(|u| u.map_label), Ok("Br".to_owned()));
+        t.map_label = Some("Zz".into());
+        assert_eq!(make(&t).map(|u| u.map_label), Ok("Zz".to_owned()));
+        t.class = ClassId("nope".into());
+        assert_eq!(
+            make(&t),
+            Err(UnitError::UnknownClass(ClassId("nope".into())))
+        );
+    }
+
+    #[test]
+    fn map_label_clashes_between_named_units() {
+        let classes = classes();
+        let t = load(Some(&classes)).unwrap_or_default();
+        let named = |label: &str, n: u32, faction| {
+            let def = &t.characters[&CharacterId("test_knight".into())];
+            Unit::from_character(UnitId(n), def, &classes, faction, Pos::new(0, 0))
+                .ok()
+                .map(|mut u| {
+                    u.map_label = label.into();
+                    u.name = format!("K{n}");
+                    u
+                })
+        };
+        let generic = |n: u32| {
+            t.generics["test_brigand"]
+                .unit(UnitId(n), &classes, Faction::Enemy, Pos::new(0, 0))
+                .ok()
+        };
+        let ok: Vec<Unit> = [
+            named("Ab", 0, Faction::Player),
+            named("Ab", 1, Faction::Enemy),
+            named("Cd", 2, Faction::Player),
+            generic(3),
+            generic(4),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        assert_eq!(ok.len(), 5);
+        assert!(check_map_labels("m.map", &ok).is_empty());
+        let mut clash = ok;
+        clash.extend(named("Ab", 5, Faction::Player));
+        clash.extend(named("Ab", 6, Faction::Player));
+        let msgs: Vec<String> = check_map_labels("m.map", &clash)
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        assert_eq!(
+            msgs,
+            [
+                "m.map: K0 and K5 are both labelled \"Ab\" on the map; give one a map_label",
+                "m.map: K0 and K6 are both labelled \"Ab\" on the map; give one a map_label",
+            ]
+        );
     }
 
     #[test]

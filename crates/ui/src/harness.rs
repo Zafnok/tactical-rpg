@@ -175,7 +175,10 @@ impl Default for Harness {
 
 fn embedded_ctx() -> Ctx {
     match Ctx::embedded() {
-        Ok(ctx) => ctx,
+        Ok(mut ctx) => {
+            ctx.debug_tools = true;
+            ctx
+        }
         Err(e) => panic!("embedded content failed to load: {e}"),
     }
 }
@@ -306,7 +309,7 @@ mod tests {
             h.snapshot(),
             h.game().buffer().to_snapshot(&h.game().ctx().palette)
         );
-        h.keys("Down f");
+        h.keys("Up f");
         assert!(h.quit_requested());
         let mut h = Harness::with_screen(Box::new(crate::screens::PlaceholderScreen));
         h.keys("d");

@@ -38,7 +38,6 @@ pub struct Game {
     ctx: Ctx,
     buffer: GlyphBuffer,
     quit: bool,
-    debug_screens: bool,
 }
 
 impl Game {
@@ -56,7 +55,12 @@ impl Game {
         {
             ctx.use_layout(layout);
         }
-        let mut stack = ScreenStack::new(Box::new(TitleScreen::new()));
+        let title = if ctx.debug_tools {
+            TitleScreen::with_quick_battle()
+        } else {
+            TitleScreen::new()
+        };
+        let mut stack = ScreenStack::new(Box::new(title));
         if ctx.layout().is_none() {
             stack.push(Box::new(LayoutPickerScreen::new()));
         }
@@ -78,16 +82,16 @@ impl Game {
             ctx,
             buffer: GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank),
             quit: false,
-            debug_screens: cfg!(debug_assertions),
         };
         game.redraw();
         game
     }
 
-    /// Turns the debug screens (the [`Action::Debug`] key) on or off.
+    /// Turns the debug screens (the [`Action::Debug`] key) on or off
+    /// ([`Ctx::debug_tools`]).
     #[must_use]
     pub fn with_debug_screens(mut self, on: bool) -> Self {
-        self.debug_screens = on;
+        self.ctx.debug_tools = on;
         self
     }
 
@@ -116,7 +120,7 @@ impl Game {
             .into_iter()
             .filter(|&a| self.input.is_held(a))
             .collect();
-        let opens_sampler = self.debug_screens
+        let opens_sampler = self.ctx.debug_tools
             && actions.contains(&Action::Debug)
             && self.stack.top_name() != Some(GlyphSamplerScreen::NAME);
         if opens_sampler {
@@ -269,8 +273,8 @@ mod tests {
     #[test]
     fn quit_stops_further_frames() {
         let mut game = Game::start(ctx());
-        game.frame(&[down(Key::Down)], 0.0);
-        let out = game.frame(&[RawKeyEvent::Up(Key::Down), down(Key::F)], 0.0);
+        game.frame(&[down(Key::Up)], 0.0);
+        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert!(out.quit);
         assert!(game.quit_requested());
         let before = game.buffer().clone();
@@ -309,8 +313,20 @@ mod tests {
 
     #[test]
     fn debug_screens_follow_the_build() {
-        let game = Game::start(ctx());
-        assert_eq!(game.debug_screens, cfg!(debug_assertions));
+        let game = Game::start(Ctx::embedded().unwrap());
+        assert_eq!(game.ctx.debug_tools, cfg!(debug_assertions));
+        let names = |ctx: Ctx| {
+            let mut game = Game::start(ctx);
+            tap(&mut game, Key::Down);
+            tap(&mut game, Key::F);
+            game.screens()
+        };
+        let mut release = ctx();
+        release.debug_tools = false;
+        assert_eq!(names(release), ["title"]); // Down + f chose Quit.
+        let mut debug = ctx();
+        debug.debug_tools = true;
+        assert_eq!(names(debug), ["title", "battle"]);
     }
 
     /// Records what the screen saw.

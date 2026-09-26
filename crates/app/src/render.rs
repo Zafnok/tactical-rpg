@@ -1,5 +1,7 @@
 //! Blits a [`GlyphBuffer`] to the window with the font atlas (ADR-0003):
-//! integer-scaled, centred, black letterbox.
+//! integer-scaled, centred, black letterbox. Sub-cell overlays (ADR-0018)
+//! are drawn as scaled rectangles: `Under` ones after the cell backgrounds,
+//! `Over` ones after the glyphs.
 
 use std::collections::HashSet;
 
@@ -7,7 +9,7 @@ use macroquad::prelude::*;
 use trpg_content::FontAtlasDef;
 use trpg_content::font::{AtlasRect, FALLBACK_GLYPH};
 use trpg_ui::console::{CELL_H_PX, CELL_W_PX, layout};
-use trpg_ui::{GlyphBuffer, Rgb};
+use trpg_ui::{GlyphBuffer, Layer, Rgb};
 
 /// Drawn for glyphs the atlas lacks, in [`MISSING_COLOR`].
 const MISSING_COLOR: Color = MAGENTA;
@@ -65,33 +67,54 @@ impl Renderer {
             f32::from(buf.height()) * cell_h,
             color(self.clear),
         );
-        for y in 0..i32::from(buf.height()) {
-            for x in 0..i32::from(buf.width()) {
-                let Some(cell) = buf.get(x, y) else { continue };
-                #[allow(clippy::cast_precision_loss)] // cell coords < 2^16
-                let (px, py) = (offset_x + x as f32 * cell_w, offset_y + y as f32 * cell_h);
-                if cell.bg != self.clear {
-                    draw_rectangle(px, py, cell_w, cell_h, color(cell.bg));
-                }
-                if cell.glyph == ' ' {
-                    continue;
-                }
-                let Some((rect, fg)) = self.atlas_cell(cell.glyph, cell.fg) else {
-                    continue;
-                };
-                draw_texture_ex(
-                    &self.texture,
-                    px,
-                    py,
-                    fg,
-                    DrawTextureParams {
-                        dest_size: Some(vec2(cell_w, cell_h)),
-                        source: Some(source_rect(rect)),
-                        ..Default::default()
-                    },
-                );
+        let cells = || {
+            (0..i32::from(buf.height())).flat_map(move |y| {
+                (0..i32::from(buf.width())).filter_map(move |x| {
+                    #[allow(clippy::cast_precision_loss)] // cell coords < 2^16
+                    let at = (offset_x + x as f32 * cell_w, offset_y + y as f32 * cell_h);
+                    buf.get(x, y).map(|cell| (at, cell))
+                })
+            })
+        };
+        for ((px, py), cell) in cells() {
+            if cell.bg != self.clear {
+                draw_rectangle(px, py, cell_w, cell_h, color(cell.bg));
             }
         }
+        let overlays = |layer: Layer| {
+            for o in buf.overlays().iter().filter(|o| o.layer == layer) {
+                let r = o.rect;
+                #[allow(clippy::cast_precision_loss)] // console pixels < 2^21
+                draw_rectangle(
+                    offset_x + r.x as f32 * scale,
+                    offset_y + r.y as f32 * scale,
+                    r.w as f32 * scale,
+                    r.h as f32 * scale,
+                    color(o.color),
+                );
+            }
+        };
+        overlays(Layer::Under);
+        for ((px, py), cell) in cells() {
+            if cell.glyph == ' ' {
+                continue;
+            }
+            let Some((rect, fg)) = self.atlas_cell(cell.glyph, cell.fg) else {
+                continue;
+            };
+            draw_texture_ex(
+                &self.texture,
+                px,
+                py,
+                fg,
+                DrawTextureParams {
+                    dest_size: Some(vec2(cell_w, cell_h)),
+                    source: Some(source_rect(rect)),
+                    ..Default::default()
+                },
+            );
+        }
+        overlays(Layer::Over);
     }
 
     /// Where to find `glyph` in the atlas and what colour to tint it: `fg`,

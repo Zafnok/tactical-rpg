@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 
 use trpg_core::ClassTable;
 
-pub use character::{CharacterTable, GenericTemplate};
+pub use character::{CharacterTable, GenericTemplate, check_map_labels};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};

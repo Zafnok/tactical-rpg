@@ -23,5 +23,8 @@ pub use movement::{
 };
 pub use stats::{GrowthValue, Growths, StatKind, StatValue, Stats};
 pub use terrain::{MovementTypeId, TerrainId, TerrainRules, TerrainTable};
-pub use unit::{CharacterDef, CharacterId, ClassRecord, Faction, Level, Unit, UnitError, UnitId};
+pub use unit::{
+    CharacterDef, CharacterId, ClassRecord, Faction, Level, MAP_LABEL_LEN, Unit, UnitError, UnitId,
+    default_map_label, is_valid_map_label,
+};
 pub use weapon::{WeaponKind, WeaponRank};

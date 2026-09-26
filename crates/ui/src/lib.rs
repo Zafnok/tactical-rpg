@@ -17,6 +17,6 @@ pub mod widgets;
 
 pub use color::{Palette, Rgb, UiColor};
 pub use game::{FrameOutput, Game, RawKeyEvent};
-pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
+pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Layer, Overlay, PxRect, Rect};
 pub use screen::{Ctx, FrameInput, LoadError, Screen, ScreenStack, Transition};
 pub use storage::{MemoryStorage, Storage, StorageError};
