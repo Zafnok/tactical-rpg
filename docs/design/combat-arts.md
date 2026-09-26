@@ -41,6 +41,20 @@ Follow-ups:
 >
 > **Do enemies use arts and actives?** "Bosses only".
 
+After the PR was opened, Nick added:
+
+> **Weapon skill gain:** "I think skill gain should be a formula of base +
+> amount of damage. So we can say sure base 2/4 skill gain but if you do a
+> lot of dmg you get extra and if you do only a little you get just a tiny
+> extra amount."
+>
+> **Spells:** "per battle actives should only exist on spells otherwise yes
+> cost durability" … "spells are like Fire or Blizzard and each of those will
+> have some set amount per battle maybe it's 10 per battle for Fire and 8 per
+> battle for Blizzard and these are the one exception to using weapon
+> durability is that these do not use durability whatsoever they simply tap
+> the spell counter."
+
 So:
 
 - **Combat Arts** are weapon techniques. A unit learns a weapon kind's arts by
@@ -58,6 +72,10 @@ So:
   sense** (Nick's example: a unique blade whose art hits Res, and a Spellsword
   class whose active does the same for a turn).
 - **Only bosses** among enemies use arts and actives.
+- **Weapon EXP** is a base (2, or 4 with an art) **plus a bonus from the
+  damage dealt** (Nick).
+- **Spells are the only per-battle resource.** Casting never touches
+  durability; spells and spell actives only spend the spell's uses (Nick).
 
 Everything marked *tunable* is a starting value Claude chose; balance tickets
 may change it without asking. Items marked *Claude's starting rule* fill a gap
@@ -109,9 +127,11 @@ All numbers are FE-sized and rescale with ticket 0013.
      An enemy hit on the player's phase is slowed through its own coming
      phase. The same effect doesn't stack with itself; applying it again
      refreshes it.
-8. **Weapon EXP** (*tunable*): a combat using an art gives **double** the
-   normal weapon-EXP award (`weapons-and-items.md`): **4** if at least one
-   strike hit, **2** if every strike missed.
+8. **Weapon EXP** (Nick: "base 2/4 … if you do a lot of dmg you get
+   extra"): a combat using an art **doubles the base** of the weapon-EXP
+   formula in `weapons-and-items.md` (**4** if at least one strike hit, **2**
+   if every strike missed). The damage bonus `dealt / 5` is added on top and
+   isn't doubled (*tunable*).
 9. Unit EXP and class points are the normal combat award (`progression.md`).
 
 ## Chapter 1 arts (*tunable* numbers; list approved by Nick)
@@ -119,8 +139,8 @@ All numbers are FE-sized and rescale with ticket 0013.
 Range is the weapon's own unless the art says otherwise. "This combat" means
 all of the attacker's strikes.
 
-| Art | Kind | Rank | Cost | Range | Effect | Weapon EXP |
-| --- | ---- | ---- | ---- | ----- | ------ | ---------- |
+| Art | Kind | Rank | Cost | Range | Effect | Weapon EXP base |
+| --- | ---- | ---- | ---- | ----- | ------ | --------------- |
 | **Flowing Cut** | Sword | E | 2 | weapon | This combat, the sword follow-up bonus is **×3/2** instead of ×6/5 (strikes 2..N: `damage * 3 / 2`). | ×2 |
 | **Guard Break** | Sword | D | 4 | weapon | This combat: hit **+10**, and the defender **can't counter**. | ×2 |
 | **Unhorse** | Spear | E | 2 | weapon | This combat: hit **+10**, and the spear's Mounted effectiveness is **×3** instead of ×2. | ×2 |
@@ -158,8 +178,8 @@ Details:
     the 2RN hit roll and the crit roll in strike order, after the main
     combat's strikes.
   - For unit EXP and class points the pierce counts as a **second combat**
-    against that unit (its own award, `progression.md`). Weapon EXP is only
-    given once, for the art.
+    against that unit (its own award, `progression.md`). Weapon EXP is one
+    award for the whole combat: the pierce's damage adds to `dealt`.
 - **Close Shot** can be used at distance 1 or 2. At distance 2 it just costs
   durability and hit, and the forecast shows that honestly.
 - **Pinning Shot / Pressure Point** apply once per combat, on the first
@@ -198,9 +218,12 @@ replaces "uses per battle" for actives in `progression.md`. Nick chose
   extra use). It never costs durability.
 - Classes with **0 weapon slots** (tier-3 magic classes) can only have spell
   actives. That is a constraint for ticket 1001, which designs tier-3 skills.
-- Actives **no longer have uses per battle** (except that spell actives spend
-  spell uses, which refill every battle as `magic.md` says).
-- Actives give no extra weapon EXP (*Claude's starting rule*; only arts do).
+- **Spells are the only thing with uses per battle** (Nick). Spells (Fire,
+  Frost, Heal…) never use durability at all; they only spend their own uses,
+  which refill every battle (`magic.md`). Spell actives follow that: they
+  spend spell uses, never durability. Every other active costs durability.
+- Actives don't double the weapon-EXP base (*Claude's starting rule*; only
+  arts do). The damage bonus applies as in any combat.
 
 ### Costs (*tunable*: 2/battle actives cost 3, 1/battle actives cost 5)
 
@@ -295,7 +318,10 @@ vs Brigand), with each sword art:
   (`9 × 3 / 2 = 13`) / Brigand unchanged.
 - **Guard Break** (20 → 16): `dmg 9 (then 10) ×2, hit 100, crit 3`
   (`94 + 10`, clamped to 100) / Brigand `—  no counter`.
-- Weapon EXP after either, if a strike hit: **4**.
+- Weapon EXP if both strikes hit (base 4 with an art, plus `dealt / 5`):
+  normal attack `2 + 19/5 = 5`; Flowing Cut `4 + 20/5 = 8` (9 + 13 = 22,
+  but the Brigand only had 20 HP, so `dealt` is 20 and it falls); Guard Break
+  `4 + 19/5 = 7`.
 
 ## Open sub-questions (deferred)
 

@@ -97,8 +97,12 @@ Nick answered every question on 2026-09-25. The result is in
 
 Claude's starting rules (Nick may veto them): one art or active per attack;
 cost paid even on a miss; a weapon brought to 0 breaks after the combat;
-weapon EXP ×2 for art combats; active costs of 3 (was 2/battle) and 5 (was
-1/battle).
+active costs of 3 (was 2/battle) and 5 (was 1/battle).
+
+Nick's follow-up on the PR: weapon EXP is **base + damage** (base 2, or 4
+with an art, plus `dealt / 5`, *tunable*). This replaces the old flat +2/+1
+rule in `weapons-and-items.md` and the ticket 0306 step. He also confirmed
+spells are the only per-battle resource: they never use durability.
 
 Downstream edits: `progression.md` skill table and actives rules,
 `weapons-and-items.md` durability/weapon EXP, tickets 0311 (costs instead of

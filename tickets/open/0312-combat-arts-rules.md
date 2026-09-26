@@ -44,7 +44,7 @@ None. Every rule and number is in `combat-arts.md`.
   Sidestep.
 - Debuff timed effects ("until the end of the target's next phase") beside
   0311's stance effects.
-- Double weapon EXP for art combats.
+- Doubled weapon-EXP base for art combats (the damage bonus isn't doubled).
 - The `boss` flag check: only boss enemies may issue an attack with an art or
   active (state unchanged otherwise). The AI choosing them is 0503.
 
@@ -95,7 +95,9 @@ None. Every rule and number is in `combat-arts.md`.
    next phase", to 0311's effect list. Mov/Spd debuffs never take the stat
    below 0. The same debuff refreshes and doesn't stack. Movement ranges, the
    danger zone and attack speed read the modified stats.
-8. Weapon EXP (0306): an art combat gives 2× the normal award (4 / 2).
+8. Weapon EXP (0306's formula): an art combat passes `used_art = true`, so
+   the base doubles (4 / 2); `dealt / 5` is added unchanged and includes a
+   Line Pierce strike's damage.
 9. Events: `ArtUsed { unit, art, weapon, durability_before, durability_after }`,
    reusing `EffectApplied`/`EffectExpired`, `ItemBroke` and the combat events.
 
@@ -107,7 +109,7 @@ None. Every rule and number is in `combat-arts.md`.
 - [ ] An art can't be used with a broken weapon, with `durability_left < cost`, on a counter, or together with a combat active (state unchanged, tests).
 - [ ] A weapon brought to exactly 0 by an art fights that combat unbroken and then emits `ItemBroke` (test).
 - [ ] A non-boss enemy's attack command with an art is rejected (test).
-- [ ] Weapon EXP doubles for art combats (test).
+- [ ] Weapon EXP for art combats: base doubled, damage bonus not (test with the `combat-arts.md` worked example: 5 / 8 / 7).
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required

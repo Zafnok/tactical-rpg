@@ -191,11 +191,25 @@ up to the Chapter 1 roster/enemies (0803).
 
 - Each unit has a rank per weapon kind its class can use: `E, D, C, B, A, S`.
   Starting ranks and the highest rank a class can reach come from 0005.
-- **Weapon EXP** (*Claude's starting rule*, numbers *tunable*): after each
-  combat, a unit gains weapon EXP in the kind it fought with: **+2** if at
-  least one of its strikes hit, **+1** if it struck but missed every time,
-  0 if it didn't strike. A combat using a Combat Art gives double
-  (`combat-arts.md`, 0014).
+- **Weapon EXP** (Nick, ticket 0014: "a formula of base + amount of
+  damage"; numbers *tunable*): after each combat, a unit gains weapon EXP in
+  the kind it fought with:
+
+  ```
+  base  = 2 if at least one of its strikes hit
+          1 if it struck but missed every time
+          0 if it didn't strike (no weapon EXP at all)
+  base  = base * 2 if it used a Combat Art this combat   (4 / 2)
+  bonus = dealt / 5
+  weapon_exp = base + bonus
+  ```
+
+  `dealt` is the HP its strikes actually removed this combat, summed over
+  every target (a Line Pierce strike counts). Overkill doesn't count: a
+  9-damage strike on a unit with 4 HP left adds 4. So a big hit gives a big
+  extra, and a scratch gives little or none (under 5 damage adds nothing).
+  Examples: two hits of 9 and 10 → `2 + 19/5 = 5`; one hit of 3 → `2 + 0 = 2`;
+  the same 9 + 10 with an art → `4 + 3 = 7`.
 - Rank thresholds (total weapon EXP, FE GBA values): D 30, C 70, B 120,
   A 180, S 250.
 - Ranks gate weapons (table above) and add `rank_speed` to attack speed.
