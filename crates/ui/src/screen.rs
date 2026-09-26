@@ -14,6 +14,7 @@ use trpg_content::{Content, ContentErrors};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Keymap};
+use crate::storage::{MemoryStorage, Storage};
 
 /// One screen of the game: title, battle map, a menu overlay, …
 pub trait Screen {
@@ -85,8 +86,8 @@ impl FrameInput {
 }
 
 /// Resources shared by every screen. A plain struct: add fields as later
-/// tickets need them (settings, storage, …).
-#[derive(Debug, Clone)]
+/// tickets need them (settings, …).
+#[derive(Debug)]
 pub struct Ctx {
     /// All validated game content.
     pub content: Content,
@@ -94,11 +95,15 @@ pub struct Ctx {
     pub palette: Palette,
     /// The active key bindings, for help text that names keys.
     pub keymap: Keymap,
+    /// Where saves and settings persist (0207): files on native,
+    /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
+    /// the platform implementation with [`Ctx::with_storage`].
+    pub storage: Box<dyn Storage>,
 }
 
 impl Ctx {
     /// Builds the shared context from loaded content. Fails with the names
-    /// of any UI colours the palette lacks.
+    /// of any UI colours the palette lacks. Starts with [`MemoryStorage`].
     pub fn new(content: Content) -> Result<Self, LoadError> {
         let palette = Palette::new(&content.palette).map_err(LoadError::Palette)?;
         let keymap = Keymap::from_def(&content.keymap);
@@ -106,12 +111,21 @@ impl Ctx {
             content,
             palette,
             keymap,
+            storage: Box::new(MemoryStorage::new()),
         })
     }
 
     /// The context for the content embedded in the binary.
     pub fn embedded() -> Result<Self, LoadError> {
         Self::new(trpg_content::load_embedded().map_err(LoadError::Content)?)
+    }
+
+    /// Replaces the storage backend (the harness and tests keep
+    /// [`MemoryStorage`]; `app` installs the platform implementation).
+    #[must_use]
+    pub fn with_storage(mut self, storage: Box<dyn Storage>) -> Self {
+        self.storage = storage;
+        self
     }
 }
 

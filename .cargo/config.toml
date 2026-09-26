@@ -9,3 +9,9 @@ xtask = "run -q -p xtask --"
 [target.x86_64-pc-windows-gnu]
 linker = "C:/msys64/mingw64/bin/gcc.exe"
 ar = "C:/msys64/mingw64/bin/ar.exe"
+
+# The wasm32 `--allow-undefined` linker flag needed for `quad-storage`'s JS
+# plugin (ticket 0207) lives in `crates/app/build.rs` instead of here: a
+# `RUSTFLAGS` env var (CI sets one, for `-D warnings`) replaces this file's
+# `rustflags` wholesale rather than merging with it, which would silently
+# drop a flag added here.

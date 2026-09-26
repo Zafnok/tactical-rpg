@@ -1,7 +1,8 @@
 //! `cargo xtask web [--release]`: builds `trpg-app` for
 //! `wasm32-unknown-unknown` and packages the resulting binary with the web
-//! shell (`web/index.html`) and the vendored JS loader (`web/mq_js_bundle.js`)
-//! into `dist/web/` (ticket 0206).
+//! shell (`web/index.html`) and the vendored JS loaders (`web/mq_js_bundle.js`,
+//! and `web/sapp_jsutils.js` + `web/quad-storage.js` for `localStorage`,
+//! ticket 0207) into `dist/web/` (ticket 0206).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,7 +12,12 @@ use std::process::Command;
 const BIN_NAME: &str = "tactical-rpg";
 
 /// Files copied from `web/` into `dist/web/` unchanged.
-const SHELL_FILES: &[&str] = &["index.html", "mq_js_bundle.js"];
+const SHELL_FILES: &[&str] = &[
+    "index.html",
+    "mq_js_bundle.js",
+    "sapp_jsutils.js",
+    "quad-storage.js",
+];
 
 /// Parsed `cargo xtask web` arguments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -170,6 +176,8 @@ mod tests {
         fs::create_dir_all(dir.join("web")).unwrap();
         fs::write(dir.join("web/index.html"), "<html></html>").unwrap();
         fs::write(dir.join("web/mq_js_bundle.js"), "// bundle").unwrap();
+        fs::write(dir.join("web/sapp_jsutils.js"), "// sapp_jsutils").unwrap();
+        fs::write(dir.join("web/quad-storage.js"), "// quad-storage").unwrap();
         dir
     }
 
@@ -248,6 +256,14 @@ mod tests {
         assert_eq!(
             fs::read_to_string(root.join("dist/web/mq_js_bundle.js")).unwrap(),
             "// bundle"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("dist/web/sapp_jsutils.js")).unwrap(),
+            "// sapp_jsutils"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("dist/web/quad-storage.js")).unwrap(),
+            "// quad-storage"
         );
         fs::remove_dir_all(&root).unwrap();
     }
