@@ -70,7 +70,8 @@ belongs to world structure (0008) and game flow (0801 / later tickets).
 - **12–14 enemies + 1 boss** (the boss has a name and portrait, 0803).
 - Mix: ordinary tier-1 human enemies, mostly Brigand, Raider and Archer. 0803
   may add 1–2 Riders, Guards or a Flier so the per-type weapon traits show
-  (spears vs mounted, bows vs flying).
+  (spears vs mounted, bows vs flying). The Flier is a tier-3 class (ticket
+  0017), so at most one, following the enemy-flier rule in `progression.md`.
 - **No elemental enemies** in Chapter 1 (Nick: no extras).
 - No reinforcements (Nick: no extras).
 

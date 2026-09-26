@@ -68,7 +68,9 @@ real story characters (07xx creates them).
      are ≤ the class caps, except after a reclass, when stats above the new
      class's caps are kept (`progression.md`).
 4. `assets/data/classes.ron`: the class tree from `progression.md` with its
-   numbers. `assets/data/characters.ron`: 3 placeholder player characters
+   numbers. The flying line starts at tier 3 (Flier, promoted from Lancer;
+   ticket 0017); its tier-4/5 classes have no numbers yet, so leave them out
+   and give Flier an empty `promotes_to`. `assets/data/characters.ron`: 3 placeholder player characters
    (`test_lord`, `test_knight`, `test_archer` — whatever classes exist) and 2
    generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
 5. `content` loaders + validation: unknown class/movement/weapon ids;
@@ -85,7 +87,7 @@ real story characters (07xx creates them).
 ## Acceptance criteria
 
 - [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes, one of them a shared promotion such as Iron Rider).
-- [ ] The whole class tree in `progression.md` (tiers 1–3 and the enemy-only classes) is in `classes.ron`.
+- [ ] The whole class tree in `progression.md` (tiers 1–3, including the tier-3 Flier, and the enemy-only classes) is in `classes.ron`.
 - [ ] All validation errors covered by tests.
 - [ ] Data files load in the all-assets test.
 

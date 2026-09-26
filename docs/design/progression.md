@@ -1,7 +1,7 @@
 # Progression: level ups, classes and the class tree
 
 Decided: 2026-09-25
-Source: ticket 0005
+Source: ticket 0005 (fliers moved to tier 3+ by ticket 0017, 2026-09-25)
 
 ## Nick's words
 
@@ -100,6 +100,20 @@ Follow-ups:
 > **Class stat numbers:** "B numbers are meaningless without playtesting."
 > (Claude's numbers are starting values, judged in the Chapter 1
 > playtest.)
+
+Fliers (ticket 0017, 2026-09-25; asked after Nick said in the terrain round:
+"Flyers I guess they'll be late game? Like tier 3+. We can adjust the class
+progression to make that work."):
+
+> **How a unit becomes a flier:** "1A" (a tier-3 promotion branch, like
+> Three Houses' advanced flying classes; no unit starts as a flier).
+>
+> **What happens to the old Flier line:** "push all them up but your
+> description is wrong. Flier = tier 3. Sky Lancer / Sky Warden = tier 4. And
+> so on."
+>
+> **Enemy fliers:** "they can show up earlier, but in small numbers, or for
+> elite enemies (i.e. boss or sub-boss)"
 
 So:
 
@@ -437,7 +451,6 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Archer | **Long Shot** (2/battle, combat): Bw max range +1 for this attack | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) |
 | Guard | **Brace** (2/battle, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
 | Rider | **Lance Rush** (2/battle, combat): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
-| Flier | **Swoop** (2/battle, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
 | Mage | **Overcast** (1/battle, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
 | Cleric | **Sanctuary** (1/battle, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
 | Duelist | **Blade Flurry** (1/battle, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
@@ -451,21 +464,31 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Bulwark | **Fortify** (1/battle, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
 | Iron Rider | **Trample** (2/battle, combat): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
 | Lancer | **Piercing Lance** (2/battle, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
-| Sky Lancer | **Swoop** | **Sky Dodge 2**: avoid +20 against bows |
-| Sky Warden | **Dive** (1/battle, combat): might +6 | **Sky Guard**: Def +3 |
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
 | Mystic | **Siphon** (1/battle, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
 | Priest | **Sanctuary 2** (1/battle, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
 
+### Flying line skills (tiers 3–4)
+
+The flying line kept its skills when it moved up (Nick, ticket 0017). Only
+the Flier's are in the game for now; tiers 4+ come later.
+
+| Class | Tier | Active (unlock) | Passive (mastery) |
+| ----- | ---- | --------------- | ----------------- |
+| Flier | 3 | **Swoop** (2/battle, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
+| Sky Lancer | 4 | **Swoop** | **Sky Dodge 2**: avoid +20 against bows |
+| Sky Warden | 4 | **Dive** (1/battle, combat): might +6 | **Sky Guard**: Def +3 |
+
 - **Skills learned twice:** a unit that learns an active it already knows
-  (e.g. Swoop from both flier lines, Overcast from Mage and Sorcerer) gets
+  (e.g. Swoop from Flier and Sky Lancer, Overcast from Mage and Sorcerer) gets
   nothing more. Ranks of the same active (Sanctuary 2, Long Shot 2) supersede
   like passives.
 - **"+1 strike" skills:** these add to the strikes worked out from attack
   speed, never above the 4-strike maximum. They're meant to make 3x/4x
   happen more often, but rarely (`stats-and-combat.md`).
-- **Tier-3 skills** and the elemental enemies' skills aren't designed yet.
-  Chapter 1 can't reach tier 3. That work is follow-up ticket 1001.
+- **Tier-3 skills** (except the Flier's, above) and the elemental enemies'
+  skills aren't designed yet. Chapter 1 can't reach tier 3. That work is
+  follow-up ticket 1001.
 
 ## Spells in class lists
 
@@ -496,10 +519,8 @@ Guard [A] (Sp) ──────┬─► Bulwark [A]    Sp Ax     ──► Ba
                      └─► Iron Rider [A][M] Sp Ax Sw ► Juggernaut [A][M] Sp Ax Sw
                               ▲
 Rider [M] (Sw Sp) ───┼────────┘  (shared promotion)
-                     └─► Lancer [M]     Sp Sw     ──► High Lancer [M] Sp Sw Ax
-
-Flier [F] (Sp) ──────┬─► Sky Lancer [F] Sp Sw     ──► Storm Lancer [F] Sp Sw
-                     └─► Sky Warden [F] Sp Ax     ──► Sky Tyrant [F]  Sp Ax
+                     └─► Lancer [M]     Sp Sw ─┬──► High Lancer [M] Sp Sw Ax
+                                               └──► Flier [F]      Sp  (see below)
 
 Mage (Sw · Fire) ────┬─► Sorcerer (Sw) ───────────► Archmage     spells only
                      └─► Mystic (Sw/Gt) ──────────► Arcanist     spells only
@@ -512,6 +533,42 @@ Enemy-only: Brigand (Ax) · Fire Elemental · Frost Elemental
 [M] Mounted (spears hit ×2)   [F] Flying (bows hit ×3)   [A] Armored (high Def, low Res)
 Sw sword · Sp spear · Ax axe · Bw bow · Gt gauntlet
 ```
+
+The flying line starts at tier 3 (Nick, ticket 0017) and goes on past the
+right edge of the tree above:
+
+```
+TIER 3                  TIER 4                         TIER 5
+────────────────────────────────────────────────────────────────────────────
+Flier [F] (Sp) ──────┬─► Sky Lancer [F] Sp Sw     ──► Storm Lancer [F] Sp Sw
+                     └─► Sky Warden [F] Sp Ax     ──► Sky Tyrant [F]  Sp Ax
+```
+
+### Fliers are late-game (Nick, ticket 0017)
+
+- **No flying class below tier 3.** Nobody starts as a flier, and a Reclass
+  Seal can't reach one as a "tier-1 class".
+- **How to get one:** a **tier-3 promotion branch** (Nick, "1A"). **Lancer**
+  promotes to **High Lancer** or **Flier** (*Claude's starting rule*: the
+  Lancer is the spear-and-mount line, the closest fit for the Flier's spear;
+  Nick may veto or add more parents). A Reclass Seal reaches Flier the usual
+  way: from a mastered Lancer, or once the unit has unlocked Flier.
+- **The old line moves up whole** (Nick): **Flier = tier 3**, **Sky Lancer /
+  Sky Warden = tier 4**, **Storm Lancer / Sky Tyrant = tier 5**. Their
+  weapon kinds, Mov, armour and skills stay as they were. Tiers 4 and 5
+  aren't designed yet (seals, minimum gains, CP per class level, rank and
+  stat scale), so those four classes have **no stat numbers yet** and aren't
+  in the Chapter 1 class data. They're filled in when tiers 4+ are designed.
+- **Enemy fliers can show up earlier** (Nick): "in small numbers, or for elite
+  enemies (i.e. boss or sub-boss)". Before the player can have a flier, a
+  battle may field flying enemies only as:
+  - a **small number**: at most **2** generic fliers per battle (*tunable*),
+    or
+  - an **elite**: a boss or sub-boss (a sub-boss is a stronger enemy that
+    the battle data marks as such).
+
+  An early enemy flier uses the tier-3 Flier class, so it's naturally strong
+  (tier-3 base stats, see *Generic units*), even at a low character level.
 
 - **Martial classes aren't constrained** (Nick): they have the same number of
   tiers as magic, and keep **3 weapon slots at every tier**. Only the magic
@@ -545,7 +602,6 @@ that class.
 | Archer | 5 | foot | — | Bw D/C | L M | 3 | — | Marksman, Outrider |
 | Guard | 4 | armored | Armored | Sp D/C | M H | 3 | — | Bulwark, Iron Rider |
 | Rider | 7 | mounted | Mounted | Sw E/C, Sp D/C | L M | 3 | — | Iron Rider, Lancer |
-| Flier | 7 | flying | Flying | Sp D/C | L | 3 | — | Sky Lancer, Sky Warden |
 | Mage | 5 | foot | — | Sw E/D | L | 3 | (1, Fire), (5, Frost) | Sorcerer, Mystic |
 | Cleric | 5 | foot | — | Gt E/D | L | 3 | (1, Heal) | Mystic, Priest |
 | Brigand *(enemy)* | 5 | foot | — | Ax D/C | L | 3 | — | — |
@@ -570,36 +626,46 @@ affinities yet. Enemy-only classes can't be promoted into or reclassed into.
 | Outrider | 7 | mounted | Mounted | Bw C/A, Sw D/B | L M | 3 | — | Windrunner |
 | Bulwark | 4 | armored | Armored | Sp C/A, Ax D/B | M H | 3 | — | Bastion |
 | Iron Rider | 6 | mounted | Armored, Mounted | Sp C/A, Ax D/B, Sw D/B | M H | 3 | — | Juggernaut |
-| Lancer | 8 | mounted | Mounted | Sp C/A, Sw C/B | L M | 3 | — | High Lancer |
-| Sky Lancer | 8 | flying | Flying | Sp C/A, Sw D/B | L | 3 | — | Storm Lancer |
-| Sky Warden | 7 | flying | Flying | Sp C/A, Ax D/B | L M | 3 | — | Sky Tyrant |
+| Lancer | 8 | mounted | Mounted | Sp C/A, Sw C/B | L M | 3 | — | High Lancer, Flier |
 | Sorcerer | 5 | foot | — | Sw D/C | L | 3 | (1, Force) | Archmage |
 | Mystic | 5 | foot | — | Sw D/C, Gt D/C | L | 3 | (1, Fire), (1, Heal), (5, Mend) | Arcanist |
 | Priest | 5 | foot | — | Gt D/C | L | 3 | (1, Mend) | Oracle |
 
 ### Tier 3
 
-| Class | Mov | Move type | Tags | Weapons | Armour | Slots | Spells |
-| ----- | --- | --------- | ---- | ------- | ------ | ----- | ------ |
-| Blade Dancer | 6 | foot | — | Sw A/S | L | 3 | — |
-| Nightblade | 6 | foot | — | Sw A/S, Gt B/A, Bw D/B | L | 3 | — |
-| Tempest Fist | 6 | foot | — | Gt A/S | L | 3 | — |
-| Colossus | 5 | foot | — | Gt A/S, Ax B/A | L M H | 3 | — |
-| Ravager | 5 | foot | — | Ax A/S, Sw C/B | L M | 3 | — |
-| Warchief | 5 | foot | — | Ax A/S, Bw B/A, Sp C/B | M H | 3 | — |
-| Deadeye | 6 | foot | — | Bw A/S | L M | 3 | — |
-| Windrunner | 8 | mounted | Mounted | Bw A/S, Sw B/A | L M | 3 | — |
-| Bastion | 4 | armored | Armored | Sp A/S, Ax B/A | M H | 3 | — |
-| Juggernaut | 6 | mounted | Armored, Mounted | Sp A/S, Ax B/A, Sw B/A | M H | 3 | — |
-| High Lancer | 8 | mounted | Mounted | Sp A/S, Sw B/A, Ax C/B | L M | 3 | — |
-| Storm Lancer | 8 | flying | Flying | Sp A/S, Sw B/A | L | 3 | — |
-| Sky Tyrant | 7 | flying | Flying | Sp A/S, Ax B/A | L M | 3 | — |
-| Archmage | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Force) |
-| Arcanist | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Heal), (1, Mend) |
-| Oracle | 5 | foot | — | — | L | **0** | (1, Heal), (1, Mend) |
+| Class | Mov | Move type | Tags | Weapons | Armour | Slots | Spells | Promotes to |
+| ----- | --- | --------- | ---- | ------- | ------ | ----- | ------ | ----------- |
+| Blade Dancer | 6 | foot | — | Sw A/S | L | 3 | — | — |
+| Nightblade | 6 | foot | — | Sw A/S, Gt B/A, Bw D/B | L | 3 | — | — |
+| Tempest Fist | 6 | foot | — | Gt A/S | L | 3 | — | — |
+| Colossus | 5 | foot | — | Gt A/S, Ax B/A | L M H | 3 | — | — |
+| Ravager | 5 | foot | — | Ax A/S, Sw C/B | L M | 3 | — | — |
+| Warchief | 5 | foot | — | Ax A/S, Bw B/A, Sp C/B | M H | 3 | — | — |
+| Deadeye | 6 | foot | — | Bw A/S | L M | 3 | — | — |
+| Windrunner | 8 | mounted | Mounted | Bw A/S, Sw B/A | L M | 3 | — | — |
+| Bastion | 4 | armored | Armored | Sp A/S, Ax B/A | M H | 3 | — | — |
+| Juggernaut | 6 | mounted | Armored, Mounted | Sp A/S, Ax B/A, Sw B/A | M H | 3 | — | — |
+| High Lancer | 8 | mounted | Mounted | Sp A/S, Sw B/A, Ax C/B | L M | 3 | — | — |
+| Flier | 7 | flying | Flying | Sp A/S | L | 3 | — | Sky Lancer, Sky Warden |
+| Archmage | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Force) | — |
+| Arcanist | 5 | foot | — | — | L | **0** | (1, Fire), (1, Frost), (1, Heal), (1, Mend) | — |
+| Oracle | 5 | foot | — | — | L | **0** | (1, Heal), (1, Mend) | — |
 
 Tier-3 spell lists only use the five starter spells for now. New spells for
 higher tiers are added when tiers above 3 are designed.
+
+### Tiers 4 and 5 (flying line only; numbers not designed yet)
+
+| Class | Tier | Mov | Move type | Tags | Weapon kinds | Armour | Slots | Promotes to |
+| ----- | ---- | --- | --------- | ---- | ------------ | ------ | ----- | ----------- |
+| Sky Lancer | 4 | 8 | flying | Flying | Sp, Sw | L | 3 | Storm Lancer |
+| Sky Warden | 4 | 7 | flying | Flying | Sp, Ax | L M | 3 | Sky Tyrant |
+| Storm Lancer | 5 | 8 | flying | Flying | Sp, Sw | L | 3 | — |
+| Sky Tyrant | 5 | 7 | flying | Flying | Sp, Ax | L M | 3 | — |
+
+Weapon ranks, base stats, caps and growths for these come with the tier-4+
+design. Until then they aren't in the game's class data, and the Flier's
+`promotes_to` in the data stays empty (nobody can promote past it yet).
 
 ### Base stats, caps and growths
 
@@ -615,7 +681,6 @@ data (0701 / 0803). Order: `HP Str Mag Dex Spd Def Res`.
 | Archer | 17 5 0 7 5 3 1 | 40 20 10 24 20 18 15 | 65 45 10 60 45 25 20 |
 | Guard | 20 7 0 4 2 9 0 | 45 22 8 18 14 26 10 | 80 45 5 35 20 55 10 |
 | Rider | 20 6 0 5 5 5 1 | 42 21 10 20 20 20 14 | 75 45 5 45 45 35 15 |
-| Flier | 16 4 1 6 7 3 5 | 38 18 14 22 24 16 22 | 60 35 20 50 55 20 45 |
 | Mage | 16 1 6 5 5 1 5 | 36 12 24 20 20 12 22 | 55 15 60 45 45 15 45 |
 | Cleric | 16 1 5 4 5 1 7 | 36 12 22 18 20 12 24 | 55 15 50 40 45 15 55 |
 | Brigand | 20 6 0 2 4 3 0 | 45 24 8 16 18 18 10 | 80 50 0 30 30 25 5 |
@@ -632,8 +697,6 @@ data (0701 / 0803). Order: `HP Str Mag Dex Spd Def Res`.
 | Bulwark | 28 11 0 6 4 14 2 | 58 30 10 24 20 36 14 | 85 50 5 40 25 60 10 |
 | Iron Rider | 27 10 0 6 6 11 2 | 56 30 10 24 22 32 14 | 85 50 5 40 35 50 10 |
 | Lancer | 25 9 0 8 9 8 3 | 52 28 12 28 28 26 18 | 80 50 5 50 50 35 20 |
-| Sky Lancer | 21 6 2 9 11 5 8 | 46 24 18 30 32 20 30 | 65 40 20 55 60 20 50 |
-| Sky Warden | 26 10 0 7 8 9 3 | 54 30 12 26 26 30 18 | 80 55 5 45 45 45 15 |
 | Sorcerer | 20 2 10 7 7 2 8 | 42 14 32 26 26 14 28 | 55 15 70 50 50 15 50 |
 | Mystic | 21 2 9 7 7 2 9 | 44 14 30 26 26 14 30 | 60 15 60 45 50 15 55 |
 | Priest | 20 2 8 6 7 2 11 | 42 14 28 24 26 14 32 | 60 15 55 45 45 15 65 |
@@ -648,8 +711,7 @@ data (0701 / 0803). Order: `HP Str Mag Dex Spd Def Res`.
 | Bastion | 36 14 0 8 5 19 3 | 70 36 12 30 24 45 18 | 85 50 5 40 25 60 10 |
 | Juggernaut | 34 13 0 8 8 15 3 | 66 36 12 30 28 40 18 | 85 50 5 40 35 50 10 |
 | High Lancer | 32 12 0 10 12 10 4 | 60 34 14 34 34 32 22 | 80 50 5 50 50 35 20 |
-| Storm Lancer | 27 9 3 12 15 7 11 | 54 30 22 36 40 24 38 | 65 40 20 55 60 20 50 |
-| Sky Tyrant | 33 13 0 9 11 12 4 | 64 36 14 32 32 36 22 | 80 55 5 45 45 45 15 |
+| Flier | 27 9 3 12 15 7 11 | 54 30 22 36 40 24 38 | 65 40 20 55 60 20 50 |
 | Archmage | 25 3 14 9 9 3 11 | 50 16 40 32 32 16 34 | 55 15 70 50 50 15 50 |
 | Arcanist | 26 3 13 9 9 3 12 | 52 16 38 32 32 16 36 | 60 15 60 45 50 15 55 |
 | Oracle | 25 3 12 8 9 3 14 | 50 16 36 30 32 16 40 | 60 15 55 45 45 15 65 |
@@ -663,7 +725,9 @@ Design intent behind the numbers:
   weapons and Light Feet, this is the line most likely to strike 3x/4x
   (Nick's "punching class").
 - **Fliers** have high Res, low Def and high Spd. Bows (×3) are their
-  weakness. **Mounted** classes have high Mov, and spears (×2) are their
+  weakness. The tier-3 Flier takes the numbers the old tier-3 Storm Lancer
+  had (*tunable*), so a Lancer promoting into it gains HP, Mag, Dex, Spd and
+  Res, and keeps its Str and Def. **Mounted** classes have high Mov, and spears (×2) are their
   weakness.
 
 ### Generic units (enemies and generic allies)
@@ -688,6 +752,11 @@ ranks, class records (usually just the starting class at class level 1), and
 - **Tiers 4 and up** (Nick expects 6–10 tiers): the classes, the minimum-gain
   steps, the level cap and new spells. Not needed for Chapter 1.
 - **Tier-3 skills** and elemental enemy skills: ticket 1001.
+- **Tiers 4–5 of the flying line** (Sky Lancer, Sky Warden, Storm Lancer,
+  Sky Tyrant): weapon ranks, stats, and Storm Lancer / Sky Tyrant skills,
+  with the rest of tiers 4+.
+- **Other flier parents** besides Lancer (e.g. a flying branch for another
+  line): Nick may add them later (ticket 0017 started with Lancer only).
 - **Flavour names** for every class, skill and seal: closer to shipping
   (Nick). They must not copy Fire Emblem names.
 - **Number scale:** all stats, caps and EXP numbers rescale with ticket 0013.

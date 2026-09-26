@@ -31,8 +31,9 @@ entries. Design questions go through the `ask-nick` skill.
 ## Scope
 
 **In:**
-- 1–2 passives and 1 active for each of the 16 tier-3 classes in
-  `progression.md`.
+- 1–2 passives and 1 active for each of the 14 tier-3 classes in
+  `progression.md` that don't have skills yet (the tier-3 Flier already has
+  Swoop and Sky Dodge 1 from ticket 0017).
 - Optional passives for Fire/Frost Elementals.
 - The numbers in `skills.ron`.
 

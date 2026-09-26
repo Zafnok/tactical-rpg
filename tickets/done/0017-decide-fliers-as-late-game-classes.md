@@ -5,10 +5,10 @@ type: design-decision
 milestone: M5 Progression
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0017 — Decide: make fliers a late-game (tier 3+) class line
@@ -60,13 +60,35 @@ later tickets); terrain costs (decided in `terrain.md`).
 
 ## Acceptance criteria
 
-- [ ] `progression.md` records Nick's words verbatim and the flier rules.
-- [ ] No tier 1 or tier 2 flying class remains unless Nick chose that.
-- [ ] Open tickets that referenced the old tier 1 Flier are updated.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `progression.md` records Nick's words verbatim and the flier rules.
+- [x] No tier 1 or tier 2 flying class remains unless Nick chose that.
+- [x] Open tickets that referenced the old tier 1 Flier are updated.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
 - None (design document only); `cargo xtask ticket-lint` passes.
 
 ## Completion notes
+
+Nick answered: 1A (a tier-3 promotion branch); push the whole line up
+(Flier = tier 3, Sky Lancer / Sky Warden = tier 4, Storm Lancer / Sky Tyrant =
+tier 5); enemy fliers may appear earlier, but only in small numbers or as
+elites (boss / sub-boss).
+
+- `progression.md`: Nick's words, a "Fliers are late-game" rule section,
+  a new tree, class tables (Flier moved to tier 3, a new tiers 4–5 table
+  with no numbers yet), stats, skills, open sub-questions. The design README
+  row is updated.
+- **Claude's starting choices (Nick may veto):** Lancer is the only parent of
+  Flier. The tier-3 Flier is Sp A/S and takes the old tier-3 Storm Lancer's
+  base/caps/growths, so promoting from Lancer gives a positive bonus. The
+  enemy "small number" limit is at most 2 generic fliers per battle before
+  the player can have one.
+- Tiers 4–5 aren't designed, so those four classes have no stats and stay
+  out of the class data; the Flier's `promotes_to` in the data is empty
+  until then.
+- Tickets edited: 0302 (class data: include Flier at tier 3, leave out
+  tiers 4–5), 0803 (optional enemy flier follows the new rule), 1001 (14
+  tier-3 classes still need skills, not 16). Also `chapter-1.md` and
+  `terrain.md`'s open question.
