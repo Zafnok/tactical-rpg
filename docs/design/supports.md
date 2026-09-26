@@ -26,6 +26,11 @@ Source: ticket 0010
 > take a long time." / "for combining bonus we should just disallow that and
 > take the highest bonus available" / "support conversations should be
 > viewable after unlock when in a camp or hub or something"
+>
+> **On pacing:** "the chapters again... are typically not a single battle...
+> I think chapters 1 and 2 and maybe 3 could be 1 battle but then it should
+> be more open ended and there will be a lot of small skirmishes so keep this
+> in mind with your claims"
 
 Options he was shown: A = FE GBA / Path of Radiance supports, B = Three Houses
 hub activities, C = Triangle Strategy / Unicorn Overlord camp events, D = main
@@ -37,7 +42,7 @@ script only.
   the lead's bonds with companions. Pairs build points by fighting together,
   and by one healing or buffing the other (Nick, from newer FE games).
 - **Camp events (Triangle Strategy style) are extras**: short, optional,
-  scripted scenes between chapters. They don't need grinding and have no
+  scripted scenes at camp. They don't need grinding and have no
   mechanical effect.
 - **Unlimited A-ranks** per unit.
 - **C comes early, A takes a long time** (Nick).
@@ -83,9 +88,8 @@ shape (C early, A "should really take a long time"); the numbers are
   **gained only when the conversation is viewed** (FE GBA).
 - While a conversation is unlocked but not viewed, the pair's points stop at
   that threshold (extra points are lost). This stops a pair jumping two ranks.
-- **At most one rank gained per pair per chapter** (*tunable*, from Path of
-  Radiance). If a pair reaches the next threshold in the same chapter, that
-  conversation unlocks at the start of the next chapter.
+- Because conversations are only viewed at camp, a pair gains **at most one
+  rank per camp visit**, however many battles it fights in between.
 - **Unlimited A-ranks** (Nick): a unit can reach A with every partner that it
   has a support with.
 - A pair may give a thresholds override in data (e.g. a lifelong-friends pair
@@ -110,13 +114,27 @@ A pair gains points only when **both units are deployed and on the map**
 - Healing, buffing or using an item counts whenever the game allows the
   action. Nothing counts for an ally that isn't in a support pair with the
   caster.
-- Rough pace: a pair that fights side by side and ends most turns adjacent
-  gets about 8–12 points per chapter, so **C after ~2 chapters, B after ~7
-  and A after ~15–20**: an A-rank is a long campaign's worth of fighting side
-  by side. A healer who heals the same ally often gets there somewhat faster.
-  If the campaign length (0008) turns out much shorter, scale B and A down
-  so A stays reachable late in a single playthrough.
-  `stats-and-combat.md`'s tuning work (0013/playtest) can change these.
+- **Rough pace, counted in battles, not chapters.** A chapter is a story
+  beat, not one battle (`chapter-1.md`). Chapters 1–2 (maybe 3) are a single
+  battle each. After that the game opens up, with many small skirmishes
+  between the bigger story battles. Estimates for a pair that fights side by
+  side and ends most turns adjacent:
+
+  | Battle kind | Points for the pair |
+  | ----------- | ------------------- |
+  | Full story battle (~10+ turns) | ~8–12 |
+  | Small skirmish (a few turns) | ~2–5 |
+
+  So **C comes after about 2 story battles** (or a handful of skirmishes).
+  **A needs about 15–20 story battles' worth** of fighting side by side, or
+  a lot of skirmishes on top of fewer story battles. A healer who heals the
+  same ally often gets there somewhat faster.
+- **Skirmishes let players push a favourite pair along** (like the optional
+  fights in FE Sacred Stones). That's accepted: A still takes a long time,
+  and the points per skirmish stay low because skirmishes are short. How many
+  skirmishes a typical run has depends on the world structure (0008). Retune
+  B and A once it's known, so A stays a late-game reward that a normal run
+  can still reach. Playtests (0013 and later) may change every number here.
 - Rewind (`death-and-difficulty.md`) rolls support points back like every
   other battle state change (they are ordinary events).
 
@@ -147,29 +165,33 @@ partner within 3 tiles** (Manhattan distance, *tunable*) that is on the map:
 - **Classic:** when a unit dies, its supports stop. Unlocked but unviewed
   conversations with it are removed. Viewed conversations stay in the
   "seen" list.
-- **Casual:** a retreated unit comes back next chapter, and its supports carry
-  on unchanged (it gains no points for the rest of that battle).
+- **Casual:** a retreated unit comes back as `death-and-difficulty.md` says,
+  and its supports carry on unchanged. It gains no points for the rest of the
+  battle it retreated from.
 
 ### Viewing support conversations
 
 Once unlocked, a support conversation can be viewed **at camp** (Nick:
 "viewable after unlock when in a camp or hub or something"), never during a
-battle. Camp is the between-chapters screen, reached before Preparations; it
-holds a **Supports** list next to the camp events. If a hub (1004) is ever
-built, the Supports list moves into it. The list shows each unlocked
-conversation (pair and rank) and marks new ones. They use the normal two-portrait dialogue player (0702/0704).
+battle. Camp is a screen **between battles**, not only between chapters.
+Where it's offered in the open part of the game (e.g. on the overworld,
+before a story battle, after a skirmish) is decided with the world structure
+(0008). Camp holds a **Supports** list next to the camp events. If a hub
+(1004) is ever built, the Supports list moves into it. The list shows each
+unlocked conversation (pair and rank) and marks new ones. Conversations use
+the normal two-portrait dialogue player (0702/0704).
 
 ## Rules: camp events
 
 - Short, **scripted, optional** conversations that appear in a **Camp** list
-  between chapters once the story reaches a set point (e.g. "after Chapter 3,
-  if Mira is alive").
+  once the story reaches a set point (e.g. "after the story battle at the
+  river fort, if Mira is alive").
 - They need no points and give no points, stats or items. They're **extras**:
   flavour, banter, small world details, group scenes of 3+ characters that
   don't fit a pair.
 - They may include the lead, with the same reply-choice rules as supports.
 - Which camp events exist and when they appear is decided by the story
-  pipeline, per chapter.
+  pipeline, alongside each chapter's story.
 - Personal arcs **must not** depend on camp events alone. The arc lives in the
   main script and the character's supports (Nick: "Supports everywhere, camp
   for extras").
@@ -195,6 +217,6 @@ conversation (pair and rank) and marks new ones. They use the normal two-portrai
 ## Implementation tickets
 
 - **1002** Support points, ranks and battle bonus (core rules + data).
-- **1003** Supports and camp lists between chapters (UI + dialogue).
+- **1003** Supports and camp lists at camp (UI + dialogue).
 - **1004** Hub activities (parked, far future / maybe never).
 - **1005** Pair abilities (parked, far future).

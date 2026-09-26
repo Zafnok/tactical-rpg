@@ -18,8 +18,10 @@ completed:
 Nick chose FE GBA-style earned supports plus camp events (ticket 0010,
 [`docs/design/supports.md`](../../docs/design/supports.md)). This ticket
 builds the **rules**: support pairs as data, points gained in battle, ranks
-C/B/A, the Hit/Avoid bonus, and carrying support state across chapters in the
-campaign. The screens for reading conversations and camp events are in 1003.
+C/B/A, the Hit/Avoid bonus, and carrying support state across battles in the
+campaign. Note: a chapter is a story beat that may hold several battles and
+skirmishes (`chapter-1.md`), so nothing here may assume one battle per chapter.
+The screens for reading conversations and camp events are in 1003.
 Crate rules: [ADR-0004](../../docs/adr/0004-crate-architecture.md) (all of
 this lives in `core`, and state changes only through `Command` → `Event`).
 
@@ -38,7 +40,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
 - A tuning record with the point values, thresholds, bonus table, range (3)
   and the no-stacking rule from `supports.md`.
 - `core::support`: `SupportTable`, and `SupportState` per pair (points, rank,
-  unlocked-but-unviewed rank, whether a rank was gained this chapter). Pure
+  and unlocked-but-unviewed rank). Pure
   functions add points, unlock ranks and view a conversation.
 - Battle hooks for the point events: ending the player phase adjacent,
   fighting with an adjacent partner, and healing, buffing or using an item on
@@ -49,8 +51,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
   forecast (0304) for attacks and counters.
 - Campaign: support state is saved with the campaign (0802) and applied after
   a battle. It is removed for units that died in Classic and kept for Casual
-  retreats. Pending unlocks move to the next chapter under the
-  one-rank-per-chapter rule.
+  retreats. This happens after every battle, skirmishes included.
 - A campaign command to view a support conversation (e.g.
   `ViewSupport { a, b }`), which raises the rank.
 
@@ -81,7 +82,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
 
 - [ ] Pairs load from data; invalid data gives a clear content error.
 - [ ] Every point rule in `supports.md` has a test that names it.
-- [ ] Points stop at an unlocked, unviewed threshold; one rank per pair per chapter.
+- [ ] Points stop at an unlocked, unviewed threshold, so a pair can't gain two ranks without a camp visit.
 - [ ] Forecast Hit/Avoid include the best partner's bonus (never combined) for attacks and counters.
 - [ ] Rewind undoes support points; a replay reproduces them.
 - [ ] A Classic death removes the unit's supports; a Casual retreat keeps them.
@@ -90,7 +91,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
 
 ## Tests required
 
-- Unit: each point rule, thresholds, best-partner-only bonus, one-rank-per-chapter, death/retreat.
+- Unit: each point rule, thresholds, best-partner-only bonus, points held at an unviewed threshold across several battles, death/retreat.
 - Property: points never pass the next unviewed threshold; the bonus never
   exceeds the A-rank bonus; pairs are symmetric ((A,B) == (B,A)).
 - Integration: a scripted battle where a healer heals a partner and two units

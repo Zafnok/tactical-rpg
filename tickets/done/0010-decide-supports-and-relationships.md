@@ -81,7 +81,10 @@ story pipeline. Then create a `10xx` implementation ticket (don't implement).
 - Nick reviewed the first draft (PR #32) and changed three things: A must
   take much longer (thresholds 20/50/90 → 20/80/180), bonuses never combine
   (best partner only, replacing a +20 cap), and conversations are viewed at
-  camp once unlocked. Paired endings are left as an open sub-question.
+  camp once unlocked. He then reminded me that chapters aren't single battles
+  (only chapters 1–2, maybe 3, are), so the pacing is now stated per battle,
+  with skirmishes as their own case, and the one-rank-per-chapter rule was
+  replaced by one rank per camp visit. Paired endings are left as an open sub-question.
 - Follow-up tickets: **1002** (support rules + data), **1003** (Supports/Camp
   screens), **1004** (parked: hub activities, "far future or maybe never"),
   **1005** (parked: pair abilities, "far future").
