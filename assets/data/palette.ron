@@ -1,47 +1,55 @@
 // Named colours (ADR-0012). Code refers to these names, never raw RGB.
-// Values are "#RRGGBB". Starting set; Nick tunes it in ticket 0011.
+// Values are "#RRGGBB". Mood "D. Earthy painterly", chosen by Nick in ticket
+// 0011 (docs/design/look-and-feel.md). Values are tunable.
 // Every name in trpg_content::palette::REQUIRED_COLORS must be present.
 {
-    // Basics
+    // Basics. `black` is the console background.
     "black": "#000000",
     "white": "#ffffff",
 
     // Text
-    "text": "#d8d4c8",
-    "text_dim": "#7f7a6e",
-    "text_highlight": "#ffe28a",
+    "text": "#d0c4a8",
+    "text_dim": "#807560",
+    "text_highlight": "#e6b860",
 
     // Panels (UI chrome)
-    "panel_bg": "#12141c",
-    "panel_border": "#4a5068",
-    "panel_border_focus": "#c8b060",
+    "panel_bg": "#1c1712",
+    "panel_border": "#6a5a40",
+    "panel_border_focus": "#c89a50",
 
     // Factions: player blue, enemy red, ally green, neutral yellow
-    "player": "#5b9bff",
-    "enemy": "#ff5a50",
-    "ally": "#5fd068",
-    "neutral": "#f0d050",
+    "player": "#7ea8e0",
+    "enemy": "#d46a50",
+    "ally": "#6cc08a",
+    "neutral": "#e0c870",
 
-    // Overlay background tints
-    "move_range": "#1c3a78",
-    "attack_range": "#7a2020",
-    "heal_range": "#1e6030",
-    "danger_zone": "#4a0e12",
+    // Overlay background tints (blended ~75% over the terrain background)
+    "move_range": "#2a4468",
+    "attack_range": "#5c2a20",
+    "heal_range": "#2e5a34",
+    "danger_zone": "#3e1812",
 
-    // Cursor
-    "cursor": "#fff4b0",
+    // Cursor brackets and the movement path line
+    "cursor": "#f0dca0",
+    "path": "#f0d8a0",
 
-    // Bars
-    "hp_high": "#58d060",
-    "hp_mid": "#e8c040",
-    "hp_low": "#e84838",
-    "exp_bar": "#b070f0",
+    // Bars (HP thresholds: see look-and-feel.md)
+    "hp_high": "#8ab050",
+    "hp_mid": "#d8b040",
+    "hp_low": "#d85a48",
+    "exp_bar": "#a880d8",
 
-    // Terrain placeholders
-    "grass": "#5a9a3c",
-    "forest": "#2e6b2a",
-    "water": "#3470c8",
-    "mountain": "#8a7a68",
-    "stone": "#9a9a9a",
-    "road": "#b89a6a",
+    // Terrain: glyph colour, and the per-terrain background tint
+    "grass": "#7a8048",
+    "grass_bg": "#1c1c10",
+    "forest": "#5e9038",
+    "forest_bg": "#142010",
+    "water": "#6a9ab8",
+    "water_bg": "#142430",
+    "mountain": "#a08868",
+    "mountain_bg": "#2a2016",
+    "stone": "#9a9488",
+    "stone_bg": "#222020",
+    "road": "#b8a070",
+    "road_bg": "#2a2214",
 }

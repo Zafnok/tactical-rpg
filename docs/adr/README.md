@@ -20,11 +20,12 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0009](0009-distribution.md) | Distribution: Windows first, web, itch, Steam | Accepted |
 | [0010](0010-ticket-workflow-and-model-routing.md) | Ticket workflow and model routing | Accepted |
 | [0011](0011-story-authoring-pipeline.md) | Story authoring pipeline with LLMs | Accepted |
-| [0012](0012-visual-style.md) | Visual style: cells, tiles, color, portraits | Accepted (pending Nick's look sign-off, ticket 0011) |
+| [0012](0012-visual-style.md) | Visual style: cells, tiles, color, portraits | Superseded by ADR-0018 |
 | [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted |
 | [0014](0014-ci-gates-skip-docs-only-prs.md) | CI quality gates, skipping heavy jobs on docs-only PRs | Accepted |
 | [0015](0015-input-actions-and-keymap-layouts.md) | Input actions, keymap layouts, virtual cursor | Accepted |
 | [0016](0016-font-atlas-and-glyph-blitting.md) | Font atlas format and glyph blitting | Accepted |
 | [0017](0017-screen-stack-and-frame-driver.md) | Screen stack, frame driver and test Harness | Accepted |
+| [0018](0018-visual-style-v2.md) | Visual style v2 (after Nick's look sign-off) | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

@@ -15,9 +15,11 @@ completed:
 
 ## Context
 
-Nick wants ASCII character sprites, two at a time, in story scenes.
-Portrait rules: [ADR-0012](../../docs/adr/0012-visual-style.md) (24×12 cells,
-named expressions, coloured per glyph) and the `ascii-art` skill.
+Nick wants character portraits, two at a time, in story scenes. In 0011 he
+chose **32×32 shaded pixel art** drawn with half-block cells: rules in
+[ADR-0018](../../docs/adr/0018-visual-style-v2.md),
+[`look-and-feel.md`](../../docs/design/look-and-feel.md) and the `ascii-art`
+skill; the style sample is `docs/screenshots/0011-portrait-expressions.png`.
 
 ## Nick input
 
@@ -36,14 +38,11 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
    ```
    (
      character: "ana",
-     size: (24, 12),
-     colors: { 'h': "hair_brown", 's': "skin_light", 'a': "armor_steel", 'e': "eye_green", '.': "text" },
-     background: None,     # or Some("palette_name")
+     size: (32, 32),       # pixels; drawn as 32×16 cells
+     colors: { 'h': "hair_brown", 's': "skin_light", 'q': "skin_light_mid", 'a': "armor_steel", 'e': "eye_green" },
    )
    === neutral
-   <12 lines of exactly 24 glyphs>
-   --- colors
-   <12 lines of exactly 24 colour keys>
+   <32 lines of exactly 32 colour keys; '.' = transparent>
    === happy
    ...
    ```
@@ -51,11 +50,13 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
    (skin tones, hair colours, metals…).
 2. Parser/validator (file:line errors): size mismatch, unknown colour key,
    unknown palette name, missing required expressions (`neutral, happy, angry,
-   sad, surprised`), duplicate expressions, glyph not in the font atlas (0203).
+   sad, surprised`), duplicate expressions, `.` reserved for transparent.
 3. Cross-check in content: dialogue expressions (0702) must exist in the
    speaker's portrait when a portrait exists.
-4. `ui::portrait::draw_portrait(buf, x, y, &Portrait, expr, dim: f32)`; `mirror`
-   flag reserved but not implemented (ASCII mirroring is lossy — note why).
+4. `ui::portrait::draw_portrait(buf, x, y, &Portrait, expr, dim: f32, mirror: bool)`:
+   each cell is `▀` with fg = top pixel, bg = bottom pixel (`▄` / space where a
+   pixel is transparent, over the given background); `dim` lerps toward the
+   background; `mirror` reverses each row (exact for pixel art).
 5. Debug viewer (debug builds): list portraits, `h/l` switch expression,
    `j/k` switch character, shows name + expression name.
 6. Two placeholder portraits (`test_lord`, `test_knight`), clearly marked as
@@ -70,7 +71,7 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
 ## Tests required
 
 - Unit: parser/validator; draw clipping.
-- Snapshot: each placeholder portrait neutral + one other expression; dimmed variant.
+- Snapshot: each placeholder portrait neutral + one other expression; dimmed variant; mirrored variant.
 
 ## Completion notes
 

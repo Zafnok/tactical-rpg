@@ -31,7 +31,8 @@ readability and pacing.
 choice (if the unit has several usable weapons), `CombatPlayback` overlay
 driven by `CombatResolved`/`UnitFell` events, fall animation.
 
-**Out:** EXP/level up display (0602), dialogue death quotes (0705), sound.
+**Out:** full-body art of the two combatants on the combat screen (Nick
+wants it, 0011; designed in 0413); EXP/level up display (0602), dialogue death quotes (0705), sound.
 
 ## Implementation steps
 

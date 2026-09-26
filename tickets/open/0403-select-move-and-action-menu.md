@@ -46,8 +46,13 @@ map menu (0405).
 3. **Path arrow:** starts as `[unit pos]`. When the cursor moves to an adjacent
    tile that extends the path within budget (use `path_cost`), append; if it
    revisits a tile on the path, truncate to it; otherwise replace with
-   `reach.path_to(cursor)` if reachable. Draw path tiles with a brighter bg and
-   an arrow glyph at the head (`►◄▲▼`). Pure logic + property test.
+   `reach.path_to(cursor)` if reachable. Pure logic + property test.
+   **Drawing** (`look-and-feel.md`, ADR-0018): while the cursor is on the
+   selected unit, the cursor shows `►` `◄` instead of brackets. Once it moves
+   away: a 3-px `Under` overlay line in `path` colour through tile centres,
+   starting at the **edge** of the unit's tile (never over its label), ending
+   in a **single arrowhead** (`Over` overlay triangle) on the destination tile;
+   no cursor frame is drawn there.
 4. **Selected + Confirm on stoppable tile** → `Moving` (unit steps along path at
    ~12 tiles/s using `dt`; hold Confirm = instant). Confirm on non-stoppable → ignored.
    **Selected + Cancel** → `Idle`, cursor back on the unit.
@@ -62,7 +67,7 @@ map menu (0405).
 
 ## Acceptance criteria
 
-- [ ] Full loop works in Quick Battle: select, steer path, move, Wait, unit dims.
+- [ ] Full loop works in Quick Battle: select, steer path, move, Wait, unit dims and its label turns lowercase.
 - [ ] Cancel from action menu restores the unit exactly (state unchanged — test).
 - [ ] Only valid destinations are accepted.
 - [ ] Harness integration tests and snapshots below pass.

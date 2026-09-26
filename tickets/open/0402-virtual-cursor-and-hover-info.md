@@ -37,13 +37,16 @@ context help bar.
 
 1. `Cursor { pos: Pos, blink_t: f32 }` in `BattleScreen`. `CursorLeft/…` move 1
    tile, clamped to map bounds (no jump actions: `docs/design/controls.md`). Camera follows (0401).
-2. Draw per `look-and-feel.md` if present; default: tile background replaced by
-   `cursor` palette colour, pulsing brightness (sine of `blink_t`, period ~1 s),
-   glyphs kept readable (use `text_highlight` fg if contrast too low).
+2. Draw per `docs/design/look-and-feel.md` / ADR-0018: `[` and `]` in the
+   cells either side of the tile, fg `cursor`, brightness pulsing between 100%
+   and ~50% (sine of `blink_t`, period ~1 s; never fully off). The tile itself
+   is not recoloured.
 3. Side panel (top → bottom):
    - **Terrain:** name, `DEF +n`, `AVO +n`, heal % if any.
    - **Unit under cursor** (if any): name, class, `Lv n`, HP `cur/max` with a
-     10-cell bar coloured `hp_high/mid/low` (thresholds 60% / 30%), faction label.
+     10-cell bar coloured `hp_high/mid/low` (thresholds 2/3 and 1/3, same as the
+     map HP bar), faction label.
+   - **No portrait** in the panel (Nick, 0011): stats only, keep it uncluttered.
 4. `NextUnit`/`PrevUnit`: cycle through the acting faction's units that haven't
    acted, ordered by `(y, x)`; wraps; moves cursor + camera.
 5. Help bar reflects context (e.g. over own ready unit: `f select · e info · s next unit`, key names read from the keymap).
