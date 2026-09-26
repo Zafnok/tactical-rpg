@@ -114,8 +114,8 @@ keeps a `heal_percent` field, set to 0 on every terrain.
 
 ## Open sub-questions
 
-- **Fliers as late-game classes** (Nick: "tier 3+"): moving the Flier line
-  out of tier 1 changes the class tree. Ticket 0017 asks this.
+- **Fliers as late-game classes** (Nick: "tier 3+"): decided in ticket 0017.
+  The flying line now starts at tier 3 (`progression.md`).
 - **Capturing, healing tiles and more building tiles** (village, gate,
   throne, …) (Nick, Q5 and Q7), after the first playtest.
 - Weather (Nick: "no weather for now").

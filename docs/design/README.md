@@ -13,7 +13,7 @@ here.
 | Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003 | ✅ decided 2026-09-25 |
 | Combat Arts | `weapons-and-items.md` (arts section) | 0014 | ⏳ awaiting Nick |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 |
-| Level ups, classes, class tree | [`progression.md`](progression.md) | 0005 | ✅ decided 2026-09-25 |
+| Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017) |
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
