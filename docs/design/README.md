@@ -19,7 +19,7 @@ here.
 | World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
 | Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
 | The lord's unique class line | `progression.md` (lord section) | 0016 | ⏳ awaiting Nick |
-| Supports & relationships | `supports.md` | 0010 | ⏳ awaiting Nick |
+| Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |
 | Look & feel | `look-and-feel.md` | 0011 | ⏳ after font ticket 0203 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
 | Controls & key layouts | [`controls.md`](controls.md) | 0015 | ✅ decided 2026-09-25 |
