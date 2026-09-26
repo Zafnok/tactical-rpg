@@ -22,6 +22,7 @@ here.
 | Supports & relationships | `supports.md` | 0010 | ⏳ awaiting Nick |
 | Look & feel | `look-and-feel.md` | 0011 | ⏳ after font ticket 0203 |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
+| Terrain: movement costs & bonuses | [`terrain.md`](terrain.md) | 0301 | ✅ costs decided 2026-09-26; bonuses under review |
 | Controls & key layouts | [`controls.md`](controls.md) | 0015 | ✅ decided 2026-09-25 |
 | Number scale & strike thresholds | [`stats-and-combat.md`](stats-and-combat.md) | 0013 | ⏳ after playtest 0804 |
 

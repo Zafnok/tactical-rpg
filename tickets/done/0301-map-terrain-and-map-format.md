@@ -96,11 +96,15 @@ small test map.
 - **assets/data/terrain.ron**: movement types `foot, mounted, armored, flying`
   (as in `progression.md`). 16 terrains: the 13 the ticket lists plus
   `village`, `gate`, `throne`, because `stats-and-combat.md` already gives
-  their numbers. Def/Avoid/Heal % are exactly the design doc's table (a test,
-  `embedded_terrain_matches_design_doc`, pins them). The design doc has no
-  movement costs, so every cost is FE7's and the file says so once at the top
-  (`TUNABLE`) instead of on every line. Shallow `water` uses FE7 "river"
-  costs (foot 5, mounted/armored impassable, flying 1).
+  their numbers. Def/Avoid/Heal % match that doc's table (pinned by
+  `embedded_terrain_matches_design_doc`).
+- **Nick revisited the player-facing choices** (recorded in the new
+  `docs/design/terrain.md`): heavy FE GBA-style movement costs, but mountains
+  cost 3 on foot and 5 mounted (horses can climb them now); foot units can
+  wade rivers at 5; fliers pay 3 on peaks. The costs are pinned by
+  `embedded_move_costs_match_design_doc`. He also said the terrain Def/Avoid/
+  Heal values in `stats-and-combat.md` were never his decision; they stay as
+  Claude's starting values, marked so in both docs, until he reviews them.
 - **Deviation, cost format**: `move_cost` is a map keyed by movement type name
   (`{ "foot": Some(2), ..., "flying": None }`) rather than a bare list, so the
   file is readable without counting positions. The loader still produces the
@@ -120,5 +124,5 @@ small test map.
 - `Content` now has `terrain` and `maps` (keyed by file stem). Terrain colour
   checks are skipped when the palette failed to load, and maps are skipped
   when terrain failed, so one broken file doesn't produce a flood of errors.
-- Follow-ups: none.
+- Follow-ups: 0017 (decide: fliers as a tier 3+ class line, from Nick).
 - For Nick: nothing visible yet; the map is first drawn in 0401.

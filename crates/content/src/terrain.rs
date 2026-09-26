@@ -559,4 +559,39 @@ mod tests {
             );
         }
     }
+
+    /// Acceptance: the embedded movement costs match the table in
+    /// `docs/design/terrain.md` (foot, mounted, armored, flying).
+    #[test]
+    fn embedded_move_costs_match_design_doc() {
+        let t = TerrainDef::load(None).unwrap_or_default();
+        let open = [Some(1); 4];
+        let expected: &[(&str, [Option<u8>; 4])] = &[
+            ("plain", open),
+            ("road", open),
+            ("bridge", open),
+            ("floor", open),
+            ("village", open),
+            ("gate", open),
+            ("throne", open),
+            ("forest", [Some(2), Some(3), Some(2), Some(1)]),
+            ("mountain", [Some(3), Some(5), None, Some(1)]),
+            ("peak", [None, None, None, Some(3)]),
+            ("fort", [Some(2), Some(2), Some(2), Some(1)]),
+            ("water", [Some(5), None, None, Some(1)]),
+            ("sea", [None, None, None, Some(1)]),
+            ("thicket", [None; 4]),
+            ("wall", [None; 4]),
+            ("door", [None; 4]),
+        ];
+        assert_eq!(t.rules.terrains.len(), expected.len());
+        for (id, costs) in expected {
+            let rules = t.display.id_of(id).and_then(|i| t.rules.get(i));
+            assert_eq!(
+                rules.map(|r| r.move_cost.as_slice()),
+                Some(&costs[..]),
+                "{id}"
+            );
+        }
+    }
 }

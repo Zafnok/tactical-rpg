@@ -1,9 +1,8 @@
 // Terrain types (ADR-0005). Loaded by trpg_content::terrain.
 //
 // Rules (move_cost, defense, avoid, heal_percent) are game design:
-// defense / avoid / heal_percent come from docs/design/stats-and-combat.md
-// ("Terrain combat effects"). That doc does not set movement costs, so every
-// move_cost is copied from Fire Emblem 7 (GBA) and is TUNABLE.
+// move_cost comes from docs/design/terrain.md; defense / avoid / heal_percent
+// from docs/design/stats-and-combat.md ("Terrain combat effects"). All TUNABLE.
 //
 // Look (glyphs, fg, bg) is placeholder until ticket 0011: `glyphs` is exactly
 // two characters (a map tile is two cells wide, ADR-0012) that the font atlas
@@ -46,16 +45,16 @@
         ),
         (
             id: "mountain", name: "Mountain", glyphs: "^^", fg: "mountain", bg: "black",
-            move_cost: { "foot": Some(4), "mounted": None, "armored": None, "flying": Some(1) },
+            move_cost: { "foot": Some(3), "mounted": Some(5), "armored": None, "flying": Some(1) },
             defense: 2, avoid: 30, heal_percent: 0,
         ),
         (
             id: "peak", name: "Peak", glyphs: "▲▲", fg: "peak", bg: "black",
-            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": Some(1) },
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": Some(3) },
             defense: 2, avoid: 40, heal_percent: 0,
         ),
         (
-            // Shallow water (FE7 "river" costs).
+            // River / shallow water.
             id: "water", name: "Water", glyphs: "≈≈", fg: "water", bg: "black",
             move_cost: { "foot": Some(5), "mounted": None, "armored": None, "flying": Some(1) },
             defense: 0, avoid: 10, heal_percent: 0,
