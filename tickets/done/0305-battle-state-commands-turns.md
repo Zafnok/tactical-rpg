@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0002", "0006", "0303", "0304"]
 nick_input: answer-first
-completed:
+completed: 2026-09-26
 ---
 
 # 0305 — Battle state, commands, events, turns, objectives
@@ -97,12 +97,12 @@ state for `BattleState` (step 11).
 
 ## Acceptance criteria
 
-- [ ] Every `CommandError` variant has a test proving the state is unchanged.
-- [ ] Phase/turn sequence matches `turn-structure.md` (test walks 3 full turns, with and without Other units; empty phases skipped).
-- [ ] Reinforcements arrive at their phase start already acted, act next turn, and wait while their tile is occupied (tests).
-- [ ] Survive and `turn_limit` resolve exactly when turn N's last phase ends (tests at N-1 and N).
-- [ ] Each objective and loss condition has a win test and a not-yet test.
-- [ ] Replay + save/load determinism tests pass.
+- [x] Every `CommandError` variant has a test proving the state is unchanged.
+- [x] Phase/turn sequence matches `turn-structure.md` (test walks 3 full turns, with and without Other units; empty phases skipped).
+- [x] Reinforcements arrive at their phase start already acted, act next turn, and wait while their tile is occupied (tests).
+- [x] Survive and `turn_limit` resolve exactly when turn N's last phase ends (tests at N-1 and N).
+- [x] Each objective and loss condition has a win test and a not-yet test.
+- [x] Replay + save/load determinism tests pass.
 
 ## Tests required
 
@@ -114,3 +114,70 @@ state for `BattleState` (step 11).
 
 ## Completion notes
 
+**Done.** New module `trpg_core::battle` (`crates/core/src/battle.rs`, rules in
+its module doc; tests in `battle/tests.rs`): `BattleSetup`, `BattleState`
+(`new`, `apply`, read-only accessors, `restore_tables`), `Phase`, `Turn`,
+`Command`, `UnitAction` (`Wait`, `Attack`, `Seize`), `Event`, `CommandError`,
+`Objective`, `Outcome`, `Reinforcement`. Replay/save-load tests in
+`crates/core/tests/replay.rs`. New ADR-0020 (saves hold the battle's own
+data; terrain/class tables are `Arc`s skipped by serde and reattached with
+`restore_tables`).
+
+What the next tickets should know (differences from the plan):
+
+- **Attacks need a weapon, and there are no items yet (0306).** `Unit` got a
+  stand-in `weapon: Option<WeaponStats>` (`None` from `from_character` /
+  `generic`, so the Quick Battle units are unarmed). `BattleState::combatant`
+  builds `CombatantInput` from it (permanent stats, class tags/affinities,
+  rank from `weapon_ranks`, no armour). 0306's text now says to replace both.
+  Combat constants are `CombatRules::default()`.
+- **`apply` takes `&Command`.** The `Objective` variants carry their own
+  `turn_limit` (so `Survive` can't have one); `Objective::turn_limit()` reads
+  it. `Seize { pos, by_lord, turn_limit }` needs a **player** unit (a lord if
+  `by_lord`).
+- **Extra `CommandError`s** beyond the ticket's list: `UnknownClass`,
+  `OffMap`, `UnknownTerrain` (bad data, or tables not restored after
+  loading), `NoWeapon`, `CannotSeize`. Unknown and fallen units are
+  `UnknownUnit` / `UnitFallen` for both the actor and the target.
+- **Extra events:** `Seized { unit, pos }`. `UnitMoved` is only sent when the
+  unit actually moves. An `Act` always ends with `UnitActed` unless the unit
+  fell (then no `UnitActed`), optionally followed by `BattleEnded`. At a
+  phase start, `UnitsArrived` comes **before** `PhaseStarted`, the order
+  `turn-structure.md` gives (arrivals, then the banner).
+- **Falling:** fallen units move from `units()` to `fallen()` (HP 0), so the
+  campaign (0801) can apply Classic/Casual.
+- **Post-action skill moves (step 9):** documented in the module doc: a
+  skill's move becomes a new event just before `UnitActed`; no `UnitAction`
+  change needed.
+- **Validation of setups** (unique ids, one unit per tile, on the map) is left
+  to content validation of maps (0803); `BattleState::new` trusts its setup.
+  Quick Battle's archer is now marked "acted" by issuing a real `Wait`
+  command.
+
+Rules I had to pin down where the docs are silent (Nick may veto):
+
+- **Rout** counts enemies **on the map**: killing the last one wins even if
+  enemy reinforcements are still scheduled (as in Fire Emblem). Maps that
+  must not end early shouldn't use Rout with late reinforcements.
+- A battle with no player units at the start is lost at once; a Rout with no
+  enemies at the start is won at once.
+
+Tests: every `CommandError` variant (state compared before/after), phase order
+over 3 turns with and without Other units, skipped empty phases, ready/done
+flags per phase, move/attack/kill/counter-kill events, terrain from each
+unit's tile, class tags and weapon rank in combat, every objective and loss
+condition (win + not yet), Survive and turn limits at N−1 and N,
+reinforcements (arrive done, act next turn, wait while blocked, wave order,
+arrivals un-skip a phase, turn-1 player arrivals), RON round-trips of state,
+commands and events. Property test (512 cases): random legal command
+sequences are always accepted, never put two units on one tile, keep HP in
+`1..=max` on the map and 0 when fallen, and never change a decided outcome.
+Replay test: same seed + commands ⇒ identical events and state; saving,
+loading and continuing at **every** command boundary ⇒ identical events.
+`cargo mutants` on the diff: 74 caught, 0 missed (27 unviable). The
+property test's saved regression cases (`proptest-regressions/battle/`)
+are cases it used to catch mutants; they now re-run every time.
+
+No follow-up tickets. Nothing new for Nick to see: the Quick Battle looks
+exactly the same (snapshots unchanged); moving and attacking arrive with
+0403/0404.

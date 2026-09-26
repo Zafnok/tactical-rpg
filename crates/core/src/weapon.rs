@@ -19,7 +19,7 @@ pub enum WeaponKind {
 }
 
 /// Weapon skill rank, lowest first: `E < D < C < B < A < S`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum WeaponRank {
     /// Lowest rank.
     E,

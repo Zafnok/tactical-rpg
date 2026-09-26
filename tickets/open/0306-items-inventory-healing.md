@@ -54,6 +54,10 @@ Preparations screen (0408), item menus UI (0407), trading (not in the design).
    tier-3+ magic classes per `magic.md`) may hold weapons; validate this. `Unit::effective_stats()` = permanent stats + armour + accessory,
    clamped to the hard ceilings. `Unit::attack_ranges()` = ranges of usable
    weapons in the loadout — replace 0303's parameters with this in callers.
+   **From 0305:** `Unit.weapon: Option<WeaponStats>` is a stand-in for the
+   equipped weapon, and `BattleState::combatant` (in `core::battle`) builds
+   `CombatantInput` from it with permanent stats and no armour. Replace both
+   with the loadout.
 4. Weapon usability: class weapon kinds (0005) and `rank ≥ weapon.rank`.
    `WeaponRanks` per unit: EXP per kind, `rank(kind)`; weapon EXP after combat
    per the design (`weapons-and-items.md`: base 2 if any strike hit, 1 if it
