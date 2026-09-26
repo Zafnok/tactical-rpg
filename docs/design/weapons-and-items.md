@@ -301,6 +301,8 @@ Any unit can wear any accessory.
 - **Villages** (*Claude's starting rule*, FE): a player unit on the village
   gate uses `Visit`: a one-time gift (gold, an item or a scene), then the
   village closes. Enemies destroying villages: not in Chapter 1.
+  **On hold:** there is no village tile yet; Nick deferred building tiles
+  other than `fort` (`terrain.md`, 2026-09-26).
 - **Chests** (*Claude's starting rule*): a player unit on a chest uses `Open`;
   no key needed for now. Contents: gold or an item.
 - Chapter 1 has no shop, village or chest (0009, `chapter-1.md`).

@@ -7,6 +7,10 @@ embedded in the binary (ADR-0005). No filesystem I/O, no macroquad.
 - `error` — `ContentError` (`file:line:col: message`) and `ContentErrors`.
 - `ron_loader` — `load_ron` / `parse_ron` with RON positions mapped to line/col.
 - `palette` — `PaletteDef` from `assets/data/palette.ron`.
+- `terrain` — `TerrainDef` from `assets/data/terrain.ron`: the rules half
+  (`trpg_core::TerrainTable`) and the look half (`TerrainDisplayTable`).
+- `map` — `.map` battle maps in `assets/maps/` (format in that folder's
+  `README.md`): `parse_map`, `print_map`, `load_all`.
 - `lib.rs` — `Content` (everything) and `load_embedded()`.
 
 ## Adding a new content type

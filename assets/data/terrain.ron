@@ -1,0 +1,84 @@
+// Terrain types (ADR-0005). Loaded by trpg_content::terrain.
+//
+// Rules (move_cost, defense, avoid, heal_percent) are game design:
+// all come from docs/design/terrain.md and are TUNABLE. Healing tiles are
+// deferred there, so heal_percent is 0 everywhere. `fort` is the only
+// building tile for now.
+//
+// Look (glyphs, fg, bg) is placeholder until ticket 0011: `glyphs` is exactly
+// two characters (a map tile is two cells wide, ADR-0012) that the font atlas
+// must contain; `fg` / `bg` are colour names from palette.ron.
+//
+// move_cost maps every movement type to Some(cost) or None (impassable).
+(
+    movement_types: ["foot", "mounted", "armored", "flying"],
+    terrains: [
+        (
+            id: "plain", name: "Plain", glyphs: "..", fg: "grass", bg: "black",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "road", name: "Road", glyphs: "··", fg: "road", bg: "black",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "bridge", name: "Bridge", glyphs: "==", fg: "wood", bg: "black",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "floor", name: "Floor", glyphs: "░░", fg: "floor", bg: "black",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "forest", name: "Forest", glyphs: "♣♣", fg: "forest", bg: "black",
+            move_cost: { "foot": Some(2), "mounted": Some(3), "armored": Some(2), "flying": Some(1) },
+            defense: 1, avoid: 20, heal_percent: 0,
+        ),
+        (
+            // Impassable woods.
+            id: "thicket", name: "Thicket", glyphs: "♠♠", fg: "thicket", bg: "black",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "mountain", name: "Mountain", glyphs: "^^", fg: "mountain", bg: "black",
+            move_cost: { "foot": Some(3), "mounted": Some(5), "armored": None, "flying": Some(1) },
+            defense: 2, avoid: 30, heal_percent: 0,
+        ),
+        (
+            id: "peak", name: "Peak", glyphs: "▲▲", fg: "peak", bg: "black",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": Some(3) },
+            defense: 2, avoid: 40, heal_percent: 0,
+        ),
+        (
+            // River / shallow water.
+            id: "water", name: "Water", glyphs: "≈≈", fg: "water", bg: "black",
+            move_cost: { "foot": Some(5), "mounted": None, "armored": None, "flying": Some(1) },
+            defense: 0, avoid: 10, heal_percent: 0,
+        ),
+        (
+            id: "sea", name: "Sea", glyphs: "≈≈", fg: "water", bg: "sea",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": Some(1) },
+            defense: 0, avoid: 10, heal_percent: 0,
+        ),
+        (
+            id: "fort", name: "Fort", glyphs: "[]", fg: "fort", bg: "black",
+            move_cost: { "foot": Some(2), "mounted": Some(2), "armored": Some(2), "flying": Some(1) },
+            defense: 2, avoid: 20, heal_percent: 0,
+        ),
+        (
+            id: "door", name: "Door", glyphs: "▐▌", fg: "wood", bg: "black",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "wall", name: "Wall", glyphs: "▓▓", fg: "stone", bg: "black",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+    ],
+)
