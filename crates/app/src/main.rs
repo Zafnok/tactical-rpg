@@ -2,6 +2,7 @@
 
 mod keys;
 mod render;
+mod storage;
 
 use macroquad::prelude::*;
 use trpg_content::font::ATLAS_PNG_PATH;
@@ -26,10 +27,12 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let ctx = match Ctx::embedded() {
-        Ok(ctx) => ctx,
+    let mut ctx = match Ctx::embedded() {
+        Ok(ctx) => ctx.with_storage(storage::platform()),
         Err(e) => return show_content_errors(&e.to_string()).await,
     };
+    #[cfg(debug_assertions)]
+    storage::smoke_check(&mut *ctx.storage);
     let png = trpg_content::bundle::bytes(ATLAS_PNG_PATH).unwrap_or_default();
     let black = ctx.palette.get(UiColor::Black);
     let mut renderer = match Renderer::new(ctx.content.font.clone(), png, black) {

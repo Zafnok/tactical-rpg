@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 trpg-core = { path = "../core" }
 trpg-content = { path = "../content" }
+thiserror.workspace = true
 
 [features]
 # The headless test `Harness` (src/harness.rs), for integration tests.

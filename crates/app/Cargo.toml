@@ -20,6 +20,17 @@ trpg-content = { path = "../content" }
 trpg-ui = { path = "../ui" }
 macroquad.workspace = true
 
+# Storage backend for web (ticket 0207): `localStorage`. Native resolves its
+# data directory by hand (see storage/native.rs) rather than pulling in the
+# `directories` crate, which drags in MPL-2.0 (denied by ADR-0013).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+quad-storage = "0.1"
+
+[dev-dependencies]
+# Turns on `harness` for `trpg-ui::storage::conformance_suite` in tests.
+trpg-ui = { path = "../ui", features = ["harness"] }
+tempfile = "3"
+
 [package.metadata.cargo-machete]
 # Crate-boundary scaffolding (ADR-0004): wired up by later tickets, not yet
 # referenced from src.
