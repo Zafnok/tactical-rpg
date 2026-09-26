@@ -39,7 +39,8 @@ tickets implement.
   are *potential*: they're not needed for Act 1, but the bible (0701) must leave
   room for them (the world is bigger than the starting kingdoms, and the
   starting kingdoms know that other lands exist). How and when the player
-  travels there is part of world structure (0008).
+  travels there: decided in 0008 ([`world-structure.md`](world-structure.md)):
+  each continent is a new act with its own world map.
 - The kingdoms' politics may be messy. Tone B allows it, and a disgraced lead
   implies a court that can wrong people.
 
@@ -133,5 +134,5 @@ not canon):
   gate 1 asks him leading questions about the cast (e.g. the mentor figure,
   rival, antagonist's motive) before the sheets are finalised.
 - **Can the player rename the lead?** Asked at 0701 gate 1.
-- **Other continents:** how many, when and how travel happens (0008 and
-  later).
+- **Other continents:** how travel happens is decided (0008: a new act and a
+  new world map per continent); how many and when is for the outline (0701).

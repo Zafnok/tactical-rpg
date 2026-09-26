@@ -39,7 +39,7 @@ campaign), map-format fields for shop/village/chest tiles,
 API reused between chapters.
 
 **Out:** the shop screen UI (0409), Preparations (0408), materials/forging
-(later, per 0008), enemies destroying villages, chest keys and thieves.
+(later, `world-structure.md`), enemies destroying villages, chest keys and thieves.
 
 ## Implementation steps
 

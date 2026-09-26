@@ -17,7 +17,7 @@ here.
 | Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017) |
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |
-| World structure | `world-structure.md` | 0008 | ⏳ awaiting Nick |
+| World structure, saving on the world map, camp | [`world-structure.md`](world-structure.md) | 0008 | ✅ decided 2026-09-26 |
 | Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
 | The lord's unique class line | [`progression.md`](progression.md) (*The lord's line*) | 0016 | ✅ decided 2026-09-25 |
 | Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |

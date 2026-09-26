@@ -132,7 +132,8 @@ A pair gains points only when **both units are deployed and on the map**
 - **Skirmishes let players push a favourite pair along** (like the optional
   fights in FE Sacred Stones). That's accepted: A still takes a long time,
   and the points per skirmish stay low because skirmishes are short. How many
-  skirmishes a typical run has depends on the world structure (0008). Retune
+  skirmishes a typical run has depends on the random-skirmish numbers in
+  `world-structure.md` (0008: capped per act, tunable). Retune
   B and A once it's known, so A stays a late-game reward that a normal run
   can still reach. Playtests (0013 and later) may change every number here.
 - Rewind (`death-and-difficulty.md`) rolls support points back like every
@@ -174,9 +175,10 @@ partner within 3 tiles** (Manhattan distance, *tunable*) that is on the map:
 Once unlocked, a support conversation can be viewed **at camp** (Nick:
 "viewable after unlock when in a camp or hub or something"), never during a
 battle. Camp is a screen **between battles**, not only between chapters.
-Where it's offered in the open part of the game (e.g. on the overworld,
-before a story battle, after a skirmish) is decided with the world structure
-(0008). Camp holds a **Supports** list next to the camp events. If a hub
+Where it's offered (0008, [`world-structure.md`](world-structure.md)):
+in the linear opening chapters, between chapters; from the world map on,
+`Camp` in the **world map menu** whenever no battle is running (Nick: "A");
+and before each story battle's Preparations. Camp holds a **Supports** list next to the camp events. If a hub
 (1004) is ever built, the Supports list moves into it. The list shows each
 unlocked conversation (pair and rank) and marks new ones. Conversations use
 the normal two-portrait dialogue player (0702/0704).

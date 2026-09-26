@@ -81,7 +81,12 @@ outline. Follow the `story-writing` skill strictly.
    at the bottom of `bible.md`.
 5. **outline.md:** Act 1 in detail (6–10 chapters: goal, conflict, turn, map
    idea, which personal arcs advance, recruits); Acts 2–3 as a paragraph each
-   with the ending. Every chapter must advance the main plot **and** a personal arc.
+   with the ending. Follow `world-structure.md` (0008): chapters 1–2 (maybe 3)
+   are linear, single-battle chapters (propose whether Chapter 3 is linear at
+   gate 2); after that, each world-map chapter names its story battle, fixed
+   skirmishes (which guard paths), towns, and side quests (whose story, unlock
+   condition). Each continent is its own act; say which acts change continent.
+   No branching routes. Every chapter must advance the main plot **and** a personal arc.
 6. **Gate 2:** one-page outline summary to Nick, including 2–3 options for the
    **midpoint twist** (Nick deferred it until the lead is known); revise until
    approved.

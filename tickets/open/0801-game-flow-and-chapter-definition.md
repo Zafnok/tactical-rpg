@@ -25,22 +25,27 @@ None.
 
 ## Scope
 
-**In:** `assets/chapters/*.ron` format + loader/validator, `core::campaign::Campaign`,
+**In:** `assets/battles/*.ron` and `assets/chapters/*.ron` formats + loaders/validators, `core::campaign::Campaign`,
 `ui::flow` (chapter sequencing), Classic/Casual mode select, lead gender select, map-menu `Restart battle`, Game Over screen, "To be continued" screen,
 replacing the title's placeholder and debug Quick Battle wiring.
 
 **Out:** saving (0802), Chapter 1 content itself (0803), world map (future),
-chapters with several battles (Nick: a chapter is a story beat; follow-ups come
-from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
+chapters with several battles (world map and skirmishes: 1007, 1008 per
+`world-structure.md`). Chapter 1 is one battle, so one chapter file = one battle here.
 
 ## Implementation steps
 
-1. **Chapter file** (document in `assets/chapters/README.md`):
+1. **Battle file and chapter file**, kept separate so a battle can be reused
+   outside a linear chapter. World-map story battles, fixed and random
+   skirmishes and side quests (1007/1008, `world-structure.md`) are all battle
+   files that aren't one-per-chapter. Document both formats in
+   `assets/battles/README.md` and `assets/chapters/README.md`.
+   **Battle file** (`assets/battles/ch01.ron`), everything needed to play one
+   battle:
    ```ron
    (
-     id: "ch01", title: "Chapter 1: …",
+     id: "ch01",
      map: "maps/ch01.map",
-     intro_scenes: ["ch01_intro", "ch01_prebattle"],
      player_slots: [ (character: "ana", pos: (3, 10)), … ],   // roster members placed here
      enemies: [ (template: "brigand", level: 2, pos: (14, 4), ai: Aggressive, loadout: (weapons: ["iron_axe"], armour: None, accessory: None), consumable: None, boss: false, name: None), … ],
      preparations: true,                                       // show the 0408 Preparations screen
@@ -48,22 +53,33 @@ from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
      clear_gold: 500,
      objective: DefeatUnit("boss_id") | Rout | Seize((x, y)) | Survive(8),
      triggers: [ … ],                                          // 0705 trigger list
-     victory_scenes: ["ch01_victory", "ch01_tbc"],
-     next: Some("ch02") | None,
      difficulty: Normal,                                       // Easy | Normal | Hard | Finale → rewind charges 2 / 3 / 5 / 8 (0006)
      seed: 12345,
    )
    ```
-2. Validator: positions in bounds, on terrain passable for that unit's movement
+   **Chapter file** (`assets/chapters/ch01.ron`), the story beat around it:
+   ```ron
+   (
+     id: "ch01", title: "Chapter 1: …",
+     intro_scenes: ["ch01_intro", "ch01_prebattle"],
+     battle: "ch01",                                           // id in assets/battles/
+     victory_scenes: ["ch01_victory", "ch01_tbc"],
+     next: Some("ch02") | None,
+   )
+   ```
+   Adding a battle must need **only data files** (map + battle file +
+   scenes), with no code change. The test in step 2 runs over every battle
+   file.
+2. Validator (every battle and chapter file): positions in bounds, on terrain passable for that unit's movement
    type, no overlaps; all ids exist (characters, templates, items, scenes);
-   objective target exists. Map labels: build the chapter's units and run
+   objective target exists. Map labels: build the battle's units and run
    `trpg_content::check_map_labels` (added in 0401, not yet called on real
    chapter data). Two named units of one faction on a map must not share a
    two-letter label (ADR-0018; fix with a `map_label` override in
    `characters.ron`). Generic units may share labels.
 3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual */, lead: LeadProfile /* 0708 */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
    (serde). `Campaign::new_game()` with the starting roster;
-   `Campaign::battle_setup(&ChapterDef) -> BattleSetup`;
+   `Campaign::battle_setup(&BattleDef) -> BattleSetup`;
    `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
    weapon ranks, durability), handles fallen player units per
    `death-and-difficulty.md` (Classic: removed from the roster, equipped items
@@ -90,7 +106,7 @@ from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
    `Ctx::debug_tools` is on, and it pushes a `BattleScreen` built by
    `ui::screens::battle::quick_battle`. Keep that item working, but route it
    through the new flow (e.g. via `assets/chapters/test.ron`).
-6. A tiny test chapter `assets/chapters/test.ron` (on `test_small.map`) used by tests.
+6. A tiny test chapter `assets/chapters/test.ron` + battle `assets/battles/test.ron` (on `test_small.map`) used by tests.
 
 ## Acceptance criteria
 

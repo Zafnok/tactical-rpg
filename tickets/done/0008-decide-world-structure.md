@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-26
 ---
 
 # 0008 — Decide: world structure
@@ -88,10 +88,47 @@ Nick chose B/C/D — do not implement.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1 (or chose "decide later").
-- [ ] `docs/design/world-structure.md` written.
-- [ ] Follow-up `10xx` ticket created if applicable.
-- [ ] Design README updated; ticket archived.
+- [x] Nick answered Q1 (or chose "decide later").
+- [x] `docs/design/world-structure.md` written.
+- [x] Follow-up `10xx` ticket created if applicable.
+- [x] Design README updated; ticket archived.
 
 ## Completion notes
 
+Asked on 2026-09-26 in two rounds with the `ask-nick` skill. Nick's answers
+are recorded verbatim in
+[`docs/design/world-structure.md`](../../docs/design/world-structure.md):
+
+- **Structure:** chapters 1–2 (maybe 3) are linear. After that, an FE Sacred
+  Stones-style world map. There's no branching unless pre-orders and hype
+  justify it. The playtest covers Chapter 1 only.
+- **Continents:** each one is a new act with its own world map, to keep the
+  pace tight.
+- **World map contents:** towns with shops, optional skirmishes, and
+  character side quests (paralogues). Recruitable wanderers might appear
+  inside towns later. A grinding tower is "for later for sure".
+- **Skirmishes:** fixed ones (some guard paths) plus random ones capped by an
+  act-level cap. Every battle node shows a symbol **and** a level marker, so
+  fights that matter and fights "just for grinding" are clearly different.
+- **Saving:** save anywhere on the world map. Camp is in the world map menu.
+
+Claude chose these starting values, marked *tunable*: random-skirmish spawn
+count (0–2 per story battle, max 3), cap = latest story battle level − 1,
+group size 4–6, Easy tier, and world map unlocking after Chapter 2 by default.
+One default is marked "Nick may veto": the army, stock, gold and supports
+carry over between acts.
+
+Deviation: the ticket asked for **one** 10xx placeholder, but its Context
+also asked for follow-up tickets for multi-battle chapters. The work is split
+into two tickets so each fits one PR:
+- **1007** World map: nodes, travel, towns, save and camp.
+- **1008** World map skirmishes: fixed and random, with markers and level cap.
+
+On this PR, Claude also split 0801's chapter file into a **battle file** and a
+**chapter file**, so world-map battles and skirmishes are data-only additions
+(Nick asked that new battles be easy to add from data).
+
+Recorded the save answer in `death-and-difficulty.md` and the camp answer in
+`supports.md`, and updated `chapter-1.md`, `setting-and-tone.md`,
+`weapons-and-items.md`, `ROADMAP.md`, and tickets 0308, 0409, 0701, 0801,
+0802 and 1003 to match.

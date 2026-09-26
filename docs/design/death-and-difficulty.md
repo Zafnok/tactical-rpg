@@ -153,6 +153,12 @@ FE style: chapter saves plus a one-time suspend.
   The title then shows `Continue`. Continuing **deletes** the suspend save, so it
   can't be reloaded to undo a turn.
 - No other saving mid-battle.
+- **World map (added by 0008, 2026-09-26):** once the game reaches the world
+  map (after the linear opening chapters), the world map menu has `Save`
+  whenever no battle is running (Nick: "A", Sacred Stones / Echoes style),
+  using the same 30 slots. `Load Game` then restores the campaign on the world
+  map at the saved node. Battles still only have the one-time `Suspend`. See
+  [`world-structure.md`](world-structure.md).
 
 ## Open sub-questions (deferred)
 

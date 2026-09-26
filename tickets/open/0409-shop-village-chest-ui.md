@@ -32,7 +32,7 @@ tile yet). Build the village UI only if 0308 implemented villages.
 and `Open` entries in the action menu, gold in the side panel and shop
 header, gift/loot message lines.
 
-**Out:** where between-chapter shopping sits in the game flow (0801 / 0008).
+**Out:** where between-chapter shopping sits in the game flow (0801 for linear chapters; town nodes on the world map, 1007).
 
 ## Implementation steps
 

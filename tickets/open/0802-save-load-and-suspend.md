@@ -17,7 +17,11 @@ completed:
 
 Saving rules from `docs/design/death-and-difficulty.md` (0006): FE-style
 chapter saves in 30 slots plus a one-time suspend save. Storage from
-0207. Determinism (0305) makes battle saves exact.
+0207. Determinism (0305) makes battle saves exact. Later, the world map
+(0008, `world-structure.md`) adds `Save` anywhere on the world map using these
+same slots; 1007 builds that on top of this format, so keep `Campaign`
+serialisation extensible (versioned) and the slot picker reusable from other
+menus.
 
 ## Nick input
 
