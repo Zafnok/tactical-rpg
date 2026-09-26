@@ -8,7 +8,7 @@ use std::sync::Arc;
 use trpg_core::{
     BattleMap, BattlePack, BattleSetup, BattleState, ClassDef, ClassId, ClassTable, Command,
     ConsumableDef, ConsumableEffect, DamageType, Event, Faction, Grid, Growths, ItemDef, ItemId,
-    ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, Stats, TerrainId, TerrainRules,
+    ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, Stats, Stock, TerrainId, TerrainRules,
     TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind, WeaponProficiency,
     WeaponRank,
 };
@@ -126,10 +126,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
 
 fn setup(seed: u64) -> BattleSetup {
     BattleSetup {
-        map: BattleMap {
-            name: "Replay".into(),
-            tiles: Grid::filled(8, 5, TerrainId(0)),
-        },
+        map: BattleMap::new("Replay", Grid::filled(8, 5, TerrainId(0))),
         terrain: terrain(),
         classes: classes(),
         items: items(),
@@ -137,6 +134,8 @@ fn setup(seed: u64) -> BattleSetup {
             items: vec![ItemId::new("potion")],
             cap: 1,
         },
+        gold: 0,
+        stock: Stock::default(),
         units: vec![
             unit(1, Faction::Player, 0, 0),
             unit(2, Faction::Player, 0, 2),

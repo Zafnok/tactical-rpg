@@ -5,7 +5,10 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use trpg_core::{BattleMap, Grid, TerrainId};
+use trpg_core::{
+    BattleMap, Grid, ItemId, ItemTable, Loot, Pos, Shop, ShopKind, TerrainId, TerrainTable,
+    TileFeature,
+};
 
 use crate::bundle;
 use crate::error::ContentError;
@@ -65,6 +68,61 @@ pub struct MapDef {
 struct Header {
     name: String,
     legend: BTreeMap<char, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    features: BTreeMap<(i32, i32), FeatureDef>,
+}
+
+/// A tile feature as written in a map header.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum FeatureDef {
+    Shop { kind: ShopKind, stock: Vec<String> },
+    Chest(LootDef),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum LootDef {
+    Gold(u32),
+    Item(String),
+}
+
+impl FeatureDef {
+    fn to_core(&self) -> TileFeature {
+        match self {
+            FeatureDef::Shop { kind, stock } => TileFeature::Shop(Shop {
+                kind: *kind,
+                stock: stock.iter().map(|i| ItemId::new(i)).collect(),
+            }),
+            FeatureDef::Chest(LootDef::Gold(n)) => TileFeature::Chest(Loot::Gold(*n)),
+            FeatureDef::Chest(LootDef::Item(i)) => TileFeature::Chest(Loot::Item(ItemId::new(i))),
+        }
+    }
+
+    fn from_core(feature: &TileFeature) -> Self {
+        match feature {
+            TileFeature::Shop(shop) => FeatureDef::Shop {
+                kind: shop.kind,
+                stock: shop.stock.iter().map(|i| i.0.clone()).collect(),
+            },
+            TileFeature::Chest(Loot::Gold(n)) => FeatureDef::Chest(LootDef::Gold(*n)),
+            TileFeature::Chest(Loot::Item(i)) => FeatureDef::Chest(LootDef::Item(i.0.clone())),
+        }
+    }
+
+    /// Problems visible without the item table: a shop's list must be empty
+    /// for a blacksmith and not empty otherwise; a chest can't hold 0 gold.
+    fn problem(&self) -> Option<&'static str> {
+        match self {
+            FeatureDef::Shop { kind, stock } => match (kind, stock.is_empty()) {
+                (ShopKind::Blacksmith, false) => {
+                    Some("a blacksmith sells nothing; its stock must be empty")
+                }
+                (ShopKind::Armoury | ShopKind::Vendor, true) => Some("the shop sells nothing"),
+                _ => None,
+            },
+            FeatureDef::Chest(LootDef::Gold(0)) => Some("the chest holds 0 gold"),
+            FeatureDef::Chest(_) => None,
+        }
+    }
 }
 
 /// Loads every `*.map` file in the bundle, keyed by file stem
@@ -143,11 +201,26 @@ pub fn parse_map(
         &terrains,
         &mut errors,
     );
+    let mut features = BTreeMap::new();
+    for (&(x, y), def) in &header.features {
+        let pos = Pos::new(x, y);
+        let at = || format!("feature at ({x}, {y})");
+        if tiles.as_ref().is_some_and(|t| t.get(pos).is_none()) {
+            errors.push(ContentError::new(
+                file,
+                format!("{}: outside the map", at()),
+            ));
+        }
+        if let Some(problem) = def.problem() {
+            errors.push(ContentError::new(file, format!("{}: {problem}", at())));
+        }
+        features.insert(pos, def.to_core());
+    }
     match tiles {
         Some(tiles) if errors.is_empty() => Ok(MapDef {
             map: BattleMap {
-                name: header.name,
-                tiles,
+                features,
+                ..BattleMap::new(header.name, tiles)
             },
             legend: MapLegend {
                 names: header.legend,
@@ -246,6 +319,11 @@ pub fn print_map(map: &BattleMap, legend: &MapLegend) -> Option<String> {
     let header = Header {
         name: map.name.clone(),
         legend: legend.names.clone(),
+        features: map
+            .features
+            .iter()
+            .map(|(p, f)| ((p.x, p.y), FeatureDef::from_core(f)))
+            .collect(),
     };
     let mut out = ron::to_string(&header).ok()?;
     out.push('\n');
@@ -259,6 +337,50 @@ pub fn print_map(map: &BattleMap, legend: &MapLegend) -> Option<String> {
         out.push('\n');
     }
     Some(out)
+}
+
+/// Checks every map's features against the items and terrain: shop and
+/// chest items exist, each shop sells only what its kind may
+/// ([`ShopKind::stocks`]), and every feature sits on a tile some movement
+/// type can enter.
+pub fn check_features(
+    maps: &BTreeMap<String, MapDef>,
+    items: &ItemTable,
+    terrain: &TerrainTable,
+) -> Vec<ContentError> {
+    let mut errors = Vec::new();
+    for (stem, def) in maps {
+        let file = bundle::display_path(&format!("{MAPS_DIR}/{stem}{MAP_EXTENSION}"));
+        for (pos, feature) in &def.map.features {
+            let at = format!("feature at ({}, {})", pos.x, pos.y);
+            let mut error =
+                |msg: String| errors.push(ContentError::new(&file, format!("{at}: {msg}")));
+            let passable = def
+                .map
+                .tiles
+                .get(*pos)
+                .and_then(|&t| terrain.get(t))
+                .is_some_and(|t| t.move_cost.iter().any(Option::is_some));
+            if !passable {
+                error("the tile can't be entered".to_owned());
+            }
+            let ids: Vec<&ItemId> = match feature {
+                TileFeature::Shop(shop) => shop.stock.iter().collect(),
+                TileFeature::Chest(Loot::Item(i)) => vec![i],
+                TileFeature::Chest(Loot::Gold(_)) => vec![],
+            };
+            for id in ids {
+                match (items.get(id), feature) {
+                    (None, _) => error(format!("unknown item \"{}\"", id.0)),
+                    (Some(item), TileFeature::Shop(shop)) if !shop.kind.stocks(item) => {
+                        error(format!("{:?} shop can't sell \"{}\"", shop.kind, id.0));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    errors
 }
 
 /// 1-based line and column of legend entry `c` in the header lines: the
@@ -461,10 +583,7 @@ mod tests {
         let legend = MapLegend::resolve(BTreeMap::from([('.', "plain".to_owned())]), &display())
             .unwrap_or_default();
         let tiles = Grid::from_cells(2, 1, vec![TerrainId(0), TerrainId(3)]);
-        let map = tiles.map(|tiles| BattleMap {
-            name: "m".into(),
-            tiles,
-        });
+        let map = tiles.map(|tiles| BattleMap::new("m", tiles));
         assert_eq!(map.and_then(|m| print_map(&m, &legend)), None);
     }
 
@@ -494,6 +613,204 @@ mod tests {
         }
     }
 
+    const FEATURES: &str = "(
+  name: \"F\",
+  legend: { '.': \"plain\", '#': \"wall\" },
+  features: {
+    (0, 0): Shop(kind: Armoury, stock: [\"sword\", \"vest\"]),
+    (1, 0): Shop(kind: Blacksmith, stock: []),
+    (0, 1): Chest(Gold(50)),
+    (1, 1): Chest(Item(\"potion\")),
+  },
+)
+---
+..#
+..#
+";
+
+    fn feature_items() -> ItemTable {
+        let mut items = ItemTable::default();
+        let weapon = trpg_core::WeaponDef {
+            name: "Sword".into(),
+            kind: trpg_core::WeaponKind::Sword,
+            rank: trpg_core::WeaponRank::E,
+            might: 1,
+            hit: 90,
+            crit: 0,
+            weight: 1,
+            min_range: 1,
+            max_range: 1,
+            damage_type: trpg_core::DamageType::Physical,
+            durability: 20,
+            effective: vec![],
+            price: 100,
+        };
+        items
+            .items
+            .insert(ItemId::new("sword"), trpg_core::ItemDef::Weapon(weapon));
+        items.items.insert(
+            ItemId::new("vest"),
+            trpg_core::ItemDef::Armour(trpg_core::ArmourDef {
+                name: "Vest".into(),
+                weight_class: trpg_core::ArmourWeight::Light,
+                bonus: trpg_core::Stats::default(),
+                weight: 0,
+                price: 10,
+            }),
+        );
+        items.items.insert(
+            ItemId::new("potion"),
+            trpg_core::ItemDef::Consumable(trpg_core::ConsumableDef {
+                name: "Potion".into(),
+                effect: trpg_core::ConsumableEffect::Heal(10),
+                price: 10,
+            }),
+        );
+        items
+    }
+
+    fn feature_terrain() -> TerrainTable {
+        let rules = |name: &str, cost| trpg_core::TerrainRules {
+            name: name.into(),
+            move_cost: vec![cost, None],
+            defense: 0,
+            avoid: 0,
+            heal_percent: 0,
+        };
+        TerrainTable {
+            movement_types: vec!["foot".into(), "flying".into()],
+            terrains: vec![
+                rules("Plain", Some(1)),
+                rules("Forest", Some(2)),
+                rules("Water", None),
+                rules("Wall", None),
+            ],
+        }
+    }
+
+    fn check(src: &str) -> Vec<String> {
+        let def = parse(src).unwrap_or_else(|e| panic!("{e:?}"));
+        let maps = BTreeMap::from([("f".to_owned(), def)]);
+        check_features(&maps, &feature_items(), &feature_terrain())
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    #[test]
+    fn parses_features() {
+        let def = parse(FEATURES).unwrap_or_else(|e| panic!("{e:?}"));
+        let m = &def.map;
+        assert_eq!(m.features.len(), 4);
+        assert_eq!(
+            m.shop(Pos::new(0, 0)),
+            Some(&Shop {
+                kind: ShopKind::Armoury,
+                stock: vec![ItemId::new("sword"), ItemId::new("vest")],
+            })
+        );
+        assert_eq!(
+            m.shop(Pos::new(1, 0)).map(|s| s.kind),
+            Some(ShopKind::Blacksmith)
+        );
+        assert_eq!(m.chest(Pos::new(0, 1)), Some(&Loot::Gold(50)));
+        assert_eq!(
+            m.chest(Pos::new(1, 1)),
+            Some(&Loot::Item(ItemId::new("potion")))
+        );
+        assert!(check(FEATURES).is_empty());
+    }
+
+    #[test]
+    fn maps_without_features_have_none() {
+        let def = parse(&format!(
+            "{HEADER}..
+"
+        ))
+        .ok();
+        assert_eq!(def.map(|d| d.map.features.len()), Some(0));
+    }
+
+    #[test]
+    fn features_round_trip() {
+        let def = parse(FEATURES).ok();
+        let printed = def.as_ref().and_then(|d| print_map(&d.map, &d.legend));
+        assert!(
+            printed
+                .as_deref()
+                .is_some_and(|p| p.contains("Chest(Gold(50))"))
+        );
+        let again = printed.as_deref().and_then(|p| parse(p).ok());
+        assert!(def.is_some());
+        assert_eq!(again, def);
+    }
+
+    #[test]
+    fn feature_shape_errors() {
+        let src = FEATURES
+            .replace("(0, 0)", "(5, 0)")
+            .replace("Blacksmith, stock: []", "Blacksmith, stock: [\"sword\"]")
+            .replace("Gold(50)", "Gold(0)");
+        assert_eq!(
+            errors(&src),
+            [
+                "m.map: feature at (0, 1): the chest holds 0 gold",
+                "m.map: feature at (1, 0): a blacksmith sells nothing; its stock must be empty",
+                "m.map: feature at (5, 0): outside the map",
+            ]
+        );
+        let empty = FEATURES.replace("[\"sword\", \"vest\"]", "[]");
+        assert_eq!(
+            errors(&empty),
+            ["m.map: feature at (0, 0): the shop sells nothing"]
+        );
+        let vendor = empty.replace("Armoury", "Vendor");
+        assert_eq!(
+            errors(&vendor),
+            ["m.map: feature at (0, 0): the shop sells nothing"]
+        );
+    }
+
+    #[test]
+    fn feature_content_errors() {
+        let src = FEATURES
+            .replace("\"vest\"]", "\"potion\", \"ghost\"]")
+            .replace("Item(\"potion\")", "Item(\"relic\")")
+            .replace("(1, 0): Shop", "(2, 0): Shop");
+        assert_eq!(
+            check(&src),
+            [
+                "assets/maps/f.map: feature at (0, 0): Armoury shop can't sell \"potion\"",
+                "assets/maps/f.map: feature at (0, 0): unknown item \"ghost\"",
+                "assets/maps/f.map: feature at (1, 1): unknown item \"relic\"",
+                "assets/maps/f.map: feature at (2, 0): the tile can't be entered",
+            ]
+        );
+        let vendor = FEATURES.replace("Armoury", "Vendor");
+        assert_eq!(
+            check(&vendor),
+            [
+                "assets/maps/f.map: feature at (0, 0): Vendor shop can't sell \"sword\"",
+                "assets/maps/f.map: feature at (0, 0): Vendor shop can't sell \"vest\"",
+            ]
+        );
+        // A tile only fliers can enter still counts as passable.
+        let mut terrain = feature_terrain();
+        terrain.terrains[3].move_cost = vec![None, Some(1)];
+        let def = parse(&FEATURES.replace("(1, 0): Shop", "(2, 0): Shop"))
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        let maps = BTreeMap::from([("f".to_owned(), def)]);
+        assert!(check_features(&maps, &feature_items(), &terrain).is_empty());
+    }
+
+    #[test]
+    fn embedded_map_features_are_valid() {
+        let content = crate::load_embedded();
+        assert!(content.is_ok(), "{content:?}");
+        let small = content.ok().and_then(|c| c.maps.get("test_small").cloned());
+        assert_eq!(small.map(|d| d.map.features.len()), Some(5));
+    }
+
     const LEGEND_CHARS: &str = ".T~#^=F";
 
     fn arb_map() -> impl Strategy<Value = (BattleMap, MapLegend)> {
@@ -515,7 +832,7 @@ mod tests {
                     .map(|i| TerrainId(u16::try_from(i).unwrap_or(0)))
                     .collect();
                 let tiles = Grid::from_cells(w, h, cells).unwrap_or_else(|| unreachable!());
-                (BattleMap { name, tiles }, legend)
+                (BattleMap::new(name, tiles), legend)
             })
     }
 

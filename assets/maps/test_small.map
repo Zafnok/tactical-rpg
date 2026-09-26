@@ -16,6 +16,14 @@
         'F': "fort",
         '=': "bridge",
     },
+    // One of each tile feature, on the plain row y = 3.
+    features: {
+        (5, 3): Shop(kind: Armoury, stock: ["iron_sword", "leather_vest", "speed_ring"]),
+        (6, 3): Shop(kind: Vendor, stock: ["potion"]),
+        (7, 3): Shop(kind: Blacksmith, stock: []),
+        (8, 3): Chest(Gold(500)),
+        (9, 3): Chest(Item("elixir")),
+    },
 )
 ---
 SSS~~..TT%%^^A

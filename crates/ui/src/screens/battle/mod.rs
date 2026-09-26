@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use trpg_content::{Content, character_unit, check_map_labels};
 use trpg_core::{
-    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Pos, UnitAction,
-    UnitId,
+    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Pos, Stock,
+    UnitAction, UnitId,
 };
 
 use self::camera::{Camera, tile_to_cell};
@@ -105,6 +105,8 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
             items: vec![ItemId::new(QUICK_BATTLE_POTION); QUICK_BATTLE_POTIONS],
             cap: items.rules.default_pack_cap,
         },
+        gold: 0,
+        stock: Stock::default(),
         units,
         reinforcements: vec![],
         objective: Objective::Rout { turn_limit: None },
@@ -271,6 +273,8 @@ mod tests {
             classes: Arc::new(c.content.classes.clone()),
             items: Arc::new(c.content.items.clone()),
             pack: BattlePack::default(),
+            gold: 0,
+            stock: Stock::default(),
             units,
             reinforcements: vec![],
             objective: Objective::Rout { turn_limit: None },
@@ -374,10 +378,7 @@ mod tests {
         // test_small is smaller than the viewport: centred.
         assert_eq!(s.camera().origin, Pos::new(-10, -11));
         assert_eq!(s.state().units().len(), 6);
-        let big = BattleMap {
-            name: "Big".into(),
-            tiles: Grid::filled(64, 40, TerrainId(0)),
-        };
+        let big = BattleMap::new("Big", Grid::filled(64, 40, TerrainId(0)));
         let units = s.state().units().to_vec();
         let camera = |units: Vec<Unit>| {
             BattleScreen::new(battle(&c, big.clone(), units))
@@ -481,10 +482,7 @@ mod tests {
         units[5].pos = Pos::new(63, 39);
         units[3].pos = Pos::new(30, 12);
         units[4].pos = Pos::new(28, 9); // Above the viewport: not drawn.
-        let map = BattleMap {
-            name: "Stripes".into(),
-            tiles: Grid::from_cells(64, 40, cells).unwrap(),
-        };
+        let map = BattleMap::new("Stripes", Grid::from_cells(64, 40, cells).unwrap());
         let mut s = BattleScreen::new(battle(&c, map, units));
         assert_eq!(s.camera().origin, Pos::new(0, 0));
         s.follow(Pos::new(63, 39));

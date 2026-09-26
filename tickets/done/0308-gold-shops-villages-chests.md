@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0306"]
 nick_input: none
-completed:
+completed: 2026-09-26
 ---
 
 # 0308 — Gold, shops, villages, chests, repair
@@ -67,10 +67,10 @@ API reused between chapters.
 
 ## Acceptance criteria
 
-- [ ] Each action: valid case, each invalid case (state unchanged), events emitted.
-- [ ] Repair cost matches a table of ≥ 4 cases (full, half, 1 missing, 0 missing).
-- [ ] Gold never goes negative; a visited village / opened chest can't be used twice.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Each action: valid case, each invalid case (state unchanged), events emitted.
+- [x] Repair cost matches a table of ≥ 4 cases (full, half, 1 missing, 0 missing).
+- [x] Gold never goes negative; a visited village / opened chest can't be used twice.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -80,3 +80,35 @@ API reused between chapters.
 
 ## Completion notes
 
+- **Villages left out** (with `Visit`): `docs/design/terrain.md` still has no
+  village tile (Nick deferred every building tile except `fort`). Follow-up
+  **0313** (villages and `Visit`, core rules) waits for that tile.
+- `core::shop`: `ShopKind`, `Shop`, `Loot`, `ShopError`, `buy`, `sell`
+  (price / 2), `repair_cost` (the ticket's integer formula, via `div_ceil`),
+  `repair`, `add_to_stock`, and `ShopSession` (between chapters: buys into /
+  sells from / repairs in the party stock with the campaign's gold). Gold is
+  `u32`, so it can't go negative; gains saturate.
+- `BattleMap.features` (shops and chests by tile); `BattleState` gains party
+  `gold`, `stock` and the opened chests (all saved). `BattleSetup` takes
+  `gold` and `stock` from the campaign.
+- `UnitAction::Shop { txns }` (`ShopTxn::{Buy, Sell, Repair}`) and
+  `UnitAction::Open`; events `Bought` (with where the item went), `Sold`,
+  `Repaired`, `GoldChanged`, `ChestOpened`. All transactions are worked out on
+  copies first, so one refused transaction applies none of them.
+- Rules I had to pick (Claude's starting rules, not in the design doc):
+  - Armouries and vendors **buy anything**; blacksmiths only repair.
+  - Shopping and chests are **player units only** (gold is the party's).
+  - A unit can sell its loadout weapons, armour, accessory, or a battle-pack
+    item. Selling the equipped weapon equips the next one it can wield.
+  - Bought armour goes on only if the slot is empty **and** the class wears
+    that weight; otherwise to the stock. A bought weapon is equipped if the
+    unit had nothing equipped.
+  - Sell price is a flat half price, whatever durability is left (as the
+    ticket says).
+- Map format: optional `features: { (x, y): Shop(kind: …, stock: [...]),
+  (x, y): Chest(Gold(n) | Item("id")) }` in the header, documented in
+  `assets/maps/README.md`. Validated: inside the map, passable for some
+  movement type, known item ids, shop lists match the kind, blacksmith list
+  empty, no `Gold(0)` chests. `test_small.map` now has one of each.
+- Nothing to play yet: the shop screen and the `Shop`/`Open` menu entries
+  are 0409, and Chapter 1 has no shops or chests.
