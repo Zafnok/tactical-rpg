@@ -70,12 +70,15 @@ real story characters (07xx creates them).
 4. `assets/data/classes.ron`: the class tree from `progression.md` with its
    numbers. The flying line starts at tier 3 (Flier, promoted from Lancer;
    ticket 0017); its tier-4/5 classes have no numbers yet, so leave them out
-   and give Flier an empty `promotes_to`. `assets/data/characters.ron`: 3 placeholder player characters
+   and give Flier an empty `promotes_to`. The tree includes the **lord's
+   line** (Exile → Blade Heir / Commander → Sovereign / Grand Marshal;
+   ticket 0016), marked `lord_only`. `assets/data/characters.ron`: 3 placeholder player characters
    (`test_lord`, `test_knight`, `test_archer` — whatever classes exist) and 2
    generic enemy templates, clearly marked `// PLACEHOLDER until 0701`.
 5. `content` loaders + validation: unknown class/movement/weapon ids;
    promotion targets must exist, be exactly one tier higher and not
-   `enemy_only`; `weapon_slots ≤ 3`; start rank ≤ max rank; `min_gains` and
+   `enemy_only`; a `lord_only` class promotes only into `lord_only` classes,
+   and only an `is_lord` character may start in one; `weapon_slots ≤ 3`; start rank ≤ max rank; `min_gains` and
    `cp_per_class_level` are non-decreasing by tier and have an entry for every
    tier used;
    at most 2 personal spells; one affinity per element per class; base ≤ caps; growths
@@ -87,7 +90,7 @@ real story characters (07xx creates them).
 ## Acceptance criteria
 
 - [ ] Stat list, class list and numbers exactly match the design docs (a test compares the class table to a small hand-written expectation for at least 2 classes, one of them a shared promotion such as Iron Rider).
-- [ ] The whole class tree in `progression.md` (tiers 1–3, including the tier-3 Flier, and the enemy-only classes) is in `classes.ron`.
+- [ ] The whole class tree in `progression.md` (tiers 1–3, including the tier-3 Flier, the lord's line, and the enemy-only classes) is in `classes.ron`.
 - [ ] All validation errors covered by tests.
 - [ ] Data files load in the all-assets test.
 

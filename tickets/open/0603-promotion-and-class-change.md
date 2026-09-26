@@ -47,7 +47,9 @@ prices/drops (chapter and shop data).
 2. `reclass(unit, target_class, classes)` per `progression.md`: always
    consumes a Reclass Seal. The target must be a tier-1 class, or a class
    whose prerequisite the unit has mastered, or a class already in
-   `class_records`, and never `enemy_only`. Saved class records come back
+   `class_records`, and never `enemy_only`. A `lord_only` class (the lord's
+   line, ticket 0016) is a valid target only for the `is_lord` unit; the
+   lord reclasses out of and back into its line like anyone else. Saved class records come back
    unchanged; a new class unlocks at class level 1. Stats never change, and
    stats above the new caps are kept.
    Event `Reclassed { unit, from, to }`.
