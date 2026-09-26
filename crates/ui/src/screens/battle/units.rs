@@ -85,12 +85,9 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &Unit, x: i32, 
     let bar = |bx: i32, w: i32, c: UiColor| {
         Overlay::new(Rect::new(bx, py, w, HP_BAR_H), palette.get(c), Layer::Over)
     };
-    if width > 0 {
-        buf.add_overlay(bar(px, width, color));
-    }
-    if width < HP_BAR_W {
-        buf.add_overlay(bar(px + width, HP_BAR_W - width, UiColor::Black));
-    }
+    // An empty part (full or zero HP) is dropped by `add_overlay`.
+    buf.add_overlay(bar(px, width, color));
+    buf.add_overlay(bar(px + width, HP_BAR_W - width, UiColor::Black));
 }
 
 #[cfg(test)]
