@@ -10,9 +10,8 @@ xtask = "run -q -p xtask --"
 linker = "C:/msys64/mingw64/bin/gcc.exe"
 ar = "C:/msys64/mingw64/bin/ar.exe"
 
-# `quad-storage` (web storage, ticket 0207) is a miniquad JS plugin: its
-# `extern "C"` functions are implemented in JS and loaded into the page
-# (index.html) at runtime, not linked in. Without this flag, rust-lld treats
-# them as link errors instead of leaving them as wasm imports.
-[target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=--allow-undefined"]
+# The wasm32 `--allow-undefined` linker flag needed for `quad-storage`'s JS
+# plugin (ticket 0207) lives in `crates/app/build.rs` instead of here: a
+# `RUSTFLAGS` env var (CI sets one, for `-D warnings`) replaces this file's
+# `rustflags` wholesale rather than merging with it, which would silently
+# drop a flag added here.

@@ -27,10 +27,12 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut ctx = match Ctx::embedded() {
+    let ctx = match Ctx::embedded() {
         Ok(ctx) => ctx.with_storage(storage::platform()),
         Err(e) => return show_content_errors(&e.to_string()).await,
     };
+    #[cfg(debug_assertions)]
+    let mut ctx = ctx;
     #[cfg(debug_assertions)]
     storage::smoke_check(&mut *ctx.storage);
     let png = trpg_content::bundle::bytes(ATLAS_PNG_PATH).unwrap_or_default();
