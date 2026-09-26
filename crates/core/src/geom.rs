@@ -77,6 +77,18 @@ impl<T> Grid<T> {
         })
     }
 
+    /// A `width × height` grid with every cell set to `value`.
+    pub fn filled(width: u16, height: u16, value: T) -> Self
+    where
+        T: Clone,
+    {
+        Self {
+            width,
+            height,
+            cells: vec![value; usize::from(width) * usize::from(height)],
+        }
+    }
+
     /// Number of columns.
     pub fn width(&self) -> u16 {
         self.width
@@ -99,13 +111,24 @@ impl<T> Grid<T> {
 
     /// The cell at `pos`, or `None` if out of bounds.
     pub fn get(&self, pos: Pos) -> Option<&T> {
+        self.cells.get(self.index(pos)?)
+    }
+
+    /// The cell at `pos` for writing, or `None` if out of bounds.
+    pub fn get_mut(&mut self, pos: Pos) -> Option<&mut T> {
+        let i = self.index(pos)?;
+        self.cells.get_mut(i)
+    }
+
+    /// The row-major index of `pos`, or `None` if out of bounds.
+    fn index(&self, pos: Pos) -> Option<usize> {
         if !self.in_bounds(pos) {
             return None;
         }
         // In bounds, so both coordinates are non-negative and small.
         let x = usize::try_from(pos.x).ok()?;
         let y = usize::try_from(pos.y).ok()?;
-        self.cells.get(y * usize::from(self.width) + x)
+        Some(y * usize::from(self.width) + x)
     }
 
     /// The in-bounds neighbours of `pos`, in [`Dir::ALL`] order.
@@ -182,6 +205,22 @@ mod tests {
         assert_eq!(g.get(Pos::new(2, 1)), Some(&5));
         assert_eq!(g.get(Pos::new(3, 0)), None);
         assert_eq!(g.get(Pos::new(-1, 1)), None);
+    }
+
+    #[test]
+    fn filled_and_get_mut() {
+        let mut g = Grid::filled(3, 2, 7u8);
+        assert_eq!((g.width(), g.height()), (3, 2));
+        assert_eq!(g.cells(), &[7; 6]);
+        if let Some(c) = g.get_mut(Pos::new(2, 1)) {
+            *c = 9;
+        }
+        if let Some(c) = g.get_mut(Pos::new(1, 0)) {
+            *c = 5;
+        }
+        assert_eq!(g.cells(), &[7, 5, 7, 7, 7, 9]);
+        assert!(g.get_mut(Pos::new(3, 0)).is_none());
+        assert!(g.get_mut(Pos::new(0, -1)).is_none());
     }
 
     #[test]
