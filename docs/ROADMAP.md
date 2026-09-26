@@ -10,12 +10,12 @@ folders: `tickets/open/` vs `tickets/done/`.
 
 | Block | Milestone | Outcome | Tickets |
 | ----- | --------- | ------- | ------- |
-| `00xx` | Design decisions | Nick's answers recorded in `docs/design/` | 0001–0014 |
+| `00xx` | Design decisions | Nick's answers recorded in `docs/design/` | 0001–0018 |
 | `01xx` | M0 Foundation | Workspace, CI on 3 OSes, security scanners, SonarCloud, mutation gate, release + Pages pipelines | 0101–0108 |
 | `02xx` | M1 Engine | Coloured glyph console in a window and browser, keyboard input with right/left-handed layouts, screens + test harness | 0201–0208 |
-| `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills — pure and heavily tested | 0301–0311 |
-| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus, combat scene art | 0401–0413 |
-| `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase | 0501–0502 |
+| `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills, Combat Arts — pure and heavily tested | 0301–0312 |
+| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus, combat scene art, arts menu | 0401–0414 |
+| `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase, boss arts | 0501–0503 |
 | `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass | 0601–0603 |
 | `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script, lead reply choices | 0701–0708 |
 | `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options, colour themes | 0801–0806 |
@@ -29,6 +29,7 @@ Design answers unblock most of the rules work. Suggested order:
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
 4. Anytime, low priority: **0010** supports · **0012** title (after the story bible)
+5. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
 preparations, 0409 shops, 0410 spells, 0411 battle notes, 0502 enemy
@@ -51,9 +52,9 @@ parallel sessions/worktrees):
  7  0306  0402  0704  0706  0208
  8  0403  0309  0601  0308  0708
  9  0404  0407  0408  0409  0310  0311  0501  0707
-10  0405  0602  0307  0410
+10  0405  0602  0307  0410  0312  0503
 11  0502  0705  0406  0412
-12  0801
+12  0801  0414
 13  0802  0411
 14  0803
 15  0804  ◄── Nick plays Chapter 1

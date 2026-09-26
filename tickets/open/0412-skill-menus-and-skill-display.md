@@ -16,7 +16,8 @@ completed:
 ## Context
 
 0311 adds class skills to `core` (`docs/design/progression.md`, *Skills*):
-always-on passives, and actives with uses per battle. The player needs to
+always-on passives, and actives paid with weapon durability (or an extra
+spell use; `docs/design/combat-arts.md`). The player needs to
 see them and use them. This ticket covers the battle UI.
 
 ## Nick input
@@ -28,7 +29,7 @@ skill quick?
 
 **In:**
 - A skills section on the unit info screen (0405), with names, rank,
-  one-line effects and `uses_left/uses`.
+  one-line effects and each active's cost (`3 dur`, `+1 use`).
 - In the attack flow (0404), an optional "use skill" choice that shows the
   forecast with the active applied.
 - A `Skill` entry in the action menu (0403) for non-combat actives, with
@@ -42,11 +43,14 @@ skill quick?
 ## Implementation steps
 
 1. Unit info screen: a `Skills` block listing only the active ranks
-   (`Unit::usable_skills()`), with `P`/`A` markers and uses for actives.
+   (`Unit::usable_skills()`), with `P`/`A` markers and the cost for actives.
 2. Attack flow: after choosing a target, `s` cycles through the usable
    combat actives (`none → Keen Edge → …`). The forecast updates, and a
-   skill name line appears.
-3. Action menu `Skill` → list of non-combat actives with uses. Picking one
+   skill name line appears with the durability change (`Keen Edge (20 → 17)`).
+   Actives the unit can't pay for are skipped. 0414 later merges this
+   cycle into one list with Combat Arts.
+3. Action menu `Skill` → list of non-combat actives with their cost and the
+   equipped weapon's durability; unaffordable ones dimmed. Picking one
    uses the same target cursor as items and heals.
 4. A unit with a timed effect shows a small highlight in its glyph
    background (colour from the theme), and the info screen lists the effect

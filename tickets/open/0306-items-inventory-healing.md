@@ -56,7 +56,9 @@ Preparations screen (0408), item menus UI (0407), trading (not in the design).
    weapons in the loadout — replace 0303's parameters with this in callers.
 4. Weapon usability: class weapon kinds (0005) and `rank ≥ weapon.rank`.
    `WeaponRanks` per unit: EXP per kind, `rank(kind)`; weapon EXP after combat
-   per the design (+2 if any strike hit, +1 if it struck but all missed) with
+   per the design (`weapons-and-items.md`: base 2 if any strike hit, 1 if it
+   struck but all missed, plus `dealt / 5` for the HP its strikes actually
+   removed; take a `used_art: bool` that doubles the base for 0312) with
    a `WeaponExpGained` / `WeaponRankUp` event.
 5. `BattlePack { items: Vec<ItemId>, cap }` on `BattleState` (shared by the
    player side). Enemies' own consumables live on the enemy unit.
