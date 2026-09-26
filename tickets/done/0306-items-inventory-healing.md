@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0003", "0004", "0305"]
 nick_input: answer-first
-completed:
+completed: 2026-09-26
 ---
 
 # 0306 — Items, loadouts, battle pack, ranks, durability
@@ -78,11 +78,11 @@ Preparations screen (0408), item menus UI (0407), trading (not in the design).
 
 ## Acceptance criteria
 
-- [ ] Item numbers match the design docs (test compares a few entries).
-- [ ] Each new action/command: valid case, each invalid case (state unchanged), event emitted.
-- [ ] Combat input uses the equipped weapon, gear-adjusted stats, armour weight and rank; unarmed units can't attack or counter.
-- [ ] Worked examples W1–W4 of `weapons-and-items.md` reproduce when built from real units + `items.ron` (not just hand-built `CombatantInput`).
-- [ ] Healing never exceeds max HP; a broken weapon still attacks with the penalties.
+- [x] Item numbers match the design docs (test compares a few entries).
+- [x] Each new action/command: valid case, each invalid case (state unchanged), event emitted.
+- [x] Combat input uses the equipped weapon, gear-adjusted stats, armour weight and rank; unarmed units can't attack or counter.
+- [x] Worked examples W1–W4 of `weapons-and-items.md` reproduce when built from real units + `items.ron` (not just hand-built `CombatantInput`).
+- [x] Healing never exceeds max HP; a broken weapon still attacks with the penalties.
 
 ## Tests required
 
@@ -91,4 +91,55 @@ Preparations screen (0408), item menus UI (0407), trading (not in the design).
 - Extend 0305's random-command property test to include `UseItem` and `Equip`.
 
 ## Completion notes
+
+**Done.**
+
+- `assets/data/items.ron`: every weapon, armour, accessory and consumable in
+  `weapons-and-items.md` with its exact numbers, each kind's trait as data,
+  `rank_speed`, rank EXP thresholds, broken penalties, the weapon EXP numbers
+  and the default pack cap (6). Loaded and validated by `trpg_content::item`
+  (unique ids across lists, ranges, durability, one trait per kind, increasing
+  thresholds…); tests compare every entry with the design tables, and the
+  kind traits / rules with `CombatRules::default()`.
+- `core::item`: `ItemId`, `ItemDef` (`Weapon`/`Armour`/`Accessory`/
+  `Consumable`), `ItemTable`, `WeaponRules`, `WeaponInstance`
+  (`is_broken`, `spend_durability`), `Loadout`, `LoadoutDef`, `BattlePack`,
+  `Stock`, and on `Unit`: `rank`, `can_wield`, `usable_weapon`,
+  `effective_stats` (gear up to the hard ceilings), `armour_weight`,
+  `attack_ranges`, `combat_input`, `validate_loadout`, `with_loadout`,
+  `gain_weapon_exp`, `spend_durability` (→ `Event::ItemBroke`).
+- Battle: `BattleSetup` takes `items` and a `pack`; `UnitAction::Attack` now
+  names a loadout `slot` (attacking equips it, `Event::Equipped`);
+  `UnitAction::UseItem { pack_index, target }` (player units use the pack,
+  other factions their own `Unit::consumables`), `Command::Equip` (free).
+  New events `Equipped`, `WeaponExpGained`, `WeaponRankUp`, `ItemUsed`,
+  `Healed`, `ItemBroke`. Combat uses gear-adjusted stats, the equipped (or
+  chosen) weapon, armour weight and rank; only a wieldable equipped weapon
+  counters.
+- `characters.ron` placeholder units have loadouts (validated at load); the
+  debug Quick Battle has a pack of 3 Potions.
+
+**Deviations / technical choices.**
+
+- The `Unit.weapon` stand-in from 0305 is gone; `BattleState::combatant`
+  builds `CombatantInput` via `Unit::combat_input`.
+- "`WeaponRanks` per unit" is two maps on `Unit`: the existing
+  `weapon_ranks` plus a new `weapon_exp`. EXP counts from the current rank's
+  threshold (a unit given rank D by its class starts at 30) and stops at the
+  class's max rank's threshold.
+- The item table is shared content like the terrain and class tables: not
+  saved, reattached with `restore_tables(terrain, classes, items)`
+  (ADR-0020, whose point 5 anticipated this). The battle's `CombatRules` now
+  come from `ItemTable::combat_rules()`.
+- `Unit::attack_ranges` is what `threat_area`/`danger_zone` callers pass;
+  there are no non-test callers yet (the UI overlays are 0403/0405).
+- A unit with no rank recorded in a kind counts as rank E. A unit may carry a
+  weapon it can't wield but never equip it.
+- Weapon EXP is given to every faction that struck (enemies too); a unit that
+  fell gets none.
+- Using an item on a unit at full HP is allowed (heals 0); the design doesn't
+  forbid it and the item menu (0407) can grey it out.
+
+**Nick:** nothing to play yet: the item and equip menus are 0407. The Quick
+Battle units now carry the design's starter weapons and armour.
 

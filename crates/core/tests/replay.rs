@@ -6,9 +6,11 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use trpg_core::{
-    BattleMap, BattleSetup, BattleState, ClassDef, ClassId, ClassTable, Command, DamageType,
-    Element, Event, Faction, Grid, Growths, MovementTypeId, Objective, Pos, Stats, TerrainId,
-    TerrainRules, TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponStats, WeaponTrait,
+    BattleMap, BattlePack, BattleSetup, BattleState, ClassDef, ClassId, ClassTable, Command,
+    ConsumableDef, ConsumableEffect, DamageType, Event, Faction, Grid, Growths, ItemDef, ItemId,
+    ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, Stats, TerrainId, TerrainRules,
+    TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind, WeaponProficiency,
+    WeaponRank,
 };
 
 fn terrain() -> Arc<TerrainTable> {
@@ -34,7 +36,11 @@ fn classes() -> Arc<ClassTable> {
         base: Stats::default(),
         caps: Stats::default(),
         growths: Growths::default(),
-        weapons: vec![],
+        weapons: vec![WeaponProficiency {
+            kind: WeaponKind::Sword,
+            start: WeaponRank::E,
+            max: WeaponRank::S,
+        }],
         armour: vec![],
         tags: UnitTags::default(),
         promotes_to: vec![],
@@ -52,9 +58,48 @@ fn classes() -> Arc<ClassTable> {
     })
 }
 
-/// A sturdy unit (40 HP) with a 60-hit, 5-damage weapon: nobody falls in
-/// the script, and every strike's roll matters.
+fn blade(might: i32) -> ItemDef {
+    ItemDef::Weapon(WeaponDef {
+        name: "Blade".into(),
+        kind: WeaponKind::Sword,
+        rank: WeaponRank::E,
+        might,
+        hit: 60,
+        crit: 0,
+        weight: 0,
+        min_range: 1,
+        max_range: 1,
+        damage_type: DamageType::Physical,
+        durability: 20,
+        effective: vec![],
+        price: 0,
+    })
+}
+
+/// `blade` (60 hit, 5 might), `dull_blade` (might 3) and `potion`.
+fn items() -> Arc<ItemTable> {
+    let potion = ItemDef::Consumable(ConsumableDef {
+        name: "Potion".into(),
+        effect: ConsumableEffect::Heal(10),
+        price: 0,
+    });
+    Arc::new(ItemTable {
+        items: BTreeMap::from([
+            (ItemId::new("blade"), blade(5)),
+            (ItemId::new("dull_blade"), blade(3)),
+            (ItemId::new("potion"), potion),
+        ]),
+        ..ItemTable::default()
+    })
+}
+
+/// A sturdy unit (40 HP) with a 60-hit, 5-damage weapon (and a 3-damage
+/// spare): nobody falls in the script, and every strike's roll matters.
 fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
+    let loadout = LoadoutDef {
+        weapons: vec![ItemId::new("blade"), ItemId::new("dull_blade")],
+        ..LoadoutDef::default()
+    };
     Unit {
         id: UnitId(id),
         character: None,
@@ -71,21 +116,12 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         is_lord: id == 1,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
-        weapon: Some(WeaponStats {
-            kind: None,
-            trait_: WeaponTrait::None,
-            might: 5,
-            hit: 60,
-            crit: 0,
-            weight: 0,
-            min_range: 1,
-            max_range: 1,
-            damage_type: DamageType::Physical,
-            effective: vec![],
-            broken: false,
-            element: Element::None,
-        }),
+        weapon_exp: BTreeMap::new(),
+        loadout: trpg_core::Loadout::default(),
+        consumables: vec![ItemId::new("potion")],
     }
+    .with_loadout(&loadout, &classes(), &items())
+    .unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn setup(seed: u64) -> BattleSetup {
@@ -96,6 +132,11 @@ fn setup(seed: u64) -> BattleSetup {
         },
         terrain: terrain(),
         classes: classes(),
+        items: items(),
+        pack: BattlePack {
+            items: vec![ItemId::new("potion")],
+            cap: 1,
+        },
         units: vec![
             unit(1, Faction::Player, 0, 0),
             unit(2, Faction::Player, 0, 2),
@@ -115,11 +156,13 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
         dest: Pos::new(x, y),
         action: UnitAction::Attack {
             target: UnitId(target),
+            slot: 0,
         },
     }
 }
 
-/// Three turns of both sides trading blows, then a wait.
+/// Three turns of both sides trading blows, then an equip, potions and a
+/// wait.
 fn script() -> Vec<Command> {
     let mut cmds = Vec::new();
     for _ in 0..3 {
@@ -132,11 +175,34 @@ fn script() -> Vec<Command> {
             Command::EndPhase,
         ]);
     }
-    cmds.push(Command::Act {
-        unit: UnitId(1),
-        dest: Pos::new(1, 1),
-        action: UnitAction::Wait,
-    });
+    cmds.extend([
+        Command::Equip {
+            unit: UnitId(2),
+            slot: 1,
+        },
+        Command::Act {
+            unit: UnitId(2),
+            dest: Pos::new(1, 2),
+            action: UnitAction::UseItem {
+                pack_index: 0,
+                target: UnitId(2),
+            },
+        },
+        Command::Act {
+            unit: UnitId(1),
+            dest: Pos::new(1, 1),
+            action: UnitAction::Wait,
+        },
+        Command::EndPhase,
+        Command::Act {
+            unit: UnitId(3),
+            dest: Pos::new(3, 0),
+            action: UnitAction::UseItem {
+                pack_index: 0,
+                target: UnitId(3),
+            },
+        },
+    ]);
     cmds
 }
 
@@ -183,7 +249,7 @@ fn saving_and_loading_mid_battle_changes_nothing() {
         log.extend(run(&mut state, &cmds[..split]));
         let saved = ron::to_string(&state).unwrap();
         let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-        loaded.restore_tables(terrain(), classes());
+        loaded.restore_tables(terrain(), classes(), items());
         assert_eq!(loaded, state, "split {split}");
         log.extend(run(&mut loaded, &cmds[split..]));
         assert_eq!(log, events, "split {split}");

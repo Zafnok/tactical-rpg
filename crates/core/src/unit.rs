@@ -7,8 +7,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
-use crate::combat::WeaponStats;
 use crate::geom::Pos;
+use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
 use crate::magic::SpellId;
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::weapon::{WeaponKind, WeaponRank};
@@ -89,6 +89,8 @@ pub struct CharacterDef {
     pub personal_spells: Vec<(Level, SpellId)>,
     /// Overrides the default [map label](default_map_label) (two letters).
     pub map_label: Option<String>,
+    /// Starting loadout; apply it with [`Unit::with_loadout`].
+    pub loadout: LoadoutDef,
 }
 
 /// A unit on the battle map.
@@ -125,10 +127,13 @@ pub struct Unit {
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
     pub map_label: String,
-    /// The equipped weapon's combat numbers; `None` = can't attack or
-    /// counter. A stand-in until ticket 0306 gives units a loadout (which
-    /// then supplies the equipped weapon).
-    pub weapon: Option<WeaponStats>,
+    /// Total weapon EXP per kind (see [`crate::item`]).
+    pub weapon_exp: BTreeMap<WeaponKind, u32>,
+    /// Weapons, armour and accessory. The equipped weapon attacks and
+    /// counters; with none the unit can't.
+    pub loadout: Loadout,
+    /// The unit's own consumables. Player units use the battle pack instead.
+    pub consumables: Vec<ItemId>,
 }
 
 /// Letters in a map label.
@@ -158,6 +163,8 @@ pub enum UnitError {
     UnknownClass(ClassId),
     /// A unit that isn't the lord was put in a lord-only class.
     LordOnlyClass(ClassId),
+    /// The unit's loadout is invalid.
+    Loadout(LoadoutError),
 }
 
 impl fmt::Display for UnitError {
@@ -167,16 +174,24 @@ impl fmt::Display for UnitError {
             UnitError::LordOnlyClass(c) => {
                 write!(f, "class \"{}\" is only for the lord", c.0)
             }
+            UnitError::Loadout(e) => write!(f, "loadout: {e}"),
         }
     }
 }
 
 impl std::error::Error for UnitError {}
 
+impl From<LoadoutError> for UnitError {
+    fn from(e: LoadoutError) -> Self {
+        UnitError::Loadout(e)
+    }
+}
+
 impl Unit {
     /// Creates the unit of named character `def` at its data level, in its
     /// starting class. Stats are clamped to `0..=cap`; Mov comes from the
-    /// class; weapon ranks are raised to the class's start ranks.
+    /// class; weapon ranks are raised to the class's start ranks. The
+    /// loadout is empty: apply `def.loadout` with [`Unit::with_loadout`].
     pub fn from_character(
         id: UnitId,
         def: &CharacterDef,
@@ -258,7 +273,9 @@ impl Unit {
             is_lord: false,
             weapon_ranks,
             map_label: default_map_label(&class.name),
-            weapon: None,
+            weapon_exp: BTreeMap::new(),
+            loadout: Loadout::default(),
+            consumables: Vec::new(),
         }
     }
 }
@@ -351,6 +368,7 @@ mod tests {
             ]),
             personal_spells: vec![],
             map_label: None,
+            loadout: LoadoutDef::default(),
         }
     }
 
@@ -407,7 +425,9 @@ mod tests {
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
             map_label: "He".into(),
-            weapon: None,
+            weapon_exp: BTreeMap::new(),
+            loadout: Loadout::default(),
+            consumables: Vec::new(),
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -522,7 +542,9 @@ mod tests {
                 (WeaponKind::Sword, WeaponRank::E),
             ]),
             map_label: "Br".into(),
-            weapon: None,
+            weapon_exp: BTreeMap::new(),
+            loadout: Loadout::default(),
+            consumables: Vec::new(),
         };
         assert_eq!(unit, Ok(expected));
     }

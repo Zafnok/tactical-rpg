@@ -92,7 +92,9 @@ fn unit(id: u32, class: &str, faction: Faction, pos: Pos, mov: StatValue) -> Uni
         is_lord: false,
         weapon_ranks: BTreeMap::new(),
         map_label: format!("u{id}"),
-        weapon: None,
+        weapon_exp: BTreeMap::new(),
+        loadout: crate::item::Loadout::default(),
+        consumables: vec![],
     }
 }
 

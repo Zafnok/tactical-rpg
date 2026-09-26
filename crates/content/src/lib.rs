@@ -8,6 +8,7 @@ pub mod class;
 mod enums;
 pub mod error;
 pub mod font;
+pub mod item;
 pub mod keymap;
 pub mod map;
 pub mod palette;
@@ -16,9 +17,9 @@ pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::ClassTable;
+use trpg_core::{ClassTable, ItemTable};
 
-pub use character::{CharacterTable, GenericTemplate, check_map_labels};
+pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
@@ -41,6 +42,8 @@ pub struct Content {
     pub maps: BTreeMap<String, MapDef>,
     /// The class tree and progression tables.
     pub classes: ClassTable,
+    /// Items and item rules.
+    pub items: ItemTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
 }
@@ -62,7 +65,8 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             .ok()
             .map(|t| t.rules.movement_types.as_slice()),
     );
-    let characters = character::load(classes.as_ref().ok());
+    let items = item::load();
+    let characters = character::load(classes.as_ref().ok(), items.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
@@ -71,6 +75,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         maps,
         Loaded {
             classes,
+            items,
             characters,
         },
     )
@@ -80,6 +85,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
 /// argument list short).
 struct Loaded {
     classes: Result<ClassTable, Vec<ContentError>>,
+    items: Result<ItemTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
 }
 
@@ -110,6 +116,7 @@ fn assemble(
         terrain: take(terrain, &mut errors),
         maps: take(maps, &mut errors),
         classes: take(units.classes, &mut errors),
+        items: take(units.items, &mut errors),
         characters: take(units.characters, &mut errors),
     };
     if errors.is_empty() {
@@ -136,12 +143,13 @@ mod tests {
     }
 
     fn ok_characters() -> Result<CharacterTable, Vec<ContentError>> {
-        character::load(ok_classes().ok().as_ref())
+        character::load(ok_classes().ok().as_ref(), item::load().ok().as_ref())
     }
 
     fn ok_units() -> Loaded {
         Loaded {
             classes: ok_classes(),
+            items: item::load(),
             characters: ok_characters(),
         }
     }
@@ -179,6 +187,10 @@ mod tests {
             ok_classes().ok().as_ref()
         );
         assert_eq!(
+            content.as_ref().map(|c| &c.items),
+            item::load().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
@@ -194,7 +206,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 7] = ["p", "k", "f", "t", "m", "c", "u"];
+    const NAMES: [&str; 8] = ["p", "k", "f", "t", "m", "c", "i", "u"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -208,6 +220,7 @@ mod tests {
                 Err(e("m")),
                 Loaded {
                     classes: Err(e("c")),
+                    items: Err(e("i")),
                     characters: Err(e("u")),
                 },
             ),
@@ -234,7 +247,8 @@ mod tests {
                 if i == 4 { Err(e("m")) } else { ok_maps() },
                 Loaded {
                     classes: if i == 5 { Err(e("c")) } else { ok_classes() },
-                    characters: if i == 6 { Err(e("u")) } else { ok_characters() },
+                    items: if i == 6 { Err(e("i")) } else { item::load() },
+                    characters: if i == 7 { Err(e("u")) } else { ok_characters() },
                 },
             )
         };

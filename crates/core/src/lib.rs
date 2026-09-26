@@ -4,6 +4,7 @@ pub mod battle;
 pub mod class;
 pub mod combat;
 pub mod geom;
+pub mod item;
 pub mod magic;
 pub mod map;
 pub mod movement;
@@ -26,6 +27,11 @@ pub use combat::{
     Strike, WeaponStats, WeaponTrait, forecast, resolve, roll_hit,
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
+pub use item::{
+    AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, ItemDef, ItemId,
+    ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef, WeaponInstance,
+    WeaponRules,
+};
 pub use magic::{Affinity, Element, SpellId};
 pub use map::BattleMap;
 pub use movement::{
