@@ -63,7 +63,7 @@ from 0008). Chapter 1 is one battle, so one chapter file = one battle here.
    `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
    weapon ranks, durability), handles fallen player units per
    `death-and-difficulty.md` (Classic: removed from the roster, equipped items
-   to the stock; Casual: kept, full HP next chapter), gives every deployed
+   to the stock; Casual: kept, full HP for the next battle), gives every deployed
    player unit (standing or retreated) 7% of one level's EXP per unused
    rewind charge (per the design; express it as a percentage of the
    EXP-per-level constant, not a fixed number), returns

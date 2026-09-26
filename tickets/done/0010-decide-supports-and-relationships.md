@@ -84,7 +84,10 @@ story pipeline. Then create a `10xx` implementation ticket (don't implement).
   camp once unlocked. He then reminded me that chapters aren't single battles
   (only chapters 1–2, maybe 3, are), so the pacing is now stated per battle,
   with skirmishes as their own case, and the one-rank-per-chapter rule was
-  replaced by one rank per camp visit. Paired endings are left as an open sub-question.
+  replaced by one rank per camp visit.
+- Side decision from the same mix-up: in Casual mode a retreated unit is back
+  for the **next battle**, not the next chapter (Nick: "yes back for next
+  battle"). Updated `death-and-difficulty.md` and 0801. Paired endings are left as an open sub-question.
 - Follow-up tickets: **1002** (support rules + data), **1003** (Supports/Camp
   screens), **1004** (parked: hub activities, "far future or maybe never"),
   **1005** (parked: pair abilities, "far future").
