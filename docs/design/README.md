@@ -11,7 +11,8 @@ here.
 | Stats & combat maths | [`stats-and-combat.md`](stats-and-combat.md) | 0001 | ✅ decided 2026-09-25 |
 | Turn structure | [`turn-structure.md`](turn-structure.md) | 0002 | ✅ decided 2026-09-25 |
 | Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003 | ✅ decided 2026-09-25 |
-| Combat Arts | `weapons-and-items.md` (arts section) | 0014 | ⏳ awaiting Nick |
+| Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 |
+| Combat Arts for ranks C–S, special weapons | `combat-arts.md` | 0018 | ⏳ after playtest 0804 |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 |
 | Level ups, classes, class tree | [`progression.md`](progression.md) | 0005 | ✅ decided 2026-09-25 |
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |

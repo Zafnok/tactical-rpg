@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0003"]
 nick_input: decision
-completed:
+completed: 2026-09-25
 ---
 
 # 0014 — Decide: Combat Arts
@@ -70,10 +70,42 @@ skill. Update `docs/design/README.md`.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q3.
-- [ ] Design doc section written with exact numbers.
-- [ ] Implementation tickets created; design README updated.
-- [ ] Ticket archived.
+- [x] Nick answered Q1–Q3.
+- [x] Design doc section written with exact numbers.
+- [x] Implementation tickets created; design README updated.
+- [x] Ticket archived.
 
 ## Completion notes
+
+Nick answered every question on 2026-09-25. The result is in
+`docs/design/combat-arts.md` (a new file rather than a section of
+`weapons-and-items.md`, which now links to it).
+
+- **Q1:** "Mix". Weapon ranks teach each kind's arts, and special weapons
+  carry their own.
+- **Q2 (limits):** "Durability only". An art boosts every strike of the
+  combat. Arts are picked only on your own turn, but an art's effect may
+  last through the enemy's turn (stance/debuff).
+- **Q3 (vs actives):** class actives **also cost durability**, which changes
+  `progression.md`. Actives no longer have uses per battle. Spell actives
+  cost 1 extra spell use, and non-attack actives cost the equipped weapon's
+  durability. There's no fixed dividing line between arts and actives:
+  both should be flavourful, and overlaps rare and sensible.
+- **Starter list:** approved as proposed. 10 arts, E and D per kind, with
+  our own names (not Three Houses').
+- **Enemies:** only bosses use arts and actives.
+
+Claude's starting rules (Nick may veto them): one art or active per attack;
+cost paid even on a miss; a weapon brought to 0 breaks after the combat;
+weapon EXP ×2 for art combats; active costs of 3 (was 2/battle) and 5 (was
+1/battle).
+
+Downstream edits: `progression.md` skill table and actives rules,
+`weapons-and-items.md` durability/weapon EXP, tickets 0311 (costs instead of
+uses, shared `pay_cost`), 0412 (cost display), 0501 (boss arts out of
+scope → 0503), `ROADMAP.md`.
+
+New tickets: **0312** Combat Arts rules (core), **0413** arts menu and
+forecast (UI), **0503** boss AI uses arts/actives, **0018** decide
+higher-rank arts and special weapons (after the playtest).
 

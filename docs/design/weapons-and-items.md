@@ -194,7 +194,8 @@ up to the Chapter 1 roster/enemies (0803).
 - **Weapon EXP** (*Claude's starting rule*, numbers *tunable*): after each
   combat, a unit gains weapon EXP in the kind it fought with: **+2** if at
   least one of its strikes hit, **+1** if it struck but missed every time,
-  0 if it didn't strike. Combat Arts may give extra (0014).
+  0 if it didn't strike. A combat using a Combat Art gives double
+  (`combat-arts.md`, 0014).
 - Rank thresholds (total weapon EXP, FE GBA values): D 30, C 70, B 120,
   A 180, S 250.
 - Ranks gate weapons (table above) and add `rank_speed` to attack speed.
@@ -205,9 +206,10 @@ up to the Chapter 1 roster/enemies (0803).
   `durability`).
 - **Normal attacks and counters never cost durability.**
 - **Combat Arts** cost durability: each art has its own cost, higher for
-  stronger effects (Nick). The list of arts and their costs is ticket 0014.
-  An art can be used only if `durability_left ≥ cost` (*Claude's starting
-  rule*).
+  stronger effects (Nick). **Class actives** cost durability too (Nick,
+  0014). The arts, their costs and the active costs are in
+  [`combat-arts.md`](combat-arts.md). An art or active can be used only if
+  `durability_left ≥ cost` (*Claude's starting rule*).
 - At `durability_left == 0` the weapon is **broken**: it still attacks and
   counters, with **might halved** (rounded down) and **−20 hit** (*tunable*),
   and cannot use Combat Arts. Its type trait still applies.
@@ -391,8 +393,7 @@ Distance 1.
 
 ## Open sub-questions (deferred)
 
-- **Combat Arts** (the list, their effects and durability costs, who learns
-  them): ticket 0014, in Chapter 1.
+- **Combat Arts:** decided in [`combat-arts.md`](combat-arts.md) (0014).
 - **Magic** weapons/tomes, their weight and traits: 0004.
 - **Class weapon kinds, starting/max ranks, armour limits, tags:** 0005.
 - **Pack cap, shops/villages/chests in Chapter 1:** decided in 0009

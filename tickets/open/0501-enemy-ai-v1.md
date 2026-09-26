@@ -32,7 +32,9 @@ Other phase (`Ally` + `Neutral` units): the same code, with targets = units
 hostile to the acting unit (`Faction::is_hostile_to`). Units that arrived as
 reinforcements this turn are already acted and must be skipped.
 
-**Out:** UI playback (0502), fancy group tactics, difficulty modes.
+**Out:** UI playback (0502), fancy group tactics, difficulty modes, bosses
+using Combat Arts and actives (0503; ordinary enemies never use them,
+`docs/design/combat-arts.md`).
 
 ## Implementation steps
 

@@ -400,8 +400,11 @@ behind when you leave an unmastered class.
     highest rank a unit knows is active.
   - Learning a lower rank than one already known does nothing.
 - An **active skill** is used on purpose:
-  - It has **uses per battle**, which refill at the start of each battle, like
-    spells (`magic.md`). It never costs weapon durability.
+  - It costs **weapon durability** (Nick, ticket 0014; this replaces the
+    uses per battle first decided here). Combat actives pay with the
+    attacking weapon, non-attack actives with the equipped weapon, and spell
+    actives cost 1 extra use of the spell instead. Exact costs and rules:
+    [`combat-arts.md`](combat-arts.md).
   - **Combat actives** are chosen from the attack menu as an option for that
     attack. **Non-combat actives** are an action of their own and end the
     action.
@@ -413,8 +416,9 @@ behind when you leave an unmastered class.
     also helps in the unit's defending combats (counters) then. It's picked
     when attacking, never during the enemy's turn. It uses the timed-effect
     rules below.
-  - Actives are separate from Combat Arts (weapon skills that spend
-    durability, ticket 0014), which Combat Arts may reuse or merge with.
+  - Actives are separate from Combat Arts (weapon techniques, also paid
+    with durability, `combat-arts.md`). An attack uses one art or one combat
+    active, not both. Nick: both should be flavourful and overlaps rare.
 - **Timed effects**, "until the start of the unit's next phase", start when
   the skill is used. They end at the start of the owner's side's next phase,
   before anyone acts. The same effect doesn't stack with itself; using it
@@ -431,31 +435,31 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 
 | Class | Active (unlock) | Passive (mastery) |
 | ----- | --------------- | ----------------- |
-| Swordsman | **Keen Edge** (2/battle, combat): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
-| Brawler | **Flurry** (1/battle, combat): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
-| Raider | **Heavy Blow** (2/battle, combat): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
-| Archer | **Long Shot** (2/battle, combat): Bw max range +1 for this attack | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) |
-| Guard | **Brace** (2/battle, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
-| Rider | **Lance Rush** (2/battle, combat): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
-| Flier | **Swoop** (2/battle, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
-| Mage | **Overcast** (1/battle, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
-| Cleric | **Sanctuary** (1/battle, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
-| Duelist | **Blade Flurry** (1/battle, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
-| Shadowblade | **Deadly Blow** (1/battle, combat): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
-| Striker | **Hundred Fists** (1/battle, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
-| Grappler | **Shove** (2/battle, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); it fails if the tile is blocked | **Iron Grip**: Gt equipped → Def +3 |
-| Berserker | **Rampage** (1/battle, combat): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
-| Vanguard | **War Cry** (1/battle, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
-| Marksman | **Long Shot 2** (2/battle, combat): Bw max range +2 | **Bow Focus**: Bw equipped → hit +10, crit +5 |
-| Outrider | **Volley** (1/battle, combat, Bw): +1 strike (max 4) | **Skirmish** (learned again, no effect if already known) + **Charge 1** |
-| Bulwark | **Fortify** (1/battle, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
-| Iron Rider | **Trample** (2/battle, combat): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
-| Lancer | **Piercing Lance** (2/battle, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
+| Swordsman | **Keen Edge** (3 dur, combat): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
+| Brawler | **Flurry** (5 dur, combat): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
+| Raider | **Heavy Blow** (3 dur, combat): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
+| Archer | **Long Shot** (3 dur, combat): Bw max range +1 for this attack | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) |
+| Guard | **Brace** (3 dur, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
+| Rider | **Lance Rush** (3 dur, combat): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
+| Flier | **Swoop** (3 dur, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
+| Mage | **Overcast** (+1 spell use, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
+| Cleric | **Sanctuary** (5 dur, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
+| Duelist | **Blade Flurry** (5 dur, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
+| Shadowblade | **Deadly Blow** (5 dur, combat): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
+| Striker | **Hundred Fists** (5 dur, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
+| Grappler | **Shove** (3 dur, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); it fails if the tile is blocked | **Iron Grip**: Gt equipped → Def +3 |
+| Berserker | **Rampage** (5 dur, combat): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
+| Vanguard | **War Cry** (5 dur, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
+| Marksman | **Long Shot 2** (3 dur, combat): Bw max range +2 | **Bow Focus**: Bw equipped → hit +10, crit +5 |
+| Outrider | **Volley** (5 dur, combat, Bw): +1 strike (max 4) | **Skirmish** (learned again, no effect if already known) + **Charge 1** |
+| Bulwark | **Fortify** (5 dur, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
+| Iron Rider | **Trample** (3 dur, combat): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
+| Lancer | **Piercing Lance** (3 dur, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
 | Sky Lancer | **Swoop** | **Sky Dodge 2**: avoid +20 against bows |
-| Sky Warden | **Dive** (1/battle, combat): might +6 | **Sky Guard**: Def +3 |
+| Sky Warden | **Dive** (5 dur, combat): might +6 | **Sky Guard**: Def +3 |
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
-| Mystic | **Siphon** (1/battle, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
-| Priest | **Sanctuary 2** (1/battle, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
+| Mystic | **Siphon** (+1 spell use, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
+| Priest | **Sanctuary 2** (5 dur, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
 
 - **Skills learned twice:** a unit that learns an active it already knows
   (e.g. Swoop from both flier lines, Overcast from Mage and Sorcerer) gets
@@ -673,7 +677,8 @@ A generic unit of class `C` at character level `L` has
 talent and no randomness (Nick: fixed average stats, so a map plays the
 same way every time and you can plan exactly). Its weapon ranks are the class's start ranks
 unless the chapter data says otherwise. Its class level is 1, with the
-class's active (it hasn't mastered anything). Chapter data may give a
+class's active (it hasn't mastered anything), but **only bosses use actives
+and Combat Arts** (Nick, `combat-arts.md`). Chapter data may give a
 generic enemy extra skills or spells.
 
 ### Named characters
@@ -691,6 +696,6 @@ ranks, class records (usually just the starting class at class level 1), and
 - **Flavour names** for every class, skill and seal: closer to shipping
   (Nick). They must not copy Fire Emblem names.
 - **Number scale:** all stats, caps and EXP numbers rescale with ticket 0013.
-- **How Combat Arts (0014) relate to mastery actives:** decided in 0014.
+- **How Combat Arts relate to actives:** decided in `combat-arts.md` (0014).
 - **Where the tier seals and Reclass Seals come from** (shops, chests, story):
   chapter and shop data (0009 and later).
