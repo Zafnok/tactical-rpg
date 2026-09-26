@@ -20,6 +20,12 @@ Source: ticket 0010
 >
 > **Battle effect of a support:** "for now small flat bonus is OK but pair
 > abilities might be added far in the future"
+>
+> **Review of the first draft** (same day): "I think the numbers you picked
+> might be too easy to achieve. C is ok to reach early but A should really
+> take a long time." / "for combining bonus we should just disallow that and
+> take the highest bonus available" / "support conversations should be
+> viewable after unlock when in a camp or hub or something"
 
 Options he was shown: A = FE GBA / Path of Radiance supports, B = Three Houses
 hub activities, C = Triangle Strategy / Unicorn Overlord camp events, D = main
@@ -34,7 +40,10 @@ script only.
   scripted scenes between chapters. They don't need grinding and have no
   mechanical effect.
 - **Unlimited A-ranks** per unit.
-- **Small flat Hit/Avoid bonus** when supported partners are close.
+- **C comes early, A takes a long time** (Nick).
+- **Small flat Hit/Avoid bonus** from the **single best** supported partner
+  nearby; bonuses never combine (Nick).
+- Conversations are **viewed at camp** once unlocked (Nick).
 - **Not now:** hub activities (far future, maybe never) and pair abilities
   (far future). Each is a parked ticket (see below).
 - **No romance** (from `setting-and-tone.md`, 0007). Supports are friendship,
@@ -60,13 +69,15 @@ script only.
 
 ### Ranks and thresholds
 
-Ranks are **C → B → A**. Points are per pair and cumulative (*tunable*):
+Ranks are **C → B → A**. Points are per pair and cumulative. Nick fixed the
+shape (C early, A "should really take a long time"); the numbers are
+*tunable*:
 
 | Rank | Points needed |
 | ---- | ------------- |
 | C | 20 |
-| B | 50 |
-| A | 90 |
+| B | 80 |
+| A | 180 |
 
 - Reaching a threshold **unlocks** that rank's conversation. The rank is
   **gained only when the conversation is viewed** (FE GBA).
@@ -100,16 +111,19 @@ A pair gains points only when **both units are deployed and on the map**
   action. Nothing counts for an ally that isn't in a support pair with the
   caster.
 - Rough pace: a pair that fights side by side and ends most turns adjacent
-  gets about 8–12 points per chapter, so C after ~2 chapters and A after
-  ~8–10. A healer who heals the same ally often gets there faster.
+  gets about 8–12 points per chapter, so **C after ~2 chapters, B after ~7
+  and A after ~15–20**: an A-rank is a long campaign's worth of fighting side
+  by side. A healer who heals the same ally often gets there somewhat faster.
+  If the campaign length (0008) turns out much shorter, scale B and A down
+  so A stays reachable late in a single playthrough.
   `stats-and-combat.md`'s tuning work (0013/playtest) can change these.
 - Rewind (`death-and-difficulty.md`) rolls support points back like every
   other battle state change (they are ordinary events).
 
 ### Battle bonus
 
-When a unit fights, it gets a bonus for **each supported partner within 3
-tiles** (Manhattan distance, *tunable*) that is on the map:
+When a unit fights, it gets the bonus of its **best-ranked supported
+partner within 3 tiles** (Manhattan distance, *tunable*) that is on the map:
 
 | Partner's rank with this unit | Hit | Avoid |
 | ----------------------------- | --- | ----- |
@@ -117,9 +131,10 @@ tiles** (Manhattan distance, *tunable*) that is on the map:
 | B | +10 | +10 |
 | A | +15 | +15 |
 
-- Bonuses from several partners **add up**, with a total cap of **+20 Hit
-  and +20 Avoid** (*tunable*; the cap keeps unlimited A-ranks from breaking
-  the hit maths in `stats-and-combat.md`).
+- **Bonuses never combine** (Nick). With several partners in range, only the
+  highest rank counts (e.g. an A partner and a C partner nearby → +15/+15).
+  So the most a unit can ever get is the A bonus, whatever its number of
+  A-ranks.
 - The bonus applies to attacking and to defending (counters).
 - The forecast shows the bonus as part of the numbers, and the unit info
   screen lists the unit's supports and ranks. How it looks is up to the UI
@@ -137,9 +152,11 @@ tiles** (Manhattan distance, *tunable*) that is on the map:
 
 ### Viewing support conversations
 
-*Claude's choice (presentation):* support conversations are viewed **between
-chapters**, from a **Supports** list reached from the between-chapters flow
-(beside Preparations), not during a battle. The list shows each unlocked
+Once unlocked, a support conversation can be viewed **at camp** (Nick:
+"viewable after unlock when in a camp or hub or something"), never during a
+battle. Camp is the between-chapters screen, reached before Preparations; it
+holds a **Supports** list next to the camp events. If a hub (1004) is ever
+built, the Supports list moves into it. The list shows each unlocked
 conversation (pair and rank) and marks new ones. They use the normal two-portrait dialogue player (0702/0704).
 
 ## Rules: camp events

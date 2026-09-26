@@ -74,13 +74,14 @@ story pipeline. Then create a `10xx` implementation ticket (don't implement).
   GBA supports) and C (camp events)**, plus the newer-FE rule that healing or
   buffing a partner raises support. Follow-up: "Supports everywhere, camp for
   extras"; **unlimited** A-ranks; a **small flat bonus** for now.
-- Recorded in `docs/design/supports.md`: pairs, C/B/A thresholds (20/50/90),
+- Recorded in `docs/design/supports.md`: pairs, C/B/A thresholds (20/80/180),
   point gain (+1 adjacent at end of player phase, +3 fight next to partner,
-  +3 heal/buff, +2 item), Hit/Avoid +5/+10/+15 within 3 tiles, capped at +20
-  (the cap is Claude's addition, because unlimited A-ranks would otherwise
-  stack). All numbers are *tunable*.
-- Claude's presentation choice: conversations are viewed between chapters,
-  not mid-battle. Paired endings are left as an open sub-question.
+  +3 heal/buff, +2 item), Hit/Avoid +5/+10/+15 from the best partner within 3 tiles.
+  All numbers are *tunable*.
+- Nick reviewed the first draft (PR #32) and changed three things: A must
+  take much longer (thresholds 20/50/90 → 20/80/180), bonuses never combine
+  (best partner only, replacing a +20 cap), and conversations are viewed at
+  camp once unlocked. Paired endings are left as an open sub-question.
 - Follow-up tickets: **1002** (support rules + data), **1003** (Supports/Camp
   screens), **1004** (parked: hub activities, "far future or maybe never"),
   **1005** (parked: pair abilities, "far future").

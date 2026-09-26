@@ -36,7 +36,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
   optional thresholds override, optional starting points, and the conversation
   ids for C/B/A (the scripts can be placeholders).
 - A tuning record with the point values, thresholds, bonus table, range (3)
-  and cap (+20/+20) from `supports.md`.
+  and the no-stacking rule from `supports.md`.
 - `core::support`: `SupportTable`, and `SupportState` per pair (points, rank,
   unlocked-but-unviewed rank, whether a rank was gained this chapter). Pure
   functions add points, unlock ranks and view a conversation.
@@ -44,7 +44,8 @@ None. Every rule and number comes from `supports.md`. The numbers there are
   fighting with an adjacent partner, and healing, buffing or using an item on
   a partner. Emitted as `Event::SupportPoints { a, b, amount }` so that rewind
   (0307) and replay just work.
-- Bonus: Hit/Avoid per partner within range, summed, capped, and fed into the
+- Bonus: Hit/Avoid of the single best-ranked partner within range (never
+  summed), fed into the
   forecast (0304) for attacks and counters.
 - Campaign: support state is saved with the campaign (0802) and applied after
   a battle. It is removed for units that died in Classic and kept for Casual
@@ -72,7 +73,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
    `supports.md` ("Gaining points"). A heal or buff on several allies gives
    points to every affected pair.
 5. Add the bonus to the forecast input: Manhattan distance, the partner must
-   be on the map, and the cap applies after summing.
+   be on the map, and only the highest-ranked partner in range counts.
 6. Carry the state through the campaign and the save format. If 0802 has a
    save version, bump it and follow its ADR's rule for old saves.
 
@@ -81,7 +82,7 @@ None. Every rule and number comes from `supports.md`. The numbers there are
 - [ ] Pairs load from data; invalid data gives a clear content error.
 - [ ] Every point rule in `supports.md` has a test that names it.
 - [ ] Points stop at an unlocked, unviewed threshold; one rank per pair per chapter.
-- [ ] Forecast Hit/Avoid include the capped bonus for attacks and counters.
+- [ ] Forecast Hit/Avoid include the best partner's bonus (never combined) for attacks and counters.
 - [ ] Rewind undoes support points; a replay reproduces them.
 - [ ] A Classic death removes the unit's supports; a Casual retreat keeps them.
 - [ ] Support state survives save/load.
@@ -89,9 +90,9 @@ None. Every rule and number comes from `supports.md`. The numbers there are
 
 ## Tests required
 
-- Unit: each point rule, thresholds, cap, one-rank-per-chapter, death/retreat.
+- Unit: each point rule, thresholds, best-partner-only bonus, one-rank-per-chapter, death/retreat.
 - Property: points never pass the next unviewed threshold; the bonus never
-  passes the cap; pairs are symmetric ((A,B) == (B,A)).
+  exceeds the A-rank bonus; pairs are symmetric ((A,B) == (B,A)).
 - Integration: a scripted battle where a healer heals a partner and two units
   fight side by side, checking the events and the final `SupportState`.
 

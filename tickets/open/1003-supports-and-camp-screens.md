@@ -16,9 +16,10 @@ completed:
 ## Context
 
 [`docs/design/supports.md`](../../docs/design/supports.md) (ticket 0010):
-support conversations are read **between chapters** from a **Supports** list,
-and optional scripted **camp events** (extras, Triangle Strategy style) from a
-**Camp** list. The rules and state come from 1002, the dialogue player from
+once unlocked, support conversations are read **at camp** (the
+between-chapters screen, before Preparations) from a **Supports** list, next
+to a list of optional scripted **camp events** (extras, Triangle Strategy
+style). The rules and state come from 1002, the dialogue player from
 0702/0704, and the between-chapters flow from 0801/0408.
 
 ## Nick input
@@ -39,8 +40,8 @@ new.
   player. Seen events are remembered in the campaign state and saved.
 - A camp event data format (id, conditions, script id) with content
   validation.
-- Entry points to both screens from the between-chapters flow (beside
-  Preparations).
+- A **Camp** screen in the between-chapters flow (before Preparations) that
+  holds both lists.
 - The unit info screen lists the unit's support partners and ranks.
 - One placeholder support conversation and one placeholder camp event in the
   data, so the screens can be tested.
