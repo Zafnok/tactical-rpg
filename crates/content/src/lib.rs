@@ -11,7 +11,7 @@ pub mod ron_loader;
 
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
-pub use keymap::{Action, Chord, Key, KeymapDef, RepeatDef};
+pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
 pub use palette::PaletteDef;
 
 /// All validated game content.
@@ -19,7 +19,7 @@ pub use palette::PaletteDef;
 pub struct Content {
     /// Named colours (ADR-0012).
     pub palette: PaletteDef,
-    /// Default key bindings and repeat timings (ADR-0006).
+    /// Key bindings for every layout, and repeat timings (ADR-0015).
     pub keymap: KeymapDef,
     /// Font atlas layout; the image is `bundle::bytes(font::ATLAS_PNG_PATH)`.
     pub font: FontAtlasDef,

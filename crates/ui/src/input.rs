@@ -3,13 +3,13 @@
 //! releases plus frame time into the actions screens see, including key
 //! repeat for held cursor keys.
 //!
-//! [`Key`], [`Chord`] and [`Action`] are defined in `trpg-content` (its
-//! keymap loader validates them) and re-exported here.
+//! [`Key`], [`Chord`], [`Action`] and [`Layout`] are defined in
+//! `trpg-content` (its keymap loader validates them) and re-exported here.
 
 use std::collections::HashMap;
 use std::time::Duration;
 
-pub use trpg_content::keymap::{Action, Chord, Key, KeymapDef, RepeatDef};
+pub use trpg_content::keymap::{Action, Chord, Key, KeymapDef, Layout, RepeatDef};
 
 /// At most this many repeats are emitted by one [`InputState::update`], so a
 /// lag spike can't teleport the cursor across the map.
@@ -23,12 +23,42 @@ pub struct Keymap {
 }
 
 impl Keymap {
-    /// Builds the lookup from a validated keymap definition.
-    pub fn from_def(def: &KeymapDef) -> Self {
+    /// A keymap with exactly `bindings`. A chord listed twice keeps its
+    /// last action.
+    pub fn new(bindings: impl IntoIterator<Item = (Chord, Action)>, repeat: RepeatDef) -> Self {
         Self {
-            bindings: def.bindings.iter().map(|(&c, &a)| (c, a)).collect(),
-            repeat: def.repeat,
+            bindings: bindings.into_iter().collect(),
+            repeat,
         }
+    }
+
+    /// `layout`'s bindings from a validated keymap definition, with its
+    /// repeat timings. A definition without that layout (only possible when
+    /// built by hand) gives a keymap with nothing bound.
+    pub fn for_layout(def: &KeymapDef, layout: Layout) -> Self {
+        let bindings = def.bindings(layout).into_iter().flatten();
+        Self::new(bindings.map(|(&c, &a)| (c, a)), def.repeat)
+    }
+
+    /// The keys that work before any layout is chosen, so the layout picker
+    /// can be used whichever hand the player types with: `Up`/`w` and
+    /// `Down`/`s` move, `f`, `j`, `Enter` and `Space` confirm. Nothing
+    /// cancels (a layout must be picked) and nothing else is bound.
+    pub fn layout_picker(repeat: RepeatDef) -> Self {
+        let plain = |key, action| (Chord::plain(key), action);
+        Self::new(
+            [
+                plain(Key::Up, Action::CursorUp),
+                plain(Key::W, Action::CursorUp),
+                plain(Key::Down, Action::CursorDown),
+                plain(Key::S, Action::CursorDown),
+                plain(Key::F, Action::Confirm),
+                plain(Key::J, Action::Confirm),
+                plain(Key::Enter, Action::Confirm),
+                plain(Key::Space, Action::Confirm),
+            ],
+            repeat,
+        )
     }
 
     /// The action bound to `chord`, if any. `Shift+h` and `h` are distinct:
@@ -119,6 +149,14 @@ impl InputState {
         &self.keymap
     }
 
+    /// Switches to other bindings (the player picked a layout). Forgets held
+    /// keys, pending presses and any running repeat, so nothing pressed
+    /// under the old bindings leaks into the new ones; a key still down is
+    /// ignored until it is pressed again.
+    pub fn set_keymap(&mut self, keymap: Keymap) {
+        *self = Self::new(keymap);
+    }
+
     /// A key went down (with its modifier state). Unbound chords and keys
     /// already held are ignored.
     pub fn key_down(&mut self, chord: Chord) {
@@ -203,7 +241,7 @@ mod tests {
     }
 
     /// A fixed test keymap, independent of the shipped defaults.
-    fn test_def(delay_ms: u32, interval_ms: u32) -> KeymapDef {
+    fn test_keymap(delay_ms: u32, interval_ms: u32) -> Keymap {
         let bindings = [
             ("h", CursorLeft),
             ("Left", CursorLeft),
@@ -214,15 +252,14 @@ mod tests {
             ("Shift+h", Info),
         ]
         .into_iter()
-        .map(|(c, a)| (chord(c), a))
-        .collect();
-        KeymapDef {
+        .map(|(c, a)| (chord(c), a));
+        Keymap::new(
             bindings,
-            repeat: RepeatDef {
+            RepeatDef {
                 delay_ms,
                 interval_ms,
             },
-        }
+        )
     }
 
     fn default_state() -> InputState {
@@ -230,7 +267,7 @@ mod tests {
     }
 
     fn state_with(delay_ms: u32, interval_ms: u32) -> InputState {
-        InputState::new(Keymap::from_def(&test_def(delay_ms, interval_ms)))
+        InputState::new(test_keymap(delay_ms, interval_ms))
     }
 
     /// Seconds for `ms` milliseconds.
@@ -267,6 +304,60 @@ mod tests {
         assert_eq!(km.primary(CursorLeft), Some(chord("h")));
         assert_eq!(km.primary(Confirm), Some(chord("f")));
         assert_eq!(km.primary(Action::Cancel), None);
+    }
+
+    #[test]
+    fn for_layout_picks_that_layouts_bindings() {
+        let def = trpg_content::load_embedded()
+            .map(|c| c.keymap)
+            .unwrap_or_default();
+        let right = Keymap::for_layout(&def, Layout::RightHanded);
+        let left = Keymap::for_layout(&def, Layout::LeftHanded);
+        assert_eq!(right.action(chord("f")), Some(Confirm));
+        assert_eq!(right.action(chord("j")), None);
+        assert_eq!(left.action(chord("j")), Some(Confirm));
+        assert_eq!(left.action(chord("f")), None);
+        assert_eq!(left.action(chord(";")), Some(Action::PrevUnit));
+        assert_eq!(left.repeat(), def.repeat);
+        assert_eq!(right.chords_for(Confirm).len(), 1);
+        let empty = Keymap::for_layout(&KeymapDef::default(), Layout::LeftHanded);
+        assert_eq!(empty.primary(Confirm), None);
+    }
+
+    #[test]
+    fn layout_picker_keys_work_for_either_hand() {
+        let km = Keymap::layout_picker(RepeatDef::default());
+        for (c, a) in [
+            ("Up", CursorUp),
+            ("w", CursorUp),
+            ("Down", CursorDown),
+            ("s", CursorDown),
+            ("f", Confirm),
+            ("j", Confirm),
+            ("Enter", Confirm),
+            ("Space", Confirm),
+        ] {
+            assert_eq!(km.action(chord(c)), Some(a), "{c}");
+        }
+        assert_eq!(km.chords_for(Confirm).len(), 4);
+        assert_eq!(km.primary(Action::Cancel), None);
+        assert_eq!(km.action(chord("d")), None);
+        assert_eq!(km.repeat(), RepeatDef::default());
+    }
+
+    #[test]
+    fn set_keymap_switches_bindings_and_forgets_held_keys() {
+        let mut s = default_state();
+        s.key_down(chord("l"));
+        s.key_down(chord("f"));
+        s.set_keymap(Keymap::layout_picker(RepeatDef::default()));
+        assert!(!s.is_held(Confirm));
+        assert_eq!(s.update(ms(1000)), vec![]);
+        // `f` is still physically down: ignored until pressed again.
+        s.key_up(Key::F);
+        s.key_down(chord("j"));
+        assert_eq!(s.update(0.0), vec![Confirm]);
+        assert_eq!(s.keymap().action(chord("l")), None);
     }
 
     #[test]
