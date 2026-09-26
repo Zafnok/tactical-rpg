@@ -18,22 +18,22 @@ expression: snap
                                                                                                     
                                                                                                     
                                                                                                     
- Palette (33)                                                                                       
+ Palette (45)                                                                                       
  ██ ally                 ██ attack_range         ██ black                ██ cursor                  
  ██ danger_zone          ██ enemy                ██ exp_bar              ██ floor                   
- ██ forest               ██ fort                 ██ grass                ██ heal_range              
+ ██ floor_bg             ██ forest               ██ forest_bg            ██ fort                    
+ ██ fort_bg              ██ grass                ██ grass_bg             ██ heal_range              
  ██ hp_high              ██ hp_low               ██ hp_mid               ██ mountain                
- ██ move_range           ██ neutral              ██ panel_bg             ██ panel_border            
- ██ panel_border_focus   ██ peak                 ██ player               ██ road                    
- ██ sea                  ██ stone                ██ text                 ██ text_dim                
- ██ text_highlight       ██ thicket              ██ water                ██ white                   
- ██ wood                                                                                            
+ ██ mountain_bg          ██ move_range           ██ neutral              ██ panel_bg                
+ ██ panel_border         ██ panel_border_focus   ██ path                 ██ peak                    
+ ██ peak_bg              ██ player               ██ road                 ██ road_bg                 
+ ██ sea                  ██ stone                ██ stone_bg             ██ text                    
+ ██ text_dim             ██ text_highlight       ██ thicket              ██ thicket_bg              
+ ██ water                ██ water_bg             ██ white                ██ wood                    
+ ██ wood_bg                                                                                         
                                                                                                     
  The quick brown fox jumps over the lazy dog. 0123456789 ÀÉÎÕÜ àéîõü ß ¿¡ «» ← ↑ → ↓                
  ┌─ Unit ───────────────────────────────┐  ╔═ Ranges ═════════════════════════════════════════════╗ 
- │ Aldo vs Brigand                      │  ║     move        attack        heal        danger     ║ 
- │ HP ■■■■■■■■■■  ░▒▓█▀▄▌▐              │  ║ .. ♣♣ ≈≈ ^^ ▓▓  A· Bˇ C! D• []                       ║ 
- └──────────────────────────────────────┘  ╚══════════════════════════════════════════════════════╝ 
 --- colours ---
 abbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -54,19 +54,19 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 abbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 accaddddaaaaaaaaaaaaaaaaaeeaddddddddddddaaaaaaaaaffadddddaaaaaaaaaaaaaaaaggaddddddaaaaaaaaaaaaaaaaaa
 ahhadddddddddddaaaaaaaaaaiiadddddaaaaaaaaaaaaaaaajjadddddddaaaaaaaaaaaaaakkadddddaaaaaaaaaaaaaaaaaaa
-alladdddddaaaaaaaaaaaaaaammaddddaaaaaaaaaaaaaaaaannadddddaaaaaaaaaaaaaaaaooaddddddddddaaaaaaaaaaaaaa
-appadddddddaaaaaaaaaaaaaaqqaddddddaaaaaaaaaaaaaaarraddddddaaaaaaaaaaaaaaassaddddddddaaaaaaaaaaaaaaaa
-attaddddddddddaaaaaaaaaaauuadddddddaaaaaaaaaaaaaavvaddddddddaaaaaaaaaaaaawwaddddddddddddaaaaaaaaaaaa
-axxaddddddddddddddddddaaayyaddddaaaaaaaaaaaaaaaaazzaddddddaaaaaaaaaaaaaaaAAaddddaaaaaaaaaaaaaaaaaaaa
-aBBadddaaaaaaaaaaaaaaaaaaCCadddddaaaaaaaaaaaaaaaaaaaddddaaaaaaaaaaaaaaaaaddaddddddddaaaaaaaaaaaaaaaa
-abbaddddddddddddddaaaaaaaDDadddddddaaaaaaaaaaaaaaEEadddddaaaaaaaaaaaaaaaaFFadddddaaaaaaaaaaaaaaaaaaa
-aGGaddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+alladdddddddaaaaaaaaaaaaammaddddddaaaaaaaaaaaaaaannadddddddddaaaaaaaaaaaaooaddddaaaaaaaaaaaaaaaaaaaa
+appadddddddaaaaaaaaaaaaaaqqadddddaaaaaaaaaaaaaaaarraddddddddaaaaaaaaaaaaassaddddddddddaaaaaaaaaaaaaa
+attadddddddaaaaaaaaaaaaaauuaddddddaaaaaaaaaaaaaaavvaddddddaaaaaaaaaaaaaaawwaddddddddaaaaaaaaaaaaaaaa
+axxadddddddddddaaaaaaaaaayyaddddddddddaaaaaaaaaaazzadddddddaaaaaaaaaaaaaaAAaddddddddaaaaaaaaaaaaaaaa
+aBBaddddddddddddaaaaaaaaaCCaddddddddddddddddddaaaDDaddddaaaaaaaaaaaaaaaaaEEaddddaaaaaaaaaaaaaaaaaaaa
+aFFadddddddaaaaaaaaaaaaaaGGaddddddaaaaaaaaaaaaaaaHHaddddaaaaaaaaaaaaaaaaaIIadddddddaaaaaaaaaaaaaaaaa
+aJJadddaaaaaaaaaaaaaaaaaaKKadddddaaaaaaaaaaaaaaaaLLaddddddddaaaaaaaaaaaaaaaaddddaaaaaaaaaaaaaaaaaaaa
+addaddddddddaaaaaaaaaaaaabbaddddddddddddddaaaaaaaMMadddddddaaaaaaaaaaaaaaNNaddddddddddaaaaaaaaaaaaaa
+aOOadddddaaaaaaaaaaaaaaaaPPaddddddddaaaaaaaaaaaaaQQadddddaaaaaaaaaaaaaaaaRRaddddaaaaaaaaaaaaaaaaaaaa
+aSSadddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aHHIIIIIIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHaaJJIIIIIIIIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJa
-aHKLLLLKMMKNNNNNNNKKKKKKKKKKKKKKKKKKKKKKHaaJKOOOOOOOOOOOOKPPPPPPPPPPPPKQQQQQQQQQQQQKRRRRRRRRRRRRKKJa
-aHKKKKSSSSSSTTTUKKVVVVVVVVKKKKKKKKKKKKKKHaaJKWWKXXKYYKZZK00KKLLK11K22K33K44KKKKKKKKKKKKKKKKKKKKKKKJa
-aHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHaaJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJa
+aTTUUUUUUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTaaVVUUUUUUUUVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVa
 --- legend ---
 a = fg:text bg:black
 b = fg:text_highlight bg:black
@@ -79,49 +79,40 @@ h = fg:danger_zone bg:black
 i = fg:enemy bg:black
 j = fg:exp_bar bg:black
 k = fg:floor bg:black
-l = fg:forest bg:black
-m = fg:fort bg:black
-n = fg:grass bg:black
-o = fg:heal_range bg:black
-p = fg:hp_high bg:black
-q = fg:hp_low bg:black
-r = fg:hp_mid bg:black
-s = fg:mountain bg:black
-t = fg:move_range bg:black
-u = fg:neutral bg:black
-v = fg:panel_bg bg:black
-w = fg:panel_border bg:black
-x = fg:panel_border_focus bg:black
-y = fg:peak bg:black
-z = fg:player bg:black
-A = fg:road bg:black
-B = fg:sea bg:black
-C = fg:stone bg:black
-D = fg:thicket bg:black
-E = fg:water bg:black
-F = fg:white bg:black
-G = fg:wood bg:black
-H = fg:panel_border bg:panel_bg
-I = fg:text_highlight bg:panel_bg
-J = fg:panel_border_focus bg:panel_bg
-K = fg:text bg:panel_bg
-L = fg:player bg:panel_bg
-M = fg:text_dim bg:panel_bg
-N = fg:enemy bg:panel_bg
-O = fg:text bg:move_range
-P = fg:text bg:attack_range
-Q = fg:text bg:heal_range
-R = fg:text bg:danger_zone
-S = fg:hp_high bg:panel_bg
-T = fg:hp_mid bg:panel_bg
-U = fg:hp_low bg:panel_bg
-V = fg:exp_bar bg:panel_bg
-W = fg:grass bg:panel_bg
-X = fg:forest bg:panel_bg
-Y = fg:water bg:panel_bg
-Z = fg:mountain bg:panel_bg
-0 = fg:stone bg:panel_bg
-1 = fg:#802d28 bg:panel_bg
-2 = fg:ally bg:panel_bg
-3 = fg:neutral bg:panel_bg
-4 = fg:cursor bg:panel_bg
+l = fg:floor_bg bg:black
+m = fg:forest bg:black
+n = fg:forest_bg bg:black
+o = fg:fort bg:black
+p = fg:fort_bg bg:black
+q = fg:grass bg:black
+r = fg:grass_bg bg:black
+s = fg:heal_range bg:black
+t = fg:hp_high bg:black
+u = fg:hp_low bg:black
+v = fg:hp_mid bg:black
+w = fg:mountain bg:black
+x = fg:mountain_bg bg:black
+y = fg:move_range bg:black
+z = fg:neutral bg:black
+A = fg:panel_bg bg:black
+B = fg:panel_border bg:black
+C = fg:panel_border_focus bg:black
+D = fg:path bg:black
+E = fg:peak bg:black
+F = fg:peak_bg bg:black
+G = fg:player bg:black
+H = fg:road bg:black
+I = fg:road_bg bg:black
+J = fg:sea bg:black
+K = fg:stone bg:black
+L = fg:stone_bg bg:black
+M = fg:thicket bg:black
+N = fg:thicket_bg bg:black
+O = fg:water bg:black
+P = fg:water_bg bg:black
+Q = fg:white bg:black
+R = fg:wood bg:black
+S = fg:wood_bg bg:black
+T = fg:panel_border bg:panel_bg
+U = fg:text_highlight bg:panel_bg
+V = fg:panel_border_focus bg:panel_bg

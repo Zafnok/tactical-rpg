@@ -14,11 +14,11 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `01xx` | M0 Foundation | Workspace, CI on 3 OSes, security scanners, SonarCloud, mutation gate, release + Pages pipelines | 0101–0108 |
 | `02xx` | M1 Engine | Coloured glyph console in a window and browser, keyboard input with right/left-handed layouts, screens + test harness | 0201–0208 |
 | `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills — pure and heavily tested | 0301–0311 |
-| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus | 0401–0412 |
+| `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus, combat scene art | 0401–0413 |
 | `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase | 0501–0502 |
 | `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass | 0601–0603 |
 | `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script, lead reply choices | 0701–0708 |
-| `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options | 0801–0805 |
+| `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options, colour themes | 0801–0806 |
 | `09xx` | M8 Release | itch.io, Windows polish, Steam readiness | 0901–0903 |
 
 ## Nick's queue (answer these first; any order within a row)
@@ -69,6 +69,7 @@ early so every later PR is checked by them.
   Parked far-future ideas: hub activities (1004), pair abilities (1005).
 - Controller support (needed for Steam Deck) — created by 0903.
 - Class tiers 4 and up; tier-3 class skills (1001).
+- Custom 16×16 class icons vs name initials on the map (1006).
 - Audio and music.
 - Colour-blind palette variant; text size options.
 - Difficulty modes; more chapters (story pipeline repeats per chapter).

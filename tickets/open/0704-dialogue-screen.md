@@ -17,7 +17,8 @@ completed:
 
 Renders a `DialoguePlayer` (0702) with portraits (0703): two characters on
 screen, speaker bright, listener dimmed, text box beneath
-([ADR-0012](../../docs/adr/0012-visual-style.md)).
+([ADR-0018](../../docs/adr/0018-visual-style-v2.md); layout Nick approved in
+`docs/screenshots/0011-conversation.png`).
 
 ## Nick input
 
@@ -32,10 +33,13 @@ typewriter reveal, advance/fast-forward/skip, caption and narration styles.
 
 ## Implementation steps
 
-1. Layout (100×32): portraits at left `x=4` and right `x=72`, `y=4`, each in a
-   single-line frame; name plates under each portrait; the text box is a
-   double-line box across the bottom (rows 22–29), 3 text lines, ~70 chars wide,
-   with the speaker's name on the top border. Caption, if any, top-centre.
+1. Layout (100×32): portraits are 32×16 cells, each in a 34×18 frame at left
+   `x=1` and right `x=65`, `y=1`; the **speaker's frame is double-line** in
+   `panel_border_focus`, the listener's single-line; name plates on row 19; the
+   text box is a single-line box across the bottom (rows 21–27, full width), 3
+   text lines, with the speaker's name on the top border. The right-hand
+   portrait is drawn mirrored so it faces the speaker. Caption, if any,
+   top-centre.
    Narration: portraits dimmed, text centred in the box, italic-feel via `text_dim`.
 2. Speaker at full brightness; listener `dim(0.45)`; empty side draws nothing.
 3. `word_wrap(text, width) -> Vec<String>`: splits on spaces, never splits

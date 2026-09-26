@@ -1,52 +1,71 @@
 ---
 name: ascii-art
-description: Author ASCII visual content — character portraits, map terrain glyphs, UI mockups, title screen art — following the project's visual style (ADR-0012). Use for portrait files, map files, and any mockup shown to Nick.
+description: Author visual content — character portraits (32×32 shaded pixel art in half-block cells), map terrain glyphs, UI mockups, title screen art — following the project's visual style (ADR-0018, docs/design/look-and-feel.md). Use for portrait files, map files, and any mockup shown to Nick.
 ---
 
 # ASCII art
 
-Read `docs/adr/0012-visual-style.md`. Key facts: cells are 8×16 px (twice as
-tall as wide), map tiles are 2 cells wide, every cell has fg + bg colour from
-named palette entries.
+Read `docs/adr/0018-visual-style-v2.md` and `docs/design/look-and-feel.md`
+(Nick's decisions, with screenshots in `docs/screenshots/0011-*.png`). Key
+facts: cells are 8×16 px (twice as tall as wide), map tiles are 2 cells wide,
+every cell has fg + bg colour from named palette entries, and the palette is
+mood D "Earthy painterly".
 
 ## Cell aspect ratio
 
-Because cells are tall, a shape that looks square in a text editor with a
-square-ish font looks **tall** in game. To draw a circle-ish face, make it about
-twice as many columns as rows. Portraits are 24 columns × 12 rows and should
-read as square.
+Because cells are tall, a shape that looks square in a text editor looks
+**tall** in game. For glyph art (title screens, UI), make shapes about twice as
+many columns as rows. Portraits avoid the problem: they are pixel grids (below).
 
 ## Portraits
 
-- Canvas: exactly 24×12. Pad with spaces; keep trailing spaces (the repo's
-  `.editorconfig` preserves them under `assets/`).
-- Composition: head and shoulders, face in the upper-middle, eyes on row 4–5.
-  Leave one blank column on each side so the frame doesn't touch the art.
-- Distinguish characters by **silhouette first** (hair shape, headgear, collar,
-  weapon hilt over shoulder), colour second.
-- Expressions change as few cells as possible (eyes, brows, mouth) so they read
-  as the same person. Required: `neutral`, `happy`, `angry`, `sad`, `surprised`.
-- Useful glyphs: `` / \ | _ - ( ) ' ` , . `` for lines; `░ ▒ ▓ █ ▀ ▄ ▌ ▐` for shading
-  and fills; `o O 0 @ * ^ v ~` for features. Only use glyphs present in the
-  font chosen in ticket 0203 (see `assets/fonts/README.md` once it exists).
-- Colour layer: same 24×12 grid of single-character colour keys defined in the
-  file's legend (e.g. `s` = skin, `h` = hair, `a` = armour, `.` = default).
-  Keep to 4–6 colours per portrait; use background colour sparingly.
-- After authoring, render it (the portrait viewer from ticket 0703, or a snapshot
-  test) and look at it — don't commit art you haven't seen rendered.
+Nick rejected both line-art ASCII and block-shaded ASCII faces as unexpressive.
+Portraits are **shaded pixel art**:
+
+- Canvas: a **32×32 grid of colour keys**, one per pixel, `.` = transparent.
+  The game draws it as 32×16 cells of `▀` (fg = top pixel, bg = bottom pixel),
+  so pixels are square. See the format in ticket 0703 / `assets/portraits/README.md`.
+- Composition: head and shoulders; face in the upper-middle (hair from row
+  ~1, brows ~12, eyes ~13–14, mouth ~20, chin ~23, shoulders from ~26); a dark
+  outline (`K`-like key) around hair and face.
+- **Shading:** light from the **upper left**. Mid-tone down the right side of the
+  face and jaw; shadow under the fringe, nose, lower lip and chin; soft highlight
+  on the left cheek and nose bridge; darker neck under the chin. Keep it
+  subtle, and **lighter still on young characters**. Nick said heavy shade
+  lines read as wrinkles and age the face.
+- **Expressive and human:** Nick wants clear emotion. Expressions change only
+  brows, eyes and mouth pixels so they read as the same person. Required:
+  `neutral`, `happy`, `angry`, `sad`, `surprised`. Useful moves: one brow
+  raised (confident), eyes squeezed into arcs + open smile with teeth (happy),
+  brows slammed down and in + bared teeth (angry), brows up in the middle +
+  downturned mouth + a tear (sad).
+- Distinguish characters by **silhouette first** (hair shape, headgear,
+  collar, weapon over the shoulder), colour second.
+- Keep to a small key set per portrait: outline, hair ×3 (base, highlight,
+  shadow), skin ×3–4 (base, mid, shadow, highlight), eyes, mouth ×2, clothes
+  ×3–4. Keys map to palette names.
+- **No mini-portraits.** Portraits appear only in conversations (Nick dropped
+  the battle-panel mini portrait: at 16×16 it looked like a meme face).
+- After authoring, render it (the portrait viewer from ticket 0703, or a
+  snapshot) and **look at it**. Don't commit art you haven't seen rendered.
+  Nick iterates character by character, so expect revisions.
 
 ## Map terrain
 
 - Two glyphs per tile. Terrain must be readable **without** colour (different
-  glyph shapes), and distinct **with** colour.
-- Busy textures (`♣♣`, `≈≈`) for costly terrain, calm ones (`..`, `  `) for
+  glyph shapes), and distinct **with** colour: glyph in `<terrain>`,
+  background in `<terrain>_bg`.
+- Busy textures (`♣♣`, `≈≈`, `^^`) for costly terrain, calm ones (`..`) for
   open ground, so the eye reads the map's flow.
-- Units must always stand out over terrain: units use bright fg; terrain uses
-  mid/dark fg.
+- Units (two-letter name labels in faction colour, thin HP bar under the tile)
+  must stand out over terrain: units use bright fg; terrain uses mid/dark fg.
 
 ## Mockups for Nick
 
-When asking Nick about anything visual, show an ASCII mockup in a fenced block,
-at real proportions (remember tiles are 2 characters wide), and describe the
-colours in words next to it, since chat can't show them. Where possible, also
-render it in-game and share a screenshot.
+Nick judges **rendered images**, not ASCII in chat. Render mockups with the
+game's real font atlas at in-game size (a throwaway tool outside the repo is
+fine: `trpg-content` gives the atlas and `trpg-ui` gives `GlyphBuffer`; blit
+cells to a PNG at 2×). Look at every render yourself before sending it, and fix
+overlaps, cut-off text and invented details (no stats or rules that aren't in
+`docs/design/`). Offer genuinely different options, then iterate on his
+comments. He often asks for more options or a combination.
