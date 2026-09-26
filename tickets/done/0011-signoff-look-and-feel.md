@@ -120,3 +120,8 @@ conventions changed.
 - **For Nick:** the portrait face in the screenshots is only a style sample.
   Real characters get drawn and iterated one by one in 0706. There is no
   portrait in the battle side panel; you dropped it.
+- **Merged main mid-PR:** 0301 had added terrains (thicket, peak, sea, wood,
+  floor, fort) with placeholder colours. They now have palette-D colours, and
+  `terrain.ron` uses per-terrain backgrounds (`<name>_bg`) as the design says.
+  With 45 palette colours, the debug glyph sampler's swatch list pushes its two
+  sample panels off-screen. It is debug-only and still shows every colour.
