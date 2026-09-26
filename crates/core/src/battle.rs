@@ -47,6 +47,24 @@
 //!   ([`Unit::consumables`]). The target is the unit itself or a non-hostile
 //!   unit adjacent to `dest`. The item is used up ([`Event::ItemUsed`]),
 //!   heals ([`Event::Healed`], never above max HP) and ends the action.
+//! - **Shops** ([`UnitAction::Shop`]): a player unit on a shop tile applies
+//!   one or more [`ShopTxn`]s in order, with the party's
+//!   [`gold`](BattleState::gold) (rules in [`crate::shop`]). An empty list is
+//!   refused (leaving a shop without doing anything is not an action).
+//!   Bought weapons, armour and accessories go to the unit's free loadout
+//!   slot (armour only if its class wears it), else the
+//!   [`stock`](BattleState::stock); a bought weapon is equipped if the unit
+//!   had none equipped and can wield it. Bought consumables go into the
+//!   battle pack, past its cap if need be. Selling the equipped weapon equips
+//!   the first other weapon the unit can wield (if any). Each transaction
+//!   emits [`Event::Bought`], [`Event::Sold`] or [`Event::Repaired`] (then
+//!   [`Event::Equipped`] if that changed), then [`Event::GoldChanged`]. If
+//!   any transaction fails, none is applied.
+//! - **Chests** ([`UnitAction::Open`]): a player unit on an unopened chest
+//!   opens it ([`Event::ChestOpened`]): gold goes to the party (then
+//!   [`Event::GoldChanged`]), a consumable into the pack, equipment into the
+//!   stock. A chest opens once. Villages are on hold (no village tile,
+//!   `docs/design/terrain.md`).
 //! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
 //!   the unit can wield, by a ready unit of the current phase. It doesn't
 //!   end the action. No trading: loadouts are fixed for the battle.
@@ -83,13 +101,15 @@
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
 //! the map, units, fallen units, pending reinforcements, objective, turn,
-//! phase, RNG position, battle pack and outcome are all saved. The
+//! phase, RNG position, battle pack, gold, stock, opened chests and outcome
+//! are all saved. The
 //! **terrain, class and item tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
 //! saved because it is battle state (terrain magic changes tiles, 0310).
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::Arc;
 
@@ -98,10 +118,11 @@ use serde::{Deserialize, Serialize};
 use crate::class::{ClassDef, ClassId, ClassTable};
 use crate::combat::{CombatHp, CombatOutcome, CombatantInput, Forecast, Side, forecast, resolve};
 use crate::geom::Pos;
-use crate::item::{BattlePack, ConsumableEffect, ItemDef, ItemId, ItemTable};
+use crate::item::{BattlePack, ConsumableEffect, ItemDef, ItemId, ItemTable, Stock, WEAPON_SLOTS};
 use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
 use crate::rng::SimRng;
+use crate::shop::{self, Gold, Loot, Shop, ShopError};
 use crate::stats::StatValue;
 use crate::terrain::TerrainTable;
 use crate::unit::{Faction, Unit, UnitId};
@@ -224,6 +245,11 @@ pub struct BattleSetup {
     pub items: Arc<ItemTable>,
     /// The player side's consumables.
     pub pack: BattlePack,
+    /// The party's gold, from the campaign.
+    pub gold: Gold,
+    /// The party's stock (items not brought in), from the campaign; gets
+    /// bought and found equipment that doesn't go in a loadout.
+    pub stock: Stock,
     /// The units on the map at the start.
     pub units: Vec<Unit>,
     /// Units that arrive later.
@@ -259,6 +285,61 @@ pub enum UnitAction {
     },
     /// Seize the objective tile (only on it, see [`Objective::Seize`]).
     Seize,
+    /// Buy, sell and repair at the shop on `dest`, in order (at least one).
+    Shop {
+        /// The transactions.
+        txns: Vec<ShopTxn>,
+    },
+    /// Open the chest on `dest`.
+    Open,
+}
+
+/// One transaction of a [`UnitAction::Shop`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ShopTxn {
+    /// Buy one of an item the shop sells.
+    Buy {
+        /// The item.
+        item: ItemId,
+    },
+    /// Sell one of the unit's items, or one from the battle pack.
+    Sell {
+        /// Which item.
+        from: SellFrom,
+    },
+    /// Repair the weapon in a loadout slot (at a blacksmith).
+    Repair {
+        /// The loadout slot.
+        slot: usize,
+    },
+}
+
+/// Which item a [`ShopTxn::Sell`] sells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SellFrom {
+    /// The weapon in this loadout slot.
+    Weapon(usize),
+    /// The worn armour.
+    Armour,
+    /// The worn accessory.
+    Accessory,
+    /// The battle pack item at this index.
+    Pack(usize),
+}
+
+/// Where a bought item went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Destination {
+    /// This loadout weapon slot.
+    WeaponSlot(usize),
+    /// The loadout armour slot.
+    Armour,
+    /// The loadout accessory slot.
+    Accessory,
+    /// The battle pack.
+    Pack,
+    /// The party's stock.
+    Stock,
 }
 
 /// A request to change the battle.
@@ -379,6 +460,51 @@ pub enum Event {
         /// The tile.
         pos: Pos,
     },
+    /// A unit bought an item.
+    Bought {
+        /// The buyer.
+        unit: UnitId,
+        /// The item.
+        item: ItemId,
+        /// Gold paid.
+        price: Gold,
+        /// Where the item went.
+        to: Destination,
+    },
+    /// A unit sold an item.
+    Sold {
+        /// The seller.
+        unit: UnitId,
+        /// The item.
+        item: ItemId,
+        /// Gold got.
+        price: Gold,
+    },
+    /// A unit had a weapon repaired to full durability.
+    Repaired {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon's loadout slot.
+        slot: usize,
+        /// The weapon.
+        item: ItemId,
+        /// Gold paid.
+        cost: Gold,
+    },
+    /// The party's gold changed.
+    GoldChanged {
+        /// The new total.
+        gold: Gold,
+    },
+    /// A unit opened a chest.
+    ChestOpened {
+        /// The unit.
+        unit: UnitId,
+        /// The chest's tile.
+        pos: Pos,
+        /// What was inside.
+        loot: Loot,
+    },
     /// A unit finished its action and is done until its next phase.
     UnitActed {
         /// The unit.
@@ -458,6 +584,23 @@ pub enum CommandError {
     /// Seizing isn't possible: not a seize map, not the seize tile, not a
     /// player unit, or not a lord when the map needs one.
     CannotSeize,
+    /// Only player units can shop or open chests.
+    PlayerOnly(UnitId),
+    /// There is no shop on this tile.
+    NoShop(Pos),
+    /// A shop action with no transactions.
+    NoTransactions,
+    /// A shop transaction was refused (none was applied).
+    Shop {
+        /// The index of the refused transaction.
+        txn: usize,
+        /// Why.
+        error: ShopError,
+    },
+    /// There is no chest on this tile.
+    NoChest(Pos),
+    /// The chest on this tile was already opened.
+    AlreadyOpened(Pos),
 }
 
 impl From<MoveError> for CommandError {
@@ -505,6 +648,14 @@ impl fmt::Display for CommandError {
                 write!(f, "unit {} is out of range ({distance} tiles)", target.0)
             }
             CommandError::CannotSeize => f.write_str("can't seize here"),
+            CommandError::PlayerOnly(id) => write!(f, "unit {} is not a player unit", id.0),
+            CommandError::NoShop(p) => write!(f, "no shop at ({}, {})", p.x, p.y),
+            CommandError::NoTransactions => f.write_str("nothing bought, sold or repaired"),
+            CommandError::Shop { txn, error } => write!(f, "transaction {txn}: {error}"),
+            CommandError::NoChest(p) => write!(f, "no chest at ({}, {})", p.x, p.y),
+            CommandError::AlreadyOpened(p) => {
+                write!(f, "the chest at ({}, {}) is already open", p.x, p.y)
+            }
         }
     }
 }
@@ -533,6 +684,9 @@ pub struct BattleState {
     objective: Objective,
     rewind_charges: u8,
     pack: BattlePack,
+    gold: Gold,
+    stock: Stock,
+    opened: BTreeSet<Pos>,
     rng: SimRng,
     outcome: Option<Outcome>,
 }
@@ -554,6 +708,159 @@ enum Step {
         target: UnitId,
     },
     Seize,
+    /// The shop visit's result, worked out on copies.
+    Shop(Box<Till>),
+    Open {
+        pos: Pos,
+        loot: Loot,
+    },
+}
+
+/// A shop visit worked out on copies of what it changes, so that a refused
+/// transaction leaves the battle untouched. Committed as a whole.
+struct Till {
+    unit: Unit,
+    gold: Gold,
+    pack: BattlePack,
+    stock: Stock,
+    events: Vec<Event>,
+}
+
+impl Till {
+    /// Applies one transaction to the copies.
+    fn apply(
+        &mut self,
+        shop: &Shop,
+        class: &ClassDef,
+        items: &ItemTable,
+        txn: &ShopTxn,
+    ) -> Result<(), ShopError> {
+        let id = self.unit.id;
+        match txn {
+            ShopTxn::Buy { item } => {
+                let price = shop::buy(shop, items, &mut self.gold, item)?;
+                let to = self.receive(class, items, item);
+                self.events.push(Event::Bought {
+                    unit: id,
+                    item: item.clone(),
+                    price,
+                    to,
+                });
+                if let Destination::WeaponSlot(slot) = to
+                    && self.unit.loadout.equipped.is_none()
+                    && self.unit.usable_weapon(slot, class, items).is_some()
+                {
+                    self.equip(Some(slot));
+                }
+            }
+            ShopTxn::Sell { from } => {
+                let item = self.item_at(*from).ok_or(ShopError::NoItem)?;
+                let price = shop::sell(shop, items, &mut self.gold, &item)?;
+                self.events.push(Event::Sold {
+                    unit: id,
+                    item,
+                    price,
+                });
+                self.remove(*from, class, items);
+            }
+            ShopTxn::Repair { slot } => {
+                let copy = self
+                    .unit
+                    .loadout
+                    .weapons
+                    .get_mut(*slot)
+                    .and_then(Option::as_mut)
+                    .ok_or(ShopError::NoItem)?;
+                let cost = shop::repair(shop, items, &mut self.gold, copy)?;
+                let item = copy.def.clone();
+                self.events.push(Event::Repaired {
+                    unit: id,
+                    slot: *slot,
+                    item,
+                    cost,
+                });
+            }
+        }
+        self.events.push(Event::GoldChanged { gold: self.gold });
+        Ok(())
+    }
+
+    /// Puts a bought `item` (known) where it goes and says where.
+    fn receive(&mut self, class: &ClassDef, items: &ItemTable, item: &ItemId) -> Destination {
+        let loadout = &mut self.unit.loadout;
+        let slots = usize::from(class.weapon_slots).min(WEAPON_SLOTS);
+        match items.get(item) {
+            Some(ItemDef::Weapon(_)) => {
+                if let Some(slot) = (0..slots).find(|&s| loadout.weapons[s].is_none()) {
+                    loadout.weapons[slot] = items.new_weapon(item);
+                    return Destination::WeaponSlot(slot);
+                }
+            }
+            Some(ItemDef::Armour(a)) => {
+                if loadout.armour.is_none() && class.armour.contains(&a.weight_class) {
+                    loadout.armour = Some(item.clone());
+                    return Destination::Armour;
+                }
+            }
+            Some(ItemDef::Accessory(_)) => {
+                if loadout.accessory.is_none() {
+                    loadout.accessory = Some(item.clone());
+                    return Destination::Accessory;
+                }
+            }
+            Some(ItemDef::Consumable(_)) => {
+                self.pack.gain(item.clone());
+                return Destination::Pack;
+            }
+            None => {}
+        }
+        // Known items only reach here (`shop::buy` checked), so this can't
+        // fail.
+        let _ = shop::add_to_stock(&mut self.stock, items, item);
+        Destination::Stock
+    }
+
+    /// The item a sale would sell, if it is there.
+    fn item_at(&self, from: SellFrom) -> Option<ItemId> {
+        let loadout = &self.unit.loadout;
+        match from {
+            SellFrom::Weapon(slot) => loadout.weapon(slot).map(|w| w.def.clone()),
+            SellFrom::Armour => loadout.armour.clone(),
+            SellFrom::Accessory => loadout.accessory.clone(),
+            SellFrom::Pack(i) => self.pack.items.get(i).cloned(),
+        }
+    }
+
+    /// Removes a sold item; re-equips if it was the equipped weapon.
+    fn remove(&mut self, from: SellFrom, class: &ClassDef, items: &ItemTable) {
+        let loadout = &mut self.unit.loadout;
+        match from {
+            SellFrom::Weapon(slot) => {
+                loadout.weapons[slot] = None;
+                if loadout.equipped == Some(slot) {
+                    let next = (0..WEAPON_SLOTS)
+                        .find(|&s| self.unit.usable_weapon(s, class, items).is_some());
+                    self.equip(next);
+                }
+            }
+            SellFrom::Armour => loadout.armour = None,
+            SellFrom::Accessory => loadout.accessory = None,
+            SellFrom::Pack(i) => {
+                self.pack.items.remove(i);
+            }
+        }
+    }
+
+    /// Equips `slot` (or nothing), with an event when there is a weapon.
+    fn equip(&mut self, slot: Option<usize>) {
+        self.unit.loadout.equipped = slot;
+        if let Some(slot) = slot {
+            self.events.push(Event::Equipped {
+                unit: self.unit.id,
+                slot,
+            });
+        }
+    }
 }
 
 impl BattleState {
@@ -577,6 +884,9 @@ impl BattleState {
             objective: setup.objective,
             rewind_charges: setup.rewind_charges,
             pack: setup.pack,
+            gold: setup.gold,
+            stock: setup.stock,
+            opened: BTreeSet::new(),
             rng: SimRng::new(setup.seed),
             outcome: None,
         };
@@ -628,6 +938,21 @@ impl BattleState {
     /// The player side's consumables.
     pub fn pack(&self) -> &BattlePack {
         &self.pack
+    }
+
+    /// The party's gold.
+    pub fn gold(&self) -> Gold {
+        self.gold
+    }
+
+    /// The party's stock (bought and found equipment lands here).
+    pub fn stock(&self) -> &Stock {
+        &self.stock
+    }
+
+    /// Whether the chest at `pos` has been opened.
+    pub fn is_opened(&self, pos: Pos) -> bool {
+        self.opened.contains(&pos)
     }
 
     /// The current turn, from 1.
@@ -734,6 +1059,8 @@ impl BattleState {
                 self.check_seize(unit, dest)?;
                 Step::Seize
             }
+            UnitAction::Shop { ref txns } => self.plan_shop(unit, dest, txns)?,
+            UnitAction::Open => self.plan_open(unit, dest)?,
         };
         Ok((path, step))
     }
@@ -829,6 +1156,53 @@ impl BattleState {
             item: item.clone(),
             effect,
             target,
+        })
+    }
+
+    /// Works out `unit`'s shop visit at `dest` on copies.
+    fn plan_shop(&self, unit: &Unit, dest: Pos, txns: &[ShopTxn]) -> Result<Step, CommandError> {
+        if unit.faction != Faction::Player {
+            return Err(CommandError::PlayerOnly(unit.id));
+        }
+        let shop = self.map.shop(dest).ok_or(CommandError::NoShop(dest))?;
+        if txns.is_empty() {
+            return Err(CommandError::NoTransactions);
+        }
+        let class = self.class_of(unit)?;
+        let mut till = Till {
+            unit: Unit {
+                pos: dest,
+                ..unit.clone()
+            },
+            gold: self.gold,
+            pack: self.pack.clone(),
+            stock: self.stock.clone(),
+            events: Vec::new(),
+        };
+        for (i, txn) in txns.iter().enumerate() {
+            till.apply(shop, class, &self.tables.items, txn)
+                .map_err(|error| CommandError::Shop { txn: i, error })?;
+        }
+        Ok(Step::Shop(Box::new(till)))
+    }
+
+    /// Validates `unit` opening the chest at `dest`.
+    fn plan_open(&self, unit: &Unit, dest: Pos) -> Result<Step, CommandError> {
+        if unit.faction != Faction::Player {
+            return Err(CommandError::PlayerOnly(unit.id));
+        }
+        let loot = self.map.chest(dest).ok_or(CommandError::NoChest(dest))?;
+        if self.opened.contains(&dest) {
+            return Err(CommandError::AlreadyOpened(dest));
+        }
+        if let Loot::Item(item) = loot
+            && self.tables.items.get(item).is_none()
+        {
+            return Err(CommandError::UnknownItem(item.clone()));
+        }
+        Ok(Step::Open {
+            pos: dest,
+            loot: loot.clone(),
         })
     }
 
@@ -935,6 +1309,17 @@ impl BattleState {
                 }
                 seized = true;
             }
+            Step::Shop(till) => {
+                let till = *till;
+                if let Some(u) = self.unit_mut(id) {
+                    *u = till.unit;
+                }
+                self.gold = till.gold;
+                self.pack = till.pack;
+                self.stock = till.stock;
+                events.extend(till.events);
+            }
+            Step::Open { pos, loot } => self.open(id, pos, loot, events),
         }
         if let Some(u) = self.unit_mut(id) {
             u.acted = true;
@@ -947,6 +1332,30 @@ impl BattleState {
         };
         if let Some(outcome) = outcome {
             self.finish(outcome, events);
+        }
+    }
+
+    /// Opens the chest at `pos` (validated) for unit `id`.
+    fn open(&mut self, id: UnitId, pos: Pos, loot: Loot, events: &mut Vec<Event>) {
+        self.opened.insert(pos);
+        events.push(Event::ChestOpened {
+            unit: id,
+            pos,
+            loot: loot.clone(),
+        });
+        match loot {
+            Loot::Gold(n) => {
+                self.gold = self.gold.saturating_add(n);
+                events.push(Event::GoldChanged { gold: self.gold });
+            }
+            Loot::Item(item) => {
+                if self.tables.items.consumable(&item).is_some() {
+                    self.pack.gain(item);
+                } else {
+                    // Known (checked by `plan_open`).
+                    let _ = shop::add_to_stock(&mut self.stock, &self.tables.items, &item);
+                }
+            }
         }
     }
 
