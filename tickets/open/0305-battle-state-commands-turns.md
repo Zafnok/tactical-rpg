@@ -29,7 +29,8 @@ units and game over per `docs/design/death-and-difficulty.md` (0006).
 
 **In:** `core::battle` — `BattleSetup`, `BattleState`, `Command`, `UnitAction`,
 `Event`, `CommandError`, phase/turn progression, objective + defeat checks,
-serde on state, replay test.
+serde on state, replay test, and swapping the battle screen's stand-in
+state for `BattleState` (step 11).
 
 **Out:** item/equip/heal actions (0306), EXP (0601), rewind (0307), AI (0501).
 
@@ -84,6 +85,15 @@ serde on state, replay test.
 10. Replay test: a fixed setup + seed + list of commands applied twice → identical
    event vectors; and serialise state mid-battle → deserialise → apply the rest
    → identical events to an uninterrupted run.
+11. **Battle screen hookup (left over from 0401).** 0401 had no `BattleState`,
+   so `ui::screens::battle` holds a stand-in `BattleScene { map, units }`.
+   Replace it:
+   - `BattleScreen::new` takes a `BattleState`, and drawing reads its map and
+     units. The screen only draws, so this change stays inside that module.
+   - `quick_battle(content)` builds a `BattleSetup` (e.g. `Objective::Rout`,
+     a fixed seed) and keeps its current units: one wounded, one acted.
+   - Delete `BattleScene`.
+   - Existing snapshots must not change: the drawing is the same.
 
 ## Acceptance criteria
 
