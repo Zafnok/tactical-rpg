@@ -108,7 +108,7 @@ impl TerrainDef {
             errors: Vec::new(),
         };
         v.check_movement_types(&raw.movement_types);
-        if raw.terrains.len() > usize::from(u16::MAX) + 1 {
+        if !fits_ids(raw.terrains.len(), usize::from(u16::MAX)) {
             v.err(
                 line_of(source, "terrains"),
                 "more than 65536 terrains".into(),
@@ -168,7 +168,7 @@ impl Validator<'_> {
         if types.is_empty() {
             self.err(line, "movement_types must not be empty".into());
         }
-        if types.len() > usize::from(u8::MAX) + 1 {
+        if !fits_ids(types.len(), usize::from(u8::MAX)) {
             self.err(line, "more than 256 movement types".into());
         }
         let mut seen = BTreeSet::new();
@@ -274,6 +274,11 @@ impl Validator<'_> {
             })
             .collect()
     }
+}
+
+/// Whether `len` items can all be numbered by ids `0..=max_id`.
+fn fits_ids(len: usize, max_id: usize) -> bool {
+    len <= max_id + 1
 }
 
 /// 1-based line of the first line containing `needle`.
@@ -491,6 +496,15 @@ mod tests {
             &[terrain("a", ".", "lava", r#"{ "foot": Some(1) }"#, 101)],
         );
         assert_eq!(errors(&src).len(), 4);
+    }
+
+    #[test]
+    fn id_space_limit() {
+        assert!(fits_ids(0, 0));
+        assert!(fits_ids(1, 0));
+        assert!(!fits_ids(2, 0));
+        assert!(fits_ids(65536, 65535));
+        assert!(!fits_ids(65537, 65535));
     }
 
     #[test]

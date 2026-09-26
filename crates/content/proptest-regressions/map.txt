@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 3fde1609b73841b00a679bde91154cd631bc7f4405d6da3b670e8009aaa95672 # shrinks to (map, legend) = (BattleMap { name: "", tiles: Grid { width: 1, height: 1, cells: [TerrainId(0)] } }, MapLegend { names: {}, terrains: {} })
+cc 573644fc83af2ef3a63743b1183153e344808c00a1cf191bf81da95a068adcae # shrinks to (map, legend) = (BattleMap { name: "", tiles: Grid { width: 1, height: 1, cells: [TerrainId(1)] } }, MapLegend { names: {'.': "plain", 'T': "forest"}, terrains: {'.': TerrainId(0), 'T': TerrainId(0)} })
