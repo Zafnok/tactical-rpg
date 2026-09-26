@@ -1,35 +1,58 @@
-// Default key bindings: the right-handed layout from docs/design/controls.md
-// (arrows steer, left hand on the A S D F row acts). Screens only see the
-// action names on the left; each maps to a list of key chords. Every action
-// must be listed (use [] to leave one unbound) and a chord may be bound to
-// only one action.
+// Key bindings: the two layouts from docs/design/controls.md. The player
+// picks one on first launch. Screens only see the action names on the left;
+// each maps to a list of key chords. In every layout, every action must be
+// listed (use [] to leave one unbound) and a chord may be bound to only one
+// action.
 //
-// Chords: lowercase letters "a".."z", digits "0".."9", "Up" "Down" "Left"
-// "Right" "Enter" "Escape" "Space" "Tab" "Backspace" "F1".."F12", optionally
-// prefixed by "Shift+". "Shift+e" and "e" are different chords.
+// Chords: lowercase letters "a".."z", digits "0".."9", ";", "Up" "Down"
+// "Left" "Right" "Enter" "Escape" "Space" "Tab" "Backspace" "F1".."F12",
+// optionally prefixed by "Shift+". "Shift+e" and "e" are different chords.
 (
-    bindings: {
-        // Held arrow keys repeat.
-        "CursorLeft": ["Left"],
-        "CursorDown": ["Down"],
-        "CursorUp": ["Up"],
-        "CursorRight": ["Right"],
+    layouts: {
+        // Arrows steer; the left hand acts from the A S D F row.
+        "RightHanded": {
+            // Held arrow keys repeat.
+            "CursorLeft": ["Left"],
+            "CursorDown": ["Down"],
+            "CursorUp": ["Up"],
+            "CursorRight": ["Right"],
 
-        // Hold Confirm to fast-forward text and animations.
-        "Confirm": ["f"],
-        // Escape also cancels; with nothing to cancel it opens the map menu.
-        "Cancel": ["d", "Escape"],
-        "PrevUnit": ["a"],
-        "NextUnit": ["s"],
-        "Info": ["e"],
-        "DangerZone": ["w"],
-        // Space opens the end-turn prompt; Space again confirms it.
-        "EndTurn": ["Space"],
-        "ToggleAutoEnd": ["Shift+Space"],
-        // Opened by Cancel with nothing to cancel, or Confirm on an empty tile.
-        "Menu": [],
-        "Debug": ["F12"],
+            // Hold Confirm to fast-forward text and animations.
+            "Confirm": ["f"],
+            // Escape also cancels; with nothing to cancel it opens the map menu.
+            "Cancel": ["d", "Escape"],
+            "PrevUnit": ["a"],
+            "NextUnit": ["s"],
+            "Info": ["e"],
+            "DangerZone": ["w"],
+            // Space opens the end-turn prompt; Space again confirms it.
+            "EndTurn": ["Space"],
+            "ToggleAutoEnd": ["Shift+Space"],
+            // Opened by Cancel with nothing to cancel, or Confirm on an empty tile.
+            "Menu": [],
+            "Debug": ["F12"],
+        },
+        // W A S D steer; the right hand acts from the J K L ; row, a finger
+        // for finger mirror of RightHanded.
+        "LeftHanded": {
+            "CursorLeft": ["a"],
+            "CursorDown": ["s"],
+            "CursorUp": ["w"],
+            "CursorRight": ["d"],
+
+            "Confirm": ["j"],
+            "Cancel": ["k", "Escape"],
+            "PrevUnit": [";"],
+            "NextUnit": ["l"],
+            "Info": ["i"],
+            "DangerZone": ["o"],
+            "EndTurn": ["Space"],
+            "ToggleAutoEnd": ["Shift+Space"],
+            "Menu": [],
+            "Debug": ["F12"],
+        },
     },
-    // Held cursor keys: first repeat after delay_ms, then every interval_ms.
+    // Held cursor keys, in every layout: first repeat after delay_ms, then
+    // every interval_ms.
     repeat: (delay_ms: 170, interval_ms: 55),
 )
