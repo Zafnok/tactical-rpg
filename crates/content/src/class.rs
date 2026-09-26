@@ -385,7 +385,7 @@ impl Validator<'_> {
         let mut frontier: Vec<&ClassId> = reached.iter().copied().collect();
         while let Some(id) = frontier.pop() {
             for next in classes.get(id).into_iter().flat_map(|c| &c.promotes_to) {
-                if classes.contains_key(next) && reached.insert(next) {
+                if reached.insert(next) {
                     frontier.push(next);
                 }
             }

@@ -162,7 +162,6 @@ impl Unit {
         let mut weapon_ranks = def.weapon_ranks.clone();
         raise_to_start_ranks(&mut weapon_ranks, class);
         Ok(Unit {
-            id,
             character: Some(def.id.clone()),
             name: def.name.clone(),
             level: def.level,
