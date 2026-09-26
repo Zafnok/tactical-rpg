@@ -230,7 +230,7 @@ up to the Chapter 1 roster/enemies (0803).
 - **Repair** at a Blacksmith (on a map or between chapters; see Shops) restores
   `durability_left` to full. Cost (*tunable*): `ceil(price / 2 × missing / durability)`
   gold. Materials for repairing rare weapons are deferred until materials
-  exist (ticket 0008 / later); Chapter 1 repairs cost gold only.
+  exist (later; see `world-structure.md`); Chapter 1 repairs cost gold only.
 - Armour, accessories and consumables have no durability.
 
 ## Loadout (per unit)
@@ -312,8 +312,8 @@ Any unit can wear any accessory.
   Buying, selling or repairing **ends that unit's action**; leaving without
   doing anything doesn't (FE rule). Bought weapons/gear go to the buyer's
   free loadout slot, else the stock.
-- **Between chapters**, the same shop screen is available (where exactly
-  depends on the world structure, 0008).
+- **Between chapters**, the same shop screen is available. From the world
+  map on, shops are in **town nodes** (0008, `world-structure.md`).
 - **Villages** (*Claude's starting rule*, FE): a player unit on the village
   gate uses `Visit`: a one-time gift (gold, an item or a scene), then the
   village closes. Enemies destroying villages: not in Chapter 1.
@@ -412,7 +412,7 @@ Distance 1.
 - **Class weapon kinds, starting/max ranks, armour limits, tags:** 0005.
 - **Pack cap, shops/villages/chests in Chapter 1:** decided in 0009
   (`chapter-1.md`: cap 3, no shops/villages/chests).
-- **Materials and forging** at the blacksmith: when the overworld/world
-  structure (0008) adds material sources.
+- **Materials and forging** at the blacksmith: later; towns, skirmishes or
+  side quests on the world map (`world-structure.md`) are the likely sources.
 - **Enemies destroying villages, chest keys, thief classes:** later chapters.
 - **Number scale:** all numbers here rescale with ticket 0013.

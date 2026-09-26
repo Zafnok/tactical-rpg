@@ -20,8 +20,9 @@ once unlocked, support conversations are read **at camp** (a screen between
 battles, not only between chapters) from a **Supports** list, next
 to a list of optional scripted **camp events** (extras, Triangle Strategy
 style). The rules and state come from 1002, the dialogue player from
-0702/0704, and the game flow from 0801/0408. Where camp appears in the open part of the
-game (overworld, after skirmishes) follows the world-structure decision (0008).
+0702/0704, and the game flow from 0801/0408. Where camp appears (0008, `world-structure.md`): between linear chapters,
+before each story battle's Preparations, and, from the world map on, as
+`Camp` in the world map menu (hooked up by 1007).
 
 ## Nick input
 
@@ -42,8 +43,9 @@ new.
 - A camp event data format (id, conditions, script id) with content
   validation.
 - A **Camp** screen in the game flow between battles that holds both lists.
-  Offer it at least before each story battle's Preparations; other spots
-  follow 0008.
+  Offer it between linear chapters and before each story battle's
+  Preparations, as a screen other menus can open (1007 adds it to the world
+  map menu).
 - The unit info screen lists the unit's support partners and ranks.
 - One placeholder support conversation and one placeholder camp event in the
   data, so the screens can be tested.

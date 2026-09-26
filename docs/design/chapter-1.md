@@ -35,7 +35,8 @@ Source: ticket 0009
 A **chapter is a story beat**, not a single battle. A chapter often ends with
 a climactic battle, and some chapters may contain several battles first (e.g.
 overworld-triggered skirmishes to train before the climax). How that works
-belongs to world structure (0008) and game flow (0801 / later tickets).
+is decided in [`world-structure.md`](world-structure.md) (0008): chapters 1–2
+(maybe 3) are linear, then a world map with fixed and random skirmishes.
 **Chapter 1 is exactly one battle.**
 
 ## Rules for Chapter 1
@@ -130,5 +131,6 @@ belongs to world structure (0008) and game flow (0801 / later tickets).
 
 ## Open sub-questions (deferred)
 
-- **Multi-battle chapters** (skirmishes before a climax): 0008 / later.
+- **Multi-battle chapters** (skirmishes before a climax): decided in
+  `world-structure.md` (0008); built by 1007 / 1008.
 - **Which extras Chapter 2 and 3 introduce**: decided with those chapters.

@@ -65,7 +65,8 @@ early so every later PR is checked by them.
 
 ## After Chapter 1 (`10xx`+, tickets created when relevant)
 
-- World map / open-world-lite, if chosen in 0008.
+- World map (0008 chose FE Sacred Stones-style, after the linear opening
+  chapters): 1007 nodes/travel/towns/save/camp, 1008 fixed and random skirmishes.
 - Supports (FE GBA-style, earned in battle) and camp events: 1002, 1003.
   Parked far-future ideas: hub activities (1004), pair abilities (1005).
 - Controller support (needed for Steam Deck) — created by 0903.
