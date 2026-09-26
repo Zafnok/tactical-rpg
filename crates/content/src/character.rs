@@ -5,8 +5,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 use trpg_core::{
-    CharacterDef, CharacterId, ClassDef, ClassId, ClassTable, Faction, Level, Pos, SpellId,
-    StatKind, StatValue, Stats, Unit, UnitError, UnitId, is_valid_map_label,
+    CharacterDef, CharacterId, ClassDef, ClassId, ClassTable, Faction, ItemId, ItemTable, Level,
+    LoadoutDef, Pos, SpellId, StatKind, StatValue, Stats, Unit, UnitError, UnitId,
+    is_valid_map_label,
 };
 
 use crate::bundle;
@@ -32,15 +33,18 @@ pub struct GenericTemplate {
     pub level: Level,
     /// Overrides the default map label (the class name's first two letters).
     pub map_label: Option<String>,
+    /// Starting loadout.
+    pub loadout: LoadoutDef,
 }
 
 impl GenericTemplate {
     /// A unit made from this template (see [`Unit::generic`]), with the
-    /// template's map label override applied.
+    /// template's map label override and loadout applied.
     pub fn unit(
         &self,
         id: UnitId,
         classes: &ClassTable,
+        items: &ItemTable,
         faction: Faction,
         pos: Pos,
     ) -> Result<Unit, UnitError> {
@@ -48,8 +52,22 @@ impl GenericTemplate {
         if let Some(label) = &self.map_label {
             unit.map_label.clone_from(label);
         }
-        Ok(unit)
+        Ok(unit.with_loadout(&self.loadout, classes, items)?)
     }
+}
+
+/// The unit of named character `def` (see [`Unit::from_character`]) with its
+/// starting loadout.
+pub fn character_unit(
+    def: &CharacterDef,
+    id: UnitId,
+    classes: &ClassTable,
+    items: &ItemTable,
+    faction: Faction,
+    pos: Pos,
+) -> Result<Unit, UnitError> {
+    let unit = Unit::from_character(id, def, classes, faction, pos)?;
+    Ok(unit.with_loadout(&def.loadout, classes, items)?)
 }
 
 /// Checks the map labels of the units placed on one map (`map`, a file
@@ -108,6 +126,29 @@ struct RawCharacter {
     personal_spells: Vec<(Level, String)>,
     #[serde(default)]
     map_label: Option<String>,
+    #[serde(default)]
+    loadout: RawLoadout,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct RawLoadout {
+    #[serde(default)]
+    weapons: Vec<String>,
+    #[serde(default)]
+    armour: Option<String>,
+    #[serde(default)]
+    accessory: Option<String>,
+}
+
+impl RawLoadout {
+    fn to_def(&self) -> LoadoutDef {
+        LoadoutDef {
+            weapons: self.weapons.iter().map(|w| ItemId::new(w)).collect(),
+            armour: self.armour.as_deref().map(ItemId::new),
+            accessory: self.accessory.as_deref().map(ItemId::new),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -118,12 +159,17 @@ struct RawGeneric {
     level: Level,
     #[serde(default)]
     map_label: Option<String>,
+    #[serde(default)]
+    loadout: RawLoadout,
 }
 
 /// Loads and validates the embedded character file. Class references are
 /// checked against `classes` when given (skipped if the class file failed to
-/// load).
-pub fn load(classes: Option<&ClassTable>) -> Result<CharacterTable, Vec<ContentError>> {
+/// load); loadouts against `classes` and `items` when both are given.
+pub fn load(
+    classes: Option<&ClassTable>,
+    items: Option<&ItemTable>,
+) -> Result<CharacterTable, Vec<ContentError>> {
     let display = bundle::display_path(CHARACTERS_PATH);
     let source = bundle::file(CHARACTERS_PATH).ok_or_else(|| {
         vec![ContentError::new(
@@ -131,7 +177,7 @@ pub fn load(classes: Option<&ClassTable>) -> Result<CharacterTable, Vec<ContentE
             "file not found in asset bundle",
         )]
     })?;
-    from_source(&display, source, classes)
+    from_source(&display, source, classes, items)
 }
 
 /// Parses and validates character `source`, attributing errors to `file`.
@@ -140,12 +186,14 @@ pub fn from_source(
     file: &str,
     source: &str,
     classes: Option<&ClassTable>,
+    items: Option<&ItemTable>,
 ) -> Result<CharacterTable, Vec<ContentError>> {
     let raw: RawFile = parse_ron(file, source).map_err(|e| vec![e])?;
     let mut v = Validator {
         file,
         source,
         classes,
+        items,
         errors: Vec::new(),
     };
     let mut table = CharacterTable::default();
@@ -168,15 +216,20 @@ pub fn from_source(
         }
         v.level(&g.id, &what, g.level);
         v.map_label(&g.id, &what, g.map_label.as_deref());
-        table.generics.insert(
-            g.id.clone(),
-            GenericTemplate {
-                id: g.id.clone(),
-                class: ClassId(g.class.clone()),
-                level: g.level,
-                map_label: g.map_label.clone(),
-            },
-        );
+        let template = GenericTemplate {
+            id: g.id.clone(),
+            class: ClassId(g.class.clone()),
+            level: g.level,
+            map_label: g.map_label.clone(),
+            loadout: g.loadout.to_def(),
+        };
+        if let (Some(classes), Some(items)) = (v.classes, v.items)
+            && let Err(UnitError::Loadout(e)) =
+                template.unit(UnitId(0), classes, items, Faction::Enemy, Pos::new(0, 0))
+        {
+            v.err(&g.id, format!("{what}: loadout: {e}"));
+        }
+        table.generics.insert(g.id.clone(), template);
     }
     if v.errors.is_empty() {
         Ok(table)
@@ -190,6 +243,7 @@ struct Validator<'a> {
     file: &'a str,
     source: &'a str,
     classes: Option<&'a ClassTable>,
+    items: Option<&'a ItemTable>,
     errors: Vec<ContentError>,
 }
 
@@ -278,9 +332,22 @@ impl<'a> Validator<'a> {
                 .map(|(level, s)| (*level, SpellId(s.clone())))
                 .collect(),
             map_label: c.map_label.clone(),
+            loadout: c.loadout.to_def(),
         };
         if let Some(class) = class {
             self.against_class(&def, &what, class);
+        }
+        if let (Some(classes), Some(items)) = (self.classes, self.items)
+            && let Err(UnitError::Loadout(e)) = character_unit(
+                &def,
+                UnitId(0),
+                classes,
+                items,
+                Faction::Player,
+                Pos::new(0, 0),
+            )
+        {
+            self.err(&c.id, format!("{what}: loadout: {e}"));
         }
         def
     }
@@ -353,8 +420,12 @@ mod tests {
         )
     }
 
+    fn items() -> ItemTable {
+        crate::item::load().unwrap_or_default()
+    }
+
     fn load_src(src: &str) -> Result<CharacterTable, Vec<ContentError>> {
-        from_source("ch.ron", src, Some(&classes()))
+        from_source("ch.ron", src, Some(&classes()), Some(&items()))
     }
 
     fn errors(src: &str) -> Vec<String> {
@@ -390,6 +461,7 @@ mod tests {
             weapon_ranks: BTreeMap::from([(WeaponKind::Sword, WeaponRank::D)]),
             personal_spells: vec![(1, SpellId("fire".into())), (10, SpellId("force".into()))],
             map_label: None,
+            loadout: LoadoutDef::default(),
         };
         assert_eq!(t.characters.get(&expected.id), Some(&expected));
         assert_eq!(
@@ -399,6 +471,7 @@ mod tests {
                 class: ClassId("brigand".into()),
                 level: 99,
                 map_label: None,
+                loadout: LoadoutDef::default(),
             })
         );
     }
@@ -409,7 +482,7 @@ mod tests {
             &[character("hero", "nope", "level: 0")].map(|c| c.replace("level: 1, ", "")),
             "(id: \"g\", class: \"nope\", level: 0)",
         );
-        let t = from_source("ch.ron", &src, None);
+        let t = from_source("ch.ron", &src, None, Some(&items()));
         assert!(t.is_ok(), "{t:?}");
         assert_eq!(
             t.ok()
@@ -596,14 +669,17 @@ mod tests {
     #[test]
     fn generic_template_units_use_the_label_override() {
         let classes = classes();
+        let items = items();
         let mut t = GenericTemplate {
             id: "g".into(),
             class: ClassId("brigand".into()),
             level: 3,
             map_label: None,
+            loadout: LoadoutDef::default(),
         };
-        let make =
-            |t: &GenericTemplate| t.unit(UnitId(4), &classes, Faction::Enemy, Pos::new(1, 2));
+        let make = |t: &GenericTemplate| {
+            t.unit(UnitId(4), &classes, &items, Faction::Enemy, Pos::new(1, 2))
+        };
         let expected = Unit::generic(
             UnitId(4),
             &t.class,
@@ -626,7 +702,8 @@ mod tests {
     #[test]
     fn map_label_clashes_between_named_units() {
         let classes = classes();
-        let t = load(Some(&classes)).unwrap_or_default();
+        let items = items();
+        let t = load(Some(&classes), Some(&items)).unwrap_or_default();
         let named = |label: &str, n: u32, faction| {
             let def = &t.characters[&CharacterId("test_knight".into())];
             Unit::from_character(UnitId(n), def, &classes, faction, Pos::new(0, 0))
@@ -639,7 +716,7 @@ mod tests {
         };
         let generic = |n: u32| {
             t.generics["test_brigand"]
-                .unit(UnitId(n), &classes, Faction::Enemy, Pos::new(0, 0))
+                .unit(UnitId(n), &classes, &items, Faction::Enemy, Pos::new(0, 0))
                 .ok()
         };
         let ok: Vec<Unit> = [
@@ -675,11 +752,64 @@ mod tests {
         assert_eq!(load_src("").err().map(|e| e.len()), Some(1));
     }
 
-    /// The placeholder file loads, and every entry makes a valid unit.
+    #[test]
+    fn loadouts_are_checked_against_classes_and_items() {
+        let src = file(
+            &[
+                character("a", "swordsman", "loadout: (weapons: [\"iron_sword\"])"),
+                character("b", "swordsman", "loadout: (weapons: [\"nope\"])"),
+                character("c", "swordsman", "loadout: (armour: Some(\"iron_plate\"))"),
+                character("d", "swordsman", "loadout: (accessory: Some(\"potion\"))"),
+            ],
+            "(id: \"g\", class: \"brigand\", level: 1, loadout: (weapons: [\"iron_axe\", \"iron_axe\", \"iron_axe\", \"iron_axe\"]))",
+        );
+        assert_eq!(
+            errors(&src),
+            [
+                "ch.ron:8: character \"b\": loadout: unknown item \"nope\"",
+                "ch.ron:12: character \"c\": loadout: the class can't wear \"iron_plate\"",
+                "ch.ron:16: character \"d\": loadout: \"potion\" doesn't go in that slot",
+                "ch.ron:20: generic \"g\": loadout: 4 weapons, but the class has 3 weapon slots",
+            ]
+        );
+        // Without the item table, loadouts aren't checked.
+        assert!(from_source("ch.ron", &src, Some(&classes()), None).is_ok());
+        let t = load_src(&file(
+            &[character(
+                "a",
+                "swordsman",
+                "loadout: (weapons: [\"iron_sword\"], armour: Some(\"leather_vest\"), accessory: Some(\"speed_ring\"))",
+            )],
+            "",
+        ))
+        .unwrap_or_default();
+        let def = &t.characters[&CharacterId("a".into())];
+        assert_eq!(
+            def.loadout,
+            LoadoutDef {
+                weapons: vec![ItemId::new("iron_sword")],
+                armour: Some(ItemId::new("leather_vest")),
+                accessory: Some(ItemId::new("speed_ring")),
+            }
+        );
+        let unit = character_unit(
+            def,
+            UnitId(1),
+            &classes(),
+            &items(),
+            Faction::Player,
+            Pos::new(0, 0),
+        );
+        assert_eq!(unit.map(|u| u.loadout.equipped), Ok(Some(0)));
+    }
+
+    /// The placeholder file loads, and every entry makes a valid unit with
+    /// its loadout.
     #[test]
     fn embedded_characters_load_and_make_units() {
         let classes = classes();
-        let t = load(Some(&classes));
+        let items = items();
+        let t = load(Some(&classes), Some(&items));
         assert!(t.is_ok(), "{t:?}");
         let t = t.unwrap_or_default();
         let ids: Vec<&str> = t.characters.keys().map(|c| c.0.as_str()).collect();
@@ -693,20 +823,23 @@ mod tests {
             .collect();
         assert_eq!(lords, ["test_lord"]);
         for def in t.characters.values() {
-            let unit =
-                Unit::from_character(UnitId(0), def, &classes, Faction::Player, Pos::new(0, 0));
-            assert!(unit.is_ok(), "{}", def.id.0);
-        }
-        for g in t.generics.values() {
-            let unit = Unit::generic(
+            let unit = character_unit(
+                def,
                 UnitId(0),
-                &g.class,
                 &classes,
-                g.level,
-                Faction::Enemy,
+                &items,
+                Faction::Player,
                 Pos::new(0, 0),
             );
-            assert!(unit.is_ok(), "{}", g.id);
+            assert!(
+                unit.is_ok_and(|u| u.loadout.equipped.is_some()),
+                "{}",
+                def.id.0
+            );
+        }
+        for g in t.generics.values() {
+            let unit = g.unit(UnitId(0), &classes, &items, Faction::Enemy, Pos::new(0, 0));
+            assert!(unit.is_ok_and(|u| u.loadout.equipped.is_some()), "{}", g.id);
         }
     }
 }

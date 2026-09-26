@@ -29,9 +29,27 @@
 //!   have acted, and `dest` must be a tile it can stop on
 //!   ([`reachable`]). After the action it is done. No
 //!   Canto: a unit never moves after its action (but see *Extending* below).
-//! - **Attacking** needs a hostile target on the map within the attacker's
-//!   weapon range *from `dest`*. The combat uses [`forecast`] and [`resolve`]
-//!   with the battle's [`SimRng`]; terrain comes from each unit's tile.
+//! - **Attacking** names a loadout slot. The weapon there must be one the
+//!   unit can wield, and the target a hostile unit on the map within its
+//!   range *from `dest`*. Attacking equips that weapon ([`Event::Equipped`]
+//!   if it changed). The defender counters with its equipped weapon, if it
+//!   can wield it and the attacker is in range. The combat uses [`forecast`]
+//!   and [`resolve`] with the battle's [`SimRng`] and the item table's
+//!   [`combat_rules`](ItemTable::combat_rules); each side's stats are
+//!   gear-adjusted ([`Unit::combat_input`]); terrain comes from each unit's
+//!   tile. Normal attacks cost no durability.
+//! - **Weapon EXP.** After a combat, each side still on the map that struck
+//!   gains weapon EXP in its weapon's kind ([`Event::WeaponExpGained`], then
+//!   [`Event::WeaponRankUp`] if its rank rose; attacker first), before
+//!   anyone falls. See [`crate::item`] for the formula.
+//! - **Items** ([`UnitAction::UseItem`]): a player unit uses a consumable
+//!   from the shared [`BattlePack`]; other factions use their own
+//!   ([`Unit::consumables`]). The target is the unit itself or a non-hostile
+//!   unit adjacent to `dest`. The item is used up ([`Event::ItemUsed`]),
+//!   heals ([`Event::Healed`], never above max HP) and ends the action.
+//! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
+//!   the unit can wield, by a ready unit of the current phase. It doesn't
+//!   end the action. No trading: loadouts are fixed for the battle.
 //! - **Falling.** A unit at 0 HP falls ([`Event::UnitFell`]): it leaves the
 //!   map, can't act, can't be targeted and doesn't block tiles. It moves to
 //!   [`BattleState::fallen`]. Classic vs Casual only matters when the
@@ -57,15 +75,16 @@
 //! the unit fell), optionally followed by [`Event::BattleEnded`]. Skills that
 //! grant movement after an action (`turn-structure.md`; e.g. "after attacking,
 //! move 1 tile away") add their move as a new event just before `UnitActed`,
-//! decided by the skill's rules; no [`UnitAction`] needs to change. Item and
-//! equip actions (0306) are new [`UnitAction`] / [`Command`] variants.
+//! decided by the skill's rules; no [`UnitAction`] needs to change. Combat
+//! Arts (0312) spend durability with [`Unit::spend_durability`], which
+//! gives the [`Event::ItemBroke`] to emit.
 //!
 //! # Saving
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
 //! the map, units, fallen units, pending reinforcements, objective, turn,
-//! phase, RNG position and outcome are all saved. The **terrain and class
-//! tables are not**: they are shared content, held by `Arc` and skipped. A
+//! phase, RNG position, battle pack and outcome are all saved. The
+//! **terrain, class and item tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
@@ -76,17 +95,17 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::class::{ClassId, ClassTable};
-use crate::combat::{
-    CombatHp, CombatOutcome, CombatRules, CombatantInput, Forecast, forecast, resolve,
-};
+use crate::class::{ClassDef, ClassId, ClassTable};
+use crate::combat::{CombatHp, CombatOutcome, CombatantInput, Forecast, Side, forecast, resolve};
 use crate::geom::Pos;
+use crate::item::{BattlePack, ConsumableEffect, ItemDef, ItemId, ItemTable};
 use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
 use crate::rng::SimRng;
+use crate::stats::StatValue;
 use crate::terrain::TerrainTable;
 use crate::unit::{Faction, Unit, UnitId};
-use crate::weapon::WeaponRank;
+use crate::weapon::{WeaponKind, WeaponRank};
 
 /// A turn number, from 1.
 pub type Turn = u32;
@@ -201,6 +220,10 @@ pub struct BattleSetup {
     pub terrain: Arc<TerrainTable>,
     /// Classes of every unit.
     pub classes: Arc<ClassTable>,
+    /// Every item units carry.
+    pub items: Arc<ItemTable>,
+    /// The player side's consumables.
+    pub pack: BattlePack,
     /// The units on the map at the start.
     pub units: Vec<Unit>,
     /// Units that arrive later.
@@ -219,9 +242,19 @@ pub struct BattleSetup {
 pub enum UnitAction {
     /// Nothing.
     Wait,
-    /// Fight `target`.
+    /// Fight `target` with the weapon in loadout slot `slot` (equips it).
     Attack {
         /// The unit attacked.
+        target: UnitId,
+        /// The weapon's loadout slot.
+        slot: usize,
+    },
+    /// Use a consumable on `target` (the unit itself or an adjacent ally).
+    UseItem {
+        /// Index in the battle pack (player units) or the unit's own
+        /// consumables (other factions).
+        pack_index: usize,
+        /// Who it is used on.
         target: UnitId,
     },
     /// Seize the objective tile (only on it, see [`Objective::Seize`]).
@@ -239,6 +272,14 @@ pub enum Command {
         dest: Pos,
         /// What it does there.
         action: UnitAction,
+    },
+    /// Equip the weapon in loadout slot `slot` of `unit`. Free: doesn't end
+    /// the action.
+    Equip {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon's loadout slot.
+        slot: usize,
     },
     /// End the current phase.
     EndPhase,
@@ -267,6 +308,13 @@ pub enum Event {
         /// Every tile of the move.
         path: Vec<Pos>,
     },
+    /// A unit equipped the weapon in `slot`.
+    Equipped {
+        /// The unit.
+        unit: UnitId,
+        /// The loadout slot.
+        slot: usize,
+    },
     /// A combat was fought.
     CombatResolved {
         /// Who attacked.
@@ -277,6 +325,47 @@ pub enum Event {
         forecast: Forecast,
         /// Every strike and the final HP.
         outcome: CombatOutcome,
+    },
+    /// A unit gained weapon EXP after a combat.
+    WeaponExpGained {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon kind.
+        kind: WeaponKind,
+        /// EXP gained.
+        amount: u32,
+    },
+    /// A unit's weapon rank rose.
+    WeaponRankUp {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon kind.
+        kind: WeaponKind,
+        /// The new rank.
+        rank: WeaponRank,
+    },
+    /// A weapon's durability reached 0.
+    ItemBroke {
+        /// The unit carrying it.
+        unit: UnitId,
+        /// The weapon.
+        item: ItemId,
+    },
+    /// A unit used up a consumable on `target`.
+    ItemUsed {
+        /// The user.
+        unit: UnitId,
+        /// The consumable.
+        item: ItemId,
+        /// Who it was used on.
+        target: UnitId,
+    },
+    /// A unit regained HP.
+    Healed {
+        /// The unit healed.
+        target: UnitId,
+        /// HP restored (after the max-HP cap).
+        amount: StatValue,
     },
     /// A unit reached 0 HP and left the map.
     UnitFell {
@@ -332,8 +421,33 @@ pub enum CommandError {
     CannotStop(Pos),
     /// The target isn't hostile to the attacker.
     NotHostile(UnitId),
-    /// The attacker has no weapon.
-    NoWeapon(UnitId),
+    /// The loadout slot holds no weapon.
+    EmptySlot {
+        /// The unit.
+        unit: UnitId,
+        /// The slot.
+        slot: usize,
+    },
+    /// The unit can't wield this weapon (class kind or rank).
+    CannotWield {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon.
+        item: ItemId,
+    },
+    /// No item at this index of the pack (or the unit's consumables).
+    NoItem {
+        /// The unit.
+        unit: UnitId,
+        /// The index.
+        index: usize,
+    },
+    /// An item id is not in the item table (e.g. tables not restored).
+    UnknownItem(ItemId),
+    /// The item can't be used (it isn't a consumable).
+    NotConsumable(ItemId),
+    /// The item's target is neither the user nor an adjacent ally.
+    BadItemTarget(UnitId),
     /// The target is outside the attacker's weapon range from `dest`.
     OutOfRange {
         /// The target.
@@ -373,7 +487,20 @@ impl fmt::Display for CommandError {
             }
             CommandError::CannotStop(p) => write!(f, "can't stop at ({}, {})", p.x, p.y),
             CommandError::NotHostile(id) => write!(f, "unit {} is not an enemy", id.0),
-            CommandError::NoWeapon(id) => write!(f, "unit {} has no weapon", id.0),
+            CommandError::EmptySlot { unit, slot } => {
+                write!(f, "unit {} has no weapon in slot {slot}", unit.0)
+            }
+            CommandError::CannotWield { unit, item } => {
+                write!(f, "unit {} can't wield \"{}\"", unit.0, item.0)
+            }
+            CommandError::NoItem { unit, index } => {
+                write!(f, "unit {} has no item {index}", unit.0)
+            }
+            CommandError::UnknownItem(i) => write!(f, "unknown item \"{}\"", i.0),
+            CommandError::NotConsumable(i) => write!(f, "\"{}\" can't be used", i.0),
+            CommandError::BadItemTarget(id) => {
+                write!(f, "unit {} can't be given an item from here", id.0)
+            }
             CommandError::OutOfRange { target, distance } => {
                 write!(f, "unit {} is out of range ({distance} tiles)", target.0)
             }
@@ -389,6 +516,7 @@ impl std::error::Error for CommandError {}
 struct Tables {
     terrain: Arc<TerrainTable>,
     classes: Arc<ClassTable>,
+    items: Arc<ItemTable>,
 }
 
 /// A running battle. Changed only by [`BattleState::apply`].
@@ -404,15 +532,27 @@ pub struct BattleState {
     pending: Vec<Reinforcement>,
     objective: Objective,
     rewind_charges: u8,
+    pack: BattlePack,
     rng: SimRng,
     outcome: Option<Outcome>,
 }
 
 /// A validated action, ready to carry out.
-#[derive(Clone, Copy)]
 enum Step {
     Wait,
-    Attack { target: UnitId, forecast: Forecast },
+    Attack {
+        target: UnitId,
+        slot: usize,
+        forecast: Forecast,
+        /// The attacker's and defender's weapon kinds, for weapon EXP.
+        kinds: [Option<WeaponKind>; 2],
+    },
+    UseItem {
+        index: usize,
+        item: ItemId,
+        effect: ConsumableEffect,
+        target: UnitId,
+    },
     Seize,
 }
 
@@ -426,6 +566,7 @@ impl BattleState {
             tables: Tables {
                 terrain: setup.terrain,
                 classes: setup.classes,
+                items: setup.items,
             },
             map: setup.map,
             turn: 1,
@@ -435,6 +576,7 @@ impl BattleState {
             pending: setup.reinforcements,
             objective: setup.objective,
             rewind_charges: setup.rewind_charges,
+            pack: setup.pack,
             rng: SimRng::new(setup.seed),
             outcome: None,
         };
@@ -450,8 +592,17 @@ impl BattleState {
 
     /// Reattaches the content tables after deserialising (see the module
     /// docs). They must be the tables the battle was started with.
-    pub fn restore_tables(&mut self, terrain: Arc<TerrainTable>, classes: Arc<ClassTable>) {
-        self.tables = Tables { terrain, classes };
+    pub fn restore_tables(
+        &mut self,
+        terrain: Arc<TerrainTable>,
+        classes: Arc<ClassTable>,
+        items: Arc<ItemTable>,
+    ) {
+        self.tables = Tables {
+            terrain,
+            classes,
+            items,
+        };
     }
 
     /// The battlefield.
@@ -467,6 +618,16 @@ impl BattleState {
     /// Classes.
     pub fn classes(&self) -> &ClassTable {
         &self.tables.classes
+    }
+
+    /// Items.
+    pub fn items(&self) -> &ItemTable {
+        &self.tables.items
+    }
+
+    /// The player side's consumables.
+    pub fn pack(&self) -> &BattlePack {
+        &self.pack
     }
 
     /// The current turn, from 1.
@@ -523,6 +684,11 @@ impl BattleState {
         let mut events = Vec::new();
         match cmd {
             Command::EndPhase => self.end_phase(&mut events),
+            Command::Equip { unit, slot } => {
+                self.check_ready(*unit)?;
+                self.check_wield(*unit, *slot)?;
+                self.equip(*unit, *slot, &mut events);
+            }
             Command::Act { unit, dest, action } => {
                 let (path, step) = self.plan(*unit, *dest, action)?;
                 self.act(*unit, path, step, &mut events);
@@ -538,16 +704,7 @@ impl BattleState {
         dest: Pos,
         action: &UnitAction,
     ) -> Result<(Vec<Pos>, Step), CommandError> {
-        let unit = self.living(id)?;
-        if Phase::of(unit.faction) != self.phase {
-            return Err(CommandError::NotItsPhase {
-                unit: id,
-                phase: self.phase,
-            });
-        }
-        if unit.acted {
-            return Err(CommandError::AlreadyActed(id));
-        }
+        let unit = self.check_ready(id)?;
         let reach = reachable(
             &self.map,
             &self.tables.terrain,
@@ -561,10 +718,18 @@ impl BattleState {
             .ok_or(CommandError::CannotStop(dest))?;
         let step = match *action {
             UnitAction::Wait => Step::Wait,
-            UnitAction::Attack { target } => Step::Attack {
-                target,
-                forecast: self.plan_attack(unit, dest, target)?,
-            },
+            UnitAction::Attack { target, slot } => {
+                let (forecast, kinds) = self.plan_attack(unit, dest, target, slot)?;
+                Step::Attack {
+                    target,
+                    slot,
+                    forecast,
+                    kinds,
+                }
+            }
+            UnitAction::UseItem { pack_index, target } => {
+                self.plan_item(unit, dest, pack_index, target)?
+            }
             UnitAction::Seize => {
                 self.check_seize(unit, dest)?;
                 Step::Seize
@@ -573,35 +738,117 @@ impl BattleState {
         Ok((path, step))
     }
 
-    /// The forecast of `unit` attacking `target` from `dest`.
+    /// The living unit `id` if it may act now: its phase, not yet acted.
+    fn check_ready(&self, id: UnitId) -> Result<&Unit, CommandError> {
+        let unit = self.living(id)?;
+        if Phase::of(unit.faction) != self.phase {
+            return Err(CommandError::NotItsPhase {
+                unit: id,
+                phase: self.phase,
+            });
+        }
+        if unit.acted {
+            return Err(CommandError::AlreadyActed(id));
+        }
+        Ok(unit)
+    }
+
+    /// Checks unit `id` can wield the weapon in `slot`.
+    fn check_wield(&self, id: UnitId, slot: usize) -> Result<(), CommandError> {
+        let unit = self.living(id)?;
+        let copy = unit
+            .loadout
+            .weapon(slot)
+            .ok_or(CommandError::EmptySlot { unit: id, slot })?;
+        let class = self.class_of(unit)?;
+        if self.tables.items.get(&copy.def).is_none() {
+            return Err(CommandError::UnknownItem(copy.def.clone()));
+        }
+        match unit.usable_weapon(slot, class, &self.tables.items) {
+            Some(_) => Ok(()),
+            None => Err(CommandError::CannotWield {
+                unit: id,
+                item: copy.def.clone(),
+            }),
+        }
+    }
+
+    /// The forecast of `unit` attacking `target` from `dest` with the weapon
+    /// in `slot`, and both sides' weapon kinds.
     fn plan_attack(
         &self,
         unit: &Unit,
         dest: Pos,
         target: UnitId,
-    ) -> Result<Forecast, CommandError> {
+        slot: usize,
+    ) -> Result<(Forecast, [Option<WeaponKind>; 2]), CommandError> {
         let defender = self.living(target)?;
         if !unit.faction.is_hostile_to(defender.faction) {
             return Err(CommandError::NotHostile(target));
         }
-        let a = self.combatant(unit, dest)?;
-        let d = self.combatant(defender, defender.pos)?;
-        if a.weapon.is_none() {
-            return Err(CommandError::NoWeapon(unit.id));
-        }
+        self.check_wield(unit.id, slot)?;
+        let a = self.combatant(unit, dest, Some(slot))?;
+        let d = self.combatant(defender, defender.pos, None)?;
         let distance = Pos::manhattan(dest, defender.pos);
-        forecast(&CombatRules::default(), &a, &d, distance)
-            .ok_or(CommandError::OutOfRange { target, distance })
+        let forecast = forecast(&self.tables.items.combat_rules(), &a, &d, distance)
+            .ok_or(CommandError::OutOfRange { target, distance })?;
+        let kind = |c: &CombatantInput| c.weapon.as_ref().and_then(|w| w.kind);
+        Ok((forecast, [kind(&a), kind(&d)]))
     }
 
-    /// `unit` as the combat maths sees it, standing on `pos`. Until 0306
-    /// adds gear: permanent stats, no armour, the stand-in `weapon`.
-    fn combatant(&self, unit: &Unit, pos: Pos) -> Result<CombatantInput<'_>, CommandError> {
-        let class = self
-            .tables
+    /// Validates `unit` using item `index` on `target` from `dest`.
+    fn plan_item(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        index: usize,
+        target: UnitId,
+    ) -> Result<Step, CommandError> {
+        let items = if unit.faction == Faction::Player {
+            &self.pack.items
+        } else {
+            &unit.consumables
+        };
+        let item = items.get(index).ok_or(CommandError::NoItem {
+            unit: unit.id,
+            index,
+        })?;
+        let effect = match self.tables.items.get(item) {
+            None => return Err(CommandError::UnknownItem(item.clone())),
+            Some(ItemDef::Consumable(c)) => c.effect,
+            Some(_) => return Err(CommandError::NotConsumable(item.clone())),
+        };
+        if target != unit.id {
+            let other = self.living(target)?;
+            if unit.faction.is_hostile_to(other.faction) || Pos::manhattan(dest, other.pos) != 1 {
+                return Err(CommandError::BadItemTarget(target));
+            }
+        }
+        Ok(Step::UseItem {
+            index,
+            item: item.clone(),
+            effect,
+            target,
+        })
+    }
+
+    /// The class of `unit`.
+    fn class_of(&self, unit: &Unit) -> Result<&ClassDef, CommandError> {
+        self.tables
             .classes
             .get(&unit.class)
-            .ok_or_else(|| CommandError::UnknownClass(unit.class.clone()))?;
+            .ok_or_else(|| CommandError::UnknownClass(unit.class.clone()))
+    }
+
+    /// `unit` as the combat maths sees it, standing on `pos`, with the
+    /// weapon in `slot` (`None`: the equipped one).
+    fn combatant(
+        &self,
+        unit: &Unit,
+        pos: Pos,
+        slot: Option<usize>,
+    ) -> Result<CombatantInput<'_>, CommandError> {
+        let class = self.class_of(unit)?;
         let tile = *self
             .map
             .tiles
@@ -612,21 +859,13 @@ impl BattleState {
             .terrain
             .get(tile)
             .ok_or(CommandError::UnknownTerrain(pos))?;
-        let weapon_rank = unit
-            .weapon
-            .as_ref()
-            .and_then(|w| w.kind)
-            .and_then(|k| unit.weapon_ranks.get(&k).copied())
-            .unwrap_or(WeaponRank::E);
-        Ok(CombatantInput {
-            stats: unit.stats,
-            tags: class.tags,
-            affinities: class.affinities.clone(),
-            weapon: unit.weapon.clone(),
-            weapon_rank,
-            armour_weight: 0,
+        Ok(unit.combat_input(
+            class,
+            &self.tables.classes,
+            &self.tables.items,
+            slot,
             terrain,
-        })
+        ))
     }
 
     /// Whether `unit` may seize from `dest`.
@@ -670,7 +909,26 @@ impl BattleState {
         let mut seized = false;
         match step {
             Step::Wait => {}
-            Step::Attack { target, forecast } => self.fight(id, target, forecast, events),
+            Step::Attack {
+                target,
+                slot,
+                forecast,
+                kinds,
+            } => {
+                if self
+                    .unit(id)
+                    .is_some_and(|u| u.loadout.equipped != Some(slot))
+                {
+                    self.equip(id, slot, events);
+                }
+                self.fight(id, target, forecast, kinds, events);
+            }
+            Step::UseItem {
+                index,
+                item,
+                effect,
+                target,
+            } => self.use_item(id, index, item, effect, target, events),
             Step::Seize => {
                 if let Some(pos) = dest {
                     events.push(Event::Seized { unit: id, pos });
@@ -692,12 +950,57 @@ impl BattleState {
         }
     }
 
-    /// Plays out a combat and removes whoever fell.
+    /// Equips the weapon in `slot` of unit `id` (already validated).
+    fn equip(&mut self, id: UnitId, slot: usize, events: &mut Vec<Event>) {
+        if let Some(u) = self.unit_mut(id) {
+            u.loadout.equipped = Some(slot);
+            events.push(Event::Equipped { unit: id, slot });
+        }
+    }
+
+    /// Uses up item `index` of unit `id`'s source (validated) on `target`.
+    fn use_item(
+        &mut self,
+        id: UnitId,
+        index: usize,
+        item: ItemId,
+        effect: ConsumableEffect,
+        target: UnitId,
+        events: &mut Vec<Event>,
+    ) {
+        let Some(user) = self.unit_mut(id) else {
+            return;
+        };
+        if user.faction == Faction::Player {
+            self.pack.items.remove(index);
+        } else {
+            user.consumables.remove(index);
+        }
+        events.push(Event::ItemUsed {
+            unit: id,
+            item,
+            target,
+        });
+        if let Some(t) = self.unit_mut(target) {
+            let max = t.stats.hp;
+            let healed = match effect {
+                ConsumableEffect::Heal(amount) => t.hp.saturating_add(amount.max(0)).min(max),
+                ConsumableEffect::HealFull => max,
+            }
+            .max(t.hp);
+            let amount = healed - t.hp;
+            t.hp = healed;
+            events.push(Event::Healed { target, amount });
+        }
+    }
+
+    /// Plays out a combat, gives weapon EXP and removes whoever fell.
     fn fight(
         &mut self,
         attacker: UnitId,
         defender: UnitId,
         forecast: Forecast,
+        kinds: [Option<WeaponKind>; 2],
         events: &mut Vec<Event>,
     ) {
         let hp = |s: &Self, id| {
@@ -708,7 +1011,13 @@ impl BattleState {
                 })
         };
         let (a, d) = (hp(self, attacker), hp(self, defender));
-        let outcome = resolve(&CombatRules::default(), &forecast, a, d, &mut self.rng);
+        let outcome = resolve(
+            &self.tables.items.combat_rules(),
+            &forecast,
+            a,
+            d,
+            &mut self.rng,
+        );
         for (id, left) in [
             (attacker, outcome.attacker_hp),
             (defender, outcome.defender_hp),
@@ -717,17 +1026,61 @@ impl BattleState {
                 u.hp = left;
             }
         }
+        let exp = weapon_exp(&self.tables.items, &outcome, a.current, d.current);
         events.push(Event::CombatResolved {
             attacker,
             defender,
             forecast,
             outcome,
         });
+        for ((id, kind), amount) in [attacker, defender].into_iter().zip(kinds).zip(exp) {
+            if let Some(kind) = kind {
+                self.gain_weapon_exp(id, kind, amount, events);
+            }
+        }
         for id in [defender, attacker] {
             if let Some(i) = self.units.iter().position(|u| u.id == id && u.hp <= 0) {
                 self.fallen.push(self.units.remove(i));
                 events.push(Event::UnitFell { unit: id });
             }
+        }
+    }
+
+    /// Gives unit `id`, if still standing, `amount` weapon EXP in `kind`.
+    fn gain_weapon_exp(
+        &mut self,
+        id: UnitId,
+        kind: WeaponKind,
+        amount: u32,
+        events: &mut Vec<Event>,
+    ) {
+        if amount == 0 {
+            return;
+        }
+        let tables = self.tables.clone();
+        let Some(unit) = self.unit_mut(id).filter(|u| u.hp > 0) else {
+            return;
+        };
+        let Some(max) = tables
+            .classes
+            .get(&unit.class)
+            .and_then(|c| c.weapon(kind))
+            .map(|w| w.max)
+        else {
+            return;
+        };
+        let rank_up = unit.gain_weapon_exp(kind, amount, max, &tables.items.rules);
+        events.push(Event::WeaponExpGained {
+            unit: id,
+            kind,
+            amount,
+        });
+        if let Some(rank) = rank_up {
+            events.push(Event::WeaponRankUp {
+                unit: id,
+                kind,
+                rank,
+            });
         }
     }
 
@@ -828,6 +1181,34 @@ impl BattleState {
         self.outcome = Some(outcome);
         events.push(Event::BattleEnded { outcome });
     }
+}
+
+/// Weapon EXP earned by the attacker and the defender in `outcome`, given
+/// their HP going in. No Combat Arts yet (0312).
+fn weapon_exp(
+    items: &ItemTable,
+    outcome: &CombatOutcome,
+    attacker_hp: StatValue,
+    defender_hp: StatValue,
+) -> [u32; 2] {
+    // HP before each strike: [attacker, defender].
+    let mut hp = [attacker_hp, defender_hp];
+    let mut struck = [0usize; 2];
+    let mut hits = [0usize; 2];
+    let mut dealt: [StatValue; 2] = [0, 0];
+    for s in &outcome.strikes {
+        let (me, target) = match s.by {
+            Side::Attacker => (0, 1),
+            Side::Defender => (1, 0),
+        };
+        struck[me] += 1;
+        hits[me] += usize::from(s.hit);
+        if !s.healed {
+            dealt[me] += (hp[target] - s.target_hp_after).max(0);
+        }
+        hp[target] = s.target_hp_after;
+    }
+    [0, 1].map(|i| items.rules.weapon_exp(struck[i], hits[i], dealt[i], false))
 }
 
 #[cfg(test)]

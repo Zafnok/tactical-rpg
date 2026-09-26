@@ -1,0 +1,68 @@
+// Every weapon, armour, accessory and consumable, and the item rules.
+// Source: docs/design/weapons-and-items.md (0003). All numbers are *tunable*
+// starting values and rescale with ticket 0013. Loaded by trpg_content::item.
+// Spells are innate, not items (magic.md): no tomes or staves here.
+//
+// rules:
+//   rank_speed: attack speed bonus per weapon rank (E, D, C, B, A, S).
+//   rank_exp: total weapon EXP for ranks (D, C, B, A, S); strictly increasing.
+//   broken_might_divisor / broken_hit_penalty: a weapon at 0 durability.
+//   exp_hit / exp_miss / exp_damage_divisor / exp_art_multiplier: weapon EXP
+//     after a combat = base (hit / all missed) x art multiplier + dealt / divisor.
+//   default_pack_cap: battle pack cap when a chapter doesn't set one.
+// kinds: each weapon kind's trait, exactly once per kind:
+//   SwordFollowUp | Effective(tag, multiplier) | AxeMinDamage(n) | GauntletAvoid(n) | None
+// weapons: range is (min, max) in tiles; damage_type defaults to Physical;
+//   effective: extra (tag, multiplier) pairs beyond the kind's trait.
+// armour: weight_class Light | Medium | Heavy; bonus lists only the stats it
+//   raises, e.g. (def: 3).
+// accessories: bonus as for armour.
+// consumables: effect Heal(n) | HealFull.
+// Ids are unique across all four lists.
+(
+    rules: (
+        rank_speed: (0, 0, 1, 2, 3, 4),
+        rank_exp: (30, 70, 120, 180, 250),
+        broken_might_divisor: 2,
+        broken_hit_penalty: 20,
+        exp_hit: 2,
+        exp_miss: 1,
+        exp_damage_divisor: 5,
+        exp_art_multiplier: 2,
+        default_pack_cap: 6,
+    ),
+    kinds: [
+        (kind: Sword, trait: SwordFollowUp),
+        (kind: Spear, trait: Effective(Mounted, 2)),
+        (kind: Axe, trait: AxeMinDamage(5)),
+        (kind: Bow, trait: Effective(Flying, 3)),
+        (kind: Gauntlet, trait: GauntletAvoid(15)),
+    ],
+    weapons: [
+        (id: "iron_sword", name: "Iron Sword", kind: Sword, rank: E, might: 5, hit: 90, crit: 0, weight: 2, range: (1, 1), durability: 20, price: 460),
+        (id: "steel_sword", name: "Steel Sword", kind: Sword, rank: D, might: 8, hit: 75, crit: 0, weight: 4, range: (1, 1), durability: 25, price: 600),
+        (id: "iron_spear", name: "Iron Spear", kind: Spear, rank: E, might: 7, hit: 80, crit: 0, weight: 4, range: (1, 1), durability: 20, price: 360),
+        (id: "steel_spear", name: "Steel Spear", kind: Spear, rank: D, might: 10, hit: 70, crit: 0, weight: 6, range: (1, 1), durability: 25, price: 480),
+        (id: "iron_axe", name: "Iron Axe", kind: Axe, rank: E, might: 8, hit: 75, crit: 0, weight: 6, range: (1, 1), durability: 20, price: 270),
+        (id: "steel_axe", name: "Steel Axe", kind: Axe, rank: D, might: 11, hit: 65, crit: 0, weight: 8, range: (1, 1), durability: 25, price: 360),
+        (id: "iron_bow", name: "Iron Bow", kind: Bow, rank: E, might: 6, hit: 85, crit: 0, weight: 3, range: (2, 2), durability: 20, price: 540),
+        (id: "steel_bow", name: "Steel Bow", kind: Bow, rank: D, might: 9, hit: 70, crit: 0, weight: 5, range: (2, 2), durability: 25, price: 720),
+        (id: "iron_gauntlets", name: "Iron Gauntlets", kind: Gauntlet, rank: E, might: 3, hit: 95, crit: 5, weight: 1, range: (1, 1), durability: 20, price: 400),
+        (id: "steel_gauntlets", name: "Steel Gauntlets", kind: Gauntlet, rank: D, might: 5, hit: 85, crit: 5, weight: 2, range: (1, 1), durability: 25, price: 560),
+    ],
+    armour: [
+        (id: "leather_vest", name: "Leather Vest", weight_class: Light, bonus: (def: 1), weight: 0, price: 300),
+        (id: "chain_mail", name: "Chain Mail", weight_class: Medium, bonus: (def: 3), weight: 2, price: 800),
+        (id: "iron_plate", name: "Iron Plate", weight_class: Heavy, bonus: (def: 5), weight: 5, price: 1500),
+        (id: "warded_robe", name: "Warded Robe", weight_class: Light, bonus: (res: 2), weight: 0, price: 700),
+    ],
+    accessories: [
+        (id: "speed_ring", name: "Speed Ring", bonus: (spd: 2), price: 2000),
+        (id: "power_ring", name: "Power Ring", bonus: (str: 2), price: 2000),
+        (id: "focus_charm", name: "Focus Charm", bonus: (dex: 2), price: 1500),
+    ],
+    consumables: [
+        (id: "potion", name: "Potion", effect: Heal(10), price: 300),
+        (id: "elixir", name: "Elixir", effect: HealFull, price: 3000),
+    ],
+)

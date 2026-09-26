@@ -12,6 +12,10 @@
 //   map_label (optional, characters and generics): Some("Xy"), the two letters drawn on
 //     the map, instead of the first two letters of the name (generics: of
 //     the class name). Named units of one side on a map need distinct labels.
+//   loadout (optional, characters and generics): (weapons: [ids], armour:
+//     Some(id), accessory: Some(id)), items from items.ron; at most the
+//     class's weapon slots, armour of a weight the class wears. The first
+//     weapon the unit can wield starts equipped.
 // generics: generic unit templates (class + character level); their stats
 //   come from the class (progression.md, "Generic units").
 (
@@ -22,6 +26,7 @@
             talent: Spd,
             base: (19, 6, 1, 7, 7, 4, 3),
             weapon_ranks: [(Sword, D)],
+            loadout: (weapons: ["iron_sword", "steel_sword"], armour: Some("leather_vest")),
         ),
         (
             id: "test_knight", name: "Test Knight", class: "guard", level: 1,
@@ -29,6 +34,7 @@
             talent: Def,
             base: (20, 7, 0, 4, 2, 9, 0),
             weapon_ranks: [(Spear, D)],
+            loadout: (weapons: ["iron_spear"], armour: Some("chain_mail")),
         ),
         (
             id: "test_archer", name: "Test Archer", class: "archer", level: 1,
@@ -36,10 +42,14 @@
             talent: Dex,
             base: (17, 5, 0, 7, 5, 3, 1),
             weapon_ranks: [(Bow, D)],
+            loadout: (weapons: ["iron_bow"], armour: Some("leather_vest")),
         ),
     ],
     generics: [
-        (id: "test_brigand", class: "brigand", level: 1),
-        (id: "test_raider", class: "raider", level: 2),
+        (id: "test_brigand", class: "brigand", level: 1, loadout: (weapons: ["iron_axe"])),
+        (
+            id: "test_raider", class: "raider", level: 2,
+            loadout: (weapons: ["steel_axe", "iron_axe"]),
+        ),
     ],
 )

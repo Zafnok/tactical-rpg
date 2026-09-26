@@ -9,9 +9,10 @@ pub mod units;
 
 use std::sync::Arc;
 
-use trpg_content::{Content, check_map_labels};
+use trpg_content::{Content, character_unit, check_map_labels};
 use trpg_core::{
-    BattleSetup, BattleState, Command, Faction, Objective, Pos, Unit, UnitAction, UnitId,
+    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Pos, UnitAction,
+    UnitId,
 };
 
 use self::camera::{Camera, tile_to_cell};
@@ -28,6 +29,12 @@ pub const QUICK_BATTLE_MAP: &str = "test_small";
 /// Seed of the debug Quick Battle's RNG.
 pub const QUICK_BATTLE_SEED: u64 = 1;
 
+/// The consumable the debug Quick Battle's pack is filled with.
+pub const QUICK_BATTLE_POTION: &str = "potion";
+
+/// How many of them (Chapter 1's default pack, `chapter-1.md`).
+pub const QUICK_BATTLE_POTIONS: usize = 3;
+
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
 /// against generic enemies (rout), one of them wounded and one having acted
 /// so both looks show. Fails with a message if the content lacks something
@@ -40,6 +47,7 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         .map
         .clone();
     let classes = &content.classes;
+    let items = &content.items;
     let chars = &content.characters;
     let mut units = Vec::new();
     let mut next_id = 0;
@@ -57,7 +65,7 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
             .characters
             .get(&trpg_core::CharacterId(name.into()))
             .ok_or_else(|| format!("no character \"{name}\""))?;
-        let unit = Unit::from_character(id(), def, classes, Faction::Player, pos)
+        let unit = character_unit(def, id(), classes, items, Faction::Player, pos)
             .map_err(|e| e.to_string())?;
         units.push(unit);
     }
@@ -72,7 +80,7 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
             .get(name)
             .ok_or_else(|| format!("no generic \"{name}\""))?;
         let unit = template
-            .unit(id(), classes, Faction::Enemy, pos)
+            .unit(id(), classes, items, Faction::Enemy, pos)
             .map_err(|e| e.to_string())?;
         units.push(unit);
     }
@@ -92,6 +100,11 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         map,
         terrain: Arc::new(content.terrain.rules.clone()),
         classes: Arc::new(classes.clone()),
+        items: Arc::new(items.clone()),
+        pack: BattlePack {
+            items: vec![ItemId::new(QUICK_BATTLE_POTION); QUICK_BATTLE_POTIONS],
+            cap: items.rules.default_pack_cap,
+        },
         units,
         reinforcements: vec![],
         objective: Objective::Rout { turn_limit: None },
@@ -240,7 +253,7 @@ impl Screen for BattleScreen {
 #[cfg(test)]
 mod tests {
     use insta::assert_snapshot;
-    use trpg_core::{BattleMap, Grid, Phase, TerrainId};
+    use trpg_core::{BattleMap, Grid, Phase, TerrainId, Unit};
 
     use super::*;
     use crate::console::{CONSOLE_H, CONSOLE_W};
@@ -256,6 +269,8 @@ mod tests {
             map,
             terrain: Arc::new(c.content.terrain.rules.clone()),
             classes: Arc::new(c.content.classes.clone()),
+            items: Arc::new(c.content.items.clone()),
+            pack: BattlePack::default(),
             units,
             reinforcements: vec![],
             objective: Objective::Rout { turn_limit: None },
