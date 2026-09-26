@@ -31,7 +31,7 @@ expression: buf.to_snapshot(&c.palette)
 ··≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^│                            │
 ··≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^│                            │
 ≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^..│                            │
-≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^Lo└────────────────────────────┘
+≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^Ra└────────────────────────────┘
                                                                                                     
  arrows move · f select · d back · e info                                                           
 --- colours ---
@@ -76,9 +76,9 @@ e = fg:water bg:water_bg
 f = fg:panel_border bg:panel_bg
 g = fg:text bg:panel_bg
 h = fg:enemy bg:forest_bg
-i = fg:player bg:grass_bg
+i = fg:enemy bg:grass_bg
 j = fg:text bg:black
 k = fg:text_dim bg:black
 --- overlays ---
-over  544,478 16x2  hp_high
 over  16,46 16x2  hp_high
+over  544,478 16x2  hp_high

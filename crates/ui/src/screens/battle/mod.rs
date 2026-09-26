@@ -435,7 +435,8 @@ mod tests {
             .flat_map(|y: usize| (0..64).map(move |x: usize| ids[(x / 3 + y / 2) % ids.len()]))
             .collect();
         let mut units = quick_battle(&c.content).unwrap().units;
-        units[0].pos = Pos::new(63, 39);
+        // The camera starts on the lord at (3, 5), top-left.
+        units[5].pos = Pos::new(63, 39);
         units[3].pos = Pos::new(30, 12);
         units[4].pos = Pos::new(28, 9); // Above the viewport: not drawn.
         let mut s = BattleScreen::new(BattleScene {
@@ -445,11 +446,12 @@ mod tests {
             },
             units,
         });
+        assert_eq!(s.camera().origin, Pos::new(0, 0));
         s.follow(Pos::new(63, 39));
         assert_eq!(s.camera().origin, Pos::new(29, 10));
         let buf = render(&s, &c);
         // The corner unit sits in the viewport's last tile.
-        assert_eq!(buf.get(68, 29).unwrap().glyph, 'L');
+        assert_eq!(buf.get(68, 29).unwrap().glyph, 'R');
         assert_snapshot!(buf.to_snapshot(&c.palette));
     }
 }
