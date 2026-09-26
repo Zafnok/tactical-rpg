@@ -169,37 +169,12 @@ Resulting true chances (for the forecast help text, not for code): displayed
 The forecast always shows the *displayed* numbers (`hit`, `crit`), never the
 true percentage.
 
-## Terrain combat effects (*tunable*)
+## Terrain combat effects
 
-These numbers are Claude's starting values (FE GBA), not Nick's decision;
-Nick is reviewing them in [`terrain.md`](terrain.md), which also holds the
-movement costs.
-
-Terrain bonuses apply to the unit standing on the tile, whether it is
-attacking or defending. `defense` adds to both Def and Res (FE GBA). Flying
-units get no terrain `defense`/`avoid` bonus (FE rule, *tunable*; applies once
-a flying movement type exists). `heal_percent` = % of max HP restored at the
-start of that unit's side's phase (rounded down; used by 0305).
-
-| Terrain | Def | Avoid | Heal % |
-| ------- | --- | ----- | ------ |
-| plain | 0 | 0 | 0 |
-| road | 0 | 0 | 0 |
-| bridge | 0 | 0 | 0 |
-| floor | 0 | 0 | 0 |
-| forest | +1 | +20 | 0 |
-| thicket (impassable) | — | — | — |
-| mountain | +2 | +30 | 0 |
-| peak | +2 | +40 | 0 |
-| water (shallow) | 0 | +10 | 0 |
-| sea | 0 | +10 | 0 |
-| village | 0 | +10 | 0 |
-| fort | +2 | +20 | 20 |
-| gate | +3 | +20 | 10 |
-| throne | +3 | +30 | 10 |
-| door / wall | — | — | — |
-
-"—" = impassable, so it never matters in combat.
+Terrain Def/Avoid values, the flier rule and healing tiles are decided in
+[`terrain.md`](terrain.md) (Nick, 2026-09-26). In the formulas above,
+`terrain_B.defense` and `terrain_B.avoid` are that table's values for the tile
+B stands on (0 for a flying B).
 
 ## Worked examples
 

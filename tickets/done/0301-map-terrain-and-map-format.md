@@ -102,9 +102,13 @@ small test map.
   `docs/design/terrain.md`): heavy FE GBA-style movement costs, but mountains
   cost 3 on foot and 5 mounted (horses can climb them now); foot units can
   wade rivers at 5; fliers pay 3 on peaks. The costs are pinned by
-  `embedded_move_costs_match_design_doc`. He also said the terrain Def/Avoid/
-  Heal values in `stats-and-combat.md` were never his decision; they stay as
-  Claude's starting values, marked so in both docs, until he reviews them.
+  `embedded_move_costs_match_design_doc`. Terrain Def/Avoid: FE GBA style
+  (unchanged numbers), fliers get no terrain bonus. **Healing tiles are
+  deferred** (Nick wants to design them with capturing later), so
+  `heal_percent` is 0 on every terrain. Nick hasn't signed off on the
+  building tiles (village, fort, gate, throne): they stay in the data as
+  placeholders while he decides. The terrain tables moved from
+  `stats-and-combat.md` into `terrain.md`.
 - **Deviation, cost format**: `move_cost` is a map keyed by movement type name
   (`{ "foot": Some(2), ..., "flying": None }`) rather than a bare list, so the
   file is readable without counting positions. The loader still produces the

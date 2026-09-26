@@ -1,6 +1,7 @@
 # Terrain
 
-Decided: 2026-09-26 (movement costs); combat bonuses still under review
+Decided: 2026-09-26 (movement costs, combat bonuses; healing deferred;
+building tiles still under review)
 Source: ticket 0301 (Nick revisited the player-facing choices of that ticket)
 
 ## Nick's words
@@ -22,6 +23,16 @@ Source: ticket 0301 (Nick revisited the player-facing choices of that ticket)
 > **Q3. What fliers can pass over** (everything but walls like FE GBA /
 > slowed by some terrain like Three Houses / everything like Advance Wars):
 > "3B but no weather for now just peaks"
+>
+> **Q4. How good terrain helps in a fight** (avoid and a bit of defence like
+> FE GBA / defence only like Advance Wars / minimal like FFT): "1A"
+>
+> **Q5. Healing tiles** (forts, gates, thrones heal like FE GBA / only your own
+> buildings like Advance Wars / none): "2 I think we can defer healing for
+> now, since the idea of capturing sounds interesting, but I also don't think
+> I ever explicitly signed off on a fort, gate, or throne tile type either."
+>
+> **Q6. Do fliers get terrain bonuses** (no like FE GBA / yes): "3A"
 
 ## Rules
 
@@ -60,13 +71,41 @@ rest are FE GBA values Nick accepted ("rest of numbers seem ok"). All
 
 ### Terrain combat bonuses
 
-The Def / Avoid / Heal % table in `stats-and-combat.md` ("Terrain combat
-effects") is **Claude's starting values, not Nick's decision**. Nick is
-reviewing it next; this section will record his answer.
+Fire Emblem GBA style (Nick, Q4): good terrain makes a unit harder to hit
+(avoid) and adds a little defence. The bonus applies to the unit standing on
+the tile, whether it attacks or defends; `defense` adds to both Def and Res.
+Numbers are FE GBA values, *tunable*:
+
+| Terrain | Def | Avoid |
+| ------- | --- | ----- |
+| plain, road, bridge, floor | 0 | 0 |
+| forest | +1 | +20 |
+| mountain | +2 | +30 |
+| peak | +2 | +40 |
+| water, sea | 0 | +10 |
+| thicket, wall, door | — | — |
+
+"—" = impassable, so it never matters in combat. Buildings (village, fort,
+gate, throne) are under review (see open sub-questions); until Nick decides,
+the data keeps FE GBA placeholders for them: village 0/+10, fort +2/+20,
+gate +3/+20, throne +3/+30.
+
+- **Fliers get no terrain Def/Avoid bonus** (Nick, Q6): they fly above the
+  trees. This balances their mobility.
+
+### Healing tiles
+
+**Deferred** (Nick, Q5): no tile heals for now. Nick finds the Advance Wars
+idea of *capturing* buildings that then heal your side interesting, so
+healing tiles are to be designed together with capturing later. The data
+keeps a `heal_percent` field, set to 0 on every terrain.
 
 ## Open sub-questions
 
 - **Fliers as late-game classes** (Nick: "tier 3+"): moving the Flier line
   out of tier 1 changes the class tree. Ticket 0017 asks this.
-- Terrain combat bonuses (above).
+- **Building tiles** (Nick: "I don't think I ever explicitly signed off on a
+  fort, gate, or throne tile type"): whether village, fort, gate and throne
+  exist, and what they do. Asked next.
+- **Capturing and healing tiles** together (Nick, Q5), later.
 - Weather (Nick: "no weather for now").

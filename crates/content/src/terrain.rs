@@ -513,8 +513,8 @@ mod tests {
         assert_eq!(line_of("a", "z"), None);
     }
 
-    /// Acceptance: the embedded terrain values match the table in
-    /// `docs/design/stats-and-combat.md` ("Terrain combat effects").
+    /// Acceptance: the embedded terrain values match the tables in
+    /// `docs/design/terrain.md` (healing is deferred, so 0 everywhere).
     #[test]
     fn embedded_terrain_matches_design_doc() {
         let t = TerrainDef::load(PaletteDef::load().ok().as_ref());
@@ -535,9 +535,9 @@ mod tests {
             ("water", 0, 10, 0),
             ("sea", 0, 10, 0),
             ("village", 0, 10, 0),
-            ("fort", 2, 20, 20),
-            ("gate", 3, 20, 10),
-            ("throne", 3, 30, 10),
+            ("fort", 2, 20, 0),
+            ("gate", 3, 20, 0),
+            ("throne", 3, 30, 0),
         ];
         for &(id, def, avoid, heal) in expected {
             let rules = t.display.id_of(id).and_then(|i| t.rules.get(i));
