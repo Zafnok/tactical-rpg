@@ -644,15 +644,29 @@ impl Unit {
             .map_or(0, |a| a.weight)
     }
 
-    /// The ranges of every weapon in the loadout the unit can wield,
-    /// without duplicates, in slot order. Empty if its class is unknown.
-    pub fn attack_ranges(&self, classes: &ClassTable, items: &ItemTable) -> Vec<AttackRange> {
+    /// The ranges of every weapon in the loadout the unit can wield, then of
+    /// every [castable](Unit::castable_attack) learned attack spell (id
+    /// order), without duplicates. Empty if its class is unknown.
+    pub fn attack_ranges(
+        &self,
+        classes: &ClassTable,
+        items: &ItemTable,
+        spells: &SpellTable,
+    ) -> Vec<AttackRange> {
         let Some(class) = classes.get(&self.class) else {
             return Vec::new();
         };
         let mut ranges = Vec::new();
         for slot in 0..WEAPON_SLOTS {
             if let Some((_, def)) = self.usable_weapon(slot, class, items) {
+                let range = (def.min_range, def.max_range);
+                if !ranges.contains(&range) {
+                    ranges.push(range);
+                }
+            }
+        }
+        for spell in &self.learned {
+            if let Some(def) = self.castable_attack(spell, spells) {
                 let range = (def.min_range, def.max_range);
                 if !ranges.contains(&range) {
                     ranges.push(range);
