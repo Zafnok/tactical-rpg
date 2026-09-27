@@ -142,7 +142,7 @@ fn the_embedded_actives_match_the_design_tables() {
             active(
                 dur(3),
                 strike(
-                    WeaponReq::Any,
+                    WeaponReq::Kind(WeaponKind::Sword),
                     CombatMods {
                         hit: 30,
                         crit: 10,

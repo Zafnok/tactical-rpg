@@ -165,9 +165,9 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
     the `Strike` effect (`SkillDef::is_combat`). Spell actives use
     `UnitAction::Cast`'s new `active`, since attack spells are cast, not
     `Attack`ed.
-  - The post-action move (Skirmish, Swoop) is chosen in the attack command
-    (`then_move`), as 0305's hook intended; the UI must ask for it with the
-    attack.
+  - The post-action move (Vault, Swoop) is its own command, chosen after
+    the combat (Nick; see the reviews below), not a field of the attack as
+    0305's hook intended.
   - Shove's landing after a burning tile is the first free neighbour of the
     fire in `Dir` order: the target's own tile is always one, so "nearest"
     never goes further than 1.
@@ -200,15 +200,26 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
     collateral damage between 2 units": collisions can take units to 0 HP,
     and a unit the target is pushed into takes the same damage
     (`Event::CollisionDamage`). Both can fall, the pushed unit first.
-  - Third review: Swoop's (and Skirmish's) step is **chosen after the fight
-    plays out**: the attack ends with `Event::MoveAfterOffered`, and a new
+  - Third review: Swoop's (and Skirmish's, now Vault's) step is **chosen
+    after the fight plays out**: the attack ends with `Event::MoveAfterOffered`, and a new
     `Command::MoveAfter { unit, to }` makes (or skips) the step; the old
     `then_move` field is gone (ADR-0021 updated). Stance riders say whether
     they also count in their own combat (`Stance { mods, this_combat }`).
     White Magic's bonus also adds to Sanctuary. Charge, Deadly Blow (doubled
     last) and skill stat bonuses were confirmed as they were.
-  - Still open with Nick: renaming Skirmish to **Vault** as an active skill,
-    and weapon kinds for the actives that have none.
+  - Fourth review: "i think skirmish should be renamed vault and it should
+    be an active skill", then "1B, 2B - give the players a bit of fun
+    here..": **Vault** (1 dur, bows only, a 1-tile step after the fight) is
+    the Archer's active; Long Shot moved to the Marksman with range +2 (Long
+    Shot 2 is gone); the Archer's passive is Bow Focus 1 (hit +5), which the
+    Outrider learns where it learned Skirmish; the Marksman's passive is
+    Bow Focus 2. "3A with exception that deadly blow goes to sword only,
+    heavy blow goes to gauntlet only, and trample goes to axe only": every
+    combat active has a weapon kind (Keen Edge Sw, Flurry Gt, Lance Rush Sp,
+    Deadly Blow Sw, Rampage Ax, Trample Ax, Swoop Sp).
+  - **Still open with Nick:** Heavy Blow → gauntlets. The Raider, whose
+    active it is, wields only axes, so it could never use it in its own
+    class; it stays usable with any weapon until Nick chooses.
 - **Claude's starting rules** (gameplay, where the design docs were silent):
   1. ~~Skill might added after effectiveness~~: **changed by Nick** (see
      below).
@@ -223,7 +234,7 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
      once); the lord never gets its own aura.
   5. ~~Shove collisions never kill~~: **changed by Nick** (see below).
      Pushed into fire, the target lands on the first free tile next to it.
-  6. **Skirmish/Swoop**: one step to an empty tile the unit can enter,
+  6. **Vault/Swoop**: one step to an empty tile the unit can enter,
      whatever its move cost (chosen after the fight: Nick).
   7. ~~A stance rider always counts in its own combat~~: **per skill**
      (Nick).
@@ -241,6 +252,8 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
       2 HP left gives 1).
   14. Skill stat bonuses (Brace, War Cry, Resolve…) count in combat only
       and may go past class caps.
-  15. Actives without a weapon kind in the table (Keen Edge, Heavy Blow,
-      Lance Rush, Deadly Blow, Rampage, Trample, Swoop) work with **any
-      weapon but not a spell** (they cost durability).
+  15. ~~Actives without a weapon kind work with any weapon~~: **every
+      combat active has a kind** (Nick), except Heavy Blow until he
+      settles it (any weapon but not a spell, meanwhile).
+  16. Bow Focus 1 is hit +5 (half of Bow Focus 2's hit +10), and the
+      Marksman's Long Shot keeps Long Shot 2's range +2.

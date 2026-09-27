@@ -48,7 +48,7 @@
         // Swordsman
         (
             id: "keen_edge", name: "Keen Edge",
-            kind: Active(cost: Durability(3), effect: Strike(with: Any, mods: (hit: 30, crit: 10))),
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Sword), mods: (hit: 30, crit: 10))),
         ),
         (
             id: "sword_focus_1", name: "Sword Focus 1", family: "sword_focus", rank: 1,
@@ -57,7 +57,7 @@
         // Brawler
         (
             id: "flurry", name: "Flurry",
-            kind: Active(cost: Durability(5), effect: Strike(with: Any, mods: (extra_strikes: 1))),
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Gauntlet), mods: (extra_strikes: 1))),
         ),
         (
             id: "light_feet_1", name: "Light Feet 1", family: "light_feet", rank: 1,
@@ -72,14 +72,15 @@
             id: "axe_focus_1", name: "Axe Focus 1", family: "axe_focus", rank: 1,
             kind: Passive([CombatMod(mods: (hit: 10), when: WeaponKindEquipped(Axe))]),
         ),
-        // Archer
+        // Archer (Nick, reviewing ticket 0311: Vault replaces Long Shot, which
+        // moves to the Marksman, and replaces the Skirmish passive)
         (
-            id: "long_shot", name: "Long Shot", family: "long_shot", rank: 1,
-            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Bow), range: 1)),
+            id: "vault", name: "Vault",
+            kind: Active(cost: Durability(1), effect: Strike(with: Kind(Bow), post_move: 1)),
         ),
         (
-            id: "skirmish", name: "Skirmish",
-            kind: Passive([PostActionMove(tiles: 1, when: WeaponKindEquipped(Bow))]),
+            id: "bow_focus_1", name: "Bow Focus 1", family: "bow_focus", rank: 1,
+            kind: Passive([CombatMod(mods: (hit: 5), when: WeaponKindEquipped(Bow))]),
         ),
         // Guard
         (
@@ -93,7 +94,7 @@
         // Rider
         (
             id: "lance_rush", name: "Lance Rush",
-            kind: Active(cost: Durability(3), effect: Strike(with: Any, mods: (might: 5))),
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Spear), mods: (might: 5))),
         ),
         (
             id: "charge_1", name: "Charge 1", family: "charge", rank: 1,
@@ -139,7 +140,7 @@
         // Shadowblade
         (
             id: "deadly_blow", name: "Deadly Blow",
-            kind: Active(cost: Durability(5), effect: Strike(with: Any, mods: (double_crit: true))),
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Sword), mods: (double_crit: true))),
         ),
         (
             id: "evasion_1", name: "Evasion 1", family: "evasion", rank: 1,
@@ -166,7 +167,7 @@
         // Berserker
         (
             id: "rampage", name: "Rampage",
-            kind: Active(cost: Durability(5), effect: Strike(with: Any, mods: (might: 8, avoid: -20))),
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Axe), mods: (might: 8, avoid: -20))),
         ),
         (
             id: "fury", name: "Fury",
@@ -183,14 +184,14 @@
         ),
         // Marksman
         (
-            id: "long_shot_2", name: "Long Shot 2", family: "long_shot", rank: 2,
+            id: "long_shot", name: "Long Shot",
             kind: Active(cost: Durability(3), effect: Strike(with: Kind(Bow), range: 2)),
         ),
         (
-            id: "bow_focus", name: "Bow Focus",
+            id: "bow_focus_2", name: "Bow Focus 2", family: "bow_focus", rank: 2,
             kind: Passive([CombatMod(mods: (hit: 10, crit: 5), when: WeaponKindEquipped(Bow))]),
         ),
-        // Outrider (passives: skirmish, charge_1)
+        // Outrider (passives: bow_focus_1, charge_1)
         (
             id: "volley", name: "Volley",
             kind: Active(cost: Durability(5), effect: Strike(with: Kind(Bow), mods: (extra_strikes: 1))),
@@ -207,7 +208,7 @@
         // Iron Rider (passives: charge_1, steadfast_1)
         (
             id: "trample", name: "Trample",
-            kind: Active(cost: Durability(3), effect: Strike(with: Any, mods: (might: 4, ignore_terrain: true))),
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Axe), mods: (might: 4, ignore_terrain: true))),
         ),
         // Lancer
         (
@@ -262,7 +263,7 @@
         // Flier (the only tier-3 skills designed so far; ticket 1001)
         (
             id: "swoop", name: "Swoop",
-            kind: Active(cost: Durability(3), effect: Strike(with: Any, post_move: 1)),
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Spear), post_move: 1)),
         ),
         (
             id: "sky_dodge_1", name: "Sky Dodge 1", family: "sky_dodge", rank: 1,

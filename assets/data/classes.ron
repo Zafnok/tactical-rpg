@@ -64,7 +64,7 @@
             base:    (17,  5,  0,  7,  5,  3,  1),
             caps:    (40, 20, 10, 24, 20, 18, 15),
             growths: (65, 45, 10, 60, 45, 25, 20),
-            active: Some("long_shot"), passives: ["skirmish"],
+            active: Some("vault"), passives: ["bow_focus_1"],
             promotes_to: ["marksman", "outrider"],
         ),
         (
@@ -200,7 +200,7 @@
             base:    (22,  8,  0, 12,  9,  5,  3),
             caps:    (48, 26, 12, 34, 28, 22, 20),
             growths: (65, 50, 10, 65, 50, 25, 25),
-            active: Some("long_shot_2"), passives: ["bow_focus"],
+            active: Some("long_shot"), passives: ["bow_focus_2"],
             promotes_to: ["deadeye"],
         ),
         (
@@ -209,7 +209,7 @@
             base:    (23,  7,  0, 10, 10,  6,  3),
             caps:    (48, 25, 12, 30, 30, 22, 20),
             growths: (70, 45, 10, 55, 55, 30, 20),
-            active: Some("volley"), passives: ["skirmish", "charge_1"],
+            active: Some("volley"), passives: ["bow_focus_1", "charge_1"],
             promotes_to: ["windrunner"],
         ),
         (

@@ -148,8 +148,8 @@
 //!     the same damage ([`Event::CollisionDamage`]). Collisions can make
 //!     either unit fall ([`Event::UnitFell`], pushed unit first; Nick).
 //!   - **Moving after an attack** (`turn-structure.md`): after an attack
-//!     with a post-action move (Skirmish with a bow, Swoop), if the unit
-//!     still stands and has somewhere to go, it is offered the move
+//!     with a post-action move (Vault, Swoop), if the unit still stands
+//!     and has somewhere to go, it is offered the move
 //!     ([`Event::MoveAfterOffered`], instead of `UnitActed`) and chooses it
 //!     after seeing the combat (Nick): [`Command::MoveAfter`] to a tile within
 //!     that many steps through empty tiles it can enter

@@ -336,33 +336,24 @@ fn axe_focus_1_hit_10_with_axes() {
 }
 
 #[test]
-fn long_shot_range_1_more_with_a_bow() {
-    let s = battle(vec![
-        player(1, "archer", p(0, 0), "iron_bow"),
-        enemy(3, p(3, 0)),
-    ]);
-    assert!(matches!(
-        try_act(&s, 1, p(0, 0), attack(3, None)),
-        Err(CommandError::OutOfRange { distance: 3, .. })
-    ));
-    let f = forecast(&s, 1, p(0, 0), attack(3, Some("long_shot")));
-    assert_eq!(f.defender, None);
-}
-
-#[test]
-fn skirmish_move_1_after_a_bow_attack() {
+fn vault_move_1_after_a_bow_attack_for_1_durability() {
     let archer = player(1, "archer", p(0, 0), "iron_bow");
-    let s = battle(vec![archer.clone(), enemy(3, p(2, 0))]);
+    let mut s = battle(vec![archer, enemy(3, p(2, 0))]);
+    // A plain attack offers no move.
     let events = try_act(&s, 1, p(0, 0), attack(3, None)).unwrap_or_default();
     assert!(
         !events
             .iter()
             .any(|e| matches!(e, Event::MoveAfterOffered { .. }))
     );
-    let mut s = battle(vec![knowing(archer, "skirmish"), enemy(3, p(2, 0))]);
-    act(&mut s, 1, p(0, 0), attack(3, None));
+    let events = act(&mut s, 1, p(0, 0), attack(3, Some("vault")));
+    assert!(events.contains(&Event::MoveAfterOffered {
+        unit: UnitId(1),
+        tiles: 1,
+    }));
     move_after(&mut s, 1, p(0, 1));
     assert_eq!(s.unit(UnitId(1)).map(|u| u.pos), Some(p(0, 1)));
+    assert_eq!(durability(&s, 1), 19);
 }
 
 /// Unit `id`, offered a move after its attack, moves to `to`.
@@ -700,41 +691,71 @@ fn axe_focus_2_hit_20_with_axes() {
 }
 
 #[test]
-fn long_shot_2_range_2_more_with_a_bow() {
+fn long_shot_range_2_more_with_a_bow() {
     let s = battle(vec![
         player(1, "marksman", p(0, 0), "iron_bow"),
         enemy(3, p(4, 0)),
     ]);
-    assert!(try_act(&s, 1, p(0, 0), attack(3, Some("long_shot_2"))).is_ok());
+    assert!(try_act(&s, 1, p(0, 0), attack(3, Some("long_shot"))).is_ok());
     let far = battle(vec![
         player(1, "marksman", p(0, 0), "iron_bow"),
         enemy(3, p(5, 0)),
     ]);
     assert!(matches!(
-        try_act(&far, 1, p(0, 0), attack(3, Some("long_shot_2"))),
+        try_act(&far, 1, p(0, 0), attack(3, Some("long_shot"))),
         Err(CommandError::OutOfRange { distance: 5, .. })
     ));
 }
 
-#[test]
-fn bow_focus_hit_10_crit_5_with_bows() {
+/// A Marksman's bow attack: (hit, crit) without and with the passives
+/// `skills`, learned in order.
+fn bow_focus(skills: &[&str]) -> ((u8, u8), (u8, u8)) {
     let archer = player(1, "marksman", p(0, 0), "iron_bow");
-    let f = |learned: bool| {
-        let a = if learned {
-            knowing(archer.clone(), "bow_focus")
-        } else {
-            archer.clone()
-        };
-        forecast(
+    let f = |a: Unit| {
+        let f = forecast(
             &battle(vec![a, enemy(3, p(2, 0))]),
             1,
             p(0, 0),
             attack(3, None),
-        )
+        );
+        (f.attacker.hit, f.attacker.crit)
     };
-    let (plain, focus) = (f(false), f(true));
-    assert_eq!(focus.attacker.hit, plain.attacker.hit + 10);
-    assert_eq!(focus.attacker.crit, plain.attacker.crit + 5);
+    let learned = skills.iter().fold(archer.clone(), |u, sk| knowing(u, sk));
+    (f(archer), f(learned))
+}
+
+#[test]
+fn bow_focus_1_hit_5_with_bows() {
+    let ((hit, crit), focus) = bow_focus(&["bow_focus_1"]);
+    assert_eq!(focus, (hit + 5, crit));
+}
+
+#[test]
+fn bow_focus_2_hit_10_crit_5_with_bows_and_supersedes_1() {
+    let ((hit, crit), focus) = bow_focus(&["bow_focus_1", "bow_focus_2"]);
+    assert_eq!(focus, (hit + 10, crit + 5));
+}
+
+#[test]
+fn actives_are_locked_to_their_weapon_kind() {
+    // Nick: Lance Rush with spears, Deadly Blow with swords, Trample with
+    // axes.
+    let wrong = |class: &str, weapon: &str, skill: &str| {
+        let s = battle(vec![player(1, class, p(0, 0), weapon), enemy(3, p(1, 0))]);
+        try_act(&s, 1, p(0, 0), attack(3, Some(skill))).err()
+    };
+    for (class, weapon, skill) in [
+        ("rider", "iron_sword", "lance_rush"),
+        ("shadowblade", "iron_gauntlets", "deadly_blow"),
+        ("iron_rider", "iron_spear", "trample"),
+        ("iron_rider", "iron_sword", "trample"),
+    ] {
+        assert_eq!(
+            wrong(class, weapon, skill),
+            Some(CommandError::WrongWeaponForSkill(SkillId::new(skill))),
+            "{skill} with {weapon}"
+        );
+    }
 }
 
 #[test]
@@ -767,7 +788,7 @@ fn steadfast_2_def_4_outside_its_own_phase() {
 fn trample_might_4_and_ignores_the_targets_terrain() {
     let s = battle_with(
         vec![
-            player(1, "iron_rider", p(0, 0), "iron_spear"),
+            player(1, "iron_rider", p(0, 0), "iron_axe"),
             enemy(3, p(1, 0)),
         ],
         &[p(1, 0)],

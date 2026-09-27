@@ -467,7 +467,7 @@ behind when you leave an unmastered class.
   the skill is used. They end at the start of the owner's side's next phase,
   before anyone acts. The same effect doesn't stack with itself; using it
   again refreshes it.
-- **Moving after an attack** (Skirmish, Swoop; Nick, reviewing ticket
+- **Moving after an attack** (Vault, Swoop; Nick, reviewing ticket
   0311's PR: "both swoop and vault should let you select after fight plays
   out"): the 1-tile step is chosen **after** the combat plays out (or
   skipped). A unit that falls in the combat, or a battle that ends with it,
@@ -495,6 +495,25 @@ behind when you leave an unmastered class.
   units"): a collision (a blocked tile, or fire) can take the pushed unit to
   0 HP. If the blocked tile holds a unit, that unit takes the same 5 damage,
   whichever side it is on, and can fall too (the pushed unit falls first).
+- **Vault** (Nick, same review: "i think skirmish should be renamed vault
+  and it should be an active skill"; then, asked where it goes and what it
+  costs, "1B" and "2B - give the players a bit of fun here.."): the Archer's
+  Skirmish passive became **Vault**, the Archer's active: **1 durability**,
+  bow attacks only, and a 1-tile step after the combat. **Long Shot** moved
+  to the Marksman with range **+2** (it was Long Shot 2); the Archer's
+  mastery passive is now **Bow Focus 1** (Bw equipped → hit +5), which
+  Bow Focus 2 supersedes. The Outrider learns Bow Focus 1 where it learned
+  Skirmish again. (*Claude's starting values: Bow Focus 1's hit +5 and Long
+  Shot's +2, tunable.*)
+- **Every combat active is locked to a weapon kind** (Nick, same review:
+  "3A with exception that deadly blow goes to sword only, heavy blow goes to
+  gauntlet only, and trample goes to axe only"): Keen Edge Sw, Flurry Gt,
+  Lance Rush Sp, Deadly Blow Sw, Rampage Ax, Trample Ax, Swoop Sp (and the
+  ones already locked: Blade Flurry, Hundred Fists, Volley, Piercing Lance,
+  Crest Strike, Vault, Long Shot). Using one with another kind is refused.
+  **Heavy Blow is not locked yet:** Nick picked gauntlets, but the Raider,
+  whose active it is, wields only axes, so it could never use it in its own
+  class. It stays usable with any weapon until Nick settles that.
 - **The skill list below is placeholder content** (Nick: "exact skills we
   can fine tune after playtesting"). It exists so Chapter 1 has something to
   play with. Skills, numbers and flavour names get tuned after the playtest.
@@ -507,24 +526,24 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 
 | Class | Active (unlock) | Passive (mastery) |
 | ----- | --------------- | ----------------- |
-| Swordsman | **Keen Edge** (3 dur, combat): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
-| Brawler | **Flurry** (5 dur, combat): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
-| Raider | **Heavy Blow** (3 dur, combat): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
-| Archer | **Long Shot** (3 dur, combat): Bw max range +1 for this attack | **Skirmish**: after attacking with a Bw, may move 1 tile (the post-action move from `turn-structure.md`) |
+| Swordsman | **Keen Edge** (3 dur, combat, Sw): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
+| Brawler | **Flurry** (5 dur, combat, Gt): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
+| Raider | **Heavy Blow** (3 dur, combat; weapon kind open, see below): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
+| Archer | **Vault** (1 dur, combat, Bw): after this attack, may move 1 tile (the post-action move from `turn-structure.md`) | **Bow Focus 1**: Bw equipped → hit +5 |
 | Guard | **Brace** (3 dur, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
-| Rider | **Lance Rush** (3 dur, combat): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
+| Rider | **Lance Rush** (3 dur, combat, Sp): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
 | Mage | **Overcast** (+1 spell use, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
 | Cleric | **Sanctuary** (5 dur, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
 | Duelist | **Blade Flurry** (5 dur, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
-| Shadowblade | **Deadly Blow** (5 dur, combat): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
+| Shadowblade | **Deadly Blow** (5 dur, combat, Sw): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
 | Striker | **Hundred Fists** (5 dur, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
 | Grappler | **Shove** (3 dur, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); if the tile is blocked the enemy stays and takes 5 collision damage (Nick, 0311's PR) | **Iron Grip**: Gt equipped → Def +3 |
-| Berserker | **Rampage** (5 dur, combat): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
+| Berserker | **Rampage** (5 dur, combat, Ax): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
 | Vanguard | **War Cry** (5 dur, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
-| Marksman | **Long Shot 2** (3 dur, combat): Bw max range +2 | **Bow Focus**: Bw equipped → hit +10, crit +5 |
-| Outrider | **Volley** (5 dur, combat, Bw): +1 strike (max 4) | **Skirmish** (learned again, no effect if already known) + **Charge 1** |
+| Marksman | **Long Shot** (3 dur, combat, Bw): Bw max range +2 for this attack | **Bow Focus 2**: Bw equipped → hit +10, crit +5 (supersedes 1) |
+| Outrider | **Volley** (5 dur, combat, Bw): +1 strike (max 4) | **Bow Focus 1** (no effect if Bow Focus 2 is known) + **Charge 1** |
 | Bulwark | **Fortify** (5 dur, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
-| Iron Rider | **Trample** (3 dur, combat): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
+| Iron Rider | **Trample** (3 dur, combat, Ax): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
 | Lancer | **Piercing Lance** (3 dur, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
 | Mystic | **Siphon** (+1 spell use, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
@@ -545,13 +564,13 @@ the Flier's are in the game for now; tiers 4+ come later.
 
 | Class | Tier | Active (unlock) | Passive (mastery) |
 | ----- | ---- | --------------- | ----------------- |
-| Flier | 3 | **Swoop** (3 dur, combat): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
+| Flier | 3 | **Swoop** (3 dur, combat, Sp): after this attack, may move 1 tile | **Sky Dodge 1**: avoid +10 against bows |
 | Sky Lancer | 4 | **Swoop** | **Sky Dodge 2**: avoid +20 against bows |
 | Sky Warden | 4 | **Dive** (5 dur, combat): might +6 | **Sky Guard**: Def +3 |
 
 - **Skills learned twice:** a unit that learns an active it already knows
   (e.g. Swoop from Flier and Sky Lancer, Overcast from Mage and Sorcerer) gets
-  nothing more. Ranks of the same active (Sanctuary 2, Long Shot 2) supersede
+  nothing more. Ranks of the same active (Sanctuary 2) supersede
   like passives.
 - **"+1 strike" skills:** these add to the strikes worked out from attack
   speed, never above the 4-strike maximum. They're meant to make 3x/4x

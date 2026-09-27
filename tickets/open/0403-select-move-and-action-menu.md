@@ -29,7 +29,7 @@ None.
 **In:** battle-screen interaction state machine, overlays, path arrow, walking
 animation, action menu with `Wait` (and `Seize` when legal), cancel flows,
 inspecting enemy ranges. After an attack that ends with
-`Event::MoveAfterOffered` (Skirmish, Swoop; 0311), let the player pick one of
+`Event::MoveAfterOffered` (Vault, Swoop; 0311), let the player pick one of
 `BattleState::move_after_tiles()` or stay, and send `Command::MoveAfter`
 (nothing else is accepted until then).
 
