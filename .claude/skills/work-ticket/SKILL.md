@@ -67,6 +67,10 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
 
 1. Fill in the ticket's `## Completion notes`: what was done, deviations from the
    plan, follow-up tickets created, anything Nick should know when playing.
+   List every **gameplay-affecting rule you had to decide** where the design
+   docs were silent (mark them *Claude's starting rule*), in plain words.
+   Repeat that list in the PR body and in your final message to Nick, so he
+   can agree or veto (Nick asked for this).
 2. Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
 3. `git mv tickets/open/<file>.md tickets/done/<file>.md`
 
