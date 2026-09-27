@@ -216,10 +216,9 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
     Bow Focus 2. "3A with exception that deadly blow goes to sword only,
     heavy blow goes to gauntlet only, and trample goes to axe only": every
     combat active has a weapon kind (Keen Edge Sw, Flurry Gt, Lance Rush Sp,
-    Deadly Blow Sw, Rampage Ax, Trample Ax, Swoop Sp).
-  - **Still open with Nick:** Heavy Blow → gauntlets. The Raider, whose
-    active it is, wields only axes, so it could never use it in its own
-    class; it stays usable with any weapon until Nick chooses.
+    Deadly Blow Sw, Rampage Ax, Trample Ax, Swoop Sp). Heavy Blow became Ax,
+    not Gt, because the Raider wields only axes ("fine A is ok.. I'm just
+    worried gauntlets won't have enough skills and axe too many").
 - **Claude's starting rules** (gameplay, where the design docs were silent):
   1. ~~Skill might added after effectiveness~~: **changed by Nick** (see
      below).
@@ -253,7 +252,6 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
   14. Skill stat bonuses (Brace, War Cry, Resolve…) count in combat only
       and may go past class caps.
   15. ~~Actives without a weapon kind work with any weapon~~: **every
-      combat active has a kind** (Nick), except Heavy Blow until he
-      settles it (any weapon but not a spell, meanwhile).
+      combat active has a kind** (Nick).
   16. Bow Focus 1 is hit +5 (half of Bow Focus 2's hit +10), and the
       Marksman's Long Shot keeps Long Shot 2's range +2.

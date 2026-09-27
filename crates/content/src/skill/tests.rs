@@ -158,7 +158,7 @@ fn the_embedded_actives_match_the_design_tables() {
             active(
                 dur(3),
                 strike(
-                    WeaponReq::Any,
+                    WeaponReq::Kind(WeaponKind::Axe),
                     CombatMods {
                         might: 5,
                         single_strike: true,

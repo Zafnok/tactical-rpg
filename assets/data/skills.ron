@@ -66,7 +66,7 @@
         // Raider
         (
             id: "heavy_blow", name: "Heavy Blow",
-            kind: Active(cost: Durability(3), effect: Strike(with: Any, mods: (might: 5, single_strike: true))),
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Axe), mods: (might: 5, single_strike: true))),
         ),
         (
             id: "axe_focus_1", name: "Axe Focus 1", family: "axe_focus", rank: 1,

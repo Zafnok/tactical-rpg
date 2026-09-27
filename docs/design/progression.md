@@ -511,9 +511,10 @@ behind when you leave an unmastered class.
   Lance Rush Sp, Deadly Blow Sw, Rampage Ax, Trample Ax, Swoop Sp (and the
   ones already locked: Blade Flurry, Hundred Fists, Volley, Piercing Lance,
   Crest Strike, Vault, Long Shot). Using one with another kind is refused.
-  **Heavy Blow is not locked yet:** Nick picked gauntlets, but the Raider,
-  whose active it is, wields only axes, so it could never use it in its own
-  class. It stays usable with any weapon until Nick settles that.
+  **Heavy Blow is Ax**: Nick first picked gauntlets, but the Raider, whose
+  active it is, wields only axes ("fine A is ok.. I'm just worried gauntlets
+  won't have enough skills and axe too many"). The balance of skills per
+  weapon kind is for the post-playtest tuning.
 - **The skill list below is placeholder content** (Nick: "exact skills we
   can fine tune after playtesting"). It exists so Chapter 1 has something to
   play with. Skills, numbers and flavour names get tuned after the playtest.
@@ -528,7 +529,7 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | ----- | --------------- | ----------------- |
 | Swordsman | **Keen Edge** (3 dur, combat, Sw): this combat hit +30, crit +10 | **Sword Focus 1**: Sw equipped → crit +10 |
 | Brawler | **Flurry** (5 dur, combat, Gt): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
-| Raider | **Heavy Blow** (3 dur, combat; weapon kind open, see below): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
+| Raider | **Heavy Blow** (3 dur, combat, Ax): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
 | Archer | **Vault** (1 dur, combat, Bw): after this attack, may move 1 tile (the post-action move from `turn-structure.md`) | **Bow Focus 1**: Bw equipped → hit +5 |
 | Guard | **Brace** (3 dur, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
 | Rider | **Lance Rush** (3 dur, combat, Sp): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
