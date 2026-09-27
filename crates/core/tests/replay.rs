@@ -91,6 +91,7 @@ fn blade(might: i32) -> ItemDef {
         damage_type: DamageType::Physical,
         durability: 20,
         effective: vec![],
+        arts: vec![],
         price: 0,
     })
 }
@@ -133,6 +134,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         pos: Pos::new(x, y),
         acted: false,
         is_lord: id == 1,
+        role: trpg_core::Role::Regular,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
@@ -253,6 +255,7 @@ fn setup(seed: u64) -> BattleSetup {
         items: items(),
         spells: spells(),
         skills: skills(),
+        arts: Arc::default(),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 1,
@@ -280,6 +283,7 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
             target: UnitId(target),
             slot: 0,
             active: None,
+            art: None,
         },
     }
 }
@@ -348,6 +352,7 @@ fn script() -> Vec<Command> {
                 target: UnitId(4),
                 slot: 0,
                 active: Some(SkillId::new("guard_strike")),
+                art: None,
             },
         },
         Command::EndPhase,
@@ -454,7 +459,14 @@ fn saving_and_loading_mid_battle_changes_nothing() {
         log.extend(run(&mut state, &cmds[..split]));
         let saved = ron::to_string(&state).unwrap();
         let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-        loaded.restore_tables(terrain(), classes(), items(), spells(), skills());
+        loaded.restore_tables(
+            terrain(),
+            classes(),
+            items(),
+            spells(),
+            skills(),
+            Arc::default(),
+        );
         assert_eq!(loaded, state, "split {split}");
         log.extend(run(&mut loaded, &cmds[split..]));
         assert_eq!(log, events, "split {split}");

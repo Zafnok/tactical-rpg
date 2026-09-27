@@ -49,6 +49,23 @@ impl Faction {
     }
 }
 
+/// What part a unit plays in its battle, besides its faction. Decides who
+/// uses Combat Arts and active skills (`combat-arts.md`, *Enemies: bosses
+/// only; combat green units too*).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+pub enum Role {
+    /// An ordinary unit.
+    #[default]
+    Regular,
+    /// A boss: the only enemies that use arts and actives.
+    Boss,
+    /// A non-combat unit (a villager to protect, a wild beast): never uses
+    /// arts or actives, even when green.
+    Noncombatant,
+}
+
 /// Identifies a unit within a battle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct UnitId(pub u32);
@@ -131,6 +148,9 @@ pub struct Unit {
     pub acted: bool,
     /// Whether this is the lord.
     pub is_lord: bool,
+    /// A boss, a non-combat unit or neither. Set by chapter data (0803).
+    #[serde(default)]
+    pub role: Role,
     /// Weapon rank per kind (kept for kinds the current class can't use).
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
@@ -296,6 +316,7 @@ impl Unit {
             pos,
             acted: false,
             is_lord: false,
+            role: Role::Regular,
             weapon_ranks,
             map_label: default_map_label(&class.name),
             weapon_exp: BTreeMap::new(),
@@ -464,6 +485,7 @@ mod tests {
             pos: POS,
             acted: false,
             is_lord: false,
+            role: Role::Regular,
             weapon_ranks: BTreeMap::from([
                 // Kept: already above the class start rank.
                 (WeaponKind::Axe, WeaponRank::C),
@@ -590,6 +612,7 @@ mod tests {
             pos: POS,
             acted: false,
             is_lord: false,
+            role: Role::Regular,
             weapon_ranks: BTreeMap::from([
                 (WeaponKind::Axe, WeaponRank::D),
                 (WeaponKind::Sword, WeaponRank::E),

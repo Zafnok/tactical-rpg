@@ -2,6 +2,7 @@
 //! ADR-0005. All content comes from the embedded asset bundle ([`bundle`]);
 //! [`load_embedded`] loads and validates everything, reporting every error.
 
+pub mod art;
 pub mod bundle;
 pub mod character;
 pub mod class;
@@ -19,7 +20,7 @@ pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{ClassTable, ItemTable, SkillTable, SpellTable};
+use trpg_core::{ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
 
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use error::{ContentError, ContentErrors};
@@ -50,6 +51,8 @@ pub struct Content {
     pub spells: SpellTable,
     /// Class skills.
     pub skills: SkillTable,
+    /// Combat Arts.
+    pub arts: ArtTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
 }
@@ -80,6 +83,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         characters.as_ref().ok(),
     );
     let skills = check_skill_references(skill::load(), classes.as_ref().ok());
+    let arts = check_art_references(art::load(), items.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
@@ -91,9 +95,30 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             items,
             spells,
             skills,
+            arts,
             characters,
         },
     )
+}
+
+/// Adds the art reference checks ([`art::check_references`]: every
+/// weapon's arts exist, are weapon arts and match its kind) to the arts'
+/// result. Skipped when the arts or items failed to load.
+fn check_art_references(
+    arts: Result<ArtTable, Vec<ContentError>>,
+    items: Option<&ItemTable>,
+) -> Result<ArtTable, Vec<ContentError>> {
+    match (arts, items) {
+        (Ok(arts), Some(items)) => {
+            let errors = art::check_references(&arts, items);
+            if errors.is_empty() {
+                Ok(arts)
+            } else {
+                Err(errors)
+            }
+        }
+        (arts, _) => arts,
+    }
 }
 
 /// Adds the skill reference checks ([`skill::check_references`]: every
@@ -164,6 +189,7 @@ struct Loaded {
     items: Result<ItemTable, Vec<ContentError>>,
     spells: Result<SpellTable, Vec<ContentError>>,
     skills: Result<SkillTable, Vec<ContentError>>,
+    arts: Result<ArtTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
 }
 
@@ -197,6 +223,7 @@ fn assemble(
         items: take(units.items, &mut errors),
         spells: take(units.spells, &mut errors),
         skills: take(units.skills, &mut errors),
+        arts: take(units.arts, &mut errors),
         characters: take(units.characters, &mut errors),
     };
     if errors.is_empty() {
@@ -240,6 +267,7 @@ mod tests {
             items: item::load(),
             spells: ok_spells(),
             skills: ok_skills(),
+            arts: art::load(),
             characters: ok_characters(),
         }
     }
@@ -288,6 +316,7 @@ mod tests {
             content.as_ref().map(|c| &c.skills),
             ok_skills().ok().as_ref()
         );
+        assert_eq!(content.as_ref().map(|c| &c.arts), art::load().ok().as_ref());
         assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
@@ -304,7 +333,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 10] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "u"];
+    const NAMES: [&str; 11] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -321,6 +350,7 @@ mod tests {
                     items: Err(e("i")),
                     spells: Err(e("s")),
                     skills: Err(e("x")),
+                    arts: Err(e("a")),
                     characters: Err(e("u")),
                 },
             ),
@@ -350,7 +380,12 @@ mod tests {
                     items: if i == 6 { Err(e("i")) } else { item::load() },
                     spells: if i == 7 { Err(e("s")) } else { ok_spells() },
                     skills: if i == 8 { Err(e("x")) } else { ok_skills() },
-                    characters: if i == 9 { Err(e("u")) } else { ok_characters() },
+                    arts: if i == 9 { Err(e("a")) } else { art::load() },
+                    characters: if i == 10 {
+                        Err(e("u"))
+                    } else {
+                        ok_characters()
+                    },
                 },
             )
         };
@@ -441,6 +476,26 @@ mod tests {
     }
 
     #[test]
+    fn art_reference_checks_join_the_art_errors() {
+        let items = item::load().ok();
+        let arts = art::load();
+        assert_eq!(check_art_references(arts.clone(), items.as_ref()), arts);
+        // A weapon naming an art that isn't there.
+        let mut broken = items.clone().unwrap_or_default();
+        if let Some(trpg_core::ItemDef::Weapon(w)) =
+            broken.items.get_mut(&trpg_core::ItemId::new("iron_sword"))
+        {
+            w.arts.push(trpg_core::ArtId::new("nope"));
+        }
+        let errors = check_art_references(arts.clone(), Some(&broken));
+        assert!(errors.is_err_and(|e| e.len() == 1));
+        // Skipped when another file failed.
+        assert_eq!(check_art_references(arts.clone(), None), arts);
+        let failed = Err(vec![ContentError::new("a", "bad")]);
+        assert_eq!(check_art_references(failed.clone(), items.as_ref()), failed);
+    }
+
+    #[test]
     fn embedded_content_loads() {
         let content = load_embedded();
         assert!(content.is_ok(), "{content:?}");
@@ -462,5 +517,6 @@ mod tests {
             content.as_ref().map(|c| &c.skills),
             ok_skills().ok().as_ref()
         );
+        assert_eq!(content.as_ref().map(|c| &c.arts), art::load().ok().as_ref());
     }
 }

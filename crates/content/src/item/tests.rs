@@ -40,6 +40,7 @@ fn row(
         damage_type: DamageType::Physical,
         durability,
         effective: vec![],
+        arts: vec![],
         price,
     }
 }

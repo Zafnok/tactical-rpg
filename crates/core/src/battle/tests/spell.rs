@@ -508,6 +508,7 @@ fn cast_and_equip_errors_leave_the_state_unchanged() {
         Arc::new(s.items().clone()),
         Arc::new(SpellTable::default()),
         Arc::new(s.skills().clone()),
+        Arc::new(s.arts().clone()),
     );
     refused_act(
         &mut loaded,

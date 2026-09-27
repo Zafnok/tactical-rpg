@@ -30,18 +30,23 @@
 //!   *Using an art* 3–5): a durability cost needs an unbroken weapon with
 //!   `durability_left ≥ cost`; a spell active needs `uses_left ≥ 2`. The cost
 //!   is paid once, when the action is committed. A weapon brought to 0 by it
-//!   breaks after the action ([`Paid::broke`]). Combat Arts (0312) use the
-//!   same helpers.
-//! - **Timed effects** ([`TimedEffect`]) last until the start of their
-//!   owner side's next phase ([`TimedEffect::until`]), before anyone acts.
-//!   The same effect (same source skill) on a unit refreshes instead of
-//!   stacking.
+//!   breaks after the action ([`Paid::broke`]). Combat Arts
+//!   ([`crate::art`]) use the same helpers.
+//! - **Timed effects** ([`TimedEffect`]) last until the start of a phase
+//!   ([`TimedEffect::until`]), before anyone acts: a buff or a stance until
+//!   its user's side's next phase, a Combat Art's debuff until the end of
+//!   its target's next phase ([`TimedEffect::debuff_until`]). The same
+//!   effect (same [source](EffectSource) skill or art) on a unit refreshes
+//!   instead of stacking. Their stat bonuses count in combat; Mov also
+//!   counts for movement ([`Unit::move_points`]). A negative bonus never
+//!   takes a stat below 0 ([`Bonuses::apply`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::art::ArtId;
 use crate::battle::{Event, Phase};
 use crate::class::ClassTable;
 use crate::combat::CombatMods;
@@ -343,15 +348,51 @@ impl SkillTable {
     }
 }
 
-/// A bonus on a unit that lasts until the start of a phase.
+/// Where a timed effect comes from: the same source refreshes it, never
+/// stacks it.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum EffectSource {
+    /// An active skill (a buff or a stance rider).
+    Skill(SkillId),
+    /// A Combat Art (a stance on its user or a debuff on its target).
+    Art(ArtId),
+}
+
+impl From<SkillId> for EffectSource {
+    fn from(id: SkillId) -> Self {
+        EffectSource::Skill(id)
+    }
+}
+
+impl From<ArtId> for EffectSource {
+    fn from(id: ArtId) -> Self {
+        EffectSource::Art(id)
+    }
+}
+
+/// A bonus (or, with negative stats, a debuff) on a unit that lasts until
+/// the start of a phase.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TimedEffect {
-    /// The skill that gave it (the same source refreshes, never stacks).
-    pub source: SkillId,
+    /// What gave it (the same source refreshes, never stacks).
+    pub source: EffectSource,
     /// The bonuses.
     pub mods: TimedMods,
-    /// It ends at the start of this phase (the user's side's next phase).
+    /// It ends at the start of this phase: the user's side's next phase for
+    /// a buff or a stance; for a debuff, the phase after the target's next
+    /// one ([`TimedEffect::debuff_until`]).
     pub until: Phase,
+}
+
+impl TimedEffect {
+    /// When a debuff on a unit of `target`'s phase ends: at the end of that
+    /// side's next phase, which is the start of the phase after it. Every
+    /// phase slot is started in turn order, even one then skipped, so the
+    /// two moments are the same. A debuff is only ever put on a unit hostile
+    /// to the current phase's side, so "next" is never the current phase.
+    pub fn debuff_until(target: Phase) -> Phase {
+        target.next()
+    }
 }
 
 /// Stat and combat bonuses gathered from skills and effects.
@@ -386,11 +427,17 @@ impl Bonuses {
         self.combat.add(&other.combat);
     }
 
-    /// `stats` with the stat bonuses added (Max HP included).
+    /// `stats` with the stat bonuses added (Max HP included). A negative
+    /// bonus (a debuff) never takes a stat below 0, nor lowers one already
+    /// below 0.
     pub fn apply(&self, stats: Stats) -> Stats {
         let mut out = stats;
         for stat in StatKind::ALL {
-            out.set(stat, stats.get(stat).saturating_add(self.stats.get(stat)));
+            let base = stats.get(stat);
+            let bonus = self.stats.get(stat);
+            // A raised stat is never below `base`, so the floor only
+            // stops a lowered one.
+            out.set(stat, base.saturating_add(bonus).max(base.min(0)));
         }
         out
     }
@@ -655,9 +702,21 @@ impl Unit {
         self.effects.push(effect);
     }
 
+    /// Whether an effect from `source` is on the unit.
+    pub fn has_effect(&self, source: &EffectSource) -> bool {
+        self.effects.iter().any(|e| e.source == *source)
+    }
+
+    /// The unit's Mov with its timed effects (a Pinning Shot's Mov −3),
+    /// never below 0: its move points. Movement ranges and the danger zone
+    /// read this.
+    pub fn move_points(&self) -> StatValue {
+        effect_bonuses(&self.effects).apply(self.stats).mov
+    }
+
     /// Removes the effects that end at the start of `phase`, returning
     /// their sources in the order they were added.
-    pub fn expire_effects(&mut self, phase: Phase) -> Vec<SkillId> {
+    pub fn expire_effects(&mut self, phase: Phase) -> Vec<EffectSource> {
         let (ended, kept): (Vec<TimedEffect>, Vec<TimedEffect>) = std::mem::take(&mut self.effects)
             .into_iter()
             .partition(|e| e.until == phase);

@@ -4,15 +4,17 @@
 
 use std::collections::{BTreeMap, VecDeque};
 
+use super::arts::{ArtUse, check_arts_allowed};
 use super::{BattleState, CommandError, Event, PendingMove, Step};
+use crate::art::ArtId;
 use crate::combat::{CombatMods, CombatantInput};
 use crate::geom::Pos;
 use crate::item::Equipped;
 use crate::movement::TileSet;
 use crate::skill::{
-    ActiveEffect, Area, Bonuses, CostError, CostSource, SkillContext, SkillCost, SkillDef, SkillId,
-    SkillKind, Stance, TimedEffect, TimedMods, auras, check_cost, effect_bonuses, heal_bonus,
-    passive_bonuses, pay_cost, post_move_tiles,
+    ActiveEffect, Area, Bonuses, CostError, CostSource, EffectSource, SkillContext, SkillCost,
+    SkillDef, SkillId, SkillKind, Stance, TimedEffect, TimedMods, auras, check_cost,
+    effect_bonuses, heal_bonus, passive_bonuses, pay_cost, post_move_tiles,
 };
 use crate::stats::StatValue;
 use crate::terrain::MovementTypeId;
@@ -30,6 +32,8 @@ pub(super) struct AttackPlan<'a> {
     pub with: Equipped,
     /// The combat active chosen, if any.
     pub active: Option<&'a SkillId>,
+    /// The Combat Art chosen, if any.
+    pub art: Option<&'a ArtId>,
 }
 
 /// What [`BattleState::fighters`] needs about the attacker's side.
@@ -42,6 +46,8 @@ pub(super) struct Fight<'a> {
     pub with: &'a Equipped,
     /// The validated combat active, if any.
     pub active: Option<&'a ActiveUse>,
+    /// The validated Combat Art, if any.
+    pub art: Option<&'a ArtUse>,
 }
 
 /// A validated use of an active skill: what to pay and what it does in a
@@ -198,12 +204,23 @@ impl BattleState {
             // A stance rider counts in its own combat if it says so, once.
             if let Some(stance) = &active.stance
                 && stance.this_combat
-                && !attacker.effects.iter().any(|e| e.source == active.skill)
+                && !attacker.has_effect(&EffectSource::Skill(active.skill.clone()))
             {
                 a_bonus.add_timed(&stance.mods);
             }
             if let Some(w) = a.weapon.as_mut() {
                 w.max_range = w.max_range.saturating_add(active.range);
+            }
+        }
+        if let Some(art) = fight.art {
+            // An art's stance counts in its own combat, once.
+            if let Some(stance) = &art.effect.stance
+                && !attacker.has_effect(&EffectSource::Art(art.art.clone()))
+            {
+                a_bonus.add_timed(stance);
+            }
+            if let Some(w) = a.weapon.as_mut() {
+                art.effect.apply(w, &mut a_bonus.combat);
             }
         }
         apply(&mut a, &a_bonus);
@@ -369,6 +386,7 @@ impl BattleState {
         id: &SkillId,
         target: Option<UnitId>,
     ) -> Result<Step, CommandError> {
+        check_arts_allowed(unit)?;
         let def = self.usable_active(unit, id)?;
         let SkillKind::Active { cost, effect } = &def.kind else {
             return Err(CommandError::WrongSkillKind(id.clone()));
@@ -544,14 +562,15 @@ impl BattleState {
             return;
         };
         if let Some(stance) = &active.stance {
+            let source = EffectSource::Skill(active.skill.clone());
             unit.add_effect(TimedEffect {
-                source: active.skill.clone(),
+                source: source.clone(),
                 mods: stance.mods.clone(),
                 until,
             });
             events.push(Event::EffectApplied {
                 unit: id,
-                skill: active.skill.clone(),
+                source,
                 until,
             });
         }
@@ -582,14 +601,15 @@ impl BattleState {
                 let until = self.phase;
                 for target in targets {
                     if let Some(u) = self.unit_mut(target) {
+                        let source = EffectSource::Skill(skill.clone());
                         u.add_effect(TimedEffect {
-                            source: skill.clone(),
+                            source: source.clone(),
                             mods: mods.clone(),
                             until,
                         });
                         events.push(Event::EffectApplied {
                             unit: target,
-                            skill: skill.clone(),
+                            source,
                             until,
                         });
                     }
@@ -643,8 +663,8 @@ impl BattleState {
     pub(super) fn expire_effects(&mut self, events: &mut Vec<Event>) {
         let phase = self.phase;
         for u in &mut self.units {
-            for skill in u.expire_effects(phase) {
-                events.push(Event::EffectExpired { unit: u.id, skill });
+            for source in u.expire_effects(phase) {
+                events.push(Event::EffectExpired { unit: u.id, source });
             }
         }
     }

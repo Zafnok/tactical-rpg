@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use trpg_core::{
-    AccessoryDef, ArmourDef, ConsumableDef, ConsumableEffect, DamageType, ItemDef, ItemId,
+    AccessoryDef, ArmourDef, ArtId, ConsumableDef, ConsumableEffect, DamageType, ItemDef, ItemId,
     ItemTable, StatValue, Stats, UnitTag, WeaponDef, WeaponKind, WeaponRank, WeaponRules,
     WeaponTrait,
 };
@@ -77,6 +77,9 @@ struct RawWeapon {
     durability: u32,
     #[serde(default)]
     effective: Vec<(UnitTag, u8)>,
+    /// The weapon's own Combat Arts (weapon arts in `arts.ron`).
+    #[serde(default)]
+    arts: Vec<String>,
     price: u32,
 }
 
@@ -303,6 +306,7 @@ impl Validator<'_> {
             damage_type: w.damage_type,
             durability: w.durability,
             effective: w.effective,
+            arts: w.arts.into_iter().map(ArtId).collect(),
             price: w.price,
         };
         self.add(&w.id, ItemDef::Weapon(def));
