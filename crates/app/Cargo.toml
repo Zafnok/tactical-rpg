@@ -14,6 +14,12 @@ workspace = true
 name = "tactical-rpg"
 path = "src/main.rs"
 
+[features]
+# Debug tools (Quick Battle, glyph sampler) in a release build: turned on only
+# by the Pages build, `cargo xtask web --release --debug-tools` (ADR-0023).
+# Never by release.yml, itch.io or Steam builds.
+debug-tools = ["trpg-ui/debug-tools"]
+
 [dependencies]
 trpg-core = { path = "../core" }
 trpg-content = { path = "../content" }

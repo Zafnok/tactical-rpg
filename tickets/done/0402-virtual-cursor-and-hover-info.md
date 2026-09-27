@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0401"]
 nick_input: sign-off
-completed:
+completed: 2026-09-27
 ---
 
 # 0402 — Virtual cursor and hover info
@@ -77,11 +77,11 @@ context help bar.
 
 ## Acceptance criteria
 
-- [ ] Holding `Right` moves the cursor with the repeat timing from the keymap.
-- [ ] Cursor never leaves the map; camera scrolls at the 3-tile margin.
-- [ ] Panel shows correct terrain and unit data.
-- [ ] Harness tests below pass; snapshots committed.
-- [ ] Quick Battle is on the title menu of the Pages build and absent from release builds (step 7).
+- [x] Holding `Right` moves the cursor with the repeat timing from the keymap.
+- [x] Cursor never leaves the map; camera scrolls at the 3-tile margin.
+- [x] Panel shows correct terrain and unit data.
+- [x] Harness tests below pass; snapshots committed.
+- [x] Quick Battle is on the title menu of the Pages build and absent from release builds (step 7).
 
 ## Tests required
 
@@ -89,4 +89,43 @@ context help bar.
 - Snapshot: hover over a unit on forest; hover over empty plain.
 
 ## Completion notes
+
+- **Cursor** (`ui::screens::battle::cursor`): `Cursor { pos, blink_t }`, one
+  tile per arrow press, held keys repeat with the keymap timing (170 ms,
+  then 55 ms), clamped to the map. `[` `]` in the cells either side of the
+  tile, `cursor` colour, brightness `0.5 + 0.5·(1 + cos)/2` over a 1 s
+  period (never off). The camera follows with the 3-tile margin.
+- **Side panel** (`ui::screens::battle::panel`): terrain name, `DEF +n  AVO
+  +n`, `Heals n% HP` only when non-zero; then for a unit: name (faction
+  colour), `Class  Lv n`, `HP cur/max` with a 10-cell bar (`█` filled in
+  `hp_high/mid/low`, same thresholds as the map bar via the shared
+  `units::hp_fill`, `░` empty), faction name. No portrait.
+- **Next/Prev unit** (`s`/`a`, `l`/`;`): the acting side's units that
+  haven't acted, in reading order `(y, x)`, starting from the cursor's
+  tile, wrapping.
+- **Help bar** by context: ready unit `f select · e info · s next unit · d
+  back`; other unit `arrows move · e info · s next unit · d back`; empty
+  tile `arrows move · s next unit · d back`. `d` still leaves the battle
+  until the map menu (0405).
+- **Start:** cursor on the first player lord (else first player unit, else
+  map centre); camera centred on it.
+- **Step 7:** new `debug-tools` cargo feature, `cargo xtask web --release
+  --debug-tools`, used only by `pages.yml` (ADR-0023). `release.yml` and
+  CI's wasm check are unchanged, so shipped builds have no Quick Battle.
+  The Pages link can only be checked after merge (Pages deploys from
+  `main`); the feature build was checked locally
+  (`cargo build -p trpg-app --target wasm32-unknown-unknown --release
+  --features debug-tools`).
+
+*Claude's starting rules* (UI details the design docs don't settle; say if
+any feel wrong):
+
+- Moving the cursor restarts its pulse at full brightness, so it's easy to
+  follow while moving.
+- Next/Prev unit starts from wherever the cursor is (so from an empty tile,
+  Next goes to the next ready unit below/right of it), not from a remembered
+  "current unit".
+- The panel's HP bar is 10 cells of `█`/`░`; the faction is shown as a word
+  (`Player`, `Enemy`, `Ally`, `Neutral`) under the HP.
+
 

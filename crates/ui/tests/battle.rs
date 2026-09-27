@@ -15,8 +15,8 @@ fn quick_battle() -> Harness {
 
 /// The Quick Battle screen: `test_small.map` centred in the viewport, three
 /// player units (the archer has acted: lowercase and dimmed; the knight is
-/// wounded) and three enemies (one badly wounded), the empty side panel and
-/// the help line.
+/// wounded) and three enemies (one badly wounded), the cursor on the lord,
+/// the side panel showing the lord and its tile, and the help line.
 #[test]
 fn quick_battle_renders() {
     let h = quick_battle();
@@ -41,4 +41,59 @@ fn every_glyph_drawn_is_in_the_font() {
     for g in glyphs.chars().filter(|&c| c != '\n') {
         assert!(font.glyph_rect(g).is_some(), "{g:?} missing from the font");
     }
+}
+
+/// The side panel's rows 1..9, inside the border, trimmed.
+fn panel(h: &Harness) -> Vec<String> {
+    let buf = h.game().buffer();
+    (1..9)
+        .map(|y| {
+            (71..99)
+                .map(|x| buf.get(x, y).map_or(' ', |c| c.glyph))
+                .collect::<String>()
+                .trim()
+                .to_owned()
+        })
+        .collect()
+}
+
+/// The column of the cursor's `[` on row `y` (not a fort's).
+fn bracket_x(h: &Harness, y: i32) -> Option<i32> {
+    let buf = h.game().buffer();
+    let fort = h.game().ctx().palette.lookup("fort");
+    (0..70).find(|&x| {
+        buf.get(x, y)
+            .is_some_and(|c| c.glyph == '[' && Some(c.fg) != fort)
+    })
+}
+
+#[test]
+fn arrows_move_the_cursor_and_the_panel_follows() {
+    let mut h = quick_battle();
+    // The lord at (3, 5), drawn from cell 26 on row 16.
+    assert_eq!(bracket_x(&h, 16), Some(25));
+    assert_eq!(panel(&h)[4], "Test Lord");
+    h.keys("Right Right Right");
+    assert_eq!(bracket_x(&h, 16), Some(31));
+    assert_eq!(panel(&h)[0], "Plain");
+    assert_eq!(panel(&h)[4], "");
+    // Held: stops at the map's right edge (x = 13, cell 46).
+    h.hold("Right", 1.0);
+    assert_eq!(bracket_x(&h, 16), Some(45));
+    assert_eq!(panel(&h)[0], "Plain");
+    // Two tiles left is a fort.
+    h.keys("Left Left");
+    assert_eq!(panel(&h)[0], "Fort");
+    assert_eq!(panel(&h)[1], "DEF +2  AVO +20");
+}
+
+#[test]
+fn next_unit_jumps_between_ready_units() {
+    let mut h = quick_battle();
+    h.keys("s");
+    assert_eq!(panel(&h)[4], "Test Knight");
+    h.keys("s");
+    assert_eq!(panel(&h)[4], "Test Lord");
+    h.keys("a");
+    assert_eq!(panel(&h)[4], "Test Knight");
 }

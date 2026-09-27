@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn debug_screens_follow_the_build() {
         let game = Game::start(Ctx::embedded().unwrap());
-        assert_eq!(game.ctx.debug_tools, cfg!(debug_assertions));
+        assert_eq!(game.ctx.debug_tools, crate::screen::DEBUG_TOOLS);
         let names = |ctx: Ctx| {
             let mut game = Game::start(ctx);
             tap(&mut game, Key::Down);
