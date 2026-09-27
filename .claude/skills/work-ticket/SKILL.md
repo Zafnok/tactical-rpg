@@ -78,6 +78,8 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
   - Body: summary bullets, list of acceptance criteria (checked), follow-up
     tickets created, and `Nick input:` line (e.g. "Sign-off: please play the
     build from the Pages link and try X").
+- Don't run mutation testing locally before pushing: CI runs it on the PR
+  (see `run-gates`). Push, open the PR, and watch CI once.
 - Wait for CI. If a check fails, fix it on the same branch. Never disable a
   gate, lower a threshold, or add `#[mutants::skip]`/`#[allow]` just to pass —
   if a gate is genuinely wrong, write a ticket about it and explain in the PR.
