@@ -26,6 +26,21 @@ discipline here is the whole quality system.
   doesn't exist yet in `docs/design/`, stop and tell the user which `00xx`
   ticket must be answered first. Do not guess game-design answers.
 
+## 1b. Get the design unknowns out first (Nick asked for this)
+
+Nick's turns are expensive; a question answered late costs a full
+implement → test → gates → push cycle. Before writing code:
+
+1. List every gameplay rule the ticket needs that `docs/design/` doesn't
+   settle, and every conflict you can see between the ticket, the design
+   docs and the data (e.g. a skill locked to a weapon its class can't
+   wield). Check new answers against the data the same way.
+2. Ask them all at once with the `ask-nick` skill, scoped to this ticket,
+   before implementing. Only a rule too small to matter goes in as a
+   *Claude's starting rule*.
+3. When Nick's reply leaves a conflict or ambiguity, ask about it **before**
+   making the rest of the changes, not after the gates have run.
+
 ## 2. Start
 
 ```bash
