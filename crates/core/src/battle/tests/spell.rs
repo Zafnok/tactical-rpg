@@ -69,12 +69,18 @@ fn spell_cast(unit: u32, spell: &str, target: u32) -> Event {
     }
 }
 
-/// Ends phases until unit `id`'s phase comes round again.
+/// Ends phases until the next turn's Player phase starts. A turn has at most
+/// [`Phase::ALL`]`.len()` phases, so this fails instead of looping forever if
+/// the turn doesn't advance.
 fn next_turn(s: &mut BattleState) {
     let turn = s.turn();
-    while s.turn() == turn || s.phase() != Phase::Player {
+    for _ in Phase::ALL {
         end(s);
+        if s.turn() > turn && s.phase() == Phase::Player {
+            return;
+        }
     }
+    panic!("turn {turn} never ended");
 }
 
 // ---- Uses per battle -------------------------------------------------------------
