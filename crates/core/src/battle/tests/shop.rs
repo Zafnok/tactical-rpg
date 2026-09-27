@@ -507,6 +507,7 @@ fn gold_stock_and_chests_are_saved() {
         Arc::new(s.items().clone()),
         Arc::new(s.spells().clone()),
         Arc::new(s.skills().clone()),
+        Arc::new(s.arts().clone()),
     );
     assert_eq!(loaded, s);
     assert_eq!(loaded.gold(), 1800);

@@ -1403,6 +1403,7 @@ fn combat_mods_add_up() {
         double_crit: true,
         ignore_terrain: false,
         pierce: 6,
+        sword_followup: Some((3, 2)),
     };
     m.add(&CombatMods {
         hit: 10,
@@ -1415,6 +1416,7 @@ fn combat_mods_add_up() {
         double_crit: false,
         ignore_terrain: true,
         pierce: 60,
+        sword_followup: None,
     });
     assert_eq!(
         m,
@@ -1429,8 +1431,15 @@ fn combat_mods_add_up() {
             double_crit: true,
             ignore_terrain: true,
             pierce: 66,
+            sword_followup: Some((3, 2)),
         }
     );
+    // A later follow-up ratio replaces an earlier one.
+    m.add(&CombatMods {
+        sword_followup: Some((1, 1)),
+        ..CombatMods::default()
+    });
+    assert_eq!(m.sword_followup, Some((1, 1)));
 }
 
 /// The order of `by` in a combat where every strike misses.
@@ -1483,4 +1492,174 @@ proptest! {
         };
         prop_assert_eq!(strikes, expected);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Combat Arts (ticket 0312): an art changes the attacker's weapon and mods.
+
+fn with_art(
+    mut c: CombatantInput<'static>,
+    effect: &crate::art::ArtEffect,
+) -> CombatantInput<'static> {
+    if let Some(w) = c.weapon.as_mut() {
+        effect.apply(w, &mut c.mods);
+    }
+    c
+}
+
+/// `combat-arts.md`, *Worked example*: W1 with each sword art. Guard
+/// Break's "no counter" isn't a number: the battle drops the counter
+/// (tested there).
+#[test]
+fn combat_arts_w1_worked_example() {
+    use crate::art::ArtEffect;
+    let rules = rules();
+    let brigand = Some(numbers(12, 12, 63, 0, 1));
+    let cases = [
+        (
+            "normal",
+            ArtEffect::default(),
+            numbers(9, 10, 94, 3, 2),
+            brigand,
+        ),
+        (
+            "Flowing Cut",
+            ArtEffect {
+                sword_followup: Some((3, 2)),
+                ..ArtEffect::default()
+            },
+            numbers(9, 13, 94, 3, 2),
+            brigand,
+        ),
+        (
+            "Guard Break",
+            ArtEffect {
+                hit: 10,
+                no_counter: true,
+                ..ArtEffect::default()
+            },
+            numbers(9, 10, 100, 3, 2),
+            brigand,
+        ),
+    ];
+    for (name, effect, attacker, defender) in cases {
+        let (a, d) = w1();
+        let f = fc(&rules, &with_art(a, &effect), &d, 1);
+        assert_eq!((f.attacker, f.defender), (attacker, defender), "{name}");
+    }
+}
+
+#[test]
+fn a_follow_up_ratio_only_changes_swords() {
+    let rules = rules();
+    let mods = CombatMods {
+        sword_followup: Some((2, 1)),
+        ..CombatMods::default()
+    };
+    // The Brigand's axe has no follow-up bonus to replace.
+    let (sword, axe) = w1();
+    let f = fc(&rules, &modded(axe, mods), &sword, 1);
+    assert_eq!(f.attacker.followup_damage, f.attacker.damage);
+    let (sword, axe) = w1();
+    let f = fc(&rules, &modded(sword, mods), &axe, 1);
+    assert_eq!((f.attacker.damage, f.attacker.followup_damage), (9, 18));
+}
+
+#[test]
+fn unhorse_is_times_three_against_mounted_and_plain_otherwise() {
+    use crate::art::ArtEffect;
+    let rules = rules();
+    let unhorse = ArtEffect {
+        hit: 10,
+        effective: vec![(UnitTag::Mounted, 3)],
+        ..ArtEffect::default()
+    };
+    let (soldier, cavalier) = w2(6);
+    let plain = fc(&rules, &soldier, &cavalier, 1).attacker;
+    let (soldier, cavalier) = w2(6);
+    let art = fc(&rules, &with_art(soldier, &unhorse), &cavalier, 1).attacker;
+    // Iron Spear might 7: ×2 is 14 damage, ×3 is 7 more.
+    assert_eq!((plain.damage, art.damage), (14, 21));
+    assert_eq!(art.hit, plain.hit + 10);
+    assert!(art.effective);
+    // Not mounted: only the hit bonus.
+    let (soldier, mut foot) = w2(6);
+    foot.tags = UnitTags::default();
+    let plain = fc(&rules, &soldier, &foot, 1).attacker;
+    let (soldier, mut foot) = w2(6);
+    foot.tags = UnitTags::default();
+    let art = fc(&rules, &with_art(soldier, &unhorse), &foot, 1).attacker;
+    assert_eq!(
+        art,
+        SideForecast {
+            hit: plain.hit + 10,
+            ..plain
+        }
+    );
+    assert!(!art.effective);
+}
+
+#[test]
+fn armor_cleave_is_effective_against_armored_only() {
+    use crate::art::ArtEffect;
+    let rules = rules();
+    let cleave = ArtEffect {
+        effective: vec![(UnitTag::Armored, 2)],
+        ..ArtEffect::default()
+    };
+    let (mut knight, brigand) = w1();
+    knight.tags = UnitTags::from_tags(&[UnitTag::Armored]);
+    let f = fc(&rules, &with_art(brigand, &cleave), &knight, 1).attacker;
+    // Str 9 + Iron Axe 8 × 2 − Def 5.
+    assert_eq!((f.damage, f.effective), (20, true));
+    let (swordsman, brigand) = w1();
+    let f = fc(&rules, &with_art(brigand, &cleave), &swordsman, 1).attacker;
+    assert_eq!((f.damage, f.effective), (12, false));
+}
+
+#[test]
+fn crushing_swing_raises_hit_and_the_axe_minimum() {
+    use crate::art::ArtEffect;
+    let rules = rules();
+    let swing = ArtEffect {
+        hit: 20,
+        axe_min_damage: Some(8),
+        ..ArtEffect::default()
+    };
+    let (soldier, cavalier) = w2(20);
+    let plain = fc(&rules, &cavalier, &soldier, 1).attacker;
+    let (soldier, cavalier) = w2(20);
+    let art = fc(&rules, &with_art(cavalier, &swing), &soldier, 1).attacker;
+    assert_eq!((plain.damage, art.damage), (5, 8));
+    assert_eq!(art.hit, plain.hit + 20);
+}
+
+#[test]
+fn close_shot_lets_a_bow_shoot_adjacent() {
+    use crate::art::ArtEffect;
+    let rules = rules();
+    let close = ArtEffect {
+        hit: -10,
+        min_range: Some(1),
+        ..ArtEffect::default()
+    };
+    let archer = unit(
+        stats([20, 5, 0, 5, 5, 0, 0]),
+        Some(weapon(WeaponKind::Bow)),
+        &PLAIN,
+    );
+    let target = unit(stats([20, 0, 0, 0, 0, 0, 0]), None, &PLAIN);
+    assert_eq!(forecast(&rules, &archer, &target, 1), None);
+    let shot = with_art(archer.clone(), &close);
+    let near = fc(&rules, &shot, &target, 1).attacker;
+    let far = fc(&rules, &archer, &target, 2).attacker;
+    assert_eq!(
+        near,
+        SideForecast {
+            hit: far.hit - 10,
+            ..far
+        }
+    );
+    // At distance 2 it still works, with the lower hit.
+    assert_eq!(fc(&rules, &shot, &target, 2).attacker, near);
 }

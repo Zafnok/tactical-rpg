@@ -18,6 +18,7 @@ use std::sync::Arc;
 use proptest::prelude::*;
 
 use super::*;
+use crate::art::{ArtDef, ArtEffect, Debuff};
 use crate::class::{ArmourWeight, ClassDef, UnitTag, UnitTags, WeaponProficiency};
 use crate::combat::{CombatMods, DamageType};
 use crate::geom::Grid;
@@ -135,6 +136,170 @@ fn skills() -> SkillTable {
     SkillTable {
         skills: all.map(|s| (s.id.clone(), s)).collect(),
     }
+}
+
+/// The Chapter 1 arts of `combat-arts.md`, with its numbers: `flowing_cut`
+/// (sword E, 2), `guard_break` (sword D, 4), `unhorse` (spear E, 2),
+/// `line_pierce` (spear D, 4), `crushing_swing` (axe E, 2), `armor_cleave`
+/// (axe D, 4), `close_shot` (bow E, 2), `pinning_shot` (bow D, 3),
+/// `pressure_point` (gauntlet E, 2), `sidestep` (gauntlet D, 3); plus
+/// `riposte`, a weapon art (sword, 1: hit +5) no weapon lists.
+fn test_arts() -> ArtTable {
+    let all = test_melee_arts().into_iter().chain(test_other_arts());
+    ArtTable {
+        arts: all.map(|a| (a.id.clone(), a)).collect(),
+    }
+}
+
+/// The sword, spear and axe arts of [`test_arts`].
+fn test_melee_arts() -> Vec<ArtDef> {
+    use WeaponKind::{Axe, Spear, Sword};
+    let e = ArtEffect::default;
+    let art = |id: &str, kind, rank, cost, effect| ArtDef {
+        id: ArtId::new(id),
+        name: id.into(),
+        kind,
+        rank,
+        cost,
+        effect,
+    };
+    let (e_rank, d_rank) = (Some(WeaponRank::E), Some(WeaponRank::D));
+    vec![
+        art(
+            "flowing_cut",
+            Sword,
+            e_rank,
+            2,
+            ArtEffect {
+                sword_followup: Some((3, 2)),
+                ..e()
+            },
+        ),
+        art(
+            "guard_break",
+            Sword,
+            d_rank,
+            4,
+            ArtEffect {
+                hit: 10,
+                no_counter: true,
+                ..e()
+            },
+        ),
+        art(
+            "unhorse",
+            Spear,
+            e_rank,
+            2,
+            ArtEffect {
+                hit: 10,
+                effective: vec![(UnitTag::Mounted, 3)],
+                ..e()
+            },
+        ),
+        art(
+            "line_pierce",
+            Spear,
+            d_rank,
+            4,
+            ArtEffect {
+                line_pierce: true,
+                ..e()
+            },
+        ),
+        art(
+            "crushing_swing",
+            Axe,
+            e_rank,
+            2,
+            ArtEffect {
+                hit: 20,
+                axe_min_damage: Some(8),
+                ..e()
+            },
+        ),
+        art(
+            "armor_cleave",
+            Axe,
+            d_rank,
+            4,
+            ArtEffect {
+                effective: vec![(UnitTag::Armored, 2)],
+                ..e()
+            },
+        ),
+    ]
+}
+
+/// The bow and gauntlet arts of [`test_arts`], and `riposte`.
+fn test_other_arts() -> Vec<ArtDef> {
+    use WeaponKind::{Bow, Gauntlet, Sword};
+    let e = ArtEffect::default;
+    let art = |id: &str, kind, rank, cost, effect| ArtDef {
+        id: ArtId::new(id),
+        name: id.into(),
+        kind,
+        rank,
+        cost,
+        effect,
+    };
+    let (e_rank, d_rank) = (Some(WeaponRank::E), Some(WeaponRank::D));
+    vec![
+        art(
+            "close_shot",
+            Bow,
+            e_rank,
+            2,
+            ArtEffect {
+                hit: -10,
+                min_range: Some(1),
+                ..e()
+            },
+        ),
+        art(
+            "pinning_shot",
+            Bow,
+            d_rank,
+            3,
+            ArtEffect {
+                on_first_hit: Some(Debuff {
+                    stat: StatKind::Mov,
+                    amount: 3,
+                }),
+                ..e()
+            },
+        ),
+        art(
+            "pressure_point",
+            Gauntlet,
+            e_rank,
+            2,
+            ArtEffect {
+                on_first_hit: Some(Debuff {
+                    stat: StatKind::Spd,
+                    amount: 3,
+                }),
+                ..e()
+            },
+        ),
+        art(
+            "sidestep",
+            Gauntlet,
+            d_rank,
+            3,
+            ArtEffect {
+                stance: Some(TimedMods {
+                    stats: vec![],
+                    combat: CombatMods {
+                        avoid: 20,
+                        ..CombatMods::default()
+                    },
+                }),
+                ..e()
+            },
+        ),
+        art("riposte", Sword, None, 1, ArtEffect { hit: 5, ..e() }),
+    ]
 }
 
 /// A test skill (family = id, rank 1).
@@ -533,6 +698,7 @@ fn sword(name: &str) -> WeaponDef {
         damage_type: DamageType::Physical,
         durability: 20,
         effective: vec![],
+        arts: vec![],
         price: 0,
     }
 }
@@ -556,7 +722,8 @@ fn parse_weapon(id: &ItemId) -> Option<WeaponDef> {
 }
 
 /// Items every test table has: `flier_bow` (range 1–2, might 3, ×3 against
-/// fliers), `master_sword` (rank S), `axe`, `vest` (Def +1), `mail`
+/// fliers), `master_sword` (rank S), `axe`, `pike` (spear, might 3),
+/// `knuckles` (gauntlet, might 2), `vest` (Def +1), `mail`
 /// (Medium, Def +2), `potion` (heals 4), `elixir` (heals all). Priced for
 /// shops: `iron` (sword, 400 gold), `leather` (Light armour, 200), `plate`
 /// (Medium armour, 500), `charm` (accessory, 100), `tonic` (heals 2, 50).
@@ -573,10 +740,12 @@ fn fixed_items() -> ItemTable {
         might: 5,
         ..sword("Master Sword")
     };
-    let axe = WeaponDef {
-        kind: WeaponKind::Axe,
-        might: 2,
-        ..sword("Axe")
+    let typed = |kind, might, name: &str| {
+        ItemDef::Weapon(WeaponDef {
+            kind,
+            might,
+            ..sword(name)
+        })
     };
     let armour = |name: &str, weight_class, def| ArmourDef {
         name: name.into(),
@@ -600,7 +769,9 @@ fn fixed_items() -> ItemTable {
     let entries = [
         ("flier_bow", ItemDef::Weapon(flier_bow)),
         ("master_sword", ItemDef::Weapon(master_sword)),
-        ("axe", ItemDef::Weapon(axe)),
+        ("axe", typed(WeaponKind::Axe, 2, "Axe")),
+        ("pike", typed(WeaponKind::Spear, 3, "Pike")),
+        ("knuckles", typed(WeaponKind::Gauntlet, 2, "Knuckles")),
         (
             "vest",
             ItemDef::Armour(armour("Vest", ArmourWeight::Light, 1)),
@@ -705,6 +876,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         pos,
         acted: false,
         is_lord: false,
+        boss: false,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
@@ -750,6 +922,7 @@ fn setup(units: Vec<Unit>) -> BattleSetup {
         items: Arc::new(items_for(&units)),
         spells: Arc::new(spells()),
         skills: Arc::new(skills()),
+        arts: Arc::new(test_arts()),
         pack: BattlePack {
             items: vec![item("potion"), item("elixir")],
             cap: 3,
@@ -791,6 +964,7 @@ fn attack(target: u32) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: None,
+        art: None,
     }
 }
 
@@ -1924,6 +2098,7 @@ fn attack_with(target: u32, slot: usize) -> UnitAction {
         target: UnitId(target),
         slot,
         active: None,
+        art: None,
     }
 }
 
@@ -2340,6 +2515,7 @@ fn state_round_trips_through_ron_and_needs_its_tables_back() {
         Arc::new(items_for(&skirmish())),
         Arc::new(spells()),
         Arc::new(skills()),
+        Arc::new(test_arts()),
     );
     assert_eq!(loaded, s);
     let cmd = Command::Act {
@@ -2424,6 +2600,7 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
                             target: t.id,
                             slot,
                             active: None,
+                            art: None,
                         });
                     }
                 }
@@ -2467,7 +2644,69 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
         }
     }
     let skills = legal_skill_commands(s, &out);
+    let arts = legal_art_commands(s, &out);
     out.extend(skills);
+    out.extend(arts);
+    out
+}
+
+/// Some Combat Art attacks, kept only if `s` accepts them: each ready
+/// unit's arts for the weapon of its first two attacks in `commands`, and
+/// from its own tile, each art for each weapon on each hostile unit up to
+/// the weapon's max range (Close Shot reaches adjacent units).
+fn legal_art_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
+    let mut out = Vec::new();
+    let ready = s
+        .units()
+        .iter()
+        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
+    for u in ready {
+        let with_art = |target, slot, art: &ArtDef| UnitAction::Attack {
+            target,
+            slot,
+            active: None,
+            art: Some(art.id.clone()),
+        };
+        let attacks = commands
+            .iter()
+            .filter_map(|c| match c {
+                Command::Act {
+                    unit,
+                    dest,
+                    action: UnitAction::Attack { target, slot, .. },
+                } if *unit == u.id => Some((*dest, *target, *slot)),
+                _ => None,
+            })
+            .take(2);
+        for (dest, target, slot) in attacks {
+            for art in u.arts_for(slot, s.classes(), s.items(), s.arts()) {
+                out.push(Command::Act {
+                    unit: u.id,
+                    dest,
+                    action: with_art(target, slot, art),
+                });
+            }
+        }
+        let class = s.classes().get(&u.class).unwrap();
+        for slot in 0..WEAPON_SLOTS {
+            let Some((_, w)) = u.usable_weapon(slot, class, s.items()) else {
+                continue;
+            };
+            let near = s.units().iter().filter(|t| {
+                u.faction.is_hostile_to(t.faction) && Pos::manhattan(u.pos, t.pos) <= w.max_range
+            });
+            for t in near {
+                for art in u.arts_for(slot, s.classes(), s.items(), s.arts()) {
+                    out.push(Command::Act {
+                        unit: u.id,
+                        dest: u.pos,
+                        action: with_art(t.id, slot, art),
+                    });
+                }
+            }
+        }
+    }
+    out.retain(|c| s.clone().apply(c).is_ok());
     out
 }
 
@@ -2575,6 +2814,7 @@ fn attack_variants(action: &UnitAction, combat: &[SkillId]) -> Vec<UnitAction> {
                 target,
                 slot,
                 active: Some(skill.clone()),
+                art: None,
             }),
             UnitAction::Cast { spell, target, .. } => Some(UnitAction::Cast {
                 spell,
@@ -2767,7 +3007,11 @@ prop_compose! {
         hit in 50..=100,
         crit in 0..=30,
         armed in prop::bool::weighted(0.9),
-        second in prop::option::of(prop::sample::select(vec!["flier_bow", "master_sword", "axe"])),
+        second in prop::option::of(prop::sample::select(
+            vec!["flier_bow", "master_sword", "axe", "pike", "knuckles"],
+        )),
+        rank in prop::sample::select(vec![WeaponRank::E, WeaponRank::D]),
+        boss in prop::bool::weighted(0.4),
         armour in prop::option::of(prop::sample::select(vec!["vest", "mail"])),
         consumables in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=2),
         wounds in 0..=10_i32,
@@ -2791,6 +3035,17 @@ prop_compose! {
             u.class = skill_class(class);
         }
         u.learned_skills = passives.iter().map(|sk| SkillId::new(sk)).collect();
+        u.weapon_ranks = [
+            WeaponKind::Sword,
+            WeaponKind::Spear,
+            WeaponKind::Axe,
+            WeaponKind::Bow,
+            WeaponKind::Gauntlet,
+        ]
+        .into_iter()
+        .map(|kind| (kind, rank))
+        .collect();
+        u.boss = boss;
         u.stats = Stats::from_growable([hp, str, mag, dex, spd, def, res], mov);
         u.hp = (hp - wounds).max(1);
         let mut weapons = Vec::new();
@@ -2957,6 +3212,30 @@ proptest! {
                     prop_assert_eq!(before.map(|b| b - paid), after);
                 }
             }
+            // Each combat's strikes match its forecast unless a unit fell,
+            // and debuffs never take Mov or Spd below 0.
+            for e in &events {
+                if let Event::CombatResolved { forecast, outcome, .. } = e {
+                    let by = |side| {
+                        u8::try_from(outcome.strikes.iter().filter(|x| x.by == side).count()).unwrap()
+                    };
+                    let expected = (
+                        forecast.attacker.strikes,
+                        forecast.defender.map_or(0, |d| d.strikes),
+                    );
+                    let got = (by(Side::Attacker), by(Side::Defender));
+                    if outcome.attacker_hp > 0 && outcome.defender_hp > 0 {
+                        prop_assert_eq!(got, expected);
+                    } else {
+                        prop_assert!(got.0 <= expected.0 && got.1 <= expected.1);
+                    }
+                }
+            }
+            for u in s.units() {
+                let now = crate::skill::effect_bonuses(&u.effects).apply(u.stats);
+                prop_assert!(now.mov >= 0 && now.spd >= 0, "{:?}", u);
+                prop_assert!(u.move_points() >= 0);
+            }
             // Effects of a phase are gone once it has started.
             for e in &events {
                 if let Event::PhaseStarted { phase, .. } = e {
@@ -3043,6 +3322,7 @@ proptest! {
     }
 }
 
+mod art;
 mod shop;
 mod skill;
 mod spell;

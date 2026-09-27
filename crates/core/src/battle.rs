@@ -82,7 +82,8 @@
 //! - **Weapon EXP.** After a combat, each side still on the map that struck
 //!   gains weapon EXP in its weapon's kind ([`Event::WeaponExpGained`], then
 //!   [`Event::WeaponRankUp`] if its rank rose; attacker first), before
-//!   anyone falls. See [`crate::item`] for the formula.
+//!   anyone falls. See [`crate::item`] for the formula; a Combat Art
+//!   doubles its user's base.
 //! - **Items** ([`UnitAction::UseItem`]): a player unit uses a consumable
 //!   from the shared [`BattlePack`]; other factions use their own
 //!   ([`Unit::consumables`]). The target is the unit itself or a non-hostile
@@ -162,6 +163,41 @@
 //!     ([`Event::EffectExpired`]).
 //!   - **Heal spells** and Sanctuary restore the caster's passives'
 //!     [`heal_bonus`] more (White Magic; Nick).
+//!   - **Bosses only**: a non-player unit that isn't a
+//!     [boss](Unit::boss) can't use actives or arts
+//!     ([`CommandError::NotABoss`]; `combat-arts.md`).
+//! - **Combat Arts** ([`crate::art`] has the art rules;
+//!   `docs/design/combat-arts.md`): an option of a weapon attack
+//!   ([`UnitAction::Attack`]'s `art`), never of a counter or a cast. An
+//!   attack uses one art **or** one combat active
+//!   ([`CommandError::ArtWithActive`]). The art must be one of the unit's
+//!   [arts for](Unit::arts_for) the attacking weapon, and its cost payable
+//!   from that weapon ([`CommandError::CannotPayArt`]: broken, or
+//!   `durability_left < cost`). Events: [`Event::ArtUsed`], the payment
+//!   ([`Event::DurabilitySpent`]), a stance ([`Event::EffectApplied`], on
+//!   the user until the start of its next phase; it counts in this combat,
+//!   once), then the combat, with the art's bonuses on **every** attacker
+//!   strike ([`ArtEffect::apply`](crate::art::ArtEffect::apply)). After the
+//!   combat's spell uses:
+//!   - a **debuff** on the target if one of the attacker's strikes hit and
+//!     the target still stands ([`Event::EffectApplied`], until the end of
+//!     the target's next phase; the same art refreshes it). Mov and Spd
+//!     debuffs feed movement, the danger zone and attack speed;
+//!   - **Line Pierce**: if the attacker still stands and the tile
+//!     `target + (target − dest)` (attacker and target in a straight line)
+//!     holds a unit hostile to it, one strike at that unit, even if the
+//!     target fell: the normal formulas against that unit, no counter, no
+//!     extra strikes, rolled after the combat's strikes. It is its own
+//!     [`Event::CombatResolved`] (a second combat for unit EXP and class
+//!     points, 0601), with numbers worked out when the attack is validated.
+//!
+//!   Weapon EXP then counts both (one award; the pierce's damage adds to
+//!   `dealt`), with the base doubled for the art's user. A weapon the
+//!   payment brought to 0 fought unbroken and breaks after
+//!   ([`Event::ItemBroke`]), before anyone falls (target, the pierced
+//!   unit, then the attacker). [`BattleState::preview_attack`] gives the UI
+//!   the forecast, the durability change and the art's
+//!   [notes](crate::art::ArtNote) before committing.
 //! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
 //!   the unit can wield, or any learned attack spell (even one with no uses
 //!   left: it just can't counter), by a ready unit of the current phase. It
@@ -193,19 +229,18 @@
 //! the unit fell, or is offered a move after its attack:
 //! [`Event::MoveAfterOffered`], then `UnitActed` comes with the
 //! [`Command::MoveAfter`]), optionally followed by [`Event::BattleEnded`].
-//! Combat Arts
-//! (0312) pay their costs with [`pay_cost`](crate::skill::pay_cost), as
-//! actives do.
+//! Combat Arts pay their costs with [`pay_cost`](crate::skill::pay_cost),
+//! as actives do.
 //!
 //! # Saving
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
 //! the map (with its current terrain), burning tiles, units (with their
-//! learned skills and timed effects), fallen units,
+//! learned skills, timed effects and boss flag), fallen units,
 //! pending reinforcements, objective, turn,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
-//! **terrain, class, item, spell and skill tables are not**: they are shared content, held by `Arc` and skipped. A
+//! **terrain, class, item, spell, skill and art tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
@@ -217,6 +252,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::art::{ArtId, ArtTable};
 use crate::class::{ClassDef, ClassId, ClassTable};
 use crate::combat::{CombatHp, CombatOutcome, CombatantInput, Forecast, Side, forecast, resolve};
 use crate::geom::Pos;
@@ -227,7 +263,7 @@ use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
 use crate::rng::SimRng;
 use crate::shop::{self, Gold, Loot, Shop, ShopError};
-use crate::skill::{CostError, SkillId, SkillTable, heal_bonus};
+use crate::skill::{CostError, EffectSource, SkillId, SkillTable, heal_bonus};
 use crate::spell::{EffectDuration, SpellDef, SpellId, SpellKind, SpellTable, TerrainEffect};
 use crate::stats::StatValue;
 use crate::terrain::{TerrainId, TerrainTable};
@@ -353,6 +389,8 @@ pub struct BattleSetup {
     pub spells: Arc<SpellTable>,
     /// Every skill units have.
     pub skills: Arc<SkillTable>,
+    /// Every Combat Art.
+    pub arts: Arc<ArtTable>,
     /// The player side's consumables.
     pub pack: BattlePack,
     /// The party's gold, from the campaign.
@@ -386,6 +424,8 @@ pub enum UnitAction {
         slot: usize,
         /// A combat active to use in this attack.
         active: Option<SkillId>,
+        /// A Combat Art to use in this attack (not with an active).
+        art: Option<ArtId>,
     },
     /// Use a consumable on `target` (the unit itself or an adjacent ally).
     UseItem {
@@ -651,12 +691,26 @@ pub enum Event {
         /// Durability left.
         left: u32,
     },
+    /// A unit used a Combat Art in its attack (before the payment's
+    /// [`Event::DurabilitySpent`] and the combat).
+    ArtUsed {
+        /// The attacker.
+        unit: UnitId,
+        /// The art.
+        art: ArtId,
+        /// The weapon that pays.
+        weapon: ItemId,
+        /// Its durability before.
+        durability_before: u32,
+        /// Its durability after.
+        durability_after: u32,
+    },
     /// A timed effect was put on a unit (or refreshed).
     EffectApplied {
         /// The unit.
         unit: UnitId,
-        /// The skill it comes from.
-        skill: SkillId,
+        /// The skill or art it comes from.
+        source: EffectSource,
         /// It ends at the start of this phase.
         until: Phase,
     },
@@ -664,8 +718,8 @@ pub enum Event {
     EffectExpired {
         /// The unit.
         unit: UnitId,
-        /// The skill it came from.
-        skill: SkillId,
+        /// The skill or art it came from.
+        source: EffectSource,
     },
     /// A unit was pushed.
     Pushed {
@@ -944,6 +998,29 @@ pub enum CommandError {
     MoveAfterPending(UnitId),
     /// This unit has no move after an attack to make.
     NoMoveAfter(UnitId),
+    /// An art id is not in the art table (e.g. tables not restored).
+    UnknownArt(ArtId),
+    /// The unit can't use this art with this attack: it doesn't know it (or
+    /// it isn't the weapon's), or the art is for another weapon kind.
+    ArtNotUsable {
+        /// The unit.
+        unit: UnitId,
+        /// The art.
+        art: ArtId,
+    },
+    /// The art's cost can't be paid.
+    CannotPayArt {
+        /// The art.
+        art: ArtId,
+        /// Why.
+        error: CostError,
+    },
+    /// An attack chose both a Combat Art and a combat active.
+    ArtWithActive,
+    /// Only bosses among non-player units use arts and active skills.
+    NotABoss(UnitId),
+    /// The action isn't an attack (for [`BattleState::preview_attack`]).
+    NotAnAttack,
 }
 
 impl From<MoveError> for CommandError {
@@ -1028,6 +1105,16 @@ impl fmt::Display for CommandError {
                     p.x, p.y
                 )
             }
+            _ => self.fmt_skill_error(f),
+        }
+    }
+}
+
+impl CommandError {
+    /// The messages of the skill, art and move-after errors (any other
+    /// error shows its debug form).
+    fn fmt_skill_error(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
             CommandError::UnknownSkill(s) => write!(f, "unknown skill \"{}\"", s.0),
             CommandError::SkillNotUsable { unit, skill } => {
                 write!(f, "unit {} can't use \"{}\" now", unit.0, skill.0)
@@ -1050,6 +1137,25 @@ impl fmt::Display for CommandError {
             CommandError::NoMoveAfter(id) => {
                 write!(f, "unit {} has no move to make", id.0)
             }
+            CommandError::UnknownArt(a) => write!(f, "unknown art \"{}\"", a.0),
+            CommandError::ArtNotUsable { unit, art } => {
+                write!(f, "unit {} can't use \"{}\" in this attack", unit.0, art.0)
+            }
+            CommandError::CannotPayArt { art, error } => {
+                write!(f, "can't pay for \"{}\": {error}", art.0)
+            }
+            CommandError::ArtWithActive => {
+                f.write_str("an attack uses one art or one active, not both")
+            }
+            CommandError::NotABoss(id) => {
+                write!(
+                    f,
+                    "unit {} isn't a boss: only bosses use arts and actives",
+                    id.0
+                )
+            }
+            CommandError::NotAnAttack => f.write_str("the action isn't an attack"),
+            other => write!(f, "{other:?}"),
         }
     }
 }
@@ -1064,6 +1170,7 @@ struct Tables {
     items: Arc<ItemTable>,
     spells: Arc<SpellTable>,
     skills: Arc<SkillTable>,
+    arts: Arc<ArtTable>,
 }
 
 /// A running battle. Changed only by [`BattleState::apply`].
@@ -1134,6 +1241,11 @@ struct AttackStep {
     arms: Arms,
     /// The combat active used, if any.
     active: Option<ActiveUse>,
+    /// The Combat Art used, if any.
+    art: Option<ArtUse>,
+    /// Line Pierce's strike after the combat: the unit behind the target
+    /// and the strike's numbers (attacker side only, 1 strike).
+    pierce: Option<(UnitId, Forecast)>,
     /// Tiles the attacker may move after the combat.
     move_after: u32,
 }
@@ -1317,6 +1429,7 @@ impl BattleState {
                 items: setup.items,
                 spells: setup.spells,
                 skills: setup.skills,
+                arts: setup.arts,
             },
             map: setup.map,
             burning: Vec::new(),
@@ -1354,6 +1467,7 @@ impl BattleState {
         items: Arc<ItemTable>,
         spells: Arc<SpellTable>,
         skills: Arc<SkillTable>,
+        arts: Arc<ArtTable>,
     ) {
         self.tables = Tables {
             terrain,
@@ -1361,6 +1475,7 @@ impl BattleState {
             items,
             spells,
             skills,
+            arts,
         };
     }
 
@@ -1397,6 +1512,11 @@ impl BattleState {
     /// Skills.
     pub fn skills(&self) -> &SkillTable {
         &self.tables.skills
+    }
+
+    /// Combat Arts.
+    pub fn arts(&self) -> &ArtTable {
+        &self.tables.arts
     }
 
     /// The player side's consumables.
@@ -1530,6 +1650,7 @@ impl BattleState {
                 target,
                 slot,
                 ref active,
+                ref art,
             } => {
                 self.check_wield(unit.id, slot)?;
                 let plan = AttackPlan {
@@ -1538,6 +1659,7 @@ impl BattleState {
                     target,
                     with: Equipped::Weapon(slot),
                     active: active.as_ref(),
+                    art: art.as_ref(),
                 };
                 self.plan_attack(unit, plan)?
             }
@@ -1561,6 +1683,7 @@ impl BattleState {
                     target,
                     with: Equipped::Spell(spell.clone()),
                     active: active.as_ref(),
+                    art: None,
                 };
                 self.plan_cast(unit, spell, plan)?
             }
@@ -1639,24 +1762,42 @@ impl BattleState {
             target,
             with,
             active,
+            art,
         } = plan;
         let defender = self.living(target)?;
         if !unit.faction.is_hostile_to(defender.faction) {
             return Err(CommandError::NotHostile(target));
         }
+        if active.is_some() && art.is_some() {
+            return Err(CommandError::ArtWithActive);
+        }
+        if active.is_some() || art.is_some() {
+            check_boss(unit)?;
+        }
         let active = active
             .map(|id| self.plan_active(unit, id, &with))
             .transpose()?;
+        let art = art.map(|id| self.plan_art(unit, id, &with)).transpose()?;
         let fight = Fight {
             dest,
             moved,
             with: &with,
             active: active.as_ref(),
+            art: art.as_ref(),
         };
         let (a, d, post_move) = self.fighters(unit, defender, &fight)?;
         let distance = Pos::manhattan(dest, defender.pos);
-        let forecast = forecast(&self.tables.items.combat_rules(), &a, &d, distance)
+        let mut forecast = forecast(&self.tables.items.combat_rules(), &a, &d, distance)
             .ok_or(CommandError::OutOfRange { target, distance })?;
+        if art.as_ref().is_some_and(|a| a.effect.no_counter) {
+            forecast.defender = None;
+        }
+        let pierce = match &art {
+            Some(a) if a.effect.line_pierce => {
+                self.plan_pierce(unit, defender, &fight, distance)?
+            }
+            _ => None,
+        };
         let kind = |c: &CombatantInput| c.weapon.as_ref().and_then(|w| w.kind);
         let counter_spell = forecast
             .defender
@@ -1678,6 +1819,8 @@ impl BattleState {
             forecast,
             arms,
             active,
+            art,
+            pierce,
             move_after: post_move,
         })))
     }
@@ -1937,7 +2080,7 @@ impl BattleState {
         let mut move_after = 0;
         match step {
             Step::Wait => {}
-            Step::Attack(attack) => move_after = self.attack(id, *attack, events),
+            Step::Attack(attack) => move_after = self.attack(id, &attack, events),
             Step::Skill { active, effect } => self.use_skill(id, &active, effect, events),
             Step::Heal {
                 spell,
@@ -2007,22 +2150,20 @@ impl BattleState {
 
     /// Carries out unit `id`'s validated combat (see the module docs for the
     /// order of events). Returns how far it may move after it.
-    fn attack(&mut self, id: UnitId, attack: AttackStep, events: &mut Vec<Event>) -> u32 {
-        let AttackStep {
-            target,
-            with,
-            forecast,
-            arms,
-            active,
-            move_after,
-        } = attack;
+    fn attack(&mut self, id: UnitId, attack: &AttackStep, events: &mut Vec<Event>) -> u32 {
+        let target = attack.target;
+        let with = attack.with.clone();
         if self
             .unit(id)
             .is_some_and(|u| u.loadout.equipped.as_ref() != Some(&with))
         {
             self.equip(id, with.clone(), events);
         }
-        let broke = active.as_ref().and_then(|a| self.pay(id, a, events));
+        let broke = match (&attack.active, &attack.art) {
+            (Some(active), _) => self.pay(id, active, events),
+            (None, Some(art)) => self.commit_art(id, art, events),
+            (None, None) => None,
+        };
         if let Equipped::Spell(spell) = with {
             events.push(Event::SpellCast {
                 unit: id,
@@ -2030,13 +2171,15 @@ impl BattleState {
                 target: CastTarget::Unit(target),
             });
         }
-        let dealt = self.fight(id, target, forecast, arms, events);
-        if let Some(active) = &active {
+        let dealt = self.fight(id, attack, events);
+        if let Some(active) = &attack.active {
             self.after_strike(id, active, dealt, events);
         }
         events.extend(broke);
-        self.remove_fallen(&[target, id], events);
-        move_after
+        let victim = attack.pierce.map(|(victim, _)| victim);
+        let order: Vec<UnitId> = std::iter::once(target).chain(victim).chain([id]).collect();
+        self.remove_fallen(&order, events);
+        attack.move_after
     }
 
     /// Opens the chest at `pos` (validated) for unit `id`.
@@ -2193,17 +2336,71 @@ impl BattleState {
         }
     }
 
-    /// Plays out a combat, spends spell uses and gives weapon EXP. Returns
-    /// the HP each side's strikes removed: `[attacker, defender]`. Whoever
-    /// fell is still on the map (see [`Self::remove_fallen`]).
+    /// Plays out `attacker`'s validated combat: the combat, spell uses, an
+    /// art's debuff, Line Pierce's strike, then weapon EXP. Returns the HP
+    /// each side's strikes removed: `[attacker, defender]` (the pierce's
+    /// damage included). Whoever fell is still on the map (see
+    /// [`Self::remove_fallen`]).
     fn fight(
+        &mut self,
+        attacker: UnitId,
+        step: &AttackStep,
+        events: &mut Vec<Event>,
+    ) -> [StatValue; 2] {
+        let defender = step.target;
+        let mut tally = self.clash(attacker, defender, step.forecast, events);
+        for ((id, spell), struck) in [attacker, defender]
+            .into_iter()
+            .zip(&step.arms.spells)
+            .zip(tally.struck)
+        {
+            if let Some(spell) = spell.as_ref().filter(|_| struck > 0) {
+                self.spend_spell(id, spell, events);
+            }
+        }
+        if let Some(art) = &step.art {
+            if tally.hits[0] > 0 {
+                self.debuff(defender, art, events);
+            }
+            let standing = self.unit(attacker).is_some_and(|u| u.hp > 0);
+            if let Some((victim, pierce)) = step.pierce.filter(|_| standing) {
+                let t = self.clash(attacker, victim, pierce, events);
+                tally.struck[0] += t.struck[0];
+                tally.hits[0] += t.hits[0];
+                tally.dealt[0] += t.dealt[0];
+            }
+        }
+        let used_art = [step.art.is_some(), false];
+        let exp = [0, 1].map(|i| {
+            self.tables.items.rules.weapon_exp(
+                tally.struck[i],
+                tally.hits[i],
+                tally.dealt[i],
+                used_art[i],
+            )
+        });
+        for ((id, kind), amount) in [attacker, defender]
+            .into_iter()
+            .zip(step.arms.kinds)
+            .zip(exp)
+        {
+            if let Some(kind) = kind {
+                self.gain_weapon_exp(id, kind, amount, events);
+            }
+        }
+        tally.dealt
+    }
+
+    /// Resolves one combat of `attacker` against `defender` with `forecast`
+    /// and the battle's RNG, sets both units' HP and emits
+    /// [`Event::CombatResolved`]. Returns what each side's strikes did.
+    fn clash(
         &mut self,
         attacker: UnitId,
         defender: UnitId,
         forecast: Forecast,
-        arms: Arms,
         events: &mut Vec<Event>,
-    ) -> [StatValue; 2] {
+    ) -> Tally {
         let hp = |s: &Self, id| {
             s.unit(id)
                 .map_or(CombatHp { current: 0, max: 0 }, |u| CombatHp {
@@ -2228,37 +2425,13 @@ impl BattleState {
             }
         }
         let tally = Tally::of(&outcome, a.current, d.current);
-        let exp = [0, 1].map(|i| {
-            self.tables.items.rules.weapon_exp(
-                tally.struck[i],
-                tally.hits[i],
-                tally.dealt[i],
-                false,
-            )
-        });
-        let struck = [Side::Attacker, Side::Defender]
-            .map(|side| outcome.strikes.iter().any(|s| s.by == side));
         events.push(Event::CombatResolved {
             attacker,
             defender,
             forecast,
             outcome,
         });
-        for ((id, spell), struck) in [attacker, defender]
-            .into_iter()
-            .zip(arms.spells)
-            .zip(struck)
-        {
-            if let Some(spell) = spell.filter(|_| struck) {
-                self.spend_spell(id, &spell, events);
-            }
-        }
-        for ((id, kind), amount) in [attacker, defender].into_iter().zip(arms.kinds).zip(exp) {
-            if let Some(kind) = kind {
-                self.gain_weapon_exp(id, kind, amount, events);
-            }
-        }
-        tally.dealt
+        tally
     }
 
     /// Moves the units of `ids` at 0 HP to the fallen, in that order.
@@ -2446,8 +2619,11 @@ impl Tally {
     }
 }
 
+mod arts;
 mod skills;
 
+pub use arts::AttackPreview;
+use arts::{ArtUse, check_boss};
 use skills::{ActiveUse, AttackPlan, Fight, SkillStep};
 
 #[cfg(test)]

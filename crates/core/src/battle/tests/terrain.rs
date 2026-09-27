@@ -477,6 +477,7 @@ fn terrain_events_and_burning_state_round_trip_through_ron() {
         s.tables.items.clone(),
         Arc::new(spells()),
         Arc::new(skills()),
+        Arc::new(test_arts()),
     );
     assert_eq!(loaded, s);
 }

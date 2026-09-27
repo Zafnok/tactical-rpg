@@ -26,7 +26,7 @@
 //!   cap but never above the hard ceiling (a stat already above the ceiling
 //!   isn't lowered). Max HP stays the permanent `stats.hp` (no gear gives HP).
 //! - **Durability**: normal attacks cost none. [`WeaponInstance::spend_durability`]
-//!   (Combat Arts, 0312) lowers it, never below 0. At 0 the weapon is broken:
+//!   (Combat Arts and active skills) lowers it, never below 0. At 0 the weapon is broken:
 //!   it still fights with the penalties in [`WeaponRules`].
 //! - **Weapon EXP** ([`WeaponRules::weapon_exp`]): after a combat, a unit that
 //!   struck gains `base + dealt / 5` in the kind it fought with, where
@@ -44,6 +44,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::art::ArtId;
 use crate::battle::Event;
 use crate::class::{ArmourWeight, ClassDef, ClassTable, UnitTag};
 use crate::combat::{
@@ -98,6 +99,9 @@ pub struct WeaponDef {
     pub durability: u32,
     /// Extra `(tag, multiplier)` pairs beyond the kind's trait.
     pub effective: Vec<(UnitTag, u8)>,
+    /// The weapon's own Combat Arts (weapon arts, `rank: None`), usable by
+    /// anyone wielding it ([`crate::art`]). Empty for every Chapter 1 weapon.
+    pub arts: Vec<ArtId>,
     /// Buy price in gold.
     pub price: u32,
 }
@@ -851,7 +855,7 @@ impl Unit {
     }
 
     /// Spends `amount` durability of the weapon in `slot` (Combat Arts and
-    /// class actives, 0312). Returns [`Event::ItemBroke`] if that broke it.
+    /// class actives). Returns [`Event::ItemBroke`] if that broke it.
     pub fn spend_durability(&mut self, slot: usize, amount: u32) -> Option<Event> {
         let unit = self.id;
         let copy = self.loadout.weapons.get_mut(slot)?.as_mut()?;

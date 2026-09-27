@@ -131,6 +131,11 @@ pub struct Unit {
     pub acted: bool,
     /// Whether this is the lord.
     pub is_lord: bool,
+    /// Whether this is a boss: the only non-player units that use Combat
+    /// Arts and active skills (`combat-arts.md`, *Enemies: bosses only*).
+    /// Set by chapter data (0803).
+    #[serde(default)]
+    pub boss: bool,
     /// Weapon rank per kind (kept for kinds the current class can't use).
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
@@ -296,6 +301,7 @@ impl Unit {
             pos,
             acted: false,
             is_lord: false,
+            boss: false,
             weapon_ranks,
             map_label: default_map_label(&class.name),
             weapon_exp: BTreeMap::new(),
@@ -464,6 +470,7 @@ mod tests {
             pos: POS,
             acted: false,
             is_lord: false,
+            boss: false,
             weapon_ranks: BTreeMap::from([
                 // Kept: already above the class start rank.
                 (WeaponKind::Axe, WeaponRank::C),
@@ -590,6 +597,7 @@ mod tests {
             pos: POS,
             acted: false,
             is_lord: false,
+            boss: false,
             weapon_ranks: BTreeMap::from([
                 (WeaponKind::Axe, WeaponRank::D),
                 (WeaponKind::Sword, WeaponRank::E),

@@ -26,6 +26,7 @@ fn weapon(price: u32, durability: u32) -> ItemDef {
         damage_type: DamageType::Physical,
         durability,
         effective: vec![],
+        arts: vec![],
         price,
     })
 }

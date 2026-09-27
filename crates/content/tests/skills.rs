@@ -105,6 +105,7 @@ fn battle_with(units: Vec<Unit>, forests: &[Pos]) -> BattleState {
         items: Arc::new(c.items.clone()),
         spells: Arc::new(c.spells.clone()),
         skills: Arc::new(c.skills.clone()),
+        arts: Arc::new(c.arts.clone()),
         pack: BattlePack::default(),
         gold: 0,
         stock: Stock::default(),
@@ -148,6 +149,7 @@ fn attack(target: u32, active: Option<&str>) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: active.map(SkillId::new),
+        art: None,
     }
 }
 

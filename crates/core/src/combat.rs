@@ -50,7 +50,11 @@
 //! crit        = (crit + A.crit) * (A.double_crit ? 2 : 1)   then clamped
 //! AS         += A.attack_speed
 //! strikes     = A.single_strike ? 1 : min(strikes + A.extra_strikes, max)
+//! follow-up   = Sword ? damage * A.sword_followup (else 6/5) : damage
 //! ```
+//!
+//! Combat Arts ([`crate::art`]) change these mods and the attacker's
+//! [`WeaponStats`] (effectiveness, axe minimum, minimum range) the same way.
 //!
 //! When both sides have strikes 2..N (only possible with extra strikes),
 //! those strikes alternate after the first two, attacker first
@@ -251,10 +255,13 @@ pub struct CombatMods {
     pub ignore_terrain: bool,
     /// Lowers the target's Def (or Res) by this much, not below 0.
     pub pierce: StatValue,
+    /// Replaces the sword follow-up ratio (Flowing Cut, `combat-arts.md`).
+    pub sword_followup: Option<(StatValue, StatValue)>,
 }
 
 impl CombatMods {
-    /// Adds `other` to these: numbers add, flags combine with "or".
+    /// Adds `other` to these: numbers add, flags combine with "or", and
+    /// `other`'s follow-up ratio, if any, replaces this one.
     pub fn add(&mut self, other: &CombatMods) {
         self.hit += other.hit;
         self.crit += other.crit;
@@ -266,6 +273,7 @@ impl CombatMods {
         self.double_crit |= other.double_crit;
         self.ignore_terrain |= other.ignore_terrain;
         self.pierce += other.pierce;
+        self.sword_followup = other.sword_followup.or(self.sword_followup);
     }
 }
 
@@ -438,8 +446,8 @@ fn side(
         damage = damage.max(min);
     }
     let followup_damage = if weapon.trait_ == WeaponTrait::SwordFollowUp {
-        let (num, den) = rules.sword_followup;
-        damage * num / den
+        let (num, den) = a.mods.sword_followup.unwrap_or(rules.sword_followup);
+        damage * num / den.max(1)
     } else {
         damage
     };

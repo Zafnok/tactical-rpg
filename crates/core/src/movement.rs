@@ -4,8 +4,9 @@
 //!
 //! # Rules
 //!
-//! - **Budget.** A unit has its Mov (`stats.mov`, set by its class) in move
-//!   points per move. A negative Mov counts as 0.
+//! - **Budget.** A unit has its Mov (`stats.mov`, set by its class, changed
+//!   by its timed effects: [`Unit::move_points`]) in move points per move. A
+//!   negative Mov counts as 0.
 //! - **Step cost.** Entering a tile costs the terrain's `move_cost` for the
 //!   mover's class movement type (`docs/design/terrain.md`). `None` means the
 //!   tile can't be entered. The start tile costs nothing. Only the 4 grid
@@ -311,7 +312,7 @@ fn mover_info<'a>(
     if !map.tiles.in_bounds(unit.pos) {
         return Err(MoveError::OffMap(id));
     }
-    let budget = u32::try_from(unit.stats.mov).unwrap_or(0);
+    let budget = u32::try_from(unit.move_points()).unwrap_or(0);
     Ok((unit, class.movement_type, budget))
 }
 

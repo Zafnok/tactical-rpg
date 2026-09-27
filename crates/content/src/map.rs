@@ -643,6 +643,7 @@ mod tests {
             damage_type: trpg_core::DamageType::Physical,
             durability: 20,
             effective: vec![],
+            arts: vec![],
             price: 100,
         };
         items

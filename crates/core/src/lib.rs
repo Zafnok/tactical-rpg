@@ -1,5 +1,6 @@
 //! Pure, deterministic game rules. See ADR-0004.
 
+pub mod art;
 pub mod battle;
 pub mod class;
 pub mod combat;
@@ -17,9 +18,11 @@ pub mod terrain;
 pub mod unit;
 pub mod weapon;
 
+pub use art::{ArtDef, ArtEffect, ArtId, ArtNote, ArtTable, Debuff};
 pub use battle::{
-    BattleSetup, BattleState, Burning, CastTarget, Command, CommandError, Destination, Event,
-    Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
+    AttackPreview, BattleSetup, BattleState, Burning, CastTarget, Command, CommandError,
+    Destination, Event, Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom, ShopTxn,
+    Turn, UnitAction,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,
@@ -44,9 +47,9 @@ pub use movement::{
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use skill::{
-    ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, Paid, PassiveEffect,
-    SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance, TimedEffect,
-    TimedMods, WeaponReq, check_cost, pay_cost,
+    ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, EffectSource, Paid,
+    PassiveEffect, SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance,
+    TimedEffect, TimedMods, WeaponReq, check_cost, pay_cost,
 };
 pub use spell::{
     EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,

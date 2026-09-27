@@ -1,0 +1,78 @@
+// Every Combat Art. Source: docs/design/combat-arts.md (0014), "Chapter 1
+// arts": two per weapon kind, at ranks E and D (list approved by Nick).
+// Every number is TUNABLE (FE-sized until ticket 0013). Arts for ranks C-S
+// and special weapons' own arts come with ticket 0018. Loaded by
+// trpg_content::art; the rules are in trpg_core::art and trpg_core::battle.
+//
+// id: unique. kind: the weapon kind it is used with (Sword, Spear, Axe, Bow,
+//   Gauntlet). rank: Some(E..S) teaches it at that weapon rank; None makes
+//   it a weapon art, reached only through a weapon's `arts` list in
+//   items.ron (usable by anyone wielding that weapon).
+// cost: durability of the attacking weapon, paid once per combat (>= 1).
+// effect, all optional (the whole combat, every strike of the attacker):
+//   hit: n                       added to hit
+//   sword_followup: (num, den)   sword follow-up ratio instead of 6/5
+//                                (Sword arts only)
+//   no_counter: true             the defender can't counter
+//   effective: [(Tag, mult)]     added effectiveness; the largest matching
+//                                multiplier wins
+//   axe_min_damage: n            axe minimum damage instead of 5 (Axe arts)
+//   min_range: n                 the weapon's minimum range for this attack
+//   on_first_hit: Some((stat: Mov, amount: n))
+//                                the first hit lowers the target's stat by
+//                                n (not below 0) until the end of its next
+//                                phase
+//   stance: Some((stats: [...], combat: (avoid: n, ...)))
+//                                on the user from this combat until the
+//                                start of its next phase
+//   line_pierce: true            after the combat, one strike at the unit
+//                                directly behind the target
+(
+    arts: [
+        // Sword
+        (
+            id: "flowing_cut", name: "Flowing Cut", kind: Sword, rank: Some(E), cost: 2,
+            effect: (sword_followup: Some((3, 2))),
+        ),
+        (
+            id: "guard_break", name: "Guard Break", kind: Sword, rank: Some(D), cost: 4,
+            effect: (hit: 10, no_counter: true),
+        ),
+        // Spear
+        (
+            id: "unhorse", name: "Unhorse", kind: Spear, rank: Some(E), cost: 2,
+            effect: (hit: 10, effective: [(Mounted, 3)]),
+        ),
+        (
+            id: "line_pierce", name: "Line Pierce", kind: Spear, rank: Some(D), cost: 4,
+            effect: (line_pierce: true),
+        ),
+        // Axe
+        (
+            id: "crushing_swing", name: "Crushing Swing", kind: Axe, rank: Some(E), cost: 2,
+            effect: (hit: 20, axe_min_damage: Some(8)),
+        ),
+        (
+            id: "armor_cleave", name: "Armor Cleave", kind: Axe, rank: Some(D), cost: 4,
+            effect: (effective: [(Armored, 2)]),
+        ),
+        // Bow
+        (
+            id: "close_shot", name: "Close Shot", kind: Bow, rank: Some(E), cost: 2,
+            effect: (hit: -10, min_range: Some(1)),
+        ),
+        (
+            id: "pinning_shot", name: "Pinning Shot", kind: Bow, rank: Some(D), cost: 3,
+            effect: (on_first_hit: Some((stat: Mov, amount: 3))),
+        ),
+        // Gauntlet
+        (
+            id: "pressure_point", name: "Pressure Point", kind: Gauntlet, rank: Some(E), cost: 2,
+            effect: (on_first_hit: Some((stat: Spd, amount: 3))),
+        ),
+        (
+            id: "sidestep", name: "Sidestep", kind: Gauntlet, rank: Some(D), cost: 3,
+            effect: (stance: Some((combat: (avoid: 20)))),
+        ),
+    ],
+)

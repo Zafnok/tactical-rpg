@@ -2,6 +2,7 @@
 //! usable skill list.
 
 use super::*;
+use crate::art::ArtId;
 use crate::class::{ClassDef, ClassId, UnitTags};
 use crate::geom::Pos;
 use crate::item::WeaponInstance;
@@ -334,7 +335,7 @@ fn passive_bonuses_follow_their_conditions() {
 #[test]
 fn effect_bonuses_add_every_effect() {
     let effect = |source: &str, def| TimedEffect {
-        source: sid(source),
+        source: EffectSource::Skill(sid(source)),
         mods: TimedMods {
             stats: vec![(StatKind::Def, def)],
             combat: hit(1),
@@ -654,7 +655,7 @@ fn only_the_highest_rank_of_a_family_is_usable() {
 fn the_same_effect_refreshes_and_effects_expire_by_phase() {
     let mut u = unit_in("plain");
     let effect = |source: &str, def, until| TimedEffect {
-        source: sid(source),
+        source: EffectSource::Skill(sid(source)),
         mods: TimedMods {
             stats: vec![(StatKind::Def, def)],
             combat: CombatMods::default(),
@@ -674,8 +675,76 @@ fn the_same_effect_refreshes_and_effects_expire_by_phase() {
         ]
     );
     assert_eq!(effect_bonuses(&u.effects).stats, stat(StatKind::Def, 10));
-    assert_eq!(u.expire_effects(Phase::Player), [sid("war_cry")]);
-    assert_eq!(u.expire_effects(Phase::Player), Vec::<SkillId>::new());
-    assert_eq!(u.expire_effects(Phase::Other), [sid("brace")]);
+    assert_eq!(
+        u.expire_effects(Phase::Player),
+        [EffectSource::Skill(sid("war_cry"))]
+    );
+    assert_eq!(u.expire_effects(Phase::Player), Vec::<EffectSource>::new());
+    assert_eq!(
+        u.expire_effects(Phase::Other),
+        [EffectSource::Skill(sid("brace"))]
+    );
     assert_eq!(u.effects, [effect("rally", 3, Phase::Enemy)]);
+}
+
+#[test]
+fn a_negative_bonus_never_takes_a_stat_below_zero() {
+    let base = Stats::from_growable([20, 5, 0, 4, 2, 3, -1], 5);
+    let bonuses = Bonuses {
+        stats: Stats::from_growable([0, -3, 0, 2, -3, -3, -2], -7),
+        ..Bonuses::default()
+    };
+    // Str 5 − 3, Dex 4 + 2, Spd 2 − 3 → 0, Def 3 − 3, Res −1 stays −1, Mov
+    // 5 − 7 → 0.
+    assert_eq!(
+        bonuses.apply(base),
+        Stats::from_growable([20, 2, 0, 6, 0, 0, -1], 0)
+    );
+}
+
+#[test]
+fn art_effects_are_keyed_by_art_and_mov_effects_change_move_points() {
+    let mut u = unit_in("plain");
+    assert_eq!(u.move_points(), 5);
+    let pin = |until| TimedEffect {
+        source: EffectSource::Art(ArtId::new("pinning_shot")),
+        mods: TimedMods {
+            stats: vec![(StatKind::Mov, -3)],
+            combat: CombatMods::default(),
+        },
+        until,
+    };
+    u.add_effect(pin(Phase::Player));
+    assert!(u.has_effect(&EffectSource::Art(ArtId::new("pinning_shot"))));
+    assert!(!u.has_effect(&EffectSource::Skill(sid("pinning_shot"))));
+    assert_eq!(u.move_points(), 2);
+    // Refreshed, not stacked.
+    u.add_effect(pin(Phase::Other));
+    assert_eq!((u.effects.len(), u.move_points()), (1, 2));
+    // Never below 0.
+    u.add_effect(TimedEffect {
+        source: EffectSource::Art(ArtId::new("deeper")),
+        ..pin(Phase::Other)
+    });
+    assert_eq!(u.move_points(), 0);
+    assert_eq!(u.stats.mov, 5);
+}
+
+#[test]
+fn a_debuff_lasts_until_the_end_of_the_targets_next_phase() {
+    assert_eq!(TimedEffect::debuff_until(Phase::Enemy), Phase::Other);
+    assert_eq!(TimedEffect::debuff_until(Phase::Other), Phase::Player);
+    assert_eq!(TimedEffect::debuff_until(Phase::Player), Phase::Enemy);
+}
+
+#[test]
+fn effect_sources_come_from_skill_and_art_ids() {
+    assert_eq!(
+        EffectSource::from(sid("brace")),
+        EffectSource::Skill(sid("brace"))
+    );
+    assert_eq!(
+        EffectSource::from(ArtId::new("sidestep")),
+        EffectSource::Art(ArtId::new("sidestep"))
+    );
 }

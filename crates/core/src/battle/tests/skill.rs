@@ -49,6 +49,7 @@ fn attack_with(target: u32, active: &str) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: Some(sk(active)),
+        art: None,
     }
 }
 
@@ -109,7 +110,7 @@ fn hp(s: &BattleState, id: u32) -> StatValue {
 fn applied(unit: u32, skill: &str, until: Phase) -> Event {
     Event::EffectApplied {
         unit: UnitId(unit),
-        skill: sk(skill),
+        source: EffectSource::Skill(sk(skill)),
         until,
     }
 }
@@ -375,7 +376,7 @@ fn a_stance_rider_counts_in_its_combat_and_lasts_until_the_next_own_phase() {
         [
             Event::EffectExpired {
                 unit: UnitId(1),
-                skill: sk("guarding"),
+                source: EffectSource::Skill(sk("guarding")),
             },
             started(2, Phase::Player),
         ]
@@ -414,7 +415,7 @@ fn a_stance_rider_is_not_applied_if_the_user_falls_and_counts_once() {
     assert_eq!(s.unit(UnitId(2)), None);
     // A unit already under the same effect doesn't get it twice.
     let mut effect = TimedEffect {
-        source: sk("guarding"),
+        source: EffectSource::Skill(sk("guarding")),
         mods: TimedMods {
             stats: vec![(StatKind::Def, 3)],
             combat: CombatMods::default(),
@@ -593,6 +594,7 @@ fn skirmish_offers_a_move_after_a_bow_attack_only() {
         target: UnitId(3),
         slot: 1,
         active: None,
+        art: None,
     };
     let events = forecast_events(&s, 1, p(2, 0), sword);
     assert_eq!(names(&events).last().map(String::as_str), Some("UnitActed"));
@@ -629,6 +631,7 @@ fn a_waiting_move_survives_a_save() {
         Arc::new(s.items().clone()),
         Arc::new(s.spells().clone()),
         Arc::new(s.skills().clone()),
+        Arc::new(s.arts().clone()),
     );
     assert_eq!(loaded, s);
     assert_eq!(loaded.pending_move(), s.pending_move());
@@ -1448,7 +1451,7 @@ fn effects_last_until_their_users_next_phase_whoever_has_them() {
     // …and loses it when the user's side's phase starts.
     let expired = |id| Event::EffectExpired {
         unit: UnitId(id),
-        skill: sk("war_cry"),
+        source: EffectSource::Skill(sk("war_cry")),
     };
     assert_eq!(
         end(&mut s),
