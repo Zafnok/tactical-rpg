@@ -28,7 +28,10 @@ None.
 
 **In:** battle-screen interaction state machine, overlays, path arrow, walking
 animation, action menu with `Wait` (and `Seize` when legal), cancel flows,
-inspecting enemy ranges.
+inspecting enemy ranges. After an attack that ends with
+`Event::MoveAfterOffered` (Skirmish, Swoop; 0311), let the player pick one of
+`BattleState::move_after_tiles()` or stay, and send `Command::MoveAfter`
+(nothing else is accepted until then).
 
 **Out:** `Attack` targeting/forecast/playback (0404; show `Attack` in the menu
 but disabled until 0404), `Item`/`Equip` menu entries (0407; there is no in-battle trade),

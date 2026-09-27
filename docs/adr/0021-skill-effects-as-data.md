@@ -37,9 +37,14 @@ that must keep passing.
 4. **Timed effects live on the unit** (`Unit::effects`, saved with the
    battle, ADR-0020) and are keyed by their source skill: the same effect
    refreshes, never stacks. They end at the start of a given phase.
-5. **Moves after an attack** are part of the attack command
-   (`UnitAction::Attack::then_move`), validated with the rest of the command,
-   so an `Act` stays one atomic, replayable command (0305's hook).
+5. **Moves after an attack are their own command**, because Nick wants the
+   tile chosen after seeing the combat. An attack with a post-action move
+   ends with `Event::MoveAfterOffered` instead of `UnitActed`, and the
+   battle records a `PendingMove` (saved with it). The only command accepted
+   then is `Command::MoveAfter { unit, to }` (`to: None` stays), which
+   ends the action; every other command is refused with
+   `MoveAfterPending`. The state never has a half-applied command: both
+   commands are atomic and replay as they are.
 
 ## Consequences
 
@@ -51,10 +56,11 @@ that must keep passing.
 - A new kind of effect (e.g. Line Pierce's extra strike in 0312) needs a new
   variant and a hook in the battle; the closed set can grow, and each growth
   is reviewed by tests rather than by reading scripts.
-- `UnitAction::Attack` and `UnitAction::Cast` gained fields, so every
-  command literal names them (`active: None`, `then_move: None`).
-- Choosing the move after an attack happens before the combat's rolls: the
-  UI (0403/0412) must ask for it with the attack, not after the animation.
+- `UnitAction::Attack` and `UnitAction::Cast` gained an `active` field, so
+  every command literal names it (`active: None`).
+- The UI (0403/0412) and the AI (0501) must answer a `MoveAfterOffered`
+  with a `MoveAfter` before anything else; `BattleState::move_after_tiles`
+  lists the choices.
 
 ## Alternatives considered
 
@@ -64,6 +70,7 @@ that must keep passing.
   placeholder skills need, and much harder to test and validate.
 - **Skill checks inside `combat.rs`** — the combat maths would need the unit,
   the map and the phase, mixing layers and breaking its standalone tests.
-- **A separate "move after" command after the attack** — the unit would sit
-  in a half-acted state between two commands, which every other command,
-  save and replay would have to handle.
+- **The move after as a field of the attack command** — simpler (one atomic
+  command, no waiting state), and it was the first version; but the tile
+  had to be chosen before the rolls, and Nick wants it chosen after the
+  combat plays out.

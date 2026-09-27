@@ -12,9 +12,9 @@ use trpg_core::{
     ClassTable, CombatMods, Command, ConsumableDef, ConsumableEffect, DamageType, EffectDuration,
     Element, Equipped, Event, Faction, Grid, Growths, ItemDef, ItemId, ItemTable, LoadoutDef,
     MovementTypeId, Objective, Pos, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, SpellDef,
-    SpellId, SpellKind, SpellState, SpellTable, StatKind, Stats, Stock, TerrainEffect, TerrainId,
-    TerrainRules, TerrainTable, TimedMods, Unit, UnitAction, UnitId, UnitTags, WeaponDef,
-    WeaponKind, WeaponProficiency, WeaponRank, WeaponReq,
+    SpellId, SpellKind, SpellState, SpellTable, Stance, StatKind, Stats, Stock, TerrainEffect,
+    TerrainId, TerrainRules, TerrainTable, TimedMods, Unit, UnitAction, UnitId, UnitTags,
+    WeaponDef, WeaponKind, WeaponProficiency, WeaponRank, WeaponReq,
 };
 
 const FOREST: TerrainId = TerrainId(1);
@@ -169,9 +169,12 @@ fn skills() -> Arc<SkillTable> {
                     ..CombatMods::default()
                 },
                 range: 0,
-                stance: Some(TimedMods {
-                    stats: vec![(StatKind::Def, 2)],
-                    combat: CombatMods::default(),
+                stance: Some(Stance {
+                    mods: TimedMods {
+                        stats: vec![(StatKind::Def, 2)],
+                        combat: CombatMods::default(),
+                    },
+                    this_combat: true,
                 }),
                 post_move: 0,
                 drain: false,
@@ -277,7 +280,6 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
             target: UnitId(target),
             slot: 0,
             active: None,
-            then_move: None,
         },
     }
 }
@@ -346,7 +348,6 @@ fn script() -> Vec<Command> {
                 target: UnitId(4),
                 slot: 0,
                 active: Some(SkillId::new("guard_strike")),
-                then_move: None,
             },
         },
         Command::EndPhase,

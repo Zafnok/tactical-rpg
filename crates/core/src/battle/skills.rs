@@ -4,15 +4,15 @@
 
 use std::collections::{BTreeMap, VecDeque};
 
-use super::{BattleState, CommandError, Event, Step};
+use super::{BattleState, CommandError, Event, PendingMove, Step};
 use crate::combat::{CombatMods, CombatantInput};
 use crate::geom::Pos;
 use crate::item::Equipped;
 use crate::movement::TileSet;
 use crate::skill::{
     ActiveEffect, Area, Bonuses, CostError, CostSource, SkillContext, SkillCost, SkillDef, SkillId,
-    SkillKind, TimedEffect, TimedMods, auras, check_cost, effect_bonuses, passive_bonuses,
-    pay_cost, post_move_tiles,
+    SkillKind, Stance, TimedEffect, TimedMods, auras, check_cost, effect_bonuses, heal_bonus,
+    passive_bonuses, pay_cost, post_move_tiles,
 };
 use crate::stats::StatValue;
 use crate::terrain::MovementTypeId;
@@ -30,8 +30,6 @@ pub(super) struct AttackPlan<'a> {
     pub with: Equipped,
     /// The combat active chosen, if any.
     pub active: Option<&'a SkillId>,
-    /// The move after the attack, if any.
-    pub then_move: Option<Pos>,
 }
 
 /// What [`BattleState::fighters`] needs about the attacker's side.
@@ -61,7 +59,7 @@ pub(super) struct ActiveUse {
     /// Max range bonus (combat actives).
     pub range: u32,
     /// Stance rider (combat actives).
-    pub stance: Option<TimedMods>,
+    pub stance: Option<Stance>,
     /// Tiles the user may move after the attack (combat actives).
     pub post_move: u32,
     /// Heals the user by half the HP its strikes removed (combat actives).
@@ -197,11 +195,12 @@ impl BattleState {
         let mut a_bonus = self.bonuses(attacker, fight.dest, &a_usable, &a_ctx);
         if let Some(active) = fight.active {
             a_bonus.combat.add(&active.mods);
-            // A stance rider counts in its own combat, once.
+            // A stance rider counts in its own combat if it says so, once.
             if let Some(stance) = &active.stance
+                && stance.this_combat
                 && !attacker.effects.iter().any(|e| e.source == active.skill)
             {
-                a_bonus.add_timed(stance);
+                a_bonus.add_timed(&stance.mods);
             }
             if let Some(w) = a.weapon.as_mut() {
                 w.max_range = w.max_range.saturating_add(active.range);
@@ -251,43 +250,101 @@ impl BattleState {
             .is_some()
     }
 
-    /// Validates `unit`'s move from `dest` to `to` after its attack, with
-    /// `tiles` of post-action move: the path, through empty tiles it can
-    /// enter, at most `tiles` steps long.
-    pub(super) fn plan_move_after(
-        &self,
-        unit: &Unit,
-        dest: Pos,
-        to: Pos,
-        tiles: u32,
-    ) -> Result<Vec<Pos>, CommandError> {
-        let mt = self.class_of(unit)?.movement_type;
+    /// Where `unit` (on the map) can move after its attack with `tiles` of
+    /// post-action move: every tile it reaches in `1..=tiles` steps through
+    /// empty tiles it can enter, with the path there (its tile first), in
+    /// the order found (breadth-first, neighbours in `Dir::ALL` order).
+    fn move_after_paths(&self, unit: &Unit, tiles: u32) -> Vec<Vec<Pos>> {
+        let Ok(class) = self.class_of(unit) else {
+            return Vec::new();
+        };
+        let mt = class.movement_type;
         let free = |p: Pos| {
             self.enterable(p, mt) && !self.units.iter().any(|u| u.id != unit.id && u.pos == p)
         };
-        let tiles_map = &self.map.tiles;
-        let mut seen = TileSet::new(tiles_map.width(), tiles_map.height());
-        seen.insert(dest);
-        let mut queue = VecDeque::from([(vec![dest], 0u32)]);
-        while let Some((path, steps)) = queue.pop_front() {
+        let map = &self.map.tiles;
+        let mut seen = TileSet::new(map.width(), map.height());
+        seen.insert(unit.pos);
+        let mut found = Vec::new();
+        let mut queue = VecDeque::from([vec![unit.pos]]);
+        while let Some(path) = queue.pop_front() {
             let Some(&last) = path.last() else {
                 continue;
             };
-            if last == to && steps > 0 {
-                return Ok(path);
-            }
+            let steps = u32::try_from(path.len() - 1).unwrap_or(u32::MAX);
             if steps >= tiles {
                 continue;
             }
-            for next in tiles_map.neighbors4(last) {
+            for next in map.neighbors4(last) {
                 if free(next) && seen.insert(next) {
                     let mut longer = path.clone();
                     longer.push(next);
-                    queue.push_back((longer, steps + 1));
+                    found.push(longer.clone());
+                    queue.push_back(longer);
                 }
             }
         }
-        Err(CommandError::CannotMoveAfter(to))
+        found
+    }
+
+    /// The tiles the unit waiting to move after its attack can move to (none
+    /// if no unit is waiting).
+    pub fn move_after_tiles(&self) -> Vec<Pos> {
+        let Some(pending) = self.pending_move else {
+            return Vec::new();
+        };
+        self.unit(pending.unit)
+            .map(|u| self.move_after_paths(u, pending.tiles))
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|path| path.last().copied())
+            .collect()
+    }
+
+    /// Offers unit `id` its move after an attack, if it still stands, has
+    /// `tiles` of post-action move and somewhere to go: it waits for a
+    /// [`Command::MoveAfter`](super::Command::MoveAfter).
+    pub(super) fn offer_move_after(&mut self, id: UnitId, tiles: u32, events: &mut Vec<Event>) {
+        let can_move = tiles > 0
+            && self
+                .unit(id)
+                .is_some_and(|u| !self.move_after_paths(u, tiles).is_empty());
+        if can_move {
+            self.pending_move = Some(PendingMove { unit: id, tiles });
+            events.push(Event::MoveAfterOffered { unit: id, tiles });
+        }
+    }
+
+    /// Carries out [`Command::MoveAfter`](super::Command::MoveAfter) for
+    /// unit `id`: stays with `to` = `None`, else moves along the path to
+    /// `to`. Ends its action.
+    pub(super) fn move_after(
+        &mut self,
+        id: UnitId,
+        to: Option<Pos>,
+        events: &mut Vec<Event>,
+    ) -> Result<(), CommandError> {
+        let pending = match self.pending_move {
+            Some(p) if p.unit == id => p,
+            Some(p) => return Err(CommandError::MoveAfterPending(p.unit)),
+            None => return Err(CommandError::NoMoveAfter(id)),
+        };
+        if let Some(to) = to {
+            let path = self
+                .unit(id)
+                .map(|u| self.move_after_paths(u, pending.tiles))
+                .unwrap_or_default()
+                .into_iter()
+                .find(|path| path.last() == Some(&to))
+                .ok_or(CommandError::CannotMoveAfter(to))?;
+            if let Some(unit) = self.unit_mut(id) {
+                unit.pos = to;
+            }
+            events.push(Event::UnitMoved { unit: id, path });
+        }
+        self.pending_move = None;
+        events.push(Event::UnitActed { unit: id });
+        Ok(())
     }
 
     /// The other units allied to `unit` within `radius` tiles of `dest`, in
@@ -344,9 +401,12 @@ impl BattleState {
                 if target.is_some() {
                     return Err(bad_target());
                 }
+                // White Magic counts for Sanctuary too (Nick).
+                let usable = unit.usable_skills(&self.tables.classes, &self.tables.skills);
                 let mag = unit
                     .effective_stats(&self.tables.classes, &self.tables.items)
-                    .mag;
+                    .mag
+                    .saturating_add(heal_bonus(&usable));
                 let heals: Vec<(UnitId, StatValue)> = self
                     .allies_near(unit, dest, *radius)
                     .iter()
@@ -486,7 +546,7 @@ impl BattleState {
         if let Some(stance) = &active.stance {
             unit.add_effect(TimedEffect {
                 source: active.skill.clone(),
-                mods: stance.clone(),
+                mods: stance.mods.clone(),
                 until,
             });
             events.push(Event::EffectApplied {
@@ -501,16 +561,6 @@ impl BattleState {
                 unit.hp += amount;
                 events.push(Event::Healed { target: id, amount });
             }
-        }
-    }
-
-    /// Moves unit `id` along `path` after its attack, if it still stands.
-    pub(super) fn move_after(&mut self, id: UnitId, path: Vec<Pos>, events: &mut Vec<Event>) {
-        if let Some(unit) = self.unit_mut(id)
-            && let Some(&to) = path.last()
-        {
-            unit.pos = to;
-            events.push(Event::UnitMoved { unit: id, path });
         }
     }
 

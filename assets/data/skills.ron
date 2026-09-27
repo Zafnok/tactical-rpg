@@ -15,6 +15,7 @@
 //   HealBonus(n)                               heal spells restore n more
 //   SpellMight(n)                              attack spells get might +n
 //   PostActionMove(tiles: n, when: W)          may move n tiles after attacking
+//                                              (chosen after the combat)
 //   AllyAura(radius: n, mods: M)               other allies within n tiles
 // When (W): Always, WeaponKindEquipped(kind), NotOwnPhase, HpAtMostHalf,
 //   MovedAtLeast(tiles), AgainstWeaponKind(kind).
@@ -28,12 +29,16 @@
 // Active effects (E):
 //   Strike(with: Any | Kind(kind) | Spell, mods: M, range: n, stance: T,
 //          post_move: n, drain: bool)   a combat active; all but `with`
-//          optional. `stance: Some((stats: [...], combat: M))` is a stance
-//          rider until the user's next phase. Spell (and only Spell) uses
-//          ExtraSpellUse.
+//          optional. `mods` count in this combat only. A stance rider,
+//          `stance: Some((mods: (stats: [...], combat: M), this_combat: b))`,
+//          lasts from the attack until the user's next phase, and counts in
+//          the attack's own combat too if `this_combat: true` (Nick). After
+//          the combat the user is offered a `post_move` of n tiles, chosen
+//          then. Spell (and only Spell) uses ExtraSpellUse.
 //   Buff(area: Own | Allies(radius: n), mods: (stats: [(stat, n)], combat: M))
 //          until the start of the user's next phase.
-//   Heal(radius: n, power: n)   other allies within n tiles, Mag + power.
+//   Heal(radius: n, power: n)   other allies within n tiles, Mag + power
+//                               (+ White Magic's bonus, Nick).
 //   Push(collision: n)          Shove: pushes an adjacent enemy 1 tile; if
 //                               it can't move there (or hits fire) it takes
 //                               n collision damage (n >= 0).

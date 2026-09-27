@@ -19,7 +19,7 @@ pub mod weapon;
 
 pub use battle::{
     BattleSetup, BattleState, Burning, CastTarget, Command, CommandError, Destination, Event,
-    Objective, Outcome, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
+    Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,
@@ -45,8 +45,8 @@ pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use skill::{
     ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, Paid, PassiveEffect,
-    SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, TimedEffect, TimedMods,
-    WeaponReq, check_cost, pay_cost,
+    SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance, TimedEffect,
+    TimedMods, WeaponReq, check_cost, pay_cost,
 };
 pub use spell::{
     EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,

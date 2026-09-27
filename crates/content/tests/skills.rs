@@ -148,7 +148,6 @@ fn attack(target: u32, active: Option<&str>) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: active.map(SkillId::new),
-        then_move: None,
     }
 }
 
@@ -353,20 +352,26 @@ fn long_shot_range_1_more_with_a_bow() {
 #[test]
 fn skirmish_move_1_after_a_bow_attack() {
     let archer = player(1, "archer", p(0, 0), "iron_bow");
-    let then = UnitAction::Attack {
-        target: UnitId(3),
-        slot: 0,
-        active: None,
-        then_move: Some(p(0, 1)),
-    };
     let s = battle(vec![archer.clone(), enemy(3, p(2, 0))]);
-    assert_eq!(
-        try_act(&s, 1, p(0, 0), then.clone()).err(),
-        Some(CommandError::CannotMoveAfter(p(0, 1)))
+    let events = try_act(&s, 1, p(0, 0), attack(3, None)).unwrap_or_default();
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, Event::MoveAfterOffered { .. }))
     );
     let mut s = battle(vec![knowing(archer, "skirmish"), enemy(3, p(2, 0))]);
-    act(&mut s, 1, p(0, 0), then);
+    act(&mut s, 1, p(0, 0), attack(3, None));
+    move_after(&mut s, 1, p(0, 1));
     assert_eq!(s.unit(UnitId(1)).map(|u| u.pos), Some(p(0, 1)));
+}
+
+/// Unit `id`, offered a move after its attack, moves to `to`.
+fn move_after(s: &mut BattleState, id: u32, to: Pos) {
+    s.apply(&Command::MoveAfter {
+        unit: UnitId(id),
+        to: Some(to),
+    })
+    .unwrap_or_else(|e| panic!("{e}"));
 }
 
 /// The enemy's damage attacking `defender` (at (0,0)) in the enemy phase,
@@ -897,17 +902,8 @@ fn swoop_move_1_after_the_attack_for_3_durability() {
         player(1, "flier", p(0, 0), "iron_spear"),
         enemy(3, p(1, 0)),
     ]);
-    act(
-        &mut s,
-        1,
-        p(0, 0),
-        UnitAction::Attack {
-            target: UnitId(3),
-            slot: 0,
-            active: Some(SkillId::new("swoop")),
-            then_move: Some(p(0, 1)),
-        },
-    );
+    act(&mut s, 1, p(0, 0), attack(3, Some("swoop")));
+    move_after(&mut s, 1, p(0, 1));
     assert_eq!(s.unit(UnitId(1)).map(|u| u.pos), Some(p(0, 1)));
     assert_eq!(durability(&s, 1), 17);
 }

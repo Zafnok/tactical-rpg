@@ -453,6 +453,13 @@ behind when you leave an unmastered class.
     also helps in the unit's defending combats (counters) then. It's picked
     when attacking, never during the enemy's turn. It uses the timed-effect
     rules below.
+    - **When a stance counts** (Nick, reviewing ticket 0311's PR: "some
+      might only apply for the combat you used it, some might only apply
+      for enemy's next turn, and some might apply for both"): each combat
+      active says so in its data. A bonus for **this combat only** is the
+      active's own bonus; a stance lasts **until the start of the unit's
+      next phase**, and counts in the attack's own combat too only if it
+      says so.
   - Actives are separate from Combat Arts (weapon techniques, also paid
     with durability, `combat-arts.md`). An attack uses one art or one combat
     active, not both. Nick: both should be flavourful and overlaps rare.
@@ -460,6 +467,18 @@ behind when you leave an unmastered class.
   the skill is used. They end at the start of the owner's side's next phase,
   before anyone acts. The same effect doesn't stack with itself; using it
   again refreshes it.
+- **Moving after an attack** (Skirmish, Swoop; Nick, reviewing ticket
+  0311's PR: "both swoop and vault should let you select after fight plays
+  out"): the 1-tile step is chosen **after** the combat plays out (or
+  skipped). A unit that falls in the combat, or a battle that ends with it,
+  gets no step.
+- **White Magic and Sanctuary** (Nick, same review: "I think sanctuary can
+  count as white magic"): White Magic's +2 / +4 also adds to Sanctuary's
+  heal (`Mag + 5 + bonus`).
+- **Confirmed in the same review:** Charge counts squares walked this
+  action (not move cost) and never counts on counters; Deadly Blow doubles
+  crit **after** the other crit bonuses (then caps at 100); skill stat
+  bonuses count in combat only and may pass class caps.
 - **Skill might and damage bonuses** (Nick, reviewing ticket 0311's PR,
   2026-09-27: "I think the might + N / damage + N should be multiplied /
   halved"): a skill's "might +N" or "damage +N" is added to the weapon's

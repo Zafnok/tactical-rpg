@@ -49,16 +49,6 @@ fn attack_with(target: u32, active: &str) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: Some(sk(active)),
-        then_move: None,
-    }
-}
-
-fn attack_then(target: u32, active: Option<&str>, to: Pos) -> UnitAction {
-    UnitAction::Attack {
-        target: UnitId(target),
-        slot: 0,
-        active: active.map(sk),
-        then_move: Some(to),
     }
 }
 
@@ -394,6 +384,22 @@ fn a_stance_rider_counts_in_its_combat_and_lasts_until_the_next_own_phase() {
 }
 
 #[test]
+fn a_stance_rider_can_start_after_its_combat() {
+    let mut s = start(setup(vec![
+        with_skill(lord(1, p(0, 0)), "watchful"),
+        armed(unit(3, Faction::Enemy, p(2, 0)), 5),
+    ]));
+    let events = act(&mut s, 1, p(1, 0), attack_with(3, "watchful"));
+    // Not in the combat that applies it…
+    assert_eq!(combat(&events).defender.map(|d| d.damage), Some(5));
+    assert!(events.contains(&applied(1, "watchful", Phase::Player)));
+    end(&mut s);
+    // …but in the enemy's phase.
+    let events = act(&mut s, 3, p(2, 0), attack(1));
+    assert_eq!(combat(&events).attacker.damage, 2);
+}
+
+#[test]
 fn a_stance_rider_is_not_applied_if_the_user_falls_and_counts_once() {
     let mut s = start(setup(vec![
         lord(1, p(0, 4)),
@@ -434,8 +440,15 @@ fn a_stance_rider_is_not_applied_if_the_user_falls_and_counts_once() {
 
 // ---- Moving after an attack --------------------------------------------------
 
+fn move_after(unit: u32, to: Option<Pos>) -> Command {
+    Command::MoveAfter {
+        unit: UnitId(unit),
+        to,
+    }
+}
+
 #[test]
-fn swoop_moves_one_tile_after_the_attack() {
+fn swoop_offers_a_move_chosen_after_the_combat() {
     let mut s = start(setup(vec![
         with_skill(lord(1, p(0, 0)), "swoop"),
         with_skill(unit(2, Faction::Player, p(0, 3)), "swoop"),
@@ -443,53 +456,98 @@ fn swoop_moves_one_tile_after_the_attack() {
         unit(4, Faction::Enemy, p(2, 3)),
         unit(5, Faction::Enemy, p(1, 4)),
     ]));
-    let err = |pos| CommandError::CannotMoveAfter(pos);
-    let swoop = |to| attack_then(3, Some("swoop"), to);
-    // Not without a skill, not 2 tiles, not onto a unit or the tile itself.
-    refused_act(
-        &mut s,
-        1,
-        p(1, 0),
-        attack_then(3, None, p(1, 1)),
-        err(p(1, 1)),
-    );
-    refused_act(&mut s, 1, p(1, 0), swoop(p(0, 1)), err(p(0, 1)));
-    refused_act(&mut s, 1, p(1, 0), swoop(p(2, 0)), err(p(2, 0)));
-    refused_act(&mut s, 1, p(1, 0), swoop(p(1, 0)), err(p(1, 0)));
-    // Its old tile is free once it has moved.
-    let events = act(&mut s, 1, p(1, 0), swoop(p(0, 0)));
+    let events = act(&mut s, 1, p(1, 0), attack_with(3, "swoop"));
     assert_eq!(
-        events[events.len() - 2..],
-        [
+        events.last(),
+        Some(&Event::MoveAfterOffered {
+            unit: UnitId(1),
+            tiles: 1,
+        })
+    );
+    assert!(!names(&events).contains(&"UnitActed".to_owned()));
+    assert_eq!(
+        s.pending_move(),
+        Some(PendingMove {
+            unit: UnitId(1),
+            tiles: 1,
+        })
+    );
+    assert!(s.unit(UnitId(1)).is_some_and(|u| u.acted));
+    // Next to (1,0): (2,0) holds the enemy; its old tile is free.
+    assert_eq!(s.move_after_tiles(), [p(1, 1), p(0, 0)]);
+    // Nothing else until it has moved (or stayed).
+    let waiting = CommandError::MoveAfterPending(UnitId(1));
+    refused(&mut s, &Command::EndPhase, waiting.clone());
+    refused(&mut s, &move_after(2, None), waiting.clone());
+    refused_act(&mut s, 2, p(1, 3), attack(4), waiting);
+    refused(
+        &mut s,
+        &move_after(1, Some(p(2, 0))),
+        CommandError::CannotMoveAfter(p(2, 0)),
+    );
+    refused(
+        &mut s,
+        &move_after(1, Some(p(0, 1))),
+        CommandError::CannotMoveAfter(p(0, 1)),
+    );
+    refused(
+        &mut s,
+        &move_after(1, Some(p(1, 0))),
+        CommandError::CannotMoveAfter(p(1, 0)),
+    );
+    assert_eq!(
+        s.apply(&move_after(1, Some(p(0, 0)))),
+        Ok(vec![
             Event::UnitMoved {
                 unit: UnitId(1),
                 path: vec![p(1, 0), p(0, 0)],
             },
             Event::UnitActed { unit: UnitId(1) },
-        ]
+        ])
     );
     assert_eq!(s.unit(UnitId(1)).map(|u| u.pos), Some(p(0, 0)));
-    // Into a wall: refused.
-    let mut walled = s.clone();
-    if let Some(t) = walled.map.tiles.get_mut(p(1, 2)) {
-        *t = TerrainId(2);
-    }
-    refused_act(
-        &mut walled,
-        2,
-        p(1, 3),
-        UnitAction::Attack {
-            target: UnitId(4),
-            slot: 0,
-            active: Some(sk("swoop")),
-            then_move: Some(p(1, 2)),
-        },
-        err(p(1, 2)),
+    assert_eq!(s.pending_move(), None);
+    assert!(s.move_after_tiles().is_empty());
+    refused(
+        &mut s,
+        &move_after(1, None),
+        CommandError::NoMoveAfter(UnitId(1)),
     );
+    // Staying put.
+    act(&mut s, 2, p(1, 3), attack_with(4, "swoop"));
+    assert_eq!(
+        s.apply(&move_after(2, None)),
+        Ok(vec![Event::UnitActed { unit: UnitId(2) }])
+    );
+    assert_eq!(s.unit(UnitId(2)).map(|u| u.pos), Some(p(1, 3)));
 }
 
 #[test]
-fn no_move_after_the_attack_if_the_attacker_falls() {
+fn no_move_is_offered_without_the_skill_or_anywhere_to_go() {
+    let mut s = start(setup(vec![
+        with_skill(lord(1, p(0, 0)), "swoop"),
+        with_skill(unit(2, Faction::Player, p(1, 1)), "swoop"),
+        unit(3, Faction::Enemy, p(2, 0)),
+        unit(4, Faction::Enemy, p(2, 1)),
+        unit(5, Faction::Enemy, p(7, 4)),
+    ]));
+    // A plain attack offers nothing.
+    let events = act(&mut s, 1, p(1, 0), attack(3));
+    assert_eq!(names(&events).last().map(String::as_str), Some("UnitActed"));
+    assert_eq!(s.pending_move(), None);
+    // Walled in: (1,0) holds unit 1, (2,1) the enemy, walls elsewhere.
+    for wall in [p(0, 1), p(1, 2)] {
+        if let Some(t) = s.map.tiles.get_mut(wall) {
+            *t = TerrainId(2);
+        }
+    }
+    let events = act(&mut s, 2, p(1, 1), attack_with(4, "swoop"));
+    assert_eq!(names(&events).last().map(String::as_str), Some("UnitActed"));
+    assert_eq!(s.pending_move(), None);
+}
+
+#[test]
+fn no_move_after_the_attack_if_the_attacker_falls_or_the_battle_ends() {
     let mut s = start(setup(vec![
         lord(1, p(0, 4)),
         Unit {
@@ -498,33 +556,83 @@ fn no_move_after_the_attack_if_the_attacker_falls() {
         },
         unit(3, Faction::Enemy, p(2, 0)),
     ]));
-    let events = act(&mut s, 2, p(1, 0), attack_then(3, Some("swoop"), p(1, 1)));
+    let events = act(&mut s, 2, p(1, 0), attack_with(3, "swoop"));
     assert_eq!(names(&events).last().map(String::as_str), Some("UnitFell"));
-    assert!(!names(&events)[1..].contains(&"UnitMoved".to_owned()));
+    assert_eq!(s.pending_move(), None);
+    // The last enemy falls: the battle is won, no move is offered.
+    let mut s = start(setup(vec![
+        with_skill(lord(1, p(0, 0)), "swoop"),
+        Unit {
+            hp: 3,
+            ..unit(3, Faction::Enemy, p(2, 0))
+        },
+    ]));
+    let events = act(&mut s, 1, p(1, 0), attack_with(3, "swoop"));
+    assert_eq!(
+        events[events.len() - 2..],
+        [
+            Event::UnitActed { unit: UnitId(1) },
+            ended(Outcome::Victory)
+        ]
+    );
+    assert_eq!(s.pending_move(), None);
 }
 
 #[test]
-fn skirmish_moves_after_a_bow_attack_only() {
+fn skirmish_offers_a_move_after_a_bow_attack_only() {
     let archer = learned(
         carrying(lord(1, p(0, 0)), &[item("flier_bow"), weapon(1, 1, 3)]),
         &["skirmish"],
     );
-    let mut s = start(setup(vec![archer, unit(3, Faction::Enemy, p(3, 0))]));
-    refused_act(
-        &mut s,
-        1,
-        p(2, 0),
-        UnitAction::Attack {
-            target: UnitId(3),
-            slot: 1,
-            active: None,
-            then_move: Some(p(2, 1)),
-        },
-        CommandError::CannotMoveAfter(p(2, 1)),
+    let mut s = start(setup(vec![
+        archer,
+        unit(3, Faction::Enemy, p(3, 0)),
+        unit(4, Faction::Enemy, p(7, 4)),
+    ]));
+    let sword = UnitAction::Attack {
+        target: UnitId(3),
+        slot: 1,
+        active: None,
+    };
+    let events = forecast_events(&s, 1, p(2, 0), sword);
+    assert_eq!(names(&events).last().map(String::as_str), Some("UnitActed"));
+    let events = act(&mut s, 1, p(1, 0), attack(3));
+    assert_eq!(
+        events.last(),
+        Some(&Event::MoveAfterOffered {
+            unit: UnitId(1),
+            tiles: 1,
+        })
     );
-    let events = act(&mut s, 1, p(1, 0), attack_then(3, None, p(1, 1)));
+    s.apply(&move_after(1, Some(p(1, 1)))).unwrap();
     assert_eq!(s.unit(UnitId(1)).map(|u| u.pos), Some(p(1, 1)));
-    assert!(names(&events).contains(&"UnitMoved".to_owned()));
+}
+
+/// The events of unit `id` doing `action` from `dest`, without changing `s`.
+fn forecast_events(s: &BattleState, id: u32, dest: Pos, action: UnitAction) -> Vec<Event> {
+    let mut copy = s.clone();
+    act(&mut copy, id, dest, action)
+}
+
+#[test]
+fn a_waiting_move_survives_a_save() {
+    let mut s = start(setup(vec![
+        with_skill(lord(1, p(0, 0)), "swoop"),
+        unit(3, Faction::Enemy, p(2, 0)),
+    ]));
+    act(&mut s, 1, p(1, 0), attack_with(3, "swoop"));
+    let saved = ron::to_string(&s).unwrap();
+    let mut loaded: BattleState = ron::from_str(&saved).unwrap();
+    loaded.restore_tables(
+        Arc::new(s.terrain().clone()),
+        Arc::new(s.classes().clone()),
+        Arc::new(s.items().clone()),
+        Arc::new(s.spells().clone()),
+        Arc::new(s.skills().clone()),
+    );
+    assert_eq!(loaded, s);
+    assert_eq!(loaded.pending_move(), s.pending_move());
+    assert!(loaded.apply(&move_after(1, None)).is_ok());
 }
 
 // ---- Spell actives -------------------------------------------------------------
@@ -890,6 +998,23 @@ fn sanctuary_heals_wounded_allies_in_reach() {
     let mut s = start(setup([vec![cleric("sanctuary_2")], others()].concat()));
     act(&mut s, 1, p(1, 1), use_skill("sanctuary_2", None));
     assert_eq!(hp(&s, 7), 8);
+    // White Magic counts (Nick): 2 + 5 + 4.
+    let white = learned(cleric("sanctuary"), &["white_magic_2"]);
+    let mut s = start(setup([vec![white], others()].concat()));
+    let events = act(&mut s, 1, p(1, 1), use_skill("sanctuary", None));
+    assert!(events.contains(&Event::Healed {
+        target: UnitId(2),
+        amount: 6,
+    }));
+    let mut deep = others();
+    deep[0].stats.hp = 30;
+    let white = learned(cleric("sanctuary"), &["white_magic_2"]);
+    let mut s = start(setup([vec![white], deep].concat()));
+    let events = act(&mut s, 1, p(1, 1), use_skill("sanctuary", None));
+    assert!(events.contains(&Event::Healed {
+        target: UnitId(2),
+        amount: 11,
+    }));
     // Nobody wounded in reach, or a target given: refused.
     let mut s = start(setup(vec![
         cleric("sanctuary"),
@@ -1360,6 +1485,14 @@ fn skill_error_messages() {
         (
             CommandError::CannotMoveAfter(p(1, 2)),
             "can't move to (1, 2) after attacking",
+        ),
+        (
+            CommandError::MoveAfterPending(UnitId(4)),
+            "unit 4 must first finish its move",
+        ),
+        (
+            CommandError::NoMoveAfter(UnitId(4)),
+            "unit 4 has no move to make",
         ),
     ];
     for (err, text) in cases {

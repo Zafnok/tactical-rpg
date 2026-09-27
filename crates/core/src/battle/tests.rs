@@ -30,8 +30,8 @@ use crate::map::TileFeature;
 use crate::movement::reachable;
 use crate::shop::{Loot, ShopKind};
 use crate::skill::{
-    ActiveEffect, Area, Condition, PassiveEffect, SkillCost, SkillDef, SkillKind, TimedMods,
-    WeaponReq,
+    ActiveEffect, Area, Condition, PassiveEffect, SkillCost, SkillDef, SkillKind, Stance,
+    TimedMods, WeaponReq,
 };
 use crate::spell::{EffectDuration, SpellState, TerrainEffect};
 use crate::stats::{Growths, StatKind, StatValue, Stats};
@@ -119,7 +119,8 @@ fn class(id: &str, tags: UnitTags) -> ClassDef {
 /// Test skills, shaped like `progression.md`'s but with round numbers.
 /// Actives: `keen` (3 dur: hit +30, crit +10), `flurry` (5 dur: +1 strike),
 /// `long_shot` / `long_shot_2` (3 dur, bows: range +1 / +2), `guarding`
-/// (2 dur: a stance rider, Def +3), `swoop` (3 dur: move 1 after),
+/// (2 dur: a stance rider, Def +3, from this combat on), `watchful` (2 dur:
+/// the same, from after this combat), `swoop` (3 dur: move 1 after),
 /// `overcast` (spell: might +5), `siphon` (spell: drain), `brace` (3 dur:
 /// own Def and Res +5), `war_cry` (5 dur: adjacent allies Str +2),
 /// `inspire` (3 dur: allies within 2 hit and avoid +10), `sanctuary` /
@@ -223,7 +224,21 @@ fn test_combat_actives() -> Vec<SkillDef> {
             "guarding",
             test_strike_with(test_strike(dur(2), WeaponReq::Any, m()), |e| {
                 if let ActiveEffect::Strike { stance, .. } = e {
-                    *stance = Some(timed(vec![(StatKind::Def, 3)], m()));
+                    *stance = Some(Stance {
+                        mods: timed(vec![(StatKind::Def, 3)], m()),
+                        this_combat: true,
+                    });
+                }
+            }),
+        ),
+        test_skill(
+            "watchful",
+            test_strike_with(test_strike(dur(2), WeaponReq::Any, m()), |e| {
+                if let ActiveEffect::Strike { stance, .. } = e {
+                    *stance = Some(Stance {
+                        mods: timed(vec![(StatKind::Def, 3)], m()),
+                        this_combat: false,
+                    });
                 }
             }),
         ),
@@ -776,7 +791,6 @@ fn attack(target: u32) -> UnitAction {
         target: UnitId(target),
         slot: 0,
         active: None,
-        then_move: None,
     }
 }
 
@@ -1910,7 +1924,6 @@ fn attack_with(target: u32, slot: usize) -> UnitAction {
         target: UnitId(target),
         slot,
         active: None,
-        then_move: None,
     }
 }
 
@@ -2361,6 +2374,9 @@ fn commands_and_events_round_trip_through_ron() {
 /// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
 /// packs are all known; weapons and spells are all known.
 fn legal_commands(s: &BattleState) -> Vec<Command> {
+    if let Some(moves) = legal_moves_after(s) {
+        return moves;
+    }
     let mut out = vec![Command::EndPhase];
     let ready = s
         .units()
@@ -2408,7 +2424,6 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
                             target: t.id,
                             slot,
                             active: None,
-                            then_move: None,
                         });
                     }
                 }
@@ -2456,9 +2471,24 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
     out
 }
 
+/// If a unit was offered a move after its attack, the only legal commands:
+/// staying, or moving to each tile it can reach.
+fn legal_moves_after(s: &BattleState) -> Option<Vec<Command>> {
+    let pending = s.pending_move()?;
+    let stay = std::iter::once(None);
+    let moves = stay
+        .chain(s.move_after_tiles().into_iter().map(Some))
+        .map(|to| Command::MoveAfter {
+            unit: pending.unit,
+            to,
+        })
+        .collect();
+    Some(moves)
+}
+
 /// Some skill commands, kept only if `s` accepts them: each ready unit's
-/// combat actives on its first attacks and casts in `commands` (with a move
-/// after, where one may be allowed), its other actives on those attacks'
+/// combat actives on its first attacks and casts in `commands`, its other
+/// actives on those attacks'
 /// targets, and its other actives from its own tile, with no target or on
 /// an adjacent hostile unit.
 fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
@@ -2477,9 +2507,6 @@ fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
                 .collect()
         };
         let (combat, actions) = (ids(true), ids(false));
-        let may_move = usable
-            .iter()
-            .any(|d| d.id.0 == "swoop" || d.id.0 == "skirmish");
         let act = |dest, action| Command::Act {
             unit: u.id,
             dest,
@@ -2503,8 +2530,7 @@ fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
             })
             .take(2);
         for (dest, action) in attacks {
-            let moves = s.map().tiles.neighbors4(dest).filter(|_| may_move);
-            for variant in attack_variants(action, &combat, moves) {
+            for variant in attack_variants(action, &combat) {
                 out.push(act(dest, variant));
             }
             if let UnitAction::Attack { target, .. } = action {
@@ -2540,40 +2566,24 @@ fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
     out
 }
 
-/// `action` (an attack or a cast at a unit) with each of `combat` actives
-/// and, for attacks, each move after to `moves`: every combination but the
-/// plain action.
-fn attack_variants(
-    action: &UnitAction,
-    combat: &[SkillId],
-    moves: impl Iterator<Item = Pos>,
-) -> Vec<UnitAction> {
-    let tiles: Vec<Option<Pos>> = std::iter::once(None).chain(moves.map(Some)).collect();
-    let mut out = Vec::new();
-    for skill in std::iter::once(None).chain(combat.iter().map(Some)) {
-        for &to in &tiles {
-            if skill.is_none() && to.is_none() {
-                continue;
-            }
-            match action.clone() {
-                UnitAction::Attack { target, slot, .. } => out.push(UnitAction::Attack {
-                    target,
-                    slot,
-                    active: skill.cloned(),
-                    then_move: to,
-                }),
-                UnitAction::Cast { spell, target, .. } if to.is_none() => {
-                    out.push(UnitAction::Cast {
-                        spell,
-                        target,
-                        active: skill.cloned(),
-                    });
-                }
-                _ => {}
-            }
-        }
-    }
-    out
+/// `action` (an attack or a cast at a unit) with each of `combat` actives.
+fn attack_variants(action: &UnitAction, combat: &[SkillId]) -> Vec<UnitAction> {
+    combat
+        .iter()
+        .filter_map(|skill| match action.clone() {
+            UnitAction::Attack { target, slot, .. } => Some(UnitAction::Attack {
+                target,
+                slot,
+                active: Some(skill.clone()),
+            }),
+            UnitAction::Cast { spell, target, .. } => Some(UnitAction::Cast {
+                spell,
+                target,
+                active: Some(skill.clone()),
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Every spell `u` can cast from `dest`: each learned spell with a use left,

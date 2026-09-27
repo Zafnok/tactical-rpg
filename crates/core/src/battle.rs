@@ -123,8 +123,9 @@
 //!     ([`check_cost`](crate::skill::check_cost)). Events:
 //!     [`Event::SkillUsed`], then the payment ([`Event::DurabilitySpent`] or
 //!     [`Event::SpellUsesChanged`]), then the combat. Its bonuses count in
-//!     this combat; a stance rider counts in it too (once) and is then
-//!     applied ([`Event::EffectApplied`]) if the user still stands; a drain
+//!     this combat; a stance rider counts in it too if its
+//!     [`this_combat`](crate::skill::Stance::this_combat) says so (once), and
+//!     is then applied ([`Event::EffectApplied`]) if the user still stands; a drain
 //!     heals the user after the combat ([`Event::Healed`]). A weapon the
 //!     payment brought to 0 breaks after the combat ([`Event::ItemBroke`],
 //!     before anyone falls).
@@ -133,7 +134,8 @@
 //!     use them) and end the action: a buff on the user or on the other
 //!     allied units in reach of `dest` ([`Event::EffectApplied`] each; none
 //!     in reach: refused), a heal of the wounded other allied units in reach
-//!     by `Mag + power` (none wounded: refused), or **Shove**. Area actives
+//!     by `Mag + power` + [`heal_bonus`] (none wounded: refused), or
+//!     **Shove**. Area actives
 //!     never include the user (*Claude's starting rule*).
 //!   - **Shove** pushes a hostile unit adjacent to `dest` 1 tile straight
 //!     away from it ([`Event::Pushed`]). If that tile is off the map, holds
@@ -145,17 +147,21 @@
 //!     one, so it never lands further away). A unit it is pushed into takes
 //!     the same damage ([`Event::CollisionDamage`]). Collisions can make
 //!     either unit fall ([`Event::UnitFell`], pushed unit first; Nick).
-//!   - **Moving after an attack** (`turn-structure.md`): an attack with a
-//!     post-action move (Skirmish with a bow, Swoop) may name `then_move`, a
-//!     tile within that many steps of `dest` through empty tiles the unit
-//!     can enter (judged when the command is given). The move comes after
-//!     the combat ([`Event::UnitMoved`]), only if the unit still stands.
+//!   - **Moving after an attack** (`turn-structure.md`): after an attack
+//!     with a post-action move (Skirmish with a bow, Swoop), if the unit
+//!     still stands and has somewhere to go, it is offered the move
+//!     ([`Event::MoveAfterOffered`], instead of `UnitActed`) and chooses it
+//!     after seeing the combat (Nick): [`Command::MoveAfter`] to a tile within
+//!     that many steps through empty tiles it can enter
+//!     ([`BattleState::move_after_tiles`]), or to stay. Until then every
+//!     other command is refused ([`CommandError::MoveAfterPending`]). The
+//!     move ends its action ([`Event::UnitMoved`], [`Event::UnitActed`]).
 //!   - **Timed effects** end at the start of their
 //!     [`until`](crate::skill::TimedEffect::until) phase, right after its
 //!     burn-outs, even if that phase is then skipped
 //!     ([`Event::EffectExpired`]).
-//!   - **Heal spells** restore their passives' [`heal_bonus`] more (White
-//!     Magic; Sanctuary doesn't get it).
+//!   - **Heal spells** and Sanctuary restore the caster's passives'
+//!     [`heal_bonus`] more (White Magic; Nick).
 //! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
 //!   the unit can wield, or any learned attack spell (even one with no uses
 //!   left: it just can't counter), by a ready unit of the current phase. It
@@ -184,8 +190,10 @@
 //! # Extending
 //!
 //! Every [`Event`] sequence of an `Act` ends with [`Event::UnitActed`] (unless
-//! the unit fell), optionally followed by [`Event::BattleEnded`]. A move after
-//! an attack is an [`Event::UnitMoved`] just before `UnitActed`. Combat Arts
+//! the unit fell, or is offered a move after its attack:
+//! [`Event::MoveAfterOffered`], then `UnitActed` comes with the
+//! [`Command::MoveAfter`]), optionally followed by [`Event::BattleEnded`].
+//! Combat Arts
 //! (0312) pay their costs with [`pay_cost`](crate::skill::pay_cost), as
 //! actives do.
 //!
@@ -378,8 +386,6 @@ pub enum UnitAction {
         slot: usize,
         /// A combat active to use in this attack.
         active: Option<SkillId>,
-        /// Where to move after the attack, if a skill allows it.
-        then_move: Option<Pos>,
     },
     /// Use a consumable on `target` (the unit itself or an adjacent ally).
     UseItem {
@@ -506,8 +512,26 @@ pub enum Command {
         /// What to equip.
         equipped: Equipped,
     },
+    /// Move `unit` after its attack ([`Event::MoveAfterOffered`]) to `to`,
+    /// or stay (`None`). Ends its action.
+    MoveAfter {
+        /// The unit waiting to move.
+        unit: UnitId,
+        /// Where it moves.
+        to: Option<Pos>,
+    },
     /// End the current phase.
     EndPhase,
+}
+
+/// A unit that may still move after its attack, waiting for
+/// [`Command::MoveAfter`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PendingMove {
+    /// The unit.
+    pub unit: UnitId,
+    /// How many tiles it may move.
+    pub tiles: u32,
 }
 
 /// Something that happened, for the UI to show. See the module docs for the
@@ -746,6 +770,14 @@ pub enum Event {
         /// What was inside.
         loot: Loot,
     },
+    /// After its attack, a unit may move up to `tiles` tiles: it waits for a
+    /// [`Command::MoveAfter`] (see [`BattleState::move_after_tiles`]).
+    MoveAfterOffered {
+        /// The unit.
+        unit: UnitId,
+        /// How far it may move.
+        tiles: u32,
+    },
     /// A unit finished its action and is done until its next phase.
     UnitActed {
         /// The unit.
@@ -907,6 +939,11 @@ pub enum CommandError {
     NoSkillTargets(SkillId),
     /// The unit can't move to this tile after its attack.
     CannotMoveAfter(Pos),
+    /// This unit must first finish its move after its attack
+    /// ([`Command::MoveAfter`]).
+    MoveAfterPending(UnitId),
+    /// This unit has no move after an attack to make.
+    NoMoveAfter(UnitId),
 }
 
 impl From<MoveError> for CommandError {
@@ -1007,6 +1044,12 @@ impl fmt::Display for CommandError {
             CommandError::CannotMoveAfter(p) => {
                 write!(f, "can't move to ({}, {}) after attacking", p.x, p.y)
             }
+            CommandError::MoveAfterPending(id) => {
+                write!(f, "unit {} must first finish its move", id.0)
+            }
+            CommandError::NoMoveAfter(id) => {
+                write!(f, "unit {} has no move to make", id.0)
+            }
         }
     }
 }
@@ -1043,6 +1086,7 @@ pub struct BattleState {
     opened: BTreeSet<Pos>,
     rng: SimRng,
     outcome: Option<Outcome>,
+    pending_move: Option<PendingMove>,
 }
 
 /// A validated action, ready to carry out.
@@ -1090,8 +1134,8 @@ struct AttackStep {
     arms: Arms,
     /// The combat active used, if any.
     active: Option<ActiveUse>,
-    /// The path of the move after the combat (from `dest`), if any.
-    then_move: Option<Vec<Pos>>,
+    /// Tiles the attacker may move after the combat.
+    move_after: u32,
 }
 
 /// What each side of a combat fights with: `[attacker, defender]`.
@@ -1289,6 +1333,7 @@ impl BattleState {
             opened: BTreeSet::new(),
             rng: SimRng::new(setup.seed),
             outcome: None,
+            pending_move: None,
         };
         let mut events = Vec::new();
         if let Some(outcome) = state.judge() {
@@ -1419,6 +1464,11 @@ impl BattleState {
         self.outcome
     }
 
+    /// The unit waiting to move after its attack, if any.
+    pub fn pending_move(&self) -> Option<PendingMove> {
+        self.pending_move
+    }
+
     /// Applies `cmd`: validates it, changes the state and returns what
     /// happened. On `Err` nothing changed.
     pub fn apply(&mut self, cmd: &Command) -> Result<Vec<Event>, CommandError> {
@@ -1426,7 +1476,13 @@ impl BattleState {
             return Err(CommandError::BattleOver);
         }
         let mut events = Vec::new();
+        if let Some(pending) = self.pending_move
+            && !matches!(cmd, Command::MoveAfter { .. })
+        {
+            return Err(CommandError::MoveAfterPending(pending.unit));
+        }
         match cmd {
+            Command::MoveAfter { unit, to } => self.move_after(*unit, *to, &mut events)?,
             Command::EndPhase => self.end_phase(&mut events),
             Command::Equip { unit, equipped } => {
                 let u = self.check_ready(*unit)?;
@@ -1474,7 +1530,6 @@ impl BattleState {
                 target,
                 slot,
                 ref active,
-                then_move,
             } => {
                 self.check_wield(unit.id, slot)?;
                 let plan = AttackPlan {
@@ -1483,7 +1538,6 @@ impl BattleState {
                     target,
                     with: Equipped::Weapon(slot),
                     active: active.as_ref(),
-                    then_move,
                 };
                 self.plan_attack(unit, plan)?
             }
@@ -1507,7 +1561,6 @@ impl BattleState {
                     target,
                     with: Equipped::Spell(spell.clone()),
                     active: active.as_ref(),
-                    then_move: None,
                 };
                 self.plan_cast(unit, spell, plan)?
             }
@@ -1586,7 +1639,6 @@ impl BattleState {
             target,
             with,
             active,
-            then_move,
         } = plan;
         let defender = self.living(target)?;
         if !unit.faction.is_hostile_to(defender.faction) {
@@ -1605,9 +1657,6 @@ impl BattleState {
         let distance = Pos::manhattan(dest, defender.pos);
         let forecast = forecast(&self.tables.items.combat_rules(), &a, &d, distance)
             .ok_or(CommandError::OutOfRange { target, distance })?;
-        let then_move = then_move
-            .map(|to| self.plan_move_after(unit, dest, to, post_move))
-            .transpose()?;
         let kind = |c: &CombatantInput| c.weapon.as_ref().and_then(|w| w.kind);
         let counter_spell = forecast
             .defender
@@ -1629,7 +1678,7 @@ impl BattleState {
             forecast,
             arms,
             active,
-            then_move,
+            move_after: post_move,
         })))
     }
 
@@ -1885,9 +1934,10 @@ impl BattleState {
             events.push(Event::UnitMoved { unit: id, path });
         }
         let mut seized = false;
+        let mut move_after = 0;
         match step {
             Step::Wait => {}
-            Step::Attack(attack) => self.attack(id, *attack, events),
+            Step::Attack(attack) => move_after = self.attack(id, *attack, events),
             Step::Skill { active, effect } => self.use_skill(id, &active, effect, events),
             Step::Heal {
                 spell,
@@ -1935,30 +1985,36 @@ impl BattleState {
             }
             Step::Open { pos, loot } => self.open(id, pos, loot, events),
         }
-        if let Some(u) = self.unit_mut(id) {
-            u.acted = true;
-            events.push(Event::UnitActed { unit: id });
-        }
         let outcome = if seized {
             Some(Outcome::Victory)
         } else {
             self.judge()
         };
+        if outcome.is_none() {
+            self.offer_move_after(id, move_after, events);
+        }
+        let waits = self.pending_move.is_some();
+        if let Some(u) = self.unit_mut(id) {
+            u.acted = true;
+            if !waits {
+                events.push(Event::UnitActed { unit: id });
+            }
+        }
         if let Some(outcome) = outcome {
             self.finish(outcome, events);
         }
     }
 
     /// Carries out unit `id`'s validated combat (see the module docs for the
-    /// order of events).
-    fn attack(&mut self, id: UnitId, attack: AttackStep, events: &mut Vec<Event>) {
+    /// order of events). Returns how far it may move after it.
+    fn attack(&mut self, id: UnitId, attack: AttackStep, events: &mut Vec<Event>) -> u32 {
         let AttackStep {
             target,
             with,
             forecast,
             arms,
             active,
-            then_move,
+            move_after,
         } = attack;
         if self
             .unit(id)
@@ -1980,9 +2036,7 @@ impl BattleState {
         }
         events.extend(broke);
         self.remove_fallen(&[target, id], events);
-        if let Some(path) = then_move {
-            self.move_after(id, path, events);
-        }
+        move_after
     }
 
     /// Opens the chest at `pos` (validated) for unit `id`.

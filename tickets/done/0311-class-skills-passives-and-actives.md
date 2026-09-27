@@ -200,6 +200,15 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
     collateral damage between 2 units": collisions can take units to 0 HP,
     and a unit the target is pushed into takes the same damage
     (`Event::CollisionDamage`). Both can fall, the pushed unit first.
+  - Third review: Swoop's (and Skirmish's) step is **chosen after the fight
+    plays out**: the attack ends with `Event::MoveAfterOffered`, and a new
+    `Command::MoveAfter { unit, to }` makes (or skips) the step; the old
+    `then_move` field is gone (ADR-0021 updated). Stance riders say whether
+    they also count in their own combat (`Stance { mods, this_combat }`).
+    White Magic's bonus also adds to Sanctuary. Charge, Deadly Blow (doubled
+    last) and skill stat bonuses were confirmed as they were.
+  - Still open with Nick: renaming Skirmish to **Vault** as an active skill,
+    and weapon kinds for the actives that have none.
 - **Claude's starting rules** (gameplay, where the design docs were silent):
   1. ~~Skill might added after effectiveness~~: **changed by Nick** (see
      below).
@@ -214,11 +223,12 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
      once); the lord never gets its own aura.
   5. ~~Shove collisions never kill~~: **changed by Nick** (see below).
      Pushed into fire, the target lands on the first free tile next to it.
-  6. **Skirmish/Swoop**: the tile is chosen with the attack (before the
-     rolls): one step to an empty tile the unit can enter, whatever its move
-     cost. If the unit falls in the combat it doesn't move.
-  7. A **stance rider** also counts in the combat that applies it.
-  8. White Magic's heal bonus is for **heal spells only**, not Sanctuary.
+  6. **Skirmish/Swoop**: one step to an empty tile the unit can enter,
+     whatever its move cost (chosen after the fight: Nick).
+  7. ~~A stance rider always counts in its own combat~~: **per skill**
+     (Nick).
+  8. ~~White Magic is for heal spells only~~: **it counts for Sanctuary**
+     (Nick).
   9. "Moved ≥ 4 tiles" (Charge) counts tiles walked this action, not move
      cost; counters never charge.
   10. Fury/Resolve's "HP ≤ 50%" means HP × 2 ≤ max HP at the start of the

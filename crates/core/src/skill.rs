@@ -208,6 +208,22 @@ pub struct TimedMods {
     pub combat: CombatMods,
 }
 
+/// A combat active's stance rider (Nick: "some might only apply for the
+/// combat you used it, some might only apply for enemy's next turn, and
+/// some might apply for both"). A bonus for the combat only is the
+/// active's `mods`; a stance lasts from the attack until the start of the
+/// user's next phase, and counts in the attack's own combat only if
+/// `this_combat` says so.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Stance {
+    /// The bonuses.
+    pub mods: TimedMods,
+    /// Whether it also counts in the combat that applies it.
+    #[serde(default)]
+    pub this_combat: bool,
+}
+
 /// What an active skill does.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ActiveEffect {
@@ -222,10 +238,10 @@ pub enum ActiveEffect {
         /// Added to the weapon's max range for this attack.
         #[serde(default)]
         range: u32,
-        /// A stance rider: a timed effect on the user from this attack
-        /// until the start of its next phase.
+        /// A stance rider: a timed effect on the user until the start of
+        /// its next phase (see [`Stance`]).
         #[serde(default)]
-        stance: Option<TimedMods>,
+        stance: Option<Stance>,
         /// After the attack the user may move up to this many tiles.
         #[serde(default)]
         post_move: u32,
