@@ -435,13 +435,9 @@ impl Bonuses {
         for stat in StatKind::ALL {
             let base = stats.get(stat);
             let bonus = self.stats.get(stat);
-            let value = base.saturating_add(bonus);
-            let value = if bonus < 0 {
-                value.max(base.min(0))
-            } else {
-                value
-            };
-            out.set(stat, value);
+            // A raised stat is never below `base`, so the floor only
+            // stops a lowered one.
+            out.set(stat, base.saturating_add(bonus).max(base.min(0)));
         }
         out
     }

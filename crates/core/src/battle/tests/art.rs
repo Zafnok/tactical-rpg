@@ -312,8 +312,9 @@ fn unhorse_is_times_three_against_mounted_and_plain_against_others() {
 
 #[test]
 fn line_pierce_strikes_the_unit_behind_the_target() {
+    // Str 2: 5 damage a strike.
     let mut s = battle(vec![
-        artist(1, p(0, 0), "pike"),
+        stats(artist(1, p(0, 0), "pike"), [10, 2, 0, 0, 0, 0, 0]),
         unit(3, Faction::Enemy, p(2, 0)),
         unit(4, Faction::Enemy, p(3, 0)),
     ]);
@@ -322,7 +323,7 @@ fn line_pierce_strikes_the_unit_behind_the_target() {
     assert_eq!(shown.notes, [ArtNote::Pierces]);
     assert_eq!(
         shown.pierce.map(|(id, f)| (id, f.damage, f.strikes)),
-        Some((UnitId(4), 3, 1))
+        Some((UnitId(4), 5, 1))
     );
     let events = act(&mut s, 1, p(1, 0), action);
     let fights = combats(&events);
@@ -333,9 +334,9 @@ fn line_pierce_strikes_the_unit_behind_the_target() {
     assert_eq!(forecast.attacker.strikes, 1);
     assert_eq!(outcome.strikes.len(), 1);
     // The target took a strike and countered; the unit behind took one.
-    assert_eq!((hp(&s, 3), hp(&s, 4), hp(&s, 1)), (7, 7, 7));
-    // One weapon EXP award: base 4, dealt 3 + 3 = 6 → +1.
-    assert_eq!(weapon_exp(&events, 1), Some(5));
+    assert_eq!((hp(&s, 3), hp(&s, 4), hp(&s, 1)), (5, 5, 7));
+    // One weapon EXP award: base 4, dealt 5 + 5 = 10 → +2.
+    assert_eq!(weapon_exp(&events, 1), Some(6));
     // The pierce comes after the combat, before weapon EXP.
     let n = names(&events);
     let at = |name: &str| n.iter().position(|x| x == name).unwrap();
@@ -344,6 +345,35 @@ fn line_pierce_strikes_the_unit_behind_the_target() {
         n.iter().rposition(|x| x == "CombatResolved"),
         Some(at("WeaponExpGained") - 1)
     );
+}
+
+#[test]
+fn a_pierce_that_hits_counts_as_a_hit_for_weapon_exp() {
+    // The target dodges everything (avoid 120) and strikes 4 times; the
+    // attacker survives and the pierce hits.
+    let mut s = battle(vec![
+        stats(artist(1, p(0, 0), "pike"), [30, 0, 0, 0, 0, 0, 0]),
+        stats(unit(3, Faction::Enemy, p(1, 0)), [10, 0, 0, 0, 60, 0, 0]),
+        unit(4, Faction::Enemy, p(2, 0)),
+    ]);
+    let events = act(&mut s, 1, p(0, 0), art_attack(3, "line_pierce"));
+    assert_eq!((hp(&s, 3), hp(&s, 4)), (10, 7));
+    // Base 4 (a strike hit), dealt 3 → +0.
+    assert_eq!(weapon_exp(&events, 1), Some(4));
+}
+
+#[test]
+fn only_line_pierce_pierces() {
+    let mut s = battle(vec![
+        artist(1, p(0, 0), "blade"),
+        unit(3, Faction::Enemy, p(1, 0)),
+        unit(4, Faction::Enemy, p(2, 0)),
+    ]);
+    let action = art_attack(3, "guard_break");
+    assert_eq!(preview(&s, 1, p(0, 0), &action).pierce, None);
+    let events = act(&mut s, 1, p(0, 0), action);
+    assert_eq!(combats(&events).len(), 1);
+    assert_eq!(hp(&s, 4), 10);
 }
 
 /// The unit Line Pierce would strike: unit 1 with `weapon` at `(0,0)`

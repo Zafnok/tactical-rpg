@@ -2362,8 +2362,9 @@ impl BattleState {
             }
             let standing = self.unit(attacker).is_some_and(|u| u.hp > 0);
             if let Some((victim, pierce)) = step.pierce.filter(|_| standing) {
+                // The attacker always struck in the combat, so only its hits
+                // and damage change.
                 let t = self.clash(attacker, victim, pierce, events);
-                tally.struck[0] += t.struck[0];
                 tally.hits[0] += t.hits[0];
                 tally.dealt[0] += t.dealt[0];
             }
