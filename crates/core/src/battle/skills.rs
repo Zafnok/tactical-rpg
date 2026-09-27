@@ -78,12 +78,14 @@ pub(super) enum SkillStep {
     },
     /// Heals each unit by its amount.
     Heal { heals: Vec<(UnitId, StatValue)> },
-    /// Moves `target` from `from` to `to`.
+    /// Moves `target` from `from` to `to`; a collision hurts it (and the
+    /// unit it hit, `struck`) by `damage`.
     Push {
         target: UnitId,
         from: Pos,
         to: Pos,
         collided: Option<Pos>,
+        struck: Option<UnitId>,
         damage: StatValue,
     },
 }
@@ -414,7 +416,11 @@ impl BattleState {
                     .iter()
                     .any(|u| u.id != unit.id && u.id != target && u.pos == p)
         };
-        let damage = collision.clamp(0, (other.hp - 1).max(0));
+        let struck = self
+            .units
+            .iter()
+            .find(|u| u.id != unit.id && u.pos == to)
+            .map(|u| u.id);
         let landing = if self.burning.iter().any(|b| b.pos == to) {
             // `from` is next to the fire and free, so a landing is always
             // found by distance 1.
@@ -431,7 +437,8 @@ impl BattleState {
                 from,
                 to: landing,
                 collided: Some(to),
-                damage,
+                struck,
+                damage: collision,
             });
         }
         Ok(SkillStep::Push {
@@ -439,6 +446,7 @@ impl BattleState {
             from,
             to,
             collided: None,
+            struck: None,
             damage: 0,
         })
     }
@@ -506,7 +514,8 @@ impl BattleState {
         }
     }
 
-    /// Carries out unit `id`'s validated non-combat active.
+    /// Carries out unit `id`'s validated non-combat active. Units a Shove
+    /// felled leave the map after the payment's `ItemBroke`.
     pub(super) fn use_skill(
         &mut self,
         id: UnitId,
@@ -516,6 +525,8 @@ impl BattleState {
     ) {
         let broke = self.pay(id, active, events);
         let skill = &active.skill;
+        // Units a collision may have felled, in order.
+        let mut hurt = Vec::new();
         match effect {
             SkillStep::Buff { targets, mods } => {
                 let until = self.phase;
@@ -547,22 +558,35 @@ impl BattleState {
                 from,
                 to,
                 collided,
+                struck,
                 damage,
             } => {
                 if let Some(u) = self.unit_mut(target) {
+                    let lost = damage.clamp(0, u.hp);
                     u.pos = to;
-                    u.hp -= damage;
+                    u.hp -= lost;
                     events.push(Event::Pushed {
                         unit: target,
                         from,
                         to,
                         collided,
-                        damage,
+                        damage: lost,
                     });
                 }
+                if let Some(u) = struck.and_then(|id| self.unit_mut(id)) {
+                    let lost = damage.clamp(0, u.hp);
+                    u.hp -= lost;
+                    events.push(Event::CollisionDamage {
+                        unit: u.id,
+                        by: target,
+                        damage: lost,
+                    });
+                }
+                hurt.extend(std::iter::once(target).chain(struck));
             }
         }
         events.extend(broke);
+        self.remove_fallen(&hurt, events);
     }
 
     /// Ends the timed effects that last until the current phase starts.

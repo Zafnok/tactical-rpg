@@ -142,8 +142,9 @@
 //!     (`magic.md`), it takes the collision damage and lands on the nearest
 //!     free tile it can stand on: the first free neighbour of the burning
 //!     tile in [`Dir::ALL`](crate::geom::Dir::ALL) order (its own tile is
-//!     one, so it never lands further away). Collisions never take it below
-//!     1 HP and don't hurt the unit it hit (*Claude's starting rules*).
+//!     one, so it never lands further away). A unit it is pushed into takes
+//!     the same damage ([`Event::CollisionDamage`]). Collisions can make
+//!     either unit fall ([`Event::UnitFell`], pushed unit first; Nick).
 //!   - **Moving after an attack** (`turn-structure.md`): an attack with a
 //!     post-action move (Skirmish with a bow, Swoop) may name `then_move`, a
 //!     tile within that many steps of `dest` through empty tiles the unit
@@ -650,9 +651,19 @@ pub enum Event {
         from: Pos,
         /// Its tile now.
         to: Pos,
-        /// The burning tile it was pushed into, if any.
+        /// The tile it hit (blocked or burning), if any.
         collided: Option<Pos>,
-        /// HP lost to the collision (the unit keeps at least 1).
+        /// HP lost to the collision (it may fall).
+        damage: StatValue,
+    },
+    /// A pushed unit crashed into this unit (just after its
+    /// [`Event::Pushed`]).
+    CollisionDamage {
+        /// The unit hit.
+        unit: UnitId,
+        /// The unit pushed into it.
+        by: UnitId,
+        /// HP lost (it may fall).
         damage: StatValue,
     },
     /// A weapon's durability reached 0.
@@ -1968,7 +1979,7 @@ impl BattleState {
             self.after_strike(id, active, dealt, events);
         }
         events.extend(broke);
-        self.remove_fallen([target, id], events);
+        self.remove_fallen(&[target, id], events);
         if let Some(path) = then_move {
             self.move_after(id, path, events);
         }
@@ -2197,8 +2208,8 @@ impl BattleState {
     }
 
     /// Moves the units of `ids` at 0 HP to the fallen, in that order.
-    fn remove_fallen(&mut self, ids: [UnitId; 2], events: &mut Vec<Event>) {
-        for id in ids {
+    fn remove_fallen(&mut self, ids: &[UnitId], events: &mut Vec<Event>) {
+        for &id in ids {
             if let Some(i) = self.units.iter().position(|u| u.id == id && u.hp <= 0) {
                 self.fallen.push(self.units.remove(i));
                 events.push(Event::UnitFell { unit: id });

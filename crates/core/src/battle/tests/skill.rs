@@ -998,21 +998,56 @@ fn a_blocked_shove_is_a_collision() {
     let (events, after, _) = shove_at(3, p(0, 1), 10, None, p(1, 1));
     assert!(events.contains(&pushed(p(0, 1), p(0, 1), Some(p(-1, 1)), 5)));
     assert_eq!(after, Some((p(0, 1), 5)));
-    // Into a unit: only the pushed unit is hurt.
+    // Into a unit: both are hurt, whoever it is.
+    let hit = |unit: u32, damage| Event::CollisionDamage {
+        unit: UnitId(unit),
+        by: UnitId(3),
+        damage,
+    };
     let (events, after, s) = shove_at(
         3,
         p(2, 1),
         10,
-        Some(unit(4, Faction::Enemy, p(3, 1))),
+        Some(unit(2, Faction::Player, p(3, 1))),
         p(1, 1),
     );
-    assert!(events.contains(&pushed(p(2, 1), p(2, 1), Some(p(3, 1)), 5)));
+    let at = |e: &Event| events.iter().position(|x| x == e);
+    let push = pushed(p(2, 1), p(2, 1), Some(p(3, 1)), 5);
+    assert!(at(&push).is_some());
+    assert_eq!(at(&hit(2, 5)), at(&push).map(|i| i + 1));
     assert_eq!(after, Some((p(2, 1), 5)));
-    assert_eq!(hp(&s, 4), 10);
-    // Never below 1 HP.
+    assert_eq!(hp(&s, 2), 5);
+    // Collisions can kill both, the pushed unit falling first.
+    let (events, after, s) = shove_at(
+        3,
+        p(2, 1),
+        3,
+        Some(Unit {
+            hp: 2,
+            ..unit(4, Faction::Enemy, p(3, 1))
+        }),
+        p(1, 1),
+    );
+    assert!(events.contains(&pushed(p(2, 1), p(2, 1), Some(p(3, 1)), 3)));
+    assert!(events.contains(&hit(4, 2)));
+    assert_eq!(after, None);
+    let fell: Vec<&Event> = events
+        .iter()
+        .filter(|e| matches!(e, Event::UnitFell { .. }))
+        .collect();
+    assert_eq!(
+        fell,
+        [
+            &Event::UnitFell { unit: UnitId(3) },
+            &Event::UnitFell { unit: UnitId(4) }
+        ]
+    );
+    assert_eq!(s.fallen().len(), 2);
+    assert_eq!(s.outcome(), Some(Outcome::Victory));
+    // Off the map, too.
     let (events, after, _) = shove_at(3, p(0, 1), 3, None, p(1, 1));
-    assert!(events.contains(&pushed(p(0, 1), p(0, 1), Some(p(-1, 1)), 2)));
-    assert_eq!(after, Some((p(0, 1), 1)));
+    assert!(events.contains(&pushed(p(0, 1), p(0, 1), Some(p(-1, 1)), 3)));
+    assert_eq!(after, None);
     // The shover's own old tile is free once it has moved: no collision.
     let (events, after, _) = shove_at(5, p(1, 0), 10, None, p(2, 0));
     assert!(events.contains(&pushed(p(1, 0), p(0, 0), None, 0)));
@@ -1082,7 +1117,7 @@ fn shove_into_a_burning_tile_burns_and_lands_next_to_it() {
         damage: 5,
     }));
     assert_eq!(s.unit(UnitId(3)).map(|u| (u.pos, u.hp)), Some((p(3, 2), 5)));
-    // Never below 1 HP; it may land back where it was.
+    // It may land back where it was, and the fire can kill.
     let mut s = start(setup(vec![
         shover(p(0, 0)),
         Unit {
@@ -1098,9 +1133,10 @@ fn shove_into_a_burning_tile_burns_and_lands_next_to_it() {
         from: p(0, 3),
         to: p(0, 3),
         collided: Some(p(0, 4)),
-        damage: 2,
+        damage: 3,
     }));
-    assert_eq!(hp(&s, 3), 1);
+    assert!(events.contains(&Event::UnitFell { unit: UnitId(3) }));
+    assert_eq!(s.unit(UnitId(3)), None);
 }
 
 // ---- Passives and auras in the forecast ---------------------------------------

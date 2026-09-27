@@ -624,7 +624,7 @@ fn shove_pushes_an_adjacent_enemy_for_3_durability() {
 }
 
 #[test]
-fn a_blocked_shove_deals_5_collision_damage() {
+fn a_blocked_shove_deals_5_collision_damage_to_both_units() {
     let mut s = battle(vec![
         player(1, "grappler", p(0, 0), "iron_gauntlets"),
         enemy(3, p(1, 0)),
@@ -635,7 +635,8 @@ fn a_blocked_shove_deals_5_collision_damage() {
         s.unit(UnitId(3)).map(|u| (u.pos, u.hp)),
         Some((p(1, 0), 25))
     );
-    assert_eq!(hp(&s, 4), 30);
+    // The unit it hit takes the same (Nick).
+    assert_eq!(hp(&s, 4), 25);
 }
 
 #[test]

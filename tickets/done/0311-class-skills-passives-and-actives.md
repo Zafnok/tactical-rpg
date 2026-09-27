@@ -196,20 +196,24 @@ None. All numbers are in `progression.md`'s tier 1–2 skill table.
     goes ahead; the enemy stays put and takes the skill's collision damage
     (5, data: `Push(collision: 5)`), the same as a push into fire.
     `CommandError::PushBlocked` is gone.
+  - Second review: "I think Shove can kill, and I think it can cause a
+    collateral damage between 2 units": collisions can take units to 0 HP,
+    and a unit the target is pushed into takes the same damage
+    (`Event::CollisionDamage`). Both can fall, the pushed unit first.
 - **Claude's starting rules** (gameplay, where the design docs were silent):
   1. ~~Skill might added after effectiveness~~: **changed by Nick** (see
      below).
   2. When both sides get extra strikes (only via "+1 strike" skills), the
-     strikes after the first two **alternate, attacker first**.
+     strikes after the first two **alternate, attacker first** (confirmed
+     by Nick, recorded in `stats-and-combat.md`).
   3. Area actives (War Cry, Inspire, Rally, Sanctuary) affect **other**
      allies only, never the user, and green (Ally) units count as allies.
      They **can't be used if nobody is in reach** (Sanctuary: nobody
      wounded), so durability is never wasted.
   4. Leadership auras from two leaders don't stack (each aura skill counts
      once); the lord never gets its own aura.
-  5. **Shove** collisions (blocked tile or fire, see below) **never take
-     the target below 1 HP** (like burn-outs) and don't hurt the unit it
-     hit. Pushed into fire it lands on the first free tile next to it.
+  5. ~~Shove collisions never kill~~: **changed by Nick** (see below).
+     Pushed into fire, the target lands on the first free tile next to it.
   6. **Skirmish/Swoop**: the tile is chosen with the attack (before the
      rolls): one step to an empty tile the unit can enter, whatever its move
      cost. If the unit falls in the combat it doesn't move.

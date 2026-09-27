@@ -470,8 +470,12 @@ behind when you leave an unmastered class.
   enemy is off the map, holds a unit, or is terrain the enemy can't enter,
   Shove still happens: the enemy stays put and takes **5** collision damage
   (*tunable*, not reduced by Def or Res; the same number as a push into
-  fire, `magic.md`). The collision never takes it below **1 HP** and doesn't
-  hurt the unit it hit (*Claude's starting rules*).
+  fire, `magic.md`).
+- **Collisions can kill, and hit both units** (Nick, same review: "I think
+  Shove can kill, and I think it can cause a collateral damage between 2
+  units"): a collision (a blocked tile, or fire) can take the pushed unit to
+  0 HP. If the blocked tile holds a unit, that unit takes the same 5 damage,
+  whichever side it is on, and can fall too (the pushed unit falls first).
 - **The skill list below is placeholder content** (Nick: "exact skills we
   can fine tune after playtesting"). It exists so Chapter 1 has something to
   play with. Skills, numbers and flavour names get tuned after the playtest.
