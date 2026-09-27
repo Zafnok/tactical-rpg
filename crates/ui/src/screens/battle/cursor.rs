@@ -37,16 +37,14 @@ impl Cursor {
     /// Advances the pulse by `dt` seconds (negative or non-finite `dt`
     /// counts as zero).
     pub fn tick(&mut self, dt: f32) {
-        if dt.is_finite() && dt > 0.0 {
-            self.blink_t = (self.blink_t + dt) % BLINK_PERIOD;
-        }
+        let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
+        self.blink_t = (self.blink_t + dt) % BLINK_PERIOD;
     }
 
     /// Current brightness: `1` at the start of a pulse, down to
     /// [`BLINK_MIN`] halfway through, then back up (a cosine).
     pub fn brightness(&self) -> f32 {
-        let wave = (TAU * self.blink_t / BLINK_PERIOD).cos();
-        BLINK_MIN + (1.0 - BLINK_MIN) * (1.0 + wave) / 2.0
+        pulse(self.blink_t, BLINK_PERIOD)
     }
 
     /// Moves one tile for a `Cursor…` action, staying on a `map_w × map_h`
@@ -75,6 +73,13 @@ impl Cursor {
     pub fn jump(&mut self, pos: Pos) {
         *self = Self::new(pos);
     }
+}
+
+/// Brightness `t` seconds into a `period`-long pulse: `1` at the start,
+/// [`BLINK_MIN`] halfway, back to `1` at the end (a cosine).
+fn pulse(t: f32, period: f32) -> f32 {
+    let wave = (TAU * t / period).cos();
+    BLINK_MIN + (1.0 - BLINK_MIN) * (1.0 + wave) / 2.0
 }
 
 /// Draws `cursor`'s brackets either side of the tile whose left cell is
@@ -144,15 +149,25 @@ mod tests {
         let mut c = Cursor::new(Pos::new(0, 0));
         assert!((c.brightness() - 1.0).abs() < 1e-6);
         c.tick(0.25);
+        assert!((c.blink_t - 0.25).abs() < 1e-6);
         assert!((c.brightness() - 0.75).abs() < 1e-6);
         c.tick(0.25);
         assert!((c.brightness() - 0.5).abs() < 1e-6);
         c.tick(0.5);
         assert!(c.blink_t < 1e-6, "wraps after a period: {}", c.blink_t);
+        c.tick(0.25);
         c.tick(-1.0);
         c.tick(f32::NAN);
         c.tick(f32::INFINITY);
-        assert!(c.blink_t < 1e-6);
+        assert!((c.blink_t - 0.25).abs() < 1e-6, "{}", c.blink_t);
+    }
+
+    #[test]
+    fn pulse_scales_with_its_period() {
+        assert!((pulse(0.0, 2.0) - 1.0).abs() < 1e-6);
+        assert!((pulse(0.5, 2.0) - 0.75).abs() < 1e-6);
+        assert!((pulse(1.0, 2.0) - BLINK_MIN).abs() < 1e-6);
+        assert!((pulse(2.0, 2.0) - 1.0).abs() < 1e-6);
     }
 
     #[test]

@@ -92,9 +92,8 @@ fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, unit
         } else {
             ('░', c(UiColor::TextDim))
         };
-        let x = HP_BAR_X + i;
-        let bg = buf.get(x, y + 2).map_or(fg, |cell| cell.bg);
-        buf.set(x, y + 2, Cell::new(glyph, fg, bg));
+        let bg = c(UiColor::PanelBg);
+        buf.set(HP_BAR_X + i, y + 2, Cell::new(glyph, fg, bg));
     }
     let faction = faction_name(unit.faction);
     line(buf, y + 3, faction, c(UiColor::TextDim));
