@@ -5,6 +5,8 @@ use proptest::prelude::*;
 use super::*;
 use crate::class::{ClassId, UnitTags, WeaponProficiency};
 use crate::geom::Pos;
+use crate::magic::Element;
+use crate::spell::{SpellDef, SpellKind};
 use crate::stats::Growths;
 use crate::terrain::MovementTypeId;
 use crate::unit::{Faction, UnitId};
@@ -409,22 +411,48 @@ fn combat_input_from_the_loadout() {
     let (c, cs) = (class(), classes());
     let mut u = equipped(&["javelin", "sword"], Some("vest"), None);
     u.weapon_ranks.insert(WeaponKind::Sword, WeaponRank::B);
-    let input = u.combat_input(&c, &cs, &t, None, &terrain);
+    let input = u.combat_input(&c, &cs, &t, &SpellTable::default(), None, &terrain);
     assert_eq!(input.stats.def, 5);
     assert_eq!(input.weapon.as_ref().map(|w| w.max_range), Some(2));
     assert_eq!(input.weapon_rank, WeaponRank::B);
     assert_eq!(input.armour_weight, 0);
-    let input = u.combat_input(&c, &cs, &t, Some(1), &terrain);
+    let input = u.combat_input(
+        &c,
+        &cs,
+        &t,
+        &SpellTable::default(),
+        Some(&Equipped::Weapon(1)),
+        &terrain,
+    );
     assert_eq!(input.weapon.as_ref().map(|w| w.max_range), Some(1));
     // An empty slot, or nothing equipped: no weapon, rank E.
-    let input = u.combat_input(&c, &cs, &t, Some(2), &terrain);
+    let input = u.combat_input(
+        &c,
+        &cs,
+        &t,
+        &SpellTable::default(),
+        Some(&Equipped::Weapon(2)),
+        &terrain,
+    );
     assert_eq!((input.weapon, input.weapon_rank), (None, WeaponRank::E));
     u.loadout.equipped = None;
-    assert_eq!(u.combat_input(&c, &cs, &t, None, &terrain).weapon, None);
+    assert_eq!(
+        u.combat_input(&c, &cs, &t, &SpellTable::default(), None, &terrain)
+            .weapon,
+        None
+    );
     // A weapon the unit can't wield gives no weapon.
     let axe = equipped(&["axe"], None, None);
     assert_eq!(
-        axe.combat_input(&c, &cs, &t, Some(0), &terrain).weapon,
+        axe.combat_input(
+            &c,
+            &cs,
+            &t,
+            &SpellTable::default(),
+            Some(&Equipped::Weapon(0)),
+            &terrain
+        )
+        .weapon,
         None
     );
 }
@@ -434,7 +462,7 @@ fn combat_input_from_the_loadout() {
 #[test]
 fn with_loadout_fills_slots_and_equips_the_first_usable_weapon() {
     let u = equipped(&["axe", "steel_sword", "sword"], Some("vest"), Some("ring"));
-    assert_eq!(u.loadout.equipped, Some(2));
+    assert_eq!(u.loadout.equipped, Some(Equipped::Weapon(2)));
     assert_eq!(u.loadout.weapon_count(), 3);
     assert_eq!(
         u.loadout.equipped_weapon(),
@@ -511,17 +539,17 @@ fn validate_checks_the_equipped_slot_and_class() {
     let t = items();
     let cs = classes();
     let mut u = equipped(&["sword", "axe"], None, None);
-    u.loadout.equipped = Some(2);
+    u.loadout.equipped = Some(Equipped::Weapon(2));
     assert_eq!(
         u.validate_loadout(&cs, &t),
         Err(LoadoutError::EquippedEmpty(2))
     );
-    u.loadout.equipped = Some(1);
+    u.loadout.equipped = Some(Equipped::Weapon(1));
     assert_eq!(
         u.validate_loadout(&cs, &t),
         Err(LoadoutError::CannotWield(id("axe")))
     );
-    u.loadout.equipped = Some(0);
+    u.loadout.equipped = Some(Equipped::Weapon(0));
     assert!(u.validate_loadout(&cs, &t).is_ok());
     u.class = ClassId("nope".into());
     assert_eq!(
@@ -552,10 +580,239 @@ fn loadout_error_messages() {
         ),
         (LoadoutError::EquippedEmpty(2), "equipped slot 2 is empty"),
         (LoadoutError::CannotWield(id("x")), "can't wield \"x\""),
+        (
+            LoadoutError::SpellNotLearned(SpellId::new("x")),
+            "the equipped spell \"x\" isn't learned",
+        ),
     ];
     for (e, msg) in cases {
         assert_eq!(e.to_string(), msg);
     }
+}
+
+// ---- Spells in the loadout ------------------------------------------------------
+
+/// `fire` (attack, might 5, range 1–2, 10 uses) and `heal`.
+fn spells() -> SpellTable {
+    let def = |name: &str, kind| SpellDef {
+        id: SpellId::new(name),
+        name: name.into(),
+        kind,
+        element: Element::Fire,
+        min_range: 1,
+        max_range: 2,
+        uses: 10,
+        terrain_effect: None,
+    };
+    let fire = def(
+        "fire",
+        SpellKind::Attack {
+            might: 5,
+            hit: 90,
+            crit: 0,
+            effective: vec![],
+        },
+    );
+    let heal = def("heal", SpellKind::Heal { heal_power: 10 });
+    SpellTable {
+        spells: [fire, heal]
+            .into_iter()
+            .map(|s| (s.id.clone(), s))
+            .collect(),
+    }
+}
+
+fn spell(s: &str) -> Equipped {
+    Equipped::Spell(SpellId::new(s))
+}
+
+/// `u` knowing `spells`, at full uses.
+fn knowing(mut u: Unit, spells_known: &[&str]) -> Unit {
+    u.learned = spells_known.iter().map(|s| SpellId::new(s)).collect();
+    u.spells = SpellState::full(&u.learned, &spells());
+    u
+}
+
+#[test]
+fn equipped_helpers() {
+    let mut l = Loadout::default();
+    assert_eq!((l.equipped_slot(), l.equipped_spell()), (None, None));
+    l.equipped = Some(Equipped::Weapon(1));
+    assert_eq!((l.equipped_slot(), l.equipped_spell()), (Some(1), None));
+    l.equipped = Some(spell("fire"));
+    assert_eq!(
+        (l.equipped_slot(), l.equipped_spell()),
+        (None, Some(&SpellId::new("fire")))
+    );
+    assert_eq!(l.equipped_weapon(), None);
+}
+
+#[test]
+fn combat_input_with_a_spell() {
+    let terrain = TerrainRules {
+        name: "Plain".into(),
+        move_cost: vec![Some(1)],
+        defense: 0,
+        avoid: 0,
+        heal_percent: 0,
+    };
+    let (t, sp) = (items(), spells());
+    let (c, cs) = (class(), classes());
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire", "heal"]);
+    u.weapon_ranks.insert(WeaponKind::Sword, WeaponRank::B);
+    let input =
+        |u: &Unit, with: Option<&Equipped>| u.combat_input(&c, &cs, &t, &sp, with, &terrain);
+    // Chosen, or equipped: the spell's numbers, rank E (spells have none).
+    let fire = sp.get(&SpellId::new("fire")).unwrap().weapon_stats();
+    let chosen = input(&u, Some(&spell("fire")));
+    assert_eq!(
+        (chosen.weapon.clone(), chosen.weapon_rank),
+        (fire.clone(), WeaponRank::E)
+    );
+    assert_eq!(input(&u, None).weapon_rank, WeaponRank::B);
+    u.loadout.equipped = Some(spell("fire"));
+    assert_eq!(input(&u, None).weapon, fire);
+    // A heal, an unknown spell, or no uses left: no weapon.
+    assert_eq!(input(&u, Some(&spell("heal"))).weapon, None);
+    assert_eq!(input(&u, Some(&spell("frost"))).weapon, None);
+    u.spells.uses_left.insert(SpellId::new("fire"), 0);
+    assert_eq!(input(&u, None).weapon, None);
+    assert_eq!(input(&u, None).weapon_rank, WeaponRank::E);
+}
+
+#[test]
+fn validate_checks_an_equipped_spell_is_learned() {
+    let (t, cs) = (items(), classes());
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
+    u.loadout.equipped = Some(spell("fire"));
+    assert!(u.validate_loadout(&cs, &t).is_ok());
+    u.loadout.equipped = Some(spell("frost"));
+    assert_eq!(
+        u.validate_loadout(&cs, &t),
+        Err(LoadoutError::SpellNotLearned(SpellId::new("frost")))
+    );
+}
+
+#[test]
+fn default_equip_prefers_a_weapon_then_the_first_attack_spell() {
+    let (t, sp, c) = (items(), spells(), class());
+    let u = knowing(equipped(&["axe", "sword"], None, None), &["heal", "fire"]);
+    assert_eq!(u.default_equip(&c, &t, &sp), Some(Equipped::Weapon(1)));
+    let u = knowing(equipped(&["axe"], None, None), &["heal", "fire"]);
+    assert_eq!(u.default_equip(&c, &t, &sp), Some(spell("fire")));
+    let u = knowing(equipped(&["axe"], None, None), &["heal"]);
+    assert_eq!(u.default_equip(&c, &t, &sp), None);
+}
+
+#[test]
+fn prepare_for_battle_refills_uses_and_equips_when_nothing_is() {
+    let (t, sp, cs) = (items(), spells(), classes());
+    let mut u = knowing(equipped(&["axe"], None, None), &["fire", "heal"]);
+    u.spells.uses_left.insert(SpellId::new("fire"), 2);
+    u.spells.uses_left.remove(&SpellId::new("heal"));
+    u.prepare_for_battle(&cs, &t, &sp);
+    assert_eq!(u.spells, SpellState::full(&u.learned, &sp));
+    assert_eq!(u.spells.uses_left(&SpellId::new("heal")), 10);
+    assert_eq!(u.loadout.equipped, Some(spell("fire")));
+    // Something equipped already stays equipped.
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
+    u.loadout.equipped = Some(spell("fire"));
+    u.prepare_for_battle(&cs, &t, &sp);
+    assert_eq!(u.loadout.equipped, Some(spell("fire")));
+    // An unknown class: uses refill, nothing is equipped.
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
+    u.loadout.equipped = None;
+    u.class = ClassId("nope".into());
+    u.prepare_for_battle(&cs, &t, &sp);
+    assert_eq!(
+        (
+            u.loadout.equipped,
+            u.spells.uses_left(&SpellId::new("fire"))
+        ),
+        (None, 10)
+    );
+}
+
+#[test]
+fn fewer_weapon_slots_send_the_extra_weapons_to_the_stock() {
+    let (t, sp) = (items(), spells());
+    let one_slot = ClassDef {
+        weapon_slots: 1,
+        ..class()
+    };
+    let mut u = knowing(
+        equipped(&["axe", "sword", "javelin"], None, None),
+        &["fire"],
+    );
+    assert_eq!(u.loadout.equipped, Some(Equipped::Weapon(1)));
+    let mut stock = Stock::default();
+    let stowed = u.fit_weapon_slots(&one_slot, &t, &sp, &mut stock);
+    assert_eq!(stowed, [id("sword"), id("javelin")]);
+    assert_eq!(
+        stock
+            .weapons
+            .iter()
+            .map(|w| w.def.clone())
+            .collect::<Vec<_>>(),
+        [id("sword"), id("javelin")]
+    );
+    assert_eq!(u.loadout.weapon_count(), 1);
+    // The equipped sword went; the axe can't be wielded, so the spell.
+    assert_eq!(u.loadout.equipped, Some(spell("fire")));
+    assert!(u.validate_loadout(&classes_with(one_slot), &t).is_ok());
+}
+
+#[test]
+fn a_zero_slot_class_holds_no_weapons() {
+    let (t, sp) = (items(), spells());
+    let sage = ClassDef {
+        id: ClassId("sage".into()),
+        weapon_slots: 0,
+        ..class()
+    };
+    let cs = classes_with(sage.clone());
+    // Promoted with weapons: all go to the stock, the spell is equipped.
+    let mut u = knowing(
+        equipped(&["sword", "javelin"], None, None),
+        &["heal", "fire"],
+    );
+    u.class = sage.id.clone();
+    assert_eq!(
+        u.validate_loadout(&cs, &t),
+        Err(LoadoutError::TooManyWeapons { count: 2, slots: 0 })
+    );
+    let mut stock = Stock::default();
+    u.fit_weapon_slots(&sage, &t, &sp, &mut stock);
+    assert_eq!(stock.weapons.len(), 2);
+    assert_eq!(u.loadout.weapon_count(), 0);
+    assert_eq!(u.loadout.equipped, Some(spell("fire")));
+    assert!(u.validate_loadout(&cs, &t).is_ok());
+    // A starting loadout with a weapon is refused.
+    let fresh = Unit {
+        class: sage.id.clone(),
+        ..unit()
+    };
+    assert_eq!(
+        fresh.with_loadout(&loadout(&["sword"], None, None), &cs, &t),
+        Err(LoadoutError::TooManyWeapons { count: 1, slots: 0 })
+    );
+    // An equipped weapon the new class keeps a slot for but can't wield is
+    // replaced too; one it can wield stays.
+    let archer = ClassDef {
+        weapons: vec![WeaponProficiency {
+            kind: WeaponKind::Bow,
+            start: WeaponRank::E,
+            max: WeaponRank::C,
+        }],
+        ..class()
+    };
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
+    u.fit_weapon_slots(&archer, &t, &sp, &mut Stock::default());
+    assert_eq!(u.loadout.equipped, Some(spell("fire")));
+    let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
+    u.fit_weapon_slots(&class(), &t, &sp, &mut stock);
+    assert_eq!(u.loadout.equipped, Some(Equipped::Weapon(0)));
+    assert_eq!(stock.weapons.len(), 2);
 }
 
 // ---- Pack and stock -----------------------------------------------------------

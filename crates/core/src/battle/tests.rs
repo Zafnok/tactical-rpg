@@ -10,7 +10,7 @@
 //! built from the ids its units carry, plus a few fixed items
 //! ([`fixed_items`]).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use proptest::prelude::*;
@@ -23,9 +23,11 @@ use crate::item::{
     AccessoryDef, ArmourDef, ConsumableDef, ItemDef, Loadout, WEAPON_SLOTS, WeaponDef,
     WeaponInstance,
 };
+use crate::magic::{Affinity, Element};
 use crate::map::TileFeature;
 use crate::movement::reachable;
 use crate::shop::{Loot, ShopKind};
+use crate::spell::{SpellState, TerrainEffectId};
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
 use crate::weapon::WeaponKind;
@@ -96,15 +98,79 @@ fn class(id: &str, tags: UnitTags) -> ClassDef {
     }
 }
 
+/// `fighter` and `flier` (every weapon kind), `sage` (0 weapon slots) and
+/// `frost_elemental` (Fire `Weak`, Ice `Absorb`; `magic.md`).
 fn classes() -> ClassTable {
     let flier = UnitTags::from_tags(&[UnitTag::Flying]);
+    let sage = ClassDef {
+        weapons: vec![],
+        weapon_slots: 0,
+        ..class("sage", UnitTags::default())
+    };
+    let elemental = ClassDef {
+        affinities: vec![
+            (Element::Fire, Affinity::Weak),
+            (Element::Ice, Affinity::Absorb),
+        ],
+        ..class("frost_elemental", UnitTags::default())
+    };
     ClassTable {
-        classes: [class("fighter", UnitTags::default()), class("flier", flier)]
-            .into_iter()
-            .map(|c| (c.id.clone(), c))
-            .collect(),
+        classes: [
+            class("fighter", UnitTags::default()),
+            class("flier", flier),
+            sage,
+            elemental,
+        ]
+        .into_iter()
+        .map(|c| (c.id.clone(), c))
+        .collect(),
         hard_ceilings: Stats::from_growable([99; 7], 15),
         ..ClassTable::default()
+    }
+}
+
+/// The starter spells of `magic.md` (`fire`, `frost`, `force`, `heal`,
+/// `mend`), plus `bolt`: a hit-100, might-3 attack spell, range 1–2, 2 uses,
+/// for exact combats.
+fn spells() -> SpellTable {
+    let attack =
+        |id: &str, element, [might, hit, crit]: [StatValue; 3], uses, effect: Option<&str>| {
+            SpellDef {
+                id: SpellId::new(id),
+                name: id.into(),
+                kind: SpellKind::Attack {
+                    might,
+                    hit,
+                    crit,
+                    effective: vec![],
+                },
+                element,
+                min_range: 1,
+                max_range: 2,
+                uses,
+                terrain_effect: effect.map(|e| TerrainEffectId(e.into())),
+            }
+        };
+    let heal = |id: &str, heal_power, uses| SpellDef {
+        id: SpellId::new(id),
+        name: id.into(),
+        kind: SpellKind::Heal { heal_power },
+        element: Element::None,
+        min_range: 1,
+        max_range: 1,
+        uses,
+        terrain_effect: None,
+    };
+    let all = [
+        attack("fire", Element::Fire, [5, 90, 0], 10, Some("burn_forest")),
+        attack("frost", Element::Ice, [4, 95, 0], 10, Some("freeze_water")),
+        attack("force", Element::None, [6, 80, 5], 8, None),
+        heal("heal", 10, 8),
+        heal("mend", 20, 4),
+        attack("bolt", Element::None, [3, 100, 0], 2, None),
+    ];
+    SpellTable {
+        spells: all.into_iter().map(|s| (s.id.clone(), s)).collect(),
     }
 }
 
@@ -289,7 +355,7 @@ fn items_for<'a>(units: impl IntoIterator<Item = &'a Unit>) -> ItemTable {
 /// `u` carrying `weapons` in slots 0.., the first equipped.
 fn carrying(u: Unit, weapons: &[ItemId]) -> Unit {
     let mut loadout = Loadout {
-        equipped: (!weapons.is_empty()).then_some(0),
+        equipped: (!weapons.is_empty()).then_some(Equipped::Weapon(0)),
         ..Loadout::default()
     };
     for (slot, id) in weapons.iter().enumerate() {
@@ -325,6 +391,9 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         weapon_exp: BTreeMap::new(),
         loadout: Loadout::default(),
         consumables: vec![],
+        personal_spells: vec![],
+        learned: BTreeSet::new(),
+        spells: SpellState::default(),
     };
     carrying(u, &[weapon(1, 1, 3)])
 }
@@ -358,6 +427,7 @@ fn setup(units: Vec<Unit>) -> BattleSetup {
         terrain: Arc::new(terrain()),
         classes: Arc::new(classes()),
         items: Arc::new(items_for(&units)),
+        spells: Arc::new(spells()),
         pack: BattlePack {
             items: vec![item("potion"), item("elixir")],
             cap: 3,
@@ -1443,7 +1513,7 @@ fn player_reinforcements_on_turn_one_arrive_at_the_start() {
 fn equip(unit: u32, slot: usize) -> Command {
     Command::Equip {
         unit: UnitId(unit),
-        slot,
+        equipped: Equipped::Weapon(slot),
     }
 }
 
@@ -1456,11 +1526,11 @@ fn equip_is_free_and_doesnt_end_the_action() {
         s.apply(&equip(2, 1)),
         Ok(vec![Event::Equipped {
             unit: UnitId(2),
-            slot: 1,
+            equipped: Equipped::Weapon(1),
         }])
     );
     let u = s.unit(UnitId(2)).unwrap();
-    assert_eq!((u.loadout.equipped, u.acted), (Some(1), false));
+    assert_eq!((u.loadout.equipped_slot(), u.acted), (Some(1), false));
     // Re-equipping the same slot is allowed; the unit can still act.
     assert!(s.apply(&equip(2, 1)).is_ok());
     act(&mut s, 2, p(0, 2), UnitAction::Wait);
@@ -1543,7 +1613,7 @@ fn attacking_with_another_weapon_equips_it() {
     let [
         Event::Equipped {
             unit: UnitId(2),
-            slot: 1,
+            equipped: Equipped::Weapon(1),
         },
         Event::CombatResolved { forecast, .. },
         ..,
@@ -1552,7 +1622,7 @@ fn attacking_with_another_weapon_equips_it() {
         panic!("{events:?}");
     };
     assert_eq!(forecast.attacker.damage, 6);
-    assert_eq!(s.unit(UnitId(2)).unwrap().loadout.equipped, Some(1));
+    assert_eq!(s.unit(UnitId(2)).unwrap().loadout.equipped_slot(), Some(1));
     // Attacking with the equipped weapon: no Equipped event.
     end(&mut s);
     let events = act(&mut s, 4, p(1, 2), attack(2));
@@ -1621,7 +1691,9 @@ fn only_a_wieldable_equipped_weapon_counters() {
         panic!("{events:?}");
     };
     assert_eq!(forecast.defender, None);
-    // Nothing equipped: no counter either.
+    // Nothing equipped and nothing it can wield (so battle start equips
+    // nothing): no counter either.
+    units[3] = carrying(units[3].clone(), &[item("master_sword")]);
     units[3].loadout.equipped = None;
     let mut s = start(setup(units));
     let events = act(&mut s, 2, p(0, 2), attack(4));
@@ -1942,6 +2014,7 @@ fn state_round_trips_through_ron_and_needs_its_tables_back() {
         Arc::new(terrain()),
         Arc::new(classes()),
         Arc::new(items_for(&skirmish())),
+        Arc::new(spells()),
     );
     assert_eq!(loaded, s);
     let cmd = Command::Act {
@@ -1970,10 +2043,11 @@ fn commands_and_events_round_trip_through_ron() {
 // ---- Property: random legal play -------------------------------------------------
 
 /// Every legal command in `s`: `EndPhase`, and for each ready unit of the
-/// phase, equipping each weapon it can wield, and each stoppable tile with
-/// `Wait`, each attack in range (per weapon), each item use, a seize, shop
-/// visits ([`legal_shop_txns`]) and opening an unopened chest.
-/// Consumables in test packs are all known; weapons are all known.
+/// phase, equipping each weapon it can wield and each attack spell it knows,
+/// and each stoppable tile with `Wait`, each attack in range (per weapon),
+/// each cast ([`legal_casts`]), each item use, a seize, shop visits
+/// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
+/// packs are all known; weapons and spells are all known.
 fn legal_commands(s: &BattleState) -> Vec<Command> {
     let mut out = vec![Command::EndPhase];
     let ready = s
@@ -1984,7 +2058,18 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
         let class = s.classes().get(&u.class).unwrap();
         for slot in 0..WEAPON_SLOTS {
             if u.usable_weapon(slot, class, s.items()).is_some() {
-                out.push(Command::Equip { unit: u.id, slot });
+                out.push(Command::Equip {
+                    unit: u.id,
+                    equipped: Equipped::Weapon(slot),
+                });
+            }
+        }
+        for spell in &u.learned {
+            if s.spells().get(spell).unwrap().is_attack() {
+                out.push(Command::Equip {
+                    unit: u.id,
+                    equipped: Equipped::Spell(spell.clone()),
+                });
             }
         }
         let reach = reachable(s.map(), s.terrain(), s.classes(), s.units(), u.id).unwrap();
@@ -2010,6 +2095,9 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
                         add(UnitAction::Attack { target: t.id, slot });
                     }
                 }
+            }
+            for action in legal_casts(s, u, dest) {
+                add(action);
             }
             let own = if u.faction == Faction::Player {
                 s.pack().items.len()
@@ -2043,6 +2131,30 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
                         add(UnitAction::Shop { txns });
                     }
                 }
+            }
+        }
+    }
+    out
+}
+
+/// Every spell `u` can cast from `dest`: each learned spell with a use left,
+/// on each hostile unit (attack) or wounded ally other than itself (heal) in
+/// its range.
+fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
+    let mut out = Vec::new();
+    for spell in u.learned.iter().filter(|sp| u.spells.uses_left(sp) > 0) {
+        let def = s.spells().get(spell).unwrap();
+        for t in s.units() {
+            let ok = if def.is_attack() {
+                u.faction.is_hostile_to(t.faction)
+            } else {
+                t.id != u.id && u.faction.is_allied_to(t.faction) && t.hp < t.stats.hp
+            };
+            if ok && def.in_range(Pos::manhattan(dest, t.pos)) {
+                out.push(UnitAction::Cast {
+                    spell: spell.clone(),
+                    target: CastTarget::Unit(t.id),
+                });
             }
         }
     }
@@ -2120,6 +2232,20 @@ fn prop_map() -> BattleMap {
     m
 }
 
+/// Every unit's (on the map or fallen) uses left per spell.
+fn spell_uses(s: &BattleState) -> BTreeMap<(UnitId, SpellId), u8> {
+    s.units()
+        .iter()
+        .chain(s.fallen())
+        .flat_map(|u| {
+            u.spells
+                .uses_left
+                .iter()
+                .map(|(sp, &n)| ((u.id, sp.clone()), n))
+        })
+        .collect()
+}
+
 /// The change in gold `events` account for.
 fn gold_flow(events: &[Event]) -> i64 {
     events
@@ -2172,9 +2298,13 @@ prop_compose! {
         consumables in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=2),
         wounds in 0..=10_i32,
         wear in 0..=20_u32,
+        mag in 0..=6,
+        res in 0..=3,
+        spells in prop::sample::subsequence(vec!["bolt", "fire", "frost", "heal", "mend"], 0..=3),
+        spell_equipped in prop::bool::weighted(0.3),
     ) -> Unit {
         let mut u = unit(0, Faction::Player, p(0, 0));
-        u.stats = Stats::from_growable([hp, str, 0, dex, spd, def, 0], mov);
+        u.stats = Stats::from_growable([hp, str, mag, dex, spd, def, res], mov);
         u.hp = (hp - wounds).max(1);
         let mut weapons = Vec::new();
         if armed {
@@ -2187,6 +2317,12 @@ prop_compose! {
         }
         u.loadout.armour = armour.map(item);
         u.consumables = consumables.into_iter().map(item).collect();
+        u.learned = spells.iter().map(|sp| SpellId::new(sp)).collect();
+        if spell_equipped
+            && let Some(first) = spells.iter().find(|sp| !["heal", "mend"].contains(sp))
+        {
+            u.loadout.equipped = Some(Equipped::Spell(SpellId::new(first)));
+        }
         u
     }
 }
@@ -2277,9 +2413,27 @@ proptest! {
             let turn = s.turn();
             let gold = s.gold();
             let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
+            let uses_before = spell_uses(&s);
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
+            // Spell uses never exceed a spell's uses, and each one is spent
+            // only with its event, one at a time.
+            let uses_after = spell_uses(&s);
+            for u in s.units().iter().chain(s.fallen()) {
+                for (spell, &n) in &u.spells.uses_left {
+                    prop_assert!(n <= s.spells().get(spell).unwrap().uses);
+                }
+            }
+            for (key, &before) in &uses_before {
+                let after = uses_after.get(key).copied().unwrap_or(0);
+                let spent = events.iter().filter(|e| matches!(
+                    e,
+                    Event::SpellUsesChanged { unit, spell, .. } if (unit, spell) == (&key.0, &key.1)
+                )).count();
+                prop_assert_eq!(u32::from(before) - u32::from(after), u32::try_from(spent).unwrap());
+                prop_assert!(spent <= 1);
+            }
             // Gold moves only by what the events say, and never below 0.
             prop_assert_eq!(i64::from(s.gold()), i64::from(gold) + gold_flow(&events));
             if let Some(Event::GoldChanged { gold }) =
@@ -2328,3 +2482,4 @@ proptest! {
 }
 
 mod shop;
+mod spell;

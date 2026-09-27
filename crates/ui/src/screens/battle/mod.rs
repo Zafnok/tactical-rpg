@@ -101,6 +101,7 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         terrain: Arc::new(content.terrain.rules.clone()),
         classes: Arc::new(classes.clone()),
         items: Arc::new(items.clone()),
+        spells: Arc::new(content.spells.clone()),
         pack: BattlePack {
             items: vec![ItemId::new(QUICK_BATTLE_POTION); QUICK_BATTLE_POTIONS],
             cap: items.rules.default_pack_cap,
@@ -272,6 +273,7 @@ mod tests {
             terrain: Arc::new(c.content.terrain.rules.clone()),
             classes: Arc::new(c.content.classes.clone()),
             items: Arc::new(c.content.items.clone()),
+            spells: Arc::new(c.content.spells.clone()),
             pack: BattlePack::default(),
             gold: 0,
             stock: Stock::default(),

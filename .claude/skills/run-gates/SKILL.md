@@ -1,6 +1,6 @@
 ---
 name: run-gates
-description: Run the local quality gates (fmt, clippy, tests, content validation, snapshot review, WASM build, mutation testing on the diff) before pushing. Use before every commit you intend to push, and whenever CI fails and you need to reproduce it.
+description: Run the local quality gates (fmt, clippy, tests, content validation, snapshot review, WASM build) before pushing. Mutation testing runs in CI only. Use before every commit you intend to push, and whenever CI fails and you need to reproduce it.
 ---
 
 # Run the local gates
@@ -27,8 +27,16 @@ cargo build -p trpg-app --target wasm32-unknown-unknown
 cargo deny check                          # after ticket 0103
 cargo machete                             # after ticket 0103
 typos                                     # after ticket 0103
-cargo mutants --in-diff <(git diff main) -p trpg-core -p trpg-content -p trpg-ui   # after ticket 0105
 ```
+
+**Mutation testing is not a local gate.** CI's `mutants (diff)` job
+(`.github/workflows/mutants.yml`) runs `cargo mutants` on every PR's diff.
+Running it locally too means waiting for it twice. So: run the gates above,
+push, open the PR and watch CI. If CI reports `MISSED` mutants, fix them on
+the branch (see *Mutation testing results* below). Run it locally only to
+reproduce a CI mutants failure, and scope it to the mutants in question
+(e.g. `cargo mutants --in-diff <(git diff origin/main) -f <file>`). Diff
+against `origin/main`, because the local `main` may be stale.
 
 On PowerShell, write the diff to a file first:
 `git diff main > $env:TEMP\pr.diff; cargo mutants --in-diff $env:TEMP\pr.diff`.

@@ -67,7 +67,7 @@ prices/drops (chapter and shop data).
 
 - [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, a seal for the wrong tier, enemy-only class, reclass into a tier-2 class whose prerequisite isn't mastered) — state unchanged.
 - [ ] Promotion keeps the character level and EXP; shared promotion (Iron Rider from Guard vs from Rider) gives different bonuses, matching a hand-worked example.
-- [ ] Reclass never changes stats and always consumes a seal; learned skills, spells and saved class records are kept (leave a class at class level 6, come back, and it is still 6).
+- [ ] Reclass never changes stats and always consumes a seal; passives and saved class records are kept (leave a class at class level 6, come back, and it is still 6); the spells and active of a class left unmastered are gone after the reclass (`Unit::refresh_spells` reports them as lost) and come back on returning to it.
 - [ ] Choice screen shows correct previews (test against `promote` on a cloned unit).
 - [ ] Harness: promote via item → class changed, stats as expected.
 - [ ] All gates in the `run-gates` skill pass.

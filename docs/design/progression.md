@@ -405,7 +405,8 @@ round.
   - Stats above the new class's caps are kept, but can't grow while in that
     class.
   - From then on, level ups use the new class's growths, caps and tier.
-- Skills and spells already learned are kept (Nick; `magic.md`).
+- Passives are kept. Actives and class spells of a class that wasn't
+  mastered stay behind (Nick; `magic.md`), and come back on returning to it.
 - Weapon ranks and slots follow the promotion rules above.
 - **Open certification** (Three Houses style, entering any class by passing an
   exam) is **not** in the game (Nick).
@@ -528,9 +529,10 @@ the Flier's are in the game for now; tiers 4+ come later.
 
 `magic.md` says a unit learns a class spell "when it reaches that level in
 that class". That level is the **class level** from this doc. Entering a
-class at class level 1 teaches its class-level-1 spells at once. Learned
-spells are kept after a class change (`magic.md`). Personal signature spells
-use the **character level**.
+class at class level 1 teaches its class-level-1 spells at once. A class's
+spells are kept after a class change only if that class is **mastered**
+(Nick, 2026-09-27; `magic.md`), like its active. Personal signature spells
+use the **character level** and are always kept.
 
 ## Class tree (approved; names are placeholders)
 

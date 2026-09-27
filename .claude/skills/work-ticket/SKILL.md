@@ -67,6 +67,10 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
 
 1. Fill in the ticket's `## Completion notes`: what was done, deviations from the
    plan, follow-up tickets created, anything Nick should know when playing.
+   List every **gameplay-affecting rule you had to decide** where the design
+   docs were silent (mark them *Claude's starting rule*), in plain words.
+   Repeat that list in the PR body and in your final message to Nick, so he
+   can agree or veto (Nick asked for this).
 2. Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
 3. `git mv tickets/open/<file>.md tickets/done/<file>.md`
 
@@ -78,6 +82,8 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
   - Body: summary bullets, list of acceptance criteria (checked), follow-up
     tickets created, and `Nick input:` line (e.g. "Sign-off: please play the
     build from the Pages link and try X").
+- Don't run mutation testing locally before pushing: CI runs it on the PR
+  (see `run-gates`). Push, open the PR, and watch CI once.
 - Wait for CI. If a check fails, fix it on the same branch. Never disable a
   gate, lower a threshold, or add `#[mutants::skip]`/`#[allow]` just to pass —
   if a gate is genuinely wrong, write a ticket about it and explain in the PR.

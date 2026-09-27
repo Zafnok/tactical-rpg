@@ -1,11 +1,7 @@
-//! Spell ids, elements and affinities (`docs/design/magic.md`). Spell
-//! definitions and uses are ticket 0309.
+//! Elements and affinities (`docs/design/magic.md`). Spells themselves are
+//! in [`crate::spell`].
 
 use serde::{Deserialize, Serialize};
-
-/// String id of a spell, e.g. `"fire"`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SpellId(pub String);
 
 /// A spell's element.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

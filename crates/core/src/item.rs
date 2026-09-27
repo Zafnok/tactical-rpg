@@ -8,8 +8,16 @@
 //!
 //! - **Loadout** ([`Loadout`]): up to [`WEAPON_SLOTS`] weapons (only the first
 //!   `class.weapon_slots` slots may hold one), one armour, one accessory. One
-//!   weapon is *equipped*: it counters, and its trait applies. A unit may
-//!   carry a weapon it can't wield, but never equip it.
+//!   weapon or learned attack spell is *equipped* ([`Equipped`]): it counters,
+//!   and a weapon's trait applies. A unit may carry a weapon it can't wield,
+//!   but never equip it.
+//! - **Default equip** ([`Unit::default_equip`]): the first weapon the unit can
+//!   wield, else its first learned attack spell (id order). Used when a battle
+//!   starts with nothing equipped, when the equipped weapon is sold, and when
+//!   a promotion stows it ([`Unit::fit_weapon_slots`]).
+//! - **Fewer weapon slots** ([`Unit::fit_weapon_slots`], called by promotion,
+//!   0603): weapons in slots the new class doesn't have go to the party
+//!   stock. A 0-slot class (tier-3+ magic) carries no weapons at all.
 //! - **Wielding**: the class can use the weapon's kind, and the unit's rank in
 //!   that kind is at least the weapon's rank. A unit with no rank recorded in
 //!   a kind counts as rank E.
@@ -41,6 +49,7 @@ use crate::class::{ArmourWeight, ClassDef, ClassTable, UnitTag};
 use crate::combat::{CombatRules, CombatantInput, DamageType, WeaponStats, WeaponTrait};
 use crate::magic::Element;
 use crate::movement::AttackRange;
+use crate::spell::{SpellDef, SpellId, SpellState, SpellTable};
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::terrain::TerrainRules;
 use crate::unit::Unit;
@@ -377,13 +386,22 @@ impl WeaponInstance {
     }
 }
 
+/// A unit's equipped attack: it attacks by default and counters.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Equipped {
+    /// The weapon in this loadout slot.
+    Weapon(usize),
+    /// This learned attack spell.
+    Spell(SpellId),
+}
+
 /// A unit's gear. See the module docs.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
 pub struct Loadout {
     /// Weapon slots; only the first `class.weapon_slots` may be filled.
     pub weapons: [Option<WeaponInstance>; WEAPON_SLOTS],
-    /// The equipped weapon's slot.
-    pub equipped: Option<usize>,
+    /// The equipped weapon or attack spell.
+    pub equipped: Option<Equipped>,
     /// Worn armour.
     pub armour: Option<ItemId>,
     /// Worn accessory.
@@ -396,9 +414,25 @@ impl Loadout {
         self.weapons.get(slot)?.as_ref()
     }
 
+    /// The equipped weapon's slot, if a weapon is equipped.
+    pub fn equipped_slot(&self) -> Option<usize> {
+        match self.equipped {
+            Some(Equipped::Weapon(slot)) => Some(slot),
+            _ => None,
+        }
+    }
+
+    /// The equipped attack spell, if a spell is equipped.
+    pub fn equipped_spell(&self) -> Option<&SpellId> {
+        match &self.equipped {
+            Some(Equipped::Spell(spell)) => Some(spell),
+            _ => None,
+        }
+    }
+
     /// The equipped weapon, if any.
     pub fn equipped_weapon(&self) -> Option<&WeaponInstance> {
-        self.weapon(self.equipped?)
+        self.weapon(self.equipped_slot()?)
     }
 
     /// Number of weapons carried.
@@ -440,6 +474,8 @@ pub enum LoadoutError {
     EquippedEmpty(usize),
     /// The equipped weapon can't be wielded (class kind or rank).
     CannotWield(ItemId),
+    /// The equipped spell hasn't been learned.
+    SpellNotLearned(SpellId),
 }
 
 impl fmt::Display for LoadoutError {
@@ -456,6 +492,9 @@ impl fmt::Display for LoadoutError {
             }
             LoadoutError::EquippedEmpty(s) => write!(f, "equipped slot {s} is empty"),
             LoadoutError::CannotWield(i) => write!(f, "can't wield \"{}\"", i.0),
+            LoadoutError::SpellNotLearned(s) => {
+                write!(f, "the equipped spell \"{}\" isn't learned", s.0)
+            }
         }
     }
 }
@@ -618,25 +657,36 @@ impl Unit {
     }
 
     /// The unit as the combat maths sees it, on `terrain`, fighting with
-    /// the weapon in `slot` (`None`: the equipped one). Its weapon is `None`
-    /// if that slot is empty or can't be wielded.
+    /// `with` (`None`: its equipped attack). Its weapon is `None` if that is
+    /// an empty slot, a weapon it can't wield, or a spell it can't cast
+    /// ([`Unit::castable_attack`]: unknown, a heal, or no uses left).
     pub fn combat_input<'a>(
         &self,
         class: &ClassDef,
         classes: &ClassTable,
         items: &ItemTable,
-        slot: Option<usize>,
+        spells: &SpellTable,
+        with: Option<&Equipped>,
         terrain: &'a TerrainRules,
     ) -> CombatantInput<'a> {
-        let weapon = slot
-            .or(self.loadout.equipped)
-            .and_then(|s| self.usable_weapon(s, class, items));
+        let (weapon, weapon_rank) = match with.or(self.loadout.equipped.as_ref()) {
+            Some(Equipped::Weapon(slot)) => match self.usable_weapon(*slot, class, items) {
+                Some((copy, def)) => (items.weapon_stats(copy), self.rank(def.kind)),
+                None => (None, WeaponRank::E),
+            },
+            Some(Equipped::Spell(spell)) => (
+                self.castable_attack(spell, spells)
+                    .and_then(SpellDef::weapon_stats),
+                WeaponRank::E,
+            ),
+            None => (None, WeaponRank::E),
+        };
         CombatantInput {
             stats: self.effective_stats(classes, items),
             tags: class.tags,
             affinities: class.affinities.clone(),
-            weapon: weapon.and_then(|(copy, _)| items.weapon_stats(copy)),
-            weapon_rank: weapon.map_or(WeaponRank::E, |(_, def)| self.rank(def.kind)),
+            weapon,
+            weapon_rank,
             armour_weight: self.armour_weight(items),
             terrain,
         }
@@ -674,14 +724,20 @@ impl Unit {
         if let Some(id) = &self.loadout.accessory {
             check_kind(items, id, |d| matches!(d, ItemDef::Accessory(_)))?;
         }
-        if let Some(slot) = self.loadout.equipped {
-            let copy = self
-                .loadout
-                .weapon(slot)
-                .ok_or(LoadoutError::EquippedEmpty(slot))?;
-            if self.usable_weapon(slot, class, items).is_none() {
-                return Err(LoadoutError::CannotWield(copy.def.clone()));
+        match &self.loadout.equipped {
+            Some(Equipped::Weapon(slot)) => {
+                let copy = self
+                    .loadout
+                    .weapon(*slot)
+                    .ok_or(LoadoutError::EquippedEmpty(*slot))?;
+                if self.usable_weapon(*slot, class, items).is_none() {
+                    return Err(LoadoutError::CannotWield(copy.def.clone()));
+                }
             }
+            Some(Equipped::Spell(spell)) if !self.learned.contains(spell) => {
+                return Err(LoadoutError::SpellNotLearned(spell.clone()));
+            }
+            Some(Equipped::Spell(_)) | None => {}
         }
         Ok(())
     }
@@ -719,11 +775,76 @@ impl Unit {
         }
         self.loadout = loadout;
         if let Some(class) = classes.get(&self.class) {
-            self.loadout.equipped =
-                (0..WEAPON_SLOTS).find(|&s| self.usable_weapon(s, class, items).is_some());
+            self.loadout.equipped = self.first_usable_weapon(class, items).map(Equipped::Weapon);
         }
         self.validate_loadout(classes, items)?;
         Ok(self)
+    }
+
+    /// The first slot holding a weapon the unit can wield.
+    fn first_usable_weapon(&self, class: &ClassDef, items: &ItemTable) -> Option<usize> {
+        (0..WEAPON_SLOTS).find(|&s| self.usable_weapon(s, class, items).is_some())
+    }
+
+    /// What to equip when nothing is (see the module docs): the first weapon
+    /// the unit can wield, else its first learned attack spell.
+    pub fn default_equip(
+        &self,
+        class: &ClassDef,
+        items: &ItemTable,
+        spells: &SpellTable,
+    ) -> Option<Equipped> {
+        self.first_usable_weapon(class, items)
+            .map(Equipped::Weapon)
+            .or_else(|| self.first_attack_spell(spells).map(Equipped::Spell))
+    }
+
+    /// Readies the unit for a new battle: every learned spell at full uses,
+    /// and the [default equip](Unit::default_equip) if nothing is equipped.
+    /// Called for every unit (reinforcements too) by
+    /// [`BattleState::new`](crate::battle::BattleState::new).
+    pub fn prepare_for_battle(
+        &mut self,
+        classes: &ClassTable,
+        items: &ItemTable,
+        spells: &SpellTable,
+    ) {
+        self.spells = SpellState::full(&self.learned, spells);
+        if self.loadout.equipped.is_none()
+            && let Some(class) = classes.get(&self.class)
+        {
+            self.loadout.equipped = self.default_equip(class, items, spells);
+        }
+    }
+
+    /// Moves the weapons in slots `class` (the unit's new class) doesn't
+    /// have to `stock`, in slot order, and returns their ids. If the equipped
+    /// weapon went (or `class` can't wield it), the
+    /// [default equip](Unit::default_equip) replaces it.
+    /// Promotion and reclass call this after changing the class (0603).
+    pub fn fit_weapon_slots(
+        &mut self,
+        class: &ClassDef,
+        items: &ItemTable,
+        spells: &SpellTable,
+        stock: &mut Stock,
+    ) -> Vec<ItemId> {
+        let slots = usize::from(class.weapon_slots).min(WEAPON_SLOTS);
+        let mut stowed = Vec::new();
+        for slot in slots..WEAPON_SLOTS {
+            if let Some(copy) = self.loadout.weapons[slot].take() {
+                stowed.push(copy.def.clone());
+                stock.weapons.push(copy);
+            }
+        }
+        if self
+            .loadout
+            .equipped_slot()
+            .is_some_and(|s| self.usable_weapon(s, class, items).is_none())
+        {
+            self.loadout.equipped = self.default_equip(class, items, spells);
+        }
+        stowed
     }
 
     /// Spends `amount` durability of the weapon in `slot` (Combat Arts and
