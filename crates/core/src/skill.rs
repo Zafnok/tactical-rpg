@@ -250,8 +250,12 @@ pub enum ActiveEffect {
         power: StatValue,
     },
     /// Pushes an adjacent hostile unit 1 tile straight away (`magic.md`'s
-    /// push rule; see [`crate::battle`]).
-    Push,
+    /// push rule; see [`crate::battle`]). A unit that can't be pushed there,
+    /// or is pushed into a burning tile, takes `collision` damage.
+    Push {
+        /// Collision damage (not reduced by Def or Res).
+        collision: StatValue,
+    },
 }
 
 /// Passive or active, with its effects.

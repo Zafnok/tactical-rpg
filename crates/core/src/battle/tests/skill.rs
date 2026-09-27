@@ -956,57 +956,84 @@ fn shove_pushes_an_adjacent_enemy_one_tile_away() {
     }
 }
 
+/// Shover 1 (from (0,0), Mov `mov`) at `dest` shoves enemy 3 at
+/// `target_pos` (with `hp`), with `other` also on the map: the events, and
+/// enemy 3's tile and HP after.
+fn shove_at(
+    mov: StatValue,
+    target_pos: Pos,
+    hp: StatValue,
+    other: Option<Unit>,
+    dest: Pos,
+) -> (Vec<Event>, Option<(Pos, StatValue)>, BattleState) {
+    let mut at = shover(p(0, 0));
+    at.stats.mov = mov;
+    let mut units = vec![
+        at,
+        Unit {
+            hp,
+            ..unit(3, Faction::Enemy, target_pos)
+        },
+    ];
+    units.extend(other);
+    let mut s = start(setup(units));
+    let events = act(&mut s, 1, dest, use_skill("shove", Some(3)));
+    let after = s.unit(UnitId(3)).map(|u| (u.pos, u.hp));
+    (events, after, s)
+}
+
+fn pushed(from: Pos, to: Pos, collided: Option<Pos>, damage: StatValue) -> Event {
+    Event::Pushed {
+        unit: UnitId(3),
+        from,
+        to,
+        collided,
+        damage,
+    }
+}
+
 #[test]
-fn shove_is_refused_when_blocked_or_badly_aimed() {
-    let try_shove = |shover: Unit, target_pos, other: Option<Unit>, dest| {
-        let mut units = vec![shover, unit(3, Faction::Enemy, target_pos)];
-        units.extend(other);
-        let mut s = start(setup(units));
-        let before = s.clone();
-        let result = s.apply(&Command::Act {
-            unit: UnitId(1),
-            dest,
-            action: use_skill("shove", Some(3)),
-        });
-        if result.is_err() {
-            assert_eq!(s, before);
-        }
-        result.map(|_| s.unit(UnitId(3)).map(|u| u.pos))
-    };
-    let at = shover(p(0, 0));
-    // Off the map, or into a unit.
-    assert_eq!(
-        try_shove(at.clone(), p(0, 1), None, p(1, 1)),
-        Err(CommandError::PushBlocked(p(-1, 1)))
+fn a_blocked_shove_is_a_collision() {
+    // Off the map: it stays and takes 5.
+    let (events, after, _) = shove_at(3, p(0, 1), 10, None, p(1, 1));
+    assert!(events.contains(&pushed(p(0, 1), p(0, 1), Some(p(-1, 1)), 5)));
+    assert_eq!(after, Some((p(0, 1), 5)));
+    // Into a unit: only the pushed unit is hurt.
+    let (events, after, s) = shove_at(
+        3,
+        p(2, 1),
+        10,
+        Some(unit(4, Faction::Enemy, p(3, 1))),
+        p(1, 1),
     );
-    assert_eq!(
-        try_shove(
-            at.clone(),
-            p(2, 1),
-            Some(unit(4, Faction::Enemy, p(3, 1))),
-            p(1, 1)
-        ),
-        Err(CommandError::PushBlocked(p(3, 1)))
-    );
-    // The shover's own old tile is free once it has moved.
-    let mut far = shover(p(0, 0));
-    far.stats.mov = 5;
-    assert_eq!(try_shove(far, p(1, 0), None, p(2, 0)), Ok(Some(p(0, 0))));
+    assert!(events.contains(&pushed(p(2, 1), p(2, 1), Some(p(3, 1)), 5)));
+    assert_eq!(after, Some((p(2, 1), 5)));
+    assert_eq!(hp(&s, 4), 10);
+    // Never below 1 HP.
+    let (events, after, _) = shove_at(3, p(0, 1), 3, None, p(1, 1));
+    assert!(events.contains(&pushed(p(0, 1), p(0, 1), Some(p(-1, 1)), 2)));
+    assert_eq!(after, Some((p(0, 1), 1)));
+    // The shover's own old tile is free once it has moved: no collision.
+    let (events, after, _) = shove_at(5, p(1, 0), 10, None, p(2, 0));
+    assert!(events.contains(&pushed(p(1, 0), p(0, 0), None, 0)));
+    assert_eq!(after, Some((p(0, 0), 10)));
     // Into a wall.
-    let mut s = start(setup(vec![at.clone(), unit(3, Faction::Enemy, p(2, 1))]));
+    let mut s = start(setup(vec![
+        shover(p(0, 0)),
+        unit(3, Faction::Enemy, p(2, 1)),
+    ]));
     if let Some(t) = s.map.tiles.get_mut(p(3, 1)) {
         *t = TerrainId(2);
     }
-    refused_act(
-        &mut s,
-        1,
-        p(1, 1),
-        use_skill("shove", Some(3)),
-        CommandError::PushBlocked(p(3, 1)),
-    );
+    let events = act(&mut s, 1, p(1, 1), use_skill("shove", Some(3)));
+    assert!(events.contains(&pushed(p(2, 1), p(2, 1), Some(p(3, 1)), 5)));
+}
+
+#[test]
+fn shove_is_refused_when_badly_aimed() {
     // Not adjacent, not hostile, no target, no such unit.
     let mut s = start(setup(vec![
-        at,
+        shover(p(0, 0)),
         unit(2, Faction::Player, p(1, 2)),
         unit(3, Faction::Enemy, p(3, 1)),
     ]));
@@ -1023,6 +1050,8 @@ fn shove_is_refused_when_blocked_or_badly_aimed() {
     );
 }
 
+/// Sets `pos` burning, with a burn-out damage (9) unlike Shove's collision
+/// (5).
 fn set_burning(s: &mut BattleState, pos: Pos) {
     if let Some(t) = s.map.tiles.get_mut(pos) {
         *t = BURNING;
@@ -1031,7 +1060,7 @@ fn set_burning(s: &mut BattleState, pos: Pos) {
         pos,
         phase: Phase::Player,
         then: BURNT,
-        damage: 5,
+        damage: 9,
     });
 }
 
@@ -1292,7 +1321,6 @@ fn skill_error_messages() {
             CommandError::NoSkillTargets(sk("x")),
             "\"x\" would reach nobody",
         ),
-        (CommandError::PushBlocked(p(1, 2)), "(1, 2) is blocked"),
         (
             CommandError::CannotMoveAfter(p(1, 2)),
             "can't move to (1, 2) after attacking",

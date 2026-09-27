@@ -460,6 +460,18 @@ behind when you leave an unmastered class.
   the skill is used. They end at the start of the owner's side's next phase,
   before anyone acts. The same effect doesn't stack with itself; using it
   again refreshes it.
+- **Skill might and damage bonuses** (Nick, reviewing ticket 0311's PR,
+  2026-09-27: "I think the might + N / damage + N should be multiplied /
+  halved"): a skill's "might +N" or "damage +N" is added to the weapon's
+  (or spell's) might. So it is **multiplied** by effectiveness (and Weak)
+  and **halved** with a broken weapon, like the weapon's own might.
+- **Shove into a blocked tile** (Nick, same review: "Shove should not be
+  refused but be used to do collision damage"): if the tile behind the
+  enemy is off the map, holds a unit, or is terrain the enemy can't enter,
+  Shove still happens: the enemy stays put and takes **5** collision damage
+  (*tunable*, not reduced by Def or Res; the same number as a push into
+  fire, `magic.md`). The collision never takes it below **1 HP** and doesn't
+  hurt the unit it hit (*Claude's starting rules*).
 - **The skill list below is placeholder content** (Nick: "exact skills we
   can fine tune after playtesting"). It exists so Chapter 1 has something to
   play with. Skills, numbers and flavour names get tuned after the playtest.
@@ -483,7 +495,7 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Duelist | **Blade Flurry** (5 dur, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
 | Shadowblade | **Deadly Blow** (5 dur, combat): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
 | Striker | **Hundred Fists** (5 dur, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
-| Grappler | **Shove** (3 dur, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); it fails if the tile is blocked | **Iron Grip**: Gt equipped → Def +3 |
+| Grappler | **Shove** (3 dur, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); if the tile is blocked the enemy stays and takes 5 collision damage (Nick, 0311's PR) | **Iron Grip**: Gt equipped → Def +3 |
 | Berserker | **Rampage** (5 dur, combat): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
 | Vanguard | **War Cry** (5 dur, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
 | Marksman | **Long Shot 2** (3 dur, combat): Bw max range +2 | **Bow Focus**: Bw equipped → hit +10, crit +5 |

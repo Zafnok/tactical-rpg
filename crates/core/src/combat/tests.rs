@@ -1222,23 +1222,33 @@ fn skill_mods_add_hit_crit_and_might() {
 }
 
 #[test]
-fn skill_might_is_not_multiplied_or_halved() {
+fn skill_might_is_multiplied_and_halved_like_weapon_might() {
     let rules = rules();
     let might = CombatMods {
         might: 3,
         ..CombatMods::default()
     };
-    // Spear against a mounted unit: weapon might ×2, skill might ×1.
+    // Spear against a mounted unit: all might ×2.
     let (soldier, cavalier) = w2(6);
     let plain = fc(&rules, &soldier, &cavalier, 1);
     let boosted = fc(&rules, &modded(soldier, might), &cavalier, 1);
     assert!(plain.attacker.effective);
-    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 3);
-    // A broken weapon halves its own might only.
+    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 6);
+    // A broken weapon halves it with the weapon's: (8 + 3) / 2 = 5, not 4 + 3.
     let (axe, gauntlet) = w4();
     let plain = fc(&rules, &axe, &gauntlet, 1);
     let boosted = fc(&rules, &modded(axe, might), &gauntlet, 1);
     assert!(plain.attacker.broken);
+    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 1);
+    // Weak spells too: (4 + 1) × 3 against 4 × 3.
+    let fire = spell(Element::Fire, 4, 95);
+    let one = CombatMods {
+        might: 1,
+        ..CombatMods::default()
+    };
+    let elemental = frost_elemental(Affinity::Absorb);
+    let plain = fc(&rules, &mage(fire.clone()), &elemental, 1);
+    let boosted = fc(&rules, &modded(mage(fire), one), &elemental, 1);
     assert_eq!(boosted.attacker.damage - plain.attacker.damage, 3);
 }
 

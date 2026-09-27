@@ -303,7 +303,7 @@ fn test_other_actives() -> Vec<SkillDef> {
             rank: 2,
             ..test_skill("sanctuary_2", heal(2))
         },
-        test_skill("shove", active(dur(3), ActiveEffect::Push)),
+        test_skill("shove", active(dur(3), ActiveEffect::Push { collision: 5 })),
     ]
 }
 

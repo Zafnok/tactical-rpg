@@ -404,9 +404,16 @@ fn steadfast_1_def_2_outside_its_own_phase() {
 }
 
 #[test]
-fn lance_rush_might_5() {
+fn lance_rush_might_5_multiplied_by_effectiveness() {
     let (plain, rush) = duel("rider", "iron_spear", "lance_rush");
     assert_eq!(rush.attacker.damage, plain.attacker.damage + 5);
+    // Against a mounted unit the spear's ×2 doubles it too (Nick).
+    let cavalry = unit(3, "rider", Faction::Enemy, p(1, 0), Some("iron_spear"));
+    let s = battle(vec![player(1, "rider", p(0, 0), "iron_spear"), cavalry]);
+    let plain = forecast(&s, 1, p(0, 0), attack(3, None));
+    let rush = forecast(&s, 1, p(0, 0), attack(3, Some("lance_rush")));
+    assert!(plain.attacker.effective);
+    assert_eq!(rush.attacker.damage, plain.attacker.damage + 10);
 }
 
 /// A rider (Mov 7) attacking an enemy at (x, 0) from (x − 1, 0), with and
@@ -614,6 +621,21 @@ fn shove_pushes_an_adjacent_enemy_for_3_durability() {
     act(&mut s, 1, p(0, 0), use_skill("shove", Some(3)));
     assert_eq!(s.unit(UnitId(3)).map(|u| u.pos), Some(p(2, 0)));
     assert_eq!(durability(&s, 1), 17);
+}
+
+#[test]
+fn a_blocked_shove_deals_5_collision_damage() {
+    let mut s = battle(vec![
+        player(1, "grappler", p(0, 0), "iron_gauntlets"),
+        enemy(3, p(1, 0)),
+        enemy(4, p(2, 0)),
+    ]);
+    act(&mut s, 1, p(0, 0), use_skill("shove", Some(3)));
+    assert_eq!(
+        s.unit(UnitId(3)).map(|u| (u.pos, u.hp)),
+        Some((p(1, 0), 25))
+    );
+    assert_eq!(hp(&s, 4), 30);
 }
 
 #[test]

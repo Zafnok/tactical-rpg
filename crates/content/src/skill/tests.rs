@@ -203,7 +203,12 @@ fn the_embedded_actives_match_the_design_tables() {
                 },
             ),
         ),
-        ("shove", "shove", 1, active(dur(3), ActiveEffect::Push)),
+        (
+            "shove",
+            "shove",
+            1,
+            active(dur(3), ActiveEffect::Push { collision: 5 }),
+        ),
     ];
     check_rows(cases);
     assert_eq!(get(&t, "keen_edge").name, "Keen Edge");
@@ -244,7 +249,7 @@ fn errors_of(body: &str) -> Vec<String> {
 fn family_and_rank_default_to_the_id_and_1() {
     let t = from_source(
         "skills.ron",
-        r#"(skills: [(id: "a", name: "A", kind: Active(cost: Durability(1), effect: Push))])"#,
+        r#"(skills: [(id: "a", name: "A", kind: Active(cost: Durability(1), effect: Push(collision: 5)))])"#,
     )
     .unwrap_or_default();
     let a = get(&t, "a");
@@ -253,7 +258,7 @@ fn family_and_rank_default_to_the_id_and_1() {
 
 #[test]
 fn validation_errors() {
-    let push = "kind: Active(cost: Durability(1), effect: Push)";
+    let push = "kind: Active(cost: Durability(1), effect: Push(collision: 5))";
     let cases = [
         (
             format!(r#"(id: "", name: "x", {push})"#),
@@ -274,7 +279,7 @@ fn validation_errors() {
             vec!["skill \"b\": family \"f\" already has a rank 2"],
         ),
         (
-            r#"(id: "a", name: "x", kind: Active(cost: Durability(0), effect: Push))"#.into(),
+            r#"(id: "a", name: "x", kind: Active(cost: Durability(0), effect: Push(collision: 5)))"#.into(),
             vec!["skill \"a\": a durability cost must be at least 1"],
         ),
         (
@@ -288,7 +293,7 @@ fn validation_errors() {
             vec!["skill \"a\": only spell actives (Strike with Spell) cost ExtraSpellUse"],
         ),
         (
-            r#"(id: "a", name: "x", kind: Active(cost: ExtraSpellUse, effect: Push))"#.into(),
+            r#"(id: "a", name: "x", kind: Active(cost: ExtraSpellUse, effect: Push(collision: 5)))"#.into(),
             vec!["skill \"a\": only spell actives (Strike with Spell) cost ExtraSpellUse"],
         ),
         (
@@ -299,6 +304,11 @@ fn validation_errors() {
             r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Buff(area: Allies(radius: 0), mods: ())))"#
                 .into(),
             vec!["skill \"a\": a buff's radius must be at least 1"],
+        ),
+        (
+            r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Push(collision: -1)))"#
+                .into(),
+            vec!["skill \"a\": collision damage can't be negative"],
         ),
         (
             r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Heal(radius: 0, power: 5)))"#
@@ -323,7 +333,7 @@ fn validation_errors() {
 
 #[test]
 fn errors_point_at_the_skill_and_parse_errors_have_a_position() {
-    let source = "(skills: [\n  (id: \"a\", name: \"x\", rank: 0, kind: Active(cost: Durability(1), effect: Push)),\n])";
+    let source = "(skills: [\n  (id: \"a\", name: \"x\", rank: 0, kind: Active(cost: Durability(1), effect: Push(collision: 5))),\n])";
     let errors = from_source("skills.ron", source).err().unwrap_or_default();
     assert_eq!(errors.first().and_then(|e| e.line), Some(2));
     let errors = from_source("skills.ron", "(skills: [(id: 1)])")

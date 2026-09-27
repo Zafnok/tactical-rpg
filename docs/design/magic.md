@@ -258,7 +258,11 @@ and belong to the terrain display data):
   added later: a unit pushed into a `burning` tile takes **5** collision
   damage (*tunable*, not reduced by Def or Res), then is placed on the
   nearest free tile it can stand on. "Nearest" means the smallest Manhattan
-  distance from the burning tile, with ties broken by `Dir` order.
+  distance from the burning tile, with ties broken by `Dir` order. A unit
+  pushed into a **blocked** tile (off the map, another unit, terrain it
+  can't enter) stays put and takes the same collision damage (Nick,
+  reviewing ticket 0311's PR). The Grappler's Shove follows these rules
+  (`progression.md`).
 - **EXP for a tile cast** (*Claude's starting rule*): the same as a heal. The
   amount is set by 0005.
 

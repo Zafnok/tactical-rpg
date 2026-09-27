@@ -133,6 +133,9 @@ fn problems(kind: &SkillKind) -> Vec<String> {
                     ..
                 } => radius(*r, "a buff's"),
                 ActiveEffect::Heal { radius: r, .. } => radius(*r, "a heal's"),
+                ActiveEffect::Push { collision } if *collision < 0 => {
+                    out.push("collision damage can't be negative".into());
+                }
                 _ => {}
             }
             let spell = matches!(

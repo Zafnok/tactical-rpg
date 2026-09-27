@@ -136,13 +136,14 @@
 //!     by `Mag + power` (none wounded: refused), or **Shove**. Area actives
 //!     never include the user (*Claude's starting rule*).
 //!   - **Shove** pushes a hostile unit adjacent to `dest` 1 tile straight
-//!     away from it ([`Event::Pushed`]). It is refused if that tile is off
-//!     the map, holds a unit or can't be entered by the target, unless the
-//!     tile is burning (`magic.md`): then the target takes the fire's damage
-//!     (never below 1 HP, as for burn-outs; *Claude's starting rule*) and
-//!     lands on the nearest free tile it can stand on: the first free
-//!     neighbour of the burning tile in [`Dir::ALL`](crate::geom::Dir::ALL)
-//!     order (its own tile is one, so it never lands further away).
+//!     away from it ([`Event::Pushed`]). If that tile is off the map, holds
+//!     a unit or can't be entered by the target, the target **stays** and
+//!     takes the skill's collision damage (Nick). Pushed into a burning tile
+//!     (`magic.md`), it takes the collision damage and lands on the nearest
+//!     free tile it can stand on: the first free neighbour of the burning
+//!     tile in [`Dir::ALL`](crate::geom::Dir::ALL) order (its own tile is
+//!     one, so it never lands further away). Collisions never take it below
+//!     1 HP and don't hurt the unit it hit (*Claude's starting rules*).
 //!   - **Moving after an attack** (`turn-structure.md`): an attack with a
 //!     post-action move (Skirmish with a bow, Swoop) may name `then_move`, a
 //!     tile within that many steps of `dest` through empty tiles the unit
@@ -893,8 +894,6 @@ pub enum CommandError {
     BadSkillTarget(SkillId),
     /// Nobody is in the skill's reach (for a heal: nobody wounded).
     NoSkillTargets(SkillId),
-    /// A push's tile is blocked.
-    PushBlocked(Pos),
     /// The unit can't move to this tile after its attack.
     CannotMoveAfter(Pos),
 }
@@ -994,7 +993,6 @@ impl fmt::Display for CommandError {
             }
             CommandError::BadSkillTarget(s) => write!(f, "\"{}\" can't target that", s.0),
             CommandError::NoSkillTargets(s) => write!(f, "\"{}\" would reach nobody", s.0),
-            CommandError::PushBlocked(p) => write!(f, "({}, {}) is blocked", p.x, p.y),
             CommandError::CannotMoveAfter(p) => {
                 write!(f, "can't move to ({}, {}) after attacking", p.x, p.y)
             }

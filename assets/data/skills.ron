@@ -21,7 +21,8 @@
 // Combat mods (M), all optional: (hit: n, crit: n, might: n, avoid: n,
 //   attack_speed: n, extra_strikes: n, single_strike: bool,
 //   double_crit: bool, ignore_terrain: bool, pierce: n). "might" adds to
-//   attack power after effectiveness; "damage +n" skills use it too.
+//   the weapon's might: halved when broken, multiplied by effectiveness
+//   (Nick). "Damage +n" skills use it too.
 //
 // Cost (C): Durability(n >= 1), or ExtraSpellUse (spell actives only).
 // Active effects (E):
@@ -33,7 +34,9 @@
 //   Buff(area: Own | Allies(radius: n), mods: (stats: [(stat, n)], combat: M))
 //          until the start of the user's next phase.
 //   Heal(radius: n, power: n)   other allies within n tiles, Mag + power.
-//   Push                        Shove (magic.md's push rule).
+//   Push(collision: n)          Shove: pushes an adjacent enemy 1 tile; if
+//                               it can't move there (or hits fire) it takes
+//                               n collision damage (n >= 0).
 (
     skills: [
         // ───────────────────────────── Tier 1 ─────────────────────────────
@@ -149,7 +152,7 @@
         // Grappler
         (
             id: "shove", name: "Shove",
-            kind: Active(cost: Durability(3), effect: Push),
+            kind: Active(cost: Durability(3), effect: Push(collision: 5)),
         ),
         (
             id: "iron_grip", name: "Iron Grip",

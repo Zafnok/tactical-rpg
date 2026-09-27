@@ -359,9 +359,9 @@ impl BattleState {
                 }
                 SkillStep::Heal { heals }
             }
-            ActiveEffect::Push => {
+            ActiveEffect::Push { collision } => {
                 let target = target.ok_or_else(bad_target)?;
-                self.plan_push(unit, dest, target, id)?
+                self.plan_push(unit, dest, target, id, *collision)?
             }
         };
         let source = unit
@@ -389,13 +389,15 @@ impl BattleState {
         })
     }
 
-    /// Validates `unit` at `dest` pushing unit `target` with skill `id`.
+    /// Validates `unit` at `dest` pushing unit `target` with skill `id`,
+    /// whose collisions deal `collision` damage.
     fn plan_push(
         &self,
         unit: &Unit,
         dest: Pos,
         target: UnitId,
         id: &SkillId,
+        collision: StatValue,
     ) -> Result<SkillStep, CommandError> {
         let other = self.living(target)?;
         if !unit.faction.is_hostile_to(other.faction) || Pos::manhattan(dest, other.pos) != 1 {
@@ -412,20 +414,25 @@ impl BattleState {
                     .iter()
                     .any(|u| u.id != unit.id && u.id != target && u.pos == p)
         };
-        if let Some(fire) = self.burning.iter().find(|b| b.pos == to) {
+        let damage = collision.clamp(0, (other.hp - 1).max(0));
+        let landing = if self.burning.iter().any(|b| b.pos == to) {
             // `from` is next to the fire and free, so a landing is always
             // found by distance 1.
-            let landing = self.map.tiles.neighbors4(to).find(|&p| free(p));
+            self.map.tiles.neighbors4(to).find(|&p| free(p))
+        } else if free(to) {
+            None
+        } else {
+            // Blocked: it stays where it is.
+            Some(from)
+        };
+        if let Some(landing) = landing {
             return Ok(SkillStep::Push {
                 target,
                 from,
-                to: landing.unwrap_or(from),
+                to: landing,
                 collided: Some(to),
-                damage: fire.damage.clamp(0, (other.hp - 1).max(0)),
+                damage,
             });
-        }
-        if !free(to) {
-            return Err(CommandError::PushBlocked(to));
         }
         Ok(SkillStep::Push {
             target,

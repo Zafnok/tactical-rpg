@@ -43,7 +43,7 @@
 //! [`crate::skill`]); all zero, they change nothing. For `A` striking `B`:
 //!
 //! ```text
-//! power      += A.might                    (after eff_mult; never halved)
+//! might      = weapon.might + A.might      (then halved if broken, × eff_mult)
 //! mitigation  = max(0, stat - A.pierce) + (A.ignore_terrain ? 0 : terrain)
 //! avoid_B    += B.avoid                    (and no terrain avoid if A.ignore_terrain)
 //! hit        += A.hit
@@ -234,7 +234,8 @@ pub struct CombatMods {
     pub hit: StatValue,
     /// Added to crit.
     pub crit: StatValue,
-    /// Added to attack power, after effectiveness.
+    /// Added to the weapon's might (so it is halved when broken and
+    /// multiplied by effectiveness, Nick).
     pub might: StatValue,
     /// Added to this side's avoid.
     pub avoid: StatValue,
@@ -416,16 +417,17 @@ fn side(
     let weak_mult = (affinity == Some(Affinity::Weak)).then_some(rules.weak_multiplier);
     let eff_mult = tag_mult.max(weak_mult).unwrap_or(1).max(1);
 
+    let might = weapon.might + a.mods.might;
     let might = if weapon.broken {
-        weapon.might / rules.broken_might_divisor
+        might / rules.broken_might_divisor
     } else {
-        weapon.might
+        might
     };
     let (power_stat, mitigation_stat) = match weapon.damage_type {
         DamageType::Physical => (a.stats.str, b.stats.def),
         DamageType::Magical => (a.stats.mag, b.stats.res),
     };
-    let power = power_stat + might * StatValue::from(eff_mult) + a.mods.might;
+    let power = power_stat + might * StatValue::from(eff_mult);
     let pierced = mitigation_stat - a.mods.pierce.clamp(0, mitigation_stat.max(0));
     let mitigation = pierced + b.terrain_defense(a.mods.ignore_terrain);
     let mut damage = (power - mitigation).max(0);
