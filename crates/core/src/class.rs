@@ -1,12 +1,13 @@
 //! Classes and the per-tier progression tables (`docs/design/progression.md`).
-//! Skills and spells are referenced by id only; their effects are tickets
-//! 0311 and 0309.
+//! Skills and spells are referenced by id only; their effects are in
+//! [`crate::skill`] and [`crate::spell`].
 
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::magic::{Affinity, Element};
+use crate::skill::SkillId;
 use crate::spell::SpellId;
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::MovementTypeId;
@@ -15,10 +16,6 @@ use crate::weapon::{WeaponKind, WeaponRank};
 /// String id of a class, e.g. `"swordsman"`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ClassId(pub String);
-
-/// String id of a skill, e.g. `"keen_edge"`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SkillId(pub String);
 
 /// A class tier: a plain number from 1. Nothing assumes 3 is the top.
 pub type Tier = u8;

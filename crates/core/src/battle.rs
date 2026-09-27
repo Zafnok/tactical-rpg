@@ -106,6 +106,54 @@
 //!   [`Event::GoldChanged`]), a consumable into the pack, equipment into the
 //!   stock. A chest opens once. Villages are on hold (no village tile,
 //!   `docs/design/terrain.md`).
+//! - **Skills** ([`crate::skill`] has the skill rules):
+//!   - **Passives** of both sides, the **timed effects** on them, and the
+//!     **ally auras** of other allied units (green ones too) in reach feed
+//!     each combat: [`CombatMods`](crate::combat::CombatMods) and stat
+//!     bonuses on its [`CombatantInput`], so the forecast shows them. Stat
+//!     bonuses from skills count in combat only and may pass caps. "Moved"
+//!     conditions count the tiles of the attacker's path; a unit attacked
+//!     has moved 0.
+//!   - **Combat actives** are an option of an attack
+//!     ([`UnitAction::Attack`]'s `active`, paid from the attacking weapon)
+//!     or of an attack spell's cast ([`UnitAction::Cast`]'s `active`: spell
+//!     actives, paid with 1 extra use). The unit must be able to
+//!     [use](Unit::usable_active) it, the attack must suit it
+//!     ([`WeaponReq`](crate::skill::WeaponReq)) and the cost must be payable
+//!     ([`check_cost`](crate::skill::check_cost)). Events:
+//!     [`Event::SkillUsed`], then the payment ([`Event::DurabilitySpent`] or
+//!     [`Event::SpellUsesChanged`]), then the combat. Its bonuses count in
+//!     this combat; a stance rider counts in it too (once) and is then
+//!     applied ([`Event::EffectApplied`]) if the user still stands; a drain
+//!     heals the user after the combat ([`Event::Healed`]). A weapon the
+//!     payment brought to 0 breaks after the combat ([`Event::ItemBroke`],
+//!     before anyone falls).
+//!   - **Other actives** ([`UnitAction::UseSkill`]) are paid from the
+//!     **equipped** weapon (so a unit with a spell or nothing equipped can't
+//!     use them) and end the action: a buff on the user or on the other
+//!     allied units in reach of `dest` ([`Event::EffectApplied`] each; none
+//!     in reach: refused), a heal of the wounded other allied units in reach
+//!     by `Mag + power` (none wounded: refused), or **Shove**. Area actives
+//!     never include the user (*Claude's starting rule*).
+//!   - **Shove** pushes a hostile unit adjacent to `dest` 1 tile straight
+//!     away from it ([`Event::Pushed`]). It is refused if that tile is off
+//!     the map, holds a unit or can't be entered by the target, unless the
+//!     tile is burning (`magic.md`): then the target takes the fire's damage
+//!     (never below 1 HP, as for burn-outs; *Claude's starting rule*) and
+//!     lands on the nearest free tile it can stand on: the first free
+//!     neighbour of the burning tile in [`Dir::ALL`](crate::geom::Dir::ALL)
+//!     order (its own tile is one, so it never lands further away).
+//!   - **Moving after an attack** (`turn-structure.md`): an attack with a
+//!     post-action move (Skirmish with a bow, Swoop) may name `then_move`, a
+//!     tile within that many steps of `dest` through empty tiles the unit
+//!     can enter (judged when the command is given). The move comes after
+//!     the combat ([`Event::UnitMoved`]), only if the unit still stands.
+//!   - **Timed effects** end at the start of their
+//!     [`until`](crate::skill::TimedEffect::until) phase, right after its
+//!     burn-outs, even if that phase is then skipped
+//!     ([`Event::EffectExpired`]).
+//!   - **Heal spells** restore their passives' [`heal_bonus`] more (White
+//!     Magic; Sanctuary doesn't get it).
 //! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
 //!   the unit can wield, or any learned attack spell (even one with no uses
 //!   left: it just can't counter), by a ready unit of the current phase. It
@@ -134,21 +182,20 @@
 //! # Extending
 //!
 //! Every [`Event`] sequence of an `Act` ends with [`Event::UnitActed`] (unless
-//! the unit fell), optionally followed by [`Event::BattleEnded`]. Skills that
-//! grant movement after an action (`turn-structure.md`; e.g. "after attacking,
-//! move 1 tile away") add their move as a new event just before `UnitActed`,
-//! decided by the skill's rules; no [`UnitAction`] needs to change. Combat
-//! Arts (0312) spend durability with [`Unit::spend_durability`], which
-//! gives the [`Event::ItemBroke`] to emit.
+//! the unit fell), optionally followed by [`Event::BattleEnded`]. A move after
+//! an attack is an [`Event::UnitMoved`] just before `UnitActed`. Combat Arts
+//! (0312) pay their costs with [`pay_cost`](crate::skill::pay_cost), as
+//! actives do.
 //!
 //! # Saving
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
-//! the map (with its current terrain), burning tiles, units, fallen units,
+//! the map (with its current terrain), burning tiles, units (with their
+//! learned skills and timed effects), fallen units,
 //! pending reinforcements, objective, turn,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
-//! **terrain, class, item and spell tables are not**: they are shared content, held by `Arc` and skipped. A
+//! **terrain, class, item, spell and skill tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
@@ -170,6 +217,7 @@ use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
 use crate::rng::SimRng;
 use crate::shop::{self, Gold, Loot, Shop, ShopError};
+use crate::skill::{CostError, SkillId, SkillTable, heal_bonus};
 use crate::spell::{EffectDuration, SpellDef, SpellId, SpellKind, SpellTable, TerrainEffect};
 use crate::stats::StatValue;
 use crate::terrain::{TerrainId, TerrainTable};
@@ -293,6 +341,8 @@ pub struct BattleSetup {
     pub items: Arc<ItemTable>,
     /// Every spell units know.
     pub spells: Arc<SpellTable>,
+    /// Every skill units have.
+    pub skills: Arc<SkillTable>,
     /// The player side's consumables.
     pub pack: BattlePack,
     /// The party's gold, from the campaign.
@@ -324,6 +374,10 @@ pub enum UnitAction {
         target: UnitId,
         /// The weapon's loadout slot.
         slot: usize,
+        /// A combat active to use in this attack.
+        active: Option<SkillId>,
+        /// Where to move after the attack, if a skill allows it.
+        then_move: Option<Pos>,
     },
     /// Use a consumable on `target` (the unit itself or an adjacent ally).
     UseItem {
@@ -348,6 +402,15 @@ pub enum UnitAction {
         spell: SpellId,
         /// What it is cast on.
         target: CastTarget,
+        /// A spell active to use with an attack spell cast at a unit.
+        active: Option<SkillId>,
+    },
+    /// Use a non-combat active skill, paid from the equipped weapon.
+    UseSkill {
+        /// The skill.
+        skill: SkillId,
+        /// The unit it is used on (Shove), or `None` (every other skill).
+        target: Option<UnitId>,
     },
 }
 
@@ -541,6 +604,55 @@ pub enum Event {
         kind: WeaponKind,
         /// The new rank.
         rank: WeaponRank,
+    },
+    /// A unit used an active skill (before its payment and its effects).
+    SkillUsed {
+        /// The user.
+        unit: UnitId,
+        /// The skill.
+        skill: SkillId,
+    },
+    /// A unit paid durability for a skill.
+    DurabilitySpent {
+        /// The unit.
+        unit: UnitId,
+        /// The weapon's loadout slot.
+        slot: usize,
+        /// The weapon.
+        item: ItemId,
+        /// Durability spent.
+        amount: u32,
+        /// Durability left.
+        left: u32,
+    },
+    /// A timed effect was put on a unit (or refreshed).
+    EffectApplied {
+        /// The unit.
+        unit: UnitId,
+        /// The skill it comes from.
+        skill: SkillId,
+        /// It ends at the start of this phase.
+        until: Phase,
+    },
+    /// A timed effect ended.
+    EffectExpired {
+        /// The unit.
+        unit: UnitId,
+        /// The skill it came from.
+        skill: SkillId,
+    },
+    /// A unit was pushed.
+    Pushed {
+        /// The unit.
+        unit: UnitId,
+        /// Its tile before.
+        from: Pos,
+        /// Its tile now.
+        to: Pos,
+        /// The burning tile it was pushed into, if any.
+        collided: Option<Pos>,
+        /// HP lost to the collision (the unit keeps at least 1).
+        damage: StatValue,
     },
     /// A weapon's durability reached 0.
     ItemBroke {
@@ -755,6 +867,36 @@ pub enum CommandError {
     TileOccupied(Pos),
     /// The spell can't change this tile's terrain.
     WrongTerrain(Pos),
+    /// A skill id is not in the skill table (e.g. tables not restored).
+    UnknownSkill(SkillId),
+    /// The unit can't use this active skill now.
+    SkillNotUsable {
+        /// The unit.
+        unit: UnitId,
+        /// The skill.
+        skill: SkillId,
+    },
+    /// A non-combat active chosen for an attack or cast, a combat active
+    /// used as an action, or an active chosen for a heal or tile cast.
+    WrongSkillKind(SkillId),
+    /// The attack doesn't use what the combat active needs.
+    WrongWeaponForSkill(SkillId),
+    /// The skill's cost can't be paid.
+    CannotPay {
+        /// The skill.
+        skill: SkillId,
+        /// Why.
+        error: CostError,
+    },
+    /// The skill was given a target it can't take (or none when it needs
+    /// one).
+    BadSkillTarget(SkillId),
+    /// Nobody is in the skill's reach (for a heal: nobody wounded).
+    NoSkillTargets(SkillId),
+    /// A push's tile is blocked.
+    PushBlocked(Pos),
+    /// The unit can't move to this tile after its attack.
+    CannotMoveAfter(Pos),
 }
 
 impl From<MoveError> for CommandError {
@@ -839,6 +981,23 @@ impl fmt::Display for CommandError {
                     p.x, p.y
                 )
             }
+            CommandError::UnknownSkill(s) => write!(f, "unknown skill \"{}\"", s.0),
+            CommandError::SkillNotUsable { unit, skill } => {
+                write!(f, "unit {} can't use \"{}\" now", unit.0, skill.0)
+            }
+            CommandError::WrongSkillKind(s) => write!(f, "\"{}\" can't be used that way", s.0),
+            CommandError::WrongWeaponForSkill(s) => {
+                write!(f, "\"{}\" can't be used with this attack", s.0)
+            }
+            CommandError::CannotPay { skill, error } => {
+                write!(f, "can't pay for \"{}\": {error}", skill.0)
+            }
+            CommandError::BadSkillTarget(s) => write!(f, "\"{}\" can't target that", s.0),
+            CommandError::NoSkillTargets(s) => write!(f, "\"{}\" would reach nobody", s.0),
+            CommandError::PushBlocked(p) => write!(f, "({}, {}) is blocked", p.x, p.y),
+            CommandError::CannotMoveAfter(p) => {
+                write!(f, "can't move to ({}, {}) after attacking", p.x, p.y)
+            }
         }
     }
 }
@@ -852,6 +1011,7 @@ struct Tables {
     classes: Arc<ClassTable>,
     items: Arc<ItemTable>,
     spells: Arc<SpellTable>,
+    skills: Arc<SkillTable>,
 }
 
 /// A running battle. Changed only by [`BattleState::apply`].
@@ -880,11 +1040,11 @@ pub struct BattleState {
 enum Step {
     Wait,
     /// A combat, with a weapon or an attack spell.
-    Attack {
-        target: UnitId,
-        with: Equipped,
-        forecast: Forecast,
-        arms: Arms,
+    Attack(Box<AttackStep>),
+    /// A non-combat active.
+    Skill {
+        active: Box<ActiveUse>,
+        effect: SkillStep,
     },
     Heal {
         spell: SpellId,
@@ -911,6 +1071,18 @@ enum Step {
         pos: Pos,
         loot: Loot,
     },
+}
+
+/// A validated combat.
+struct AttackStep {
+    target: UnitId,
+    with: Equipped,
+    forecast: Forecast,
+    arms: Arms,
+    /// The combat active used, if any.
+    active: Option<ActiveUse>,
+    /// The path of the move after the combat (from `dest`), if any.
+    then_move: Option<Vec<Pos>>,
 }
 
 /// What each side of a combat fights with: `[attacker, defender]`.
@@ -1091,6 +1263,7 @@ impl BattleState {
                 classes: setup.classes,
                 items: setup.items,
                 spells: setup.spells,
+                skills: setup.skills,
             },
             map: setup.map,
             burning: Vec::new(),
@@ -1126,12 +1299,14 @@ impl BattleState {
         classes: Arc<ClassTable>,
         items: Arc<ItemTable>,
         spells: Arc<SpellTable>,
+        skills: Arc<SkillTable>,
     ) {
         self.tables = Tables {
             terrain,
             classes,
             items,
             spells,
+            skills,
         };
     }
 
@@ -1163,6 +1338,11 @@ impl BattleState {
     /// Spells.
     pub fn spells(&self) -> &SpellTable {
         &self.tables.spells
+    }
+
+    /// Skills.
+    pub fn skills(&self) -> &SkillTable {
+        &self.tables.skills
     }
 
     /// The player side's consumables.
@@ -1278,11 +1458,25 @@ impl BattleState {
             .path_to(dest)
             .filter(|_| reach.is_stoppable(dest))
             .ok_or(CommandError::CannotStop(dest))?;
+        let moved = u32::try_from(path.len().saturating_sub(1)).unwrap_or(u32::MAX);
         let step = match *action {
             UnitAction::Wait => Step::Wait,
-            UnitAction::Attack { target, slot } => {
+            UnitAction::Attack {
+                target,
+                slot,
+                ref active,
+                then_move,
+            } => {
                 self.check_wield(unit.id, slot)?;
-                self.plan_attack(unit, dest, target, Equipped::Weapon(slot))?
+                let plan = AttackPlan {
+                    dest,
+                    moved,
+                    target,
+                    with: Equipped::Weapon(slot),
+                    active: active.as_ref(),
+                    then_move,
+                };
+                self.plan_attack(unit, plan)?
             }
             UnitAction::UseItem { pack_index, target } => {
                 self.plan_item(unit, dest, pack_index, target)?
@@ -1296,11 +1490,31 @@ impl BattleState {
             UnitAction::Cast {
                 ref spell,
                 target: CastTarget::Unit(target),
-            } => self.plan_cast(unit, dest, spell, target)?,
+                ref active,
+            } => {
+                let plan = AttackPlan {
+                    dest,
+                    moved,
+                    target,
+                    with: Equipped::Spell(spell.clone()),
+                    active: active.as_ref(),
+                    then_move: None,
+                };
+                self.plan_cast(unit, spell, plan)?
+            }
             UnitAction::Cast {
                 ref spell,
                 target: CastTarget::Tile(pos),
-            } => self.plan_tile_cast(unit, dest, spell, pos)?,
+                ref active,
+            } => {
+                if let Some(skill) = active {
+                    return Err(CommandError::WrongSkillKind(skill.clone()));
+                }
+                self.plan_tile_cast(unit, dest, spell, pos)?
+            }
+            UnitAction::UseSkill { ref skill, target } => {
+                self.plan_skill(unit, dest, skill, target)?
+            }
         };
         Ok((path, step))
     }
@@ -1354,24 +1568,37 @@ impl BattleState {
             .ok_or_else(|| CommandError::UnknownSpell(spell.clone()))
     }
 
-    /// The combat of `unit` attacking `target` from `dest` with `with`
-    /// (already checked usable, apart from its range).
-    fn plan_attack(
-        &self,
-        unit: &Unit,
-        dest: Pos,
-        target: UnitId,
-        with: Equipped,
-    ) -> Result<Step, CommandError> {
+    /// The combat of `unit` attacking as `plan` says (its weapon or spell
+    /// already checked usable, apart from its range).
+    fn plan_attack(&self, unit: &Unit, plan: AttackPlan) -> Result<Step, CommandError> {
+        let AttackPlan {
+            dest,
+            moved,
+            target,
+            with,
+            active,
+            then_move,
+        } = plan;
         let defender = self.living(target)?;
         if !unit.faction.is_hostile_to(defender.faction) {
             return Err(CommandError::NotHostile(target));
         }
-        let a = self.combatant(unit, dest, Some(&with))?;
-        let d = self.combatant(defender, defender.pos, None)?;
+        let active = active
+            .map(|id| self.plan_active(unit, id, &with))
+            .transpose()?;
+        let fight = Fight {
+            dest,
+            moved,
+            with: &with,
+            active: active.as_ref(),
+        };
+        let (a, d, post_move) = self.fighters(unit, defender, &fight)?;
         let distance = Pos::manhattan(dest, defender.pos);
         let forecast = forecast(&self.tables.items.combat_rules(), &a, &d, distance)
             .ok_or(CommandError::OutOfRange { target, distance })?;
+        let then_move = then_move
+            .map(|to| self.plan_move_after(unit, dest, to, post_move))
+            .transpose()?;
         let kind = |c: &CombatantInput| c.weapon.as_ref().and_then(|w| w.kind);
         let counter_spell = forecast
             .defender
@@ -1387,12 +1614,14 @@ impl BattleState {
                 counter_spell,
             ],
         };
-        Ok(Step::Attack {
+        Ok(Step::Attack(Box::new(AttackStep {
             target,
             with,
             forecast,
             arms,
-        })
+            active,
+            then_move,
+        })))
     }
 
     /// The spell `spell` if `unit` has learned it and has a use left.
@@ -1407,21 +1636,23 @@ impl BattleState {
         Ok(def)
     }
 
-    /// Validates `unit` casting `spell` on unit `target` from `dest`.
+    /// Validates `unit` casting `spell` on unit `plan.target` from
+    /// `plan.dest` (`plan.with` is the spell).
     fn plan_cast(
         &self,
         unit: &Unit,
-        dest: Pos,
         spell: &SpellId,
-        target: UnitId,
+        plan: AttackPlan,
     ) -> Result<Step, CommandError> {
         let def = self.castable(unit, spell)?;
         let heal_power = match def.kind {
-            SpellKind::Attack { .. } => {
-                return self.plan_attack(unit, dest, target, Equipped::Spell(spell.clone()));
-            }
+            SpellKind::Attack { .. } => return self.plan_attack(unit, plan),
             SpellKind::Heal { heal_power } => heal_power,
         };
+        if let Some(skill) = plan.active {
+            return Err(CommandError::WrongSkillKind(skill.clone()));
+        }
+        let (dest, target) = (plan.dest, plan.target);
         let other = self.living(target)?;
         if target == unit.id || !unit.faction.is_allied_to(other.faction) {
             return Err(CommandError::BadHealTarget(target));
@@ -1437,10 +1668,14 @@ impl BattleState {
         let mag = unit
             .effective_stats(&self.tables.classes, &self.tables.items)
             .mag;
+        let bonus = heal_bonus(&unit.usable_skills(&self.tables.classes, &self.tables.skills));
         Ok(Step::Heal {
             spell: spell.clone(),
             target,
-            amount: heal_power.saturating_add(mag).clamp(0, missing),
+            amount: heal_power
+                .saturating_add(mag)
+                .saturating_add(bonus)
+                .clamp(0, missing),
         })
     }
 
@@ -1643,27 +1878,8 @@ impl BattleState {
         let mut seized = false;
         match step {
             Step::Wait => {}
-            Step::Attack {
-                target,
-                with,
-                forecast,
-                arms,
-            } => {
-                if self
-                    .unit(id)
-                    .is_some_and(|u| u.loadout.equipped.as_ref() != Some(&with))
-                {
-                    self.equip(id, with.clone(), events);
-                }
-                if let Equipped::Spell(spell) = with {
-                    events.push(Event::SpellCast {
-                        unit: id,
-                        spell,
-                        target: CastTarget::Unit(target),
-                    });
-                }
-                self.fight(id, target, forecast, arms, events);
-            }
+            Step::Attack(attack) => self.attack(id, *attack, events),
+            Step::Skill { active, effect } => self.use_skill(id, &active, effect, events),
             Step::Heal {
                 spell,
                 target,
@@ -1721,6 +1937,42 @@ impl BattleState {
         };
         if let Some(outcome) = outcome {
             self.finish(outcome, events);
+        }
+    }
+
+    /// Carries out unit `id`'s validated combat (see the module docs for the
+    /// order of events).
+    fn attack(&mut self, id: UnitId, attack: AttackStep, events: &mut Vec<Event>) {
+        let AttackStep {
+            target,
+            with,
+            forecast,
+            arms,
+            active,
+            then_move,
+        } = attack;
+        if self
+            .unit(id)
+            .is_some_and(|u| u.loadout.equipped.as_ref() != Some(&with))
+        {
+            self.equip(id, with.clone(), events);
+        }
+        let broke = active.as_ref().and_then(|a| self.pay(id, a, events));
+        if let Equipped::Spell(spell) = with {
+            events.push(Event::SpellCast {
+                unit: id,
+                spell,
+                target: CastTarget::Unit(target),
+            });
+        }
+        let dealt = self.fight(id, target, forecast, arms, events);
+        if let Some(active) = &active {
+            self.after_strike(id, active, dealt, events);
+        }
+        events.extend(broke);
+        self.remove_fallen([target, id], events);
+        if let Some(path) = then_move {
+            self.move_after(id, path, events);
         }
     }
 
@@ -1878,8 +2130,9 @@ impl BattleState {
         }
     }
 
-    /// Plays out a combat, spends spell uses, gives weapon EXP and removes
-    /// whoever fell.
+    /// Plays out a combat, spends spell uses and gives weapon EXP. Returns
+    /// the HP each side's strikes removed: `[attacker, defender]`. Whoever
+    /// fell is still on the map (see [`Self::remove_fallen`]).
     fn fight(
         &mut self,
         attacker: UnitId,
@@ -1887,7 +2140,7 @@ impl BattleState {
         forecast: Forecast,
         arms: Arms,
         events: &mut Vec<Event>,
-    ) {
+    ) -> [StatValue; 2] {
         let hp = |s: &Self, id| {
             s.unit(id)
                 .map_or(CombatHp { current: 0, max: 0 }, |u| CombatHp {
@@ -1911,7 +2164,15 @@ impl BattleState {
                 u.hp = left;
             }
         }
-        let exp = weapon_exp(&self.tables.items, &outcome, a.current, d.current);
+        let tally = Tally::of(&outcome, a.current, d.current);
+        let exp = [0, 1].map(|i| {
+            self.tables.items.rules.weapon_exp(
+                tally.struck[i],
+                tally.hits[i],
+                tally.dealt[i],
+                false,
+            )
+        });
         let struck = [Side::Attacker, Side::Defender]
             .map(|side| outcome.strikes.iter().any(|s| s.by == side));
         events.push(Event::CombatResolved {
@@ -1934,7 +2195,12 @@ impl BattleState {
                 self.gain_weapon_exp(id, kind, amount, events);
             }
         }
-        for id in [defender, attacker] {
+        tally.dealt
+    }
+
+    /// Moves the units of `ids` at 0 HP to the fallen, in that order.
+    fn remove_fallen(&mut self, ids: [UnitId; 2], events: &mut Vec<Event>) {
+        for id in ids {
             if let Some(i) = self.units.iter().position(|u| u.id == id && u.hp <= 0) {
                 self.fallen.push(self.units.remove(i));
                 events.push(Event::UnitFell { unit: id });
@@ -2005,6 +2271,7 @@ impl BattleState {
     /// phase still burns out its tiles (their only events).
     fn start_phase(&mut self, events: &mut Vec<Event>) -> bool {
         self.burn_out(events);
+        self.expire_effects(events);
         let phase = self.phase;
         for u in self
             .units
@@ -2080,33 +2347,45 @@ impl BattleState {
     }
 }
 
-/// Weapon EXP earned by the attacker and the defender in `outcome`, given
-/// their HP going in. No Combat Arts yet (0312).
-fn weapon_exp(
-    items: &ItemTable,
-    outcome: &CombatOutcome,
-    attacker_hp: StatValue,
-    defender_hp: StatValue,
-) -> [u32; 2] {
-    // HP before each strike: [attacker, defender].
-    let mut hp = [attacker_hp, defender_hp];
-    let mut struck = [0usize; 2];
-    let mut hits = [0usize; 2];
-    let mut dealt: [StatValue; 2] = [0, 0];
-    for s in &outcome.strikes {
-        let (me, target) = match s.by {
-            Side::Attacker => (0, 1),
-            Side::Defender => (1, 0),
-        };
-        struck[me] += 1;
-        hits[me] += usize::from(s.hit);
-        if !s.healed {
-            dealt[me] += (hp[target] - s.target_hp_after).max(0);
-        }
-        hp[target] = s.target_hp_after;
-    }
-    [0, 1].map(|i| items.rules.weapon_exp(struck[i], hits[i], dealt[i], false))
+/// What each side's strikes did in a combat: `[attacker, defender]`.
+struct Tally {
+    /// Strikes made.
+    struck: [usize; 2],
+    /// Strikes that hit.
+    hits: [usize; 2],
+    /// HP removed (Absorb healing doesn't count).
+    dealt: [StatValue; 2],
 }
+
+impl Tally {
+    /// The tally of `outcome`, given the two sides' HP going in.
+    fn of(outcome: &CombatOutcome, attacker_hp: StatValue, defender_hp: StatValue) -> Tally {
+        // HP before each strike: [attacker, defender].
+        let mut hp = [attacker_hp, defender_hp];
+        let mut t = Tally {
+            struck: [0; 2],
+            hits: [0; 2],
+            dealt: [0; 2],
+        };
+        for s in &outcome.strikes {
+            let (me, target) = match s.by {
+                Side::Attacker => (0, 1),
+                Side::Defender => (1, 0),
+            };
+            t.struck[me] += 1;
+            t.hits[me] += usize::from(s.hit);
+            if !s.healed {
+                t.dealt[me] += (hp[target] - s.target_hp_after).max(0);
+            }
+            hp[target] = s.target_hp_after;
+        }
+        t
+    }
+}
+
+mod skills;
+
+use skills::{ActiveUse, AttackPlan, Fight, SkillStep};
 
 #[cfg(test)]
 mod tests;

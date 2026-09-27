@@ -26,6 +26,7 @@ fn cast_on(spell: &str, target: u32) -> UnitAction {
     UnitAction::Cast {
         spell: sid(spell),
         target: CastTarget::Unit(UnitId(target)),
+        active: None,
     }
 }
 
@@ -506,6 +507,7 @@ fn cast_and_equip_errors_leave_the_state_unchanged() {
         Arc::new(s.classes().clone()),
         Arc::new(s.items().clone()),
         Arc::new(SpellTable::default()),
+        Arc::new(s.skills().clone()),
     );
     refused_act(
         &mut loaded,

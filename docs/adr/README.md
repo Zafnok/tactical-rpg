@@ -29,5 +29,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0018](0018-visual-style-v2.md) | Visual style v2 (after Nick's look sign-off) | Accepted |
 | [0019](0019-simulation-rng-and-serde-in-core.md) | In-crate PCG32 simulation RNG; serde derives in `core` | Accepted |
 | [0020](0020-battle-state-serialisation.md) | Battle state saves its own data, not the content tables | Accepted |
+| [0021](0021-skill-effects-as-data.md) | Skill effects are data, gathered into combat modifiers | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).
