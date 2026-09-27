@@ -325,6 +325,7 @@ fn validation_errors() {
         r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Buff(area: Own, mods: (stats: [(Def, 1)]))))"#,
         r#"(id: "a", name: "x", kind: Passive([AllyAura(radius: 1, mods: (hit: 1)), HealBonus(1)]))"#,
         r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Heal(radius: 1, power: 5)))"#,
+        r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Push(collision: 0)))"#,
     ];
     for body in ok {
         assert_eq!(errors_of(body), Vec::<String>::new(), "{body}");

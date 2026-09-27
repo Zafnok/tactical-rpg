@@ -554,13 +554,13 @@ pub fn resolve(
         order.push(Side::Defender);
     }
     let extra = |s: Option<SideForecast>| s.map_or(0, |s| s.strikes.saturating_sub(1));
-    let mut left = [extra(Some(forecast.attacker)), extra(forecast.defender)];
-    while left != [0, 0] {
-        for (side, n) in [Side::Attacker, Side::Defender].into_iter().zip(&mut left) {
-            if *n > 0 {
-                *n -= 1;
-                order.push(side);
-            }
+    let (a_extra, d_extra) = (extra(Some(forecast.attacker)), extra(forecast.defender));
+    for i in 0..a_extra.max(d_extra) {
+        if i < a_extra {
+            order.push(Side::Attacker);
+        }
+        if i < d_extra {
+            order.push(Side::Defender);
         }
     }
 
