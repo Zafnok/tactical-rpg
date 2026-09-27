@@ -39,6 +39,10 @@ Rules:
 - Keep each option honest about downsides.
 - If the question has sub-questions that only matter for some answers, ask
   them *after* the main answer, not all at once.
+- Before asking, check each option against the data and the rest of the
+  design (classes, weapons, existing rules): don't offer an option that
+  can't work as written. When an answer conflicts with something, say so
+  and ask right away, before implementing any of it.
 - If Nick answers vaguely ("whatever feels like FE"), take the recommended
   option, state exactly what you're recording, and let him veto.
 

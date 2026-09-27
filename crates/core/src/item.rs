@@ -46,7 +46,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::battle::Event;
 use crate::class::{ArmourWeight, ClassDef, ClassTable, UnitTag};
-use crate::combat::{CombatRules, CombatantInput, DamageType, WeaponStats, WeaponTrait};
+use crate::combat::{
+    CombatMods, CombatRules, CombatantInput, DamageType, WeaponStats, WeaponTrait,
+};
 use crate::magic::Element;
 use crate::movement::AttackRange;
 use crate::spell::{SpellDef, SpellId, SpellState, SpellTable};
@@ -689,6 +691,7 @@ impl Unit {
             weapon_rank,
             armour_weight: self.armour_weight(items),
             terrain,
+            mods: CombatMods::default(),
         }
     }
 

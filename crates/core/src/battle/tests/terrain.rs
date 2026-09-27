@@ -20,6 +20,7 @@ fn on_tile(spell: &str, pos: Pos) -> UnitAction {
     UnitAction::Cast {
         spell: sid(spell),
         target: CastTarget::Tile(pos),
+        active: None,
     }
 }
 
@@ -330,6 +331,7 @@ fn a_cast_at_a_unit_never_changes_terrain() {
         UnitAction::Cast {
             spell: sid("fire"),
             target: CastTarget::Unit(UnitId(3)),
+            active: None,
         },
     );
     assert_eq!(tile(&s, WOOD), FOREST);
@@ -474,6 +476,7 @@ fn terrain_events_and_burning_state_round_trip_through_ron() {
         Arc::new(classes()),
         s.tables.items.clone(),
         Arc::new(spells()),
+        Arc::new(skills()),
     );
     assert_eq!(loaded, s);
 }

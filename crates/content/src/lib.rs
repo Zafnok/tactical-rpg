@@ -13,12 +13,13 @@ pub mod keymap;
 pub mod map;
 pub mod palette;
 pub mod ron_loader;
+pub mod skill;
 pub mod spell;
 pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{ClassTable, ItemTable, SpellTable};
+use trpg_core::{ClassTable, ItemTable, SkillTable, SpellTable};
 
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use error::{ContentError, ContentErrors};
@@ -47,6 +48,8 @@ pub struct Content {
     pub items: ItemTable,
     /// Spells.
     pub spells: SpellTable,
+    /// Class skills.
+    pub skills: SkillTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
 }
@@ -76,6 +79,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         classes.as_ref().ok(),
         characters.as_ref().ok(),
     );
+    let skills = check_skill_references(skill::load(), classes.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
@@ -86,9 +90,30 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             classes,
             items,
             spells,
+            skills,
             characters,
         },
     )
+}
+
+/// Adds the skill reference checks ([`skill::check_references`]: every
+/// class active and passive exists, of the right kind) to the skills'
+/// result. Skipped when the skills or classes failed to load.
+fn check_skill_references(
+    skills: Result<SkillTable, Vec<ContentError>>,
+    classes: Option<&ClassTable>,
+) -> Result<SkillTable, Vec<ContentError>> {
+    match (skills, classes) {
+        (Ok(skills), Some(classes)) => {
+            let errors = skill::check_references(&skills, classes);
+            if errors.is_empty() {
+                Ok(skills)
+            } else {
+                Err(errors)
+            }
+        }
+        (skills, _) => skills,
+    }
 }
 
 /// Adds the spell reference checks ([`spell::check_references`]: every class
@@ -138,6 +163,7 @@ struct Loaded {
     classes: Result<ClassTable, Vec<ContentError>>,
     items: Result<ItemTable, Vec<ContentError>>,
     spells: Result<SpellTable, Vec<ContentError>>,
+    skills: Result<SkillTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
 }
 
@@ -170,6 +196,7 @@ fn assemble(
         classes: take(units.classes, &mut errors),
         items: take(units.items, &mut errors),
         spells: take(units.spells, &mut errors),
+        skills: take(units.skills, &mut errors),
         characters: take(units.characters, &mut errors),
     };
     if errors.is_empty() {
@@ -203,11 +230,16 @@ mod tests {
         spell::load(Some(&ok_terrain().unwrap_or_default().display))
     }
 
+    fn ok_skills() -> Result<SkillTable, Vec<ContentError>> {
+        skill::load()
+    }
+
     fn ok_units() -> Loaded {
         Loaded {
             classes: ok_classes(),
             items: item::load(),
             spells: ok_spells(),
+            skills: ok_skills(),
             characters: ok_characters(),
         }
     }
@@ -253,6 +285,10 @@ mod tests {
             ok_spells().ok().as_ref()
         );
         assert_eq!(
+            content.as_ref().map(|c| &c.skills),
+            ok_skills().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
@@ -268,7 +304,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 9] = ["p", "k", "f", "t", "m", "c", "i", "s", "u"];
+    const NAMES: [&str; 10] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "u"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -284,6 +320,7 @@ mod tests {
                     classes: Err(e("c")),
                     items: Err(e("i")),
                     spells: Err(e("s")),
+                    skills: Err(e("x")),
                     characters: Err(e("u")),
                 },
             ),
@@ -312,7 +349,8 @@ mod tests {
                     classes: if i == 5 { Err(e("c")) } else { ok_classes() },
                     items: if i == 6 { Err(e("i")) } else { item::load() },
                     spells: if i == 7 { Err(e("s")) } else { ok_spells() },
-                    characters: if i == 8 { Err(e("u")) } else { ok_characters() },
+                    skills: if i == 8 { Err(e("x")) } else { ok_skills() },
+                    characters: if i == 9 { Err(e("u")) } else { ok_characters() },
                 },
             )
         };
@@ -383,6 +421,26 @@ mod tests {
     }
 
     #[test]
+    fn skill_reference_checks_join_the_skill_errors() {
+        let classes = ok_classes().ok();
+        let skills = ok_skills();
+        assert_eq!(
+            check_skill_references(skills.clone(), classes.as_ref()),
+            skills
+        );
+        let empty = Ok(SkillTable::default());
+        let errors = check_skill_references(empty.clone(), classes.as_ref());
+        assert!(errors.is_err_and(|e| !e.is_empty()));
+        // Skipped when another file failed.
+        assert_eq!(check_skill_references(empty.clone(), None), empty);
+        let failed = Err(vec![ContentError::new("x", "bad")]);
+        assert_eq!(
+            check_skill_references(failed.clone(), classes.as_ref()),
+            failed
+        );
+    }
+
+    #[test]
     fn embedded_content_loads() {
         let content = load_embedded();
         assert!(content.is_ok(), "{content:?}");
@@ -399,6 +457,10 @@ mod tests {
         assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
+        );
+        assert_eq!(
+            content.as_ref().map(|c| &c.skills),
+            ok_skills().ok().as_ref()
         );
     }
 }

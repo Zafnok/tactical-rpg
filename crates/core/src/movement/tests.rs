@@ -98,6 +98,8 @@ fn unit(id: u32, class: &str, faction: Faction, pos: Pos, mov: StatValue) -> Uni
         personal_spells: vec![],
         learned: std::collections::BTreeSet::new(),
         spells: crate::spell::SpellState::default(),
+        learned_skills: std::collections::BTreeSet::new(),
+        effects: Vec::new(),
     }
 }
 

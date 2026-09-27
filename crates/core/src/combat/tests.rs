@@ -87,6 +87,7 @@ fn unit(s: Stats, weapon: Option<WeaponStats>, terrain: &TerrainRules) -> Combat
         weapon_rank: WeaponRank::E,
         armour_weight: 0,
         terrain,
+        mods: CombatMods::default(),
     }
 }
 
@@ -1139,6 +1140,7 @@ fn build(s: &Spec) -> CombatantInput<'static> {
         weapon_rank: s.rank,
         armour_weight: s.armour,
         terrain,
+        mods: CombatMods::default(),
     }
 }
 
@@ -1192,5 +1194,293 @@ proptest! {
             };
             prop_assert_eq!(s.hit, side.hit > 0);
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Skill modifiers (ticket 0311).
+
+fn modded(mut c: CombatantInput<'static>, mods: CombatMods) -> CombatantInput<'static> {
+    c.mods = mods;
+    c
+}
+
+#[test]
+fn skill_mods_add_hit_crit_and_might() {
+    let rules = rules();
+    let (a, d) = w1();
+    let mods = CombatMods {
+        hit: 5,
+        crit: 10,
+        might: 5,
+        ..CombatMods::default()
+    };
+    let f = fc(&rules, &modded(a, mods), &d, 1);
+    // W1 is dmg 9 (then 10) ×2, hit 94, crit 3; +5 power: 14 (then 16).
+    assert_eq!(f.attacker, numbers(14, 16, 99, 13, 2));
+    assert_eq!(f.defender, Some(numbers(12, 12, 63, 0, 1)));
+}
+
+#[test]
+fn skill_might_is_multiplied_and_halved_like_weapon_might() {
+    let rules = rules();
+    let might = CombatMods {
+        might: 3,
+        ..CombatMods::default()
+    };
+    // Spear against a mounted unit: all might ×2.
+    let (soldier, cavalier) = w2(6);
+    let plain = fc(&rules, &soldier, &cavalier, 1);
+    let boosted = fc(&rules, &modded(soldier, might), &cavalier, 1);
+    assert!(plain.attacker.effective);
+    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 6);
+    // A broken weapon halves it with the weapon's: (8 + 3) / 2 = 5, not 4 + 3.
+    let (axe, gauntlet) = w4();
+    let plain = fc(&rules, &axe, &gauntlet, 1);
+    let boosted = fc(&rules, &modded(axe, might), &gauntlet, 1);
+    assert!(plain.attacker.broken);
+    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 1);
+    // Weak spells too: (4 + 1) × 3 against 4 × 3.
+    let fire = spell(Element::Fire, 4, 95);
+    let one = CombatMods {
+        might: 1,
+        ..CombatMods::default()
+    };
+    let elemental = frost_elemental(Affinity::Absorb);
+    let plain = fc(&rules, &mage(fire.clone()), &elemental, 1);
+    let boosted = fc(&rules, &modded(mage(fire), one), &elemental, 1);
+    assert_eq!(boosted.attacker.damage - plain.attacker.damage, 3);
+}
+
+#[test]
+fn skill_avoid_helps_the_side_being_struck() {
+    let rules = rules();
+    let (a, d) = w1();
+    let dodge = CombatMods {
+        avoid: 10,
+        ..CombatMods::default()
+    };
+    let reckless = CombatMods {
+        avoid: -20,
+        ..CombatMods::default()
+    };
+    let f = fc(&rules, &a, &modded(d.clone(), dodge), 1);
+    assert_eq!((f.attacker.hit, f.defender.map(|d| d.hit)), (84, Some(63)));
+    let f = fc(&rules, &modded(a, reckless), &d, 1);
+    assert_eq!((f.attacker.hit, f.defender.map(|d| d.hit)), (94, Some(83)));
+}
+
+#[test]
+fn skill_attack_speed_changes_strikes() {
+    let rules = rules();
+    let (a, d) = w1();
+    // W1: AS 8 against 0, a gap of 8: two strikes.
+    let speed = |n| CombatMods {
+        attack_speed: n,
+        ..CombatMods::default()
+    };
+    assert_eq!(a.attack_speed(&rules), 8);
+    assert_eq!(modded(a.clone(), speed(2)).attack_speed(&rules), 10);
+    let f = fc(&rules, &a, &modded(d.clone(), speed(5)), 1);
+    assert_eq!(f.attacker.strikes, 1);
+    let f = fc(&rules, &a, &modded(d.clone(), speed(4)), 1);
+    assert_eq!(f.attacker.strikes, 2);
+    let f = fc(&rules, &modded(a, speed(6)), &d, 1);
+    assert_eq!(f.attacker.strikes, 3);
+}
+
+#[test]
+fn extra_strikes_add_after_attack_speed_up_to_the_maximum() {
+    let rules = rules();
+    let (a, d) = w1();
+    let extra = |n| CombatMods {
+        extra_strikes: n,
+        ..CombatMods::default()
+    };
+    let strikes = |a: &CombatantInput, d: &CombatantInput| {
+        let f = fc(&rules, a, d, 1);
+        (f.attacker.strikes, f.defender.map(|d| d.strikes))
+    };
+    assert_eq!(strikes(&modded(a.clone(), extra(1)), &d), (3, Some(1)));
+    assert_eq!(strikes(&modded(a.clone(), extra(2)), &d), (4, Some(1)));
+    assert_eq!(strikes(&modded(a.clone(), extra(9)), &d), (4, Some(1)));
+    assert_eq!(strikes(&a, &modded(d.clone(), extra(1))), (2, Some(2)));
+    let single = CombatMods {
+        single_strike: true,
+        extra_strikes: 1,
+        ..CombatMods::default()
+    };
+    assert_eq!(strikes(&modded(a, single), &d), (1, Some(1)));
+}
+
+#[test]
+fn double_crit_doubles_after_crit_bonuses_and_clamps() {
+    let rules = rules();
+    let (a, d) = w1();
+    let mods = |crit, double_crit| CombatMods {
+        crit,
+        double_crit,
+        ..CombatMods::default()
+    };
+    let crit = |m| fc(&rules, &modded(a.clone(), m), &d, 1).attacker.crit;
+    assert_eq!(crit(mods(0, true)), 6);
+    assert_eq!(crit(mods(10, true)), 26);
+    assert_eq!(crit(mods(10, false)), 13);
+    assert_eq!(crit(mods(60, true)), 100);
+    // Absorb still means no crit.
+    let f = fc(
+        &rules,
+        &modded(mage(spell(Element::Ice, 4, 95)), mods(50, true)),
+        &frost_elemental(Affinity::Absorb),
+        1,
+    );
+    assert_eq!(f.attacker.crit, 0);
+}
+
+#[test]
+fn ignore_terrain_drops_the_targets_terrain_def_and_avoid() {
+    let rules = rules();
+    let plain = fc(&rules, &ex2_attacker(), &ex2_defender(), 1);
+    let ignore = CombatMods {
+        ignore_terrain: true,
+        ..CombatMods::default()
+    };
+    let f = fc(&rules, &modded(ex2_attacker(), ignore), &ex2_defender(), 1);
+    // The defender stands in a forest: Def +1, avoid +20.
+    assert_eq!(f.attacker.damage, plain.attacker.damage + 1);
+    assert_eq!(f.attacker.hit, plain.attacker.hit + 20);
+    // Only for the side that has it.
+    assert_eq!(f.defender, plain.defender);
+    let f = fc(&rules, &ex2_attacker(), &modded(ex2_defender(), ignore), 1);
+    assert_eq!(f.attacker, plain.attacker);
+}
+
+#[test]
+fn pierce_lowers_def_or_res_not_below_zero() {
+    let rules = rules();
+    let pierce = |n| CombatMods {
+        pierce: n,
+        ..CombatMods::default()
+    };
+    let (a, d) = w1();
+    let damage = |a: &CombatantInput, d: &CombatantInput| fc(&rules, a, d, 1).attacker.damage;
+    // Brigand Def 4: 9 damage, then 11, then 13 (Def 0) whatever the excess.
+    assert_eq!(damage(&modded(a.clone(), pierce(2)), &d), 11);
+    assert_eq!(damage(&modded(a.clone(), pierce(5)), &d), 13);
+    let bare = CombatantInput {
+        stats: stats([20, 9, 0, 3, 5, 0, 1]),
+        ..d.clone()
+    };
+    assert_eq!(damage(&modded(a.clone(), pierce(5)), &bare), 13);
+    assert_eq!(damage(&a, &bare), 13);
+    // Terrain Def still counts.
+    let in_fort = CombatantInput {
+        terrain: &FORT,
+        ..d
+    };
+    assert_eq!(damage(&modded(a, pierce(5)), &in_fort), 11);
+    // Magic pierces Res.
+    let plain = fc(&rules, &ex2_attacker(), &ex2_defender(), 1);
+    let f = fc(
+        &rules,
+        &modded(ex2_attacker(), pierce(1)),
+        &ex2_defender(),
+        1,
+    );
+    assert_eq!(f.attacker.damage, plain.attacker.damage + 1);
+}
+
+#[test]
+fn combat_mods_add_up() {
+    let mut m = CombatMods {
+        hit: 1,
+        crit: 2,
+        might: 3,
+        avoid: 4,
+        attack_speed: 5,
+        extra_strikes: 1,
+        single_strike: false,
+        double_crit: true,
+        ignore_terrain: false,
+        pierce: 6,
+    };
+    m.add(&CombatMods {
+        hit: 10,
+        crit: 20,
+        might: 30,
+        avoid: 40,
+        attack_speed: 50,
+        extra_strikes: u8::MAX,
+        single_strike: true,
+        double_crit: false,
+        ignore_terrain: true,
+        pierce: 60,
+    });
+    assert_eq!(
+        m,
+        CombatMods {
+            hit: 11,
+            crit: 22,
+            might: 33,
+            avoid: 44,
+            attack_speed: 55,
+            extra_strikes: u8::MAX,
+            single_strike: true,
+            double_crit: true,
+            ignore_terrain: true,
+            pierce: 66,
+        }
+    );
+}
+
+/// The order of `by` in a combat where every strike misses.
+fn strike_order(attacker: u8, defender: u8) -> Vec<Side> {
+    let f = Forecast {
+        attacker: numbers(1, 1, 0, 0, attacker),
+        defender: Some(numbers(1, 1, 0, 0, defender)),
+    };
+    let mut rng = ScriptedRng::new(vec![0; 2 * usize::from(attacker + defender)]);
+    let out = resolve(&rules(), &f, hp(10, 10), hp(10, 10), &mut rng);
+    out.strikes.iter().map(|s| s.by).collect()
+}
+
+#[test]
+fn strikes_after_the_first_two_alternate_when_both_sides_have_some() {
+    use Side::{Attacker as A, Defender as D};
+    assert_eq!(strike_order(3, 2), [A, D, A, D, A]);
+    assert_eq!(strike_order(2, 3), [A, D, A, D, D]);
+    assert_eq!(strike_order(2, 2), [A, D, A, D]);
+    assert_eq!(strike_order(1, 3), [A, D, D, D]);
+    assert_eq!(strike_order(4, 1), [A, D, A, A, A]);
+    assert_eq!(strike_order(1, 1), [A, D]);
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(300))]
+
+    /// "+1 strike" skills never give more than the maximum.
+    #[test]
+    fn extra_strikes_never_exceed_the_maximum(
+        a in spec(),
+        d in spec(),
+        extra in 0u8..=6,
+        single in any::<bool>(),
+        distance in 1..=2u32,
+    ) {
+        let rules = rules();
+        let (a, d) = (build(&a), build(&d));
+        let Some(base) = forecast(&rules, &a, &d, distance) else {
+            return Ok(());
+        };
+        let mods = CombatMods { extra_strikes: extra, single_strike: single, ..CombatMods::default() };
+        let f = forecast(&rules, &modded(a, mods), &d, distance);
+        let strikes = f.map_or(0, |f| f.attacker.strikes);
+        prop_assert!((1..=rules.max_strikes()).contains(&strikes));
+        let expected = if single {
+            1
+        } else {
+            (base.attacker.strikes + extra).min(rules.max_strikes())
+        };
+        prop_assert_eq!(strikes, expected);
     }
 }

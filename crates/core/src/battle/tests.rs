@@ -19,7 +19,7 @@ use proptest::prelude::*;
 
 use super::*;
 use crate::class::{ArmourWeight, ClassDef, UnitTag, UnitTags, WeaponProficiency};
-use crate::combat::DamageType;
+use crate::combat::{CombatMods, DamageType};
 use crate::geom::Grid;
 use crate::item::{
     AccessoryDef, ArmourDef, ConsumableDef, ItemDef, Loadout, WEAPON_SLOTS, WeaponDef,
@@ -29,8 +29,12 @@ use crate::magic::{Affinity, Element};
 use crate::map::TileFeature;
 use crate::movement::reachable;
 use crate::shop::{Loot, ShopKind};
+use crate::skill::{
+    ActiveEffect, Area, Condition, PassiveEffect, SkillCost, SkillDef, SkillKind, Stance,
+    TimedMods, WeaponReq,
+};
 use crate::spell::{EffectDuration, SpellState, TerrainEffect};
-use crate::stats::{Growths, StatValue, Stats};
+use crate::stats::{Growths, StatKind, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
 use crate::weapon::WeaponKind;
 
@@ -112,8 +116,281 @@ fn class(id: &str, tags: UnitTags) -> ClassDef {
     }
 }
 
-/// `fighter` and `flier` (every weapon kind), `sage` (0 weapon slots) and
-/// `frost_elemental` (Fire `Weak`, Ice `Absorb`; `magic.md`).
+/// Test skills, shaped like `progression.md`'s but with round numbers.
+/// Actives: `keen` (3 dur: hit +30, crit +10), `flurry` (5 dur: +1 strike),
+/// `long_shot` / `long_shot_2` (3 dur, bows: range +1 / +2), `guarding`
+/// (2 dur: a stance rider, Def +3, from this combat on), `watchful` (2 dur:
+/// the same, from after this combat), `swoop` (3 dur: move 1 after),
+/// `overcast` (spell: might +5), `siphon` (spell: drain), `brace` (3 dur:
+/// own Def and Res +5), `war_cry` (5 dur: adjacent allies Str +2),
+/// `inspire` (3 dur: allies within 2 hit and avoid +10), `sanctuary` /
+/// `sanctuary_2` (5 dur: heal allies within 1 / 2 by Mag + 5), `shove`
+/// (3 dur). Passives: `focus` (swords: crit +10), `steadfast` (not own
+/// phase: Def +2), `fury` (HP ≤ half: crit +15), `charge` (moved ≥ 4:
+/// might +2), `sky_dodge` (against bows: avoid +10), `white_magic_1` /
+/// `white_magic_2` (heals +2 / +4), `black_magic` (spells: might +1),
+/// `skirmish` (bows: move 1 after), `leadership` (allies within 2: hit +10).
+fn skills() -> SkillTable {
+    let all = test_actives().into_iter().chain(test_passives());
+    SkillTable {
+        skills: all.map(|s| (s.id.clone(), s)).collect(),
+    }
+}
+
+/// A test skill (family = id, rank 1).
+fn test_skill(id: &str, kind: SkillKind) -> SkillDef {
+    SkillDef {
+        id: SkillId::new(id),
+        name: id.into(),
+        family: id.into(),
+        rank: 1,
+        kind,
+    }
+}
+
+/// A combat active with only `mods`.
+fn test_strike(cost: SkillCost, with: WeaponReq, mods: CombatMods) -> SkillKind {
+    SkillKind::Active {
+        cost,
+        effect: ActiveEffect::Strike {
+            with,
+            mods,
+            range: 0,
+            stance: None,
+            post_move: 0,
+            drain: false,
+        },
+    }
+}
+
+/// `kind` with its strike's fields changed by `f`.
+fn test_strike_with(kind: SkillKind, f: impl FnOnce(&mut ActiveEffect)) -> SkillKind {
+    match kind {
+        SkillKind::Active { cost, mut effect } => {
+            f(&mut effect);
+            SkillKind::Active { cost, effect }
+        }
+        passive @ SkillKind::Passive(_) => passive,
+    }
+}
+
+/// The actives of [`skills`].
+fn test_actives() -> Vec<SkillDef> {
+    let mut all = test_combat_actives();
+    all.extend(test_other_actives());
+    all
+}
+
+/// The combat actives of [`skills`].
+fn test_combat_actives() -> Vec<SkillDef> {
+    let dur = SkillCost::Durability;
+    let m = CombatMods::default;
+    let timed = |stats: Vec<(StatKind, StatValue)>, combat| TimedMods { stats, combat };
+    let bow = |range| {
+        test_strike_with(
+            test_strike(dur(3), WeaponReq::Kind(WeaponKind::Bow), m()),
+            |e| {
+                if let ActiveEffect::Strike { range: r, .. } = e {
+                    *r = range;
+                }
+            },
+        )
+    };
+    let keen = CombatMods {
+        hit: 30,
+        crit: 10,
+        ..m()
+    };
+    vec![
+        test_skill("keen", test_strike(dur(3), WeaponReq::Any, keen)),
+        test_skill(
+            "flurry",
+            test_strike(
+                dur(5),
+                WeaponReq::Any,
+                CombatMods {
+                    extra_strikes: 1,
+                    ..m()
+                },
+            ),
+        ),
+        test_skill("long_shot", bow(1)),
+        SkillDef {
+            family: "long_shot".into(),
+            rank: 2,
+            ..test_skill("long_shot_2", bow(2))
+        },
+        test_skill(
+            "guarding",
+            test_strike_with(test_strike(dur(2), WeaponReq::Any, m()), |e| {
+                if let ActiveEffect::Strike { stance, .. } = e {
+                    *stance = Some(Stance {
+                        mods: timed(vec![(StatKind::Def, 3)], m()),
+                        this_combat: true,
+                    });
+                }
+            }),
+        ),
+        test_skill(
+            "watchful",
+            test_strike_with(test_strike(dur(2), WeaponReq::Any, m()), |e| {
+                if let ActiveEffect::Strike { stance, .. } = e {
+                    *stance = Some(Stance {
+                        mods: timed(vec![(StatKind::Def, 3)], m()),
+                        this_combat: false,
+                    });
+                }
+            }),
+        ),
+        test_skill(
+            "swoop",
+            test_strike_with(test_strike(dur(3), WeaponReq::Any, m()), |e| {
+                if let ActiveEffect::Strike { post_move, .. } = e {
+                    *post_move = 1;
+                }
+            }),
+        ),
+        test_skill(
+            "overcast",
+            test_strike(
+                SkillCost::ExtraSpellUse,
+                WeaponReq::Spell,
+                CombatMods { might: 5, ..m() },
+            ),
+        ),
+        test_skill(
+            "siphon",
+            test_strike_with(
+                test_strike(SkillCost::ExtraSpellUse, WeaponReq::Spell, m()),
+                |e| {
+                    if let ActiveEffect::Strike { drain, .. } = e {
+                        *drain = true;
+                    }
+                },
+            ),
+        ),
+    ]
+}
+
+/// The non-combat actives of [`skills`].
+fn test_other_actives() -> Vec<SkillDef> {
+    let dur = SkillCost::Durability;
+    let m = CombatMods::default;
+    let active = |cost, effect| SkillKind::Active { cost, effect };
+    let timed = |stats: Vec<(StatKind, StatValue)>, combat| TimedMods { stats, combat };
+    let buff = |cost, area, mods| active(cost, ActiveEffect::Buff { area, mods });
+    let heal = |radius| active(dur(5), ActiveEffect::Heal { radius, power: 5 });
+    vec![
+        test_skill(
+            "brace",
+            buff(
+                dur(3),
+                Area::Own,
+                timed(vec![(StatKind::Def, 5), (StatKind::Res, 5)], m()),
+            ),
+        ),
+        test_skill(
+            "war_cry",
+            buff(
+                dur(5),
+                Area::Allies { radius: 1 },
+                timed(vec![(StatKind::Str, 2)], m()),
+            ),
+        ),
+        test_skill(
+            "inspire",
+            buff(
+                dur(3),
+                Area::Allies { radius: 2 },
+                timed(
+                    vec![],
+                    CombatMods {
+                        hit: 10,
+                        avoid: 10,
+                        ..m()
+                    },
+                ),
+            ),
+        ),
+        test_skill("sanctuary", heal(1)),
+        SkillDef {
+            family: "sanctuary".into(),
+            rank: 2,
+            ..test_skill("sanctuary_2", heal(2))
+        },
+        test_skill("shove", active(dur(3), ActiveEffect::Push { collision: 5 })),
+    ]
+}
+
+/// The passives of [`skills`].
+fn test_passives() -> Vec<SkillDef> {
+    let m = CombatMods::default;
+    let combat = |mods, when| SkillKind::Passive(vec![PassiveEffect::CombatMod { mods, when }]);
+    let one = |effect| SkillKind::Passive(vec![effect]);
+    let ranked = |id: &str, family: &str, rank, kind| SkillDef {
+        family: family.into(),
+        rank,
+        ..test_skill(id, kind)
+    };
+    let sword = Condition::WeaponKindEquipped(WeaponKind::Sword);
+    let bow = Condition::AgainstWeaponKind(WeaponKind::Bow);
+    vec![
+        test_skill("focus", combat(CombatMods { crit: 10, ..m() }, sword)),
+        test_skill(
+            "steadfast",
+            one(PassiveEffect::StatWhile {
+                stat: StatKind::Def,
+                amount: 2,
+                when: Condition::NotOwnPhase,
+            }),
+        ),
+        test_skill(
+            "fury",
+            combat(CombatMods { crit: 15, ..m() }, Condition::HpAtMostHalf),
+        ),
+        test_skill(
+            "charge",
+            combat(CombatMods { might: 2, ..m() }, Condition::MovedAtLeast(4)),
+        ),
+        test_skill("sky_dodge", combat(CombatMods { avoid: 10, ..m() }, bow)),
+        ranked(
+            "white_magic_1",
+            "white_magic",
+            1,
+            one(PassiveEffect::HealBonus(2)),
+        ),
+        ranked(
+            "white_magic_2",
+            "white_magic",
+            2,
+            one(PassiveEffect::HealBonus(4)),
+        ),
+        test_skill("black_magic", one(PassiveEffect::SpellMight(1))),
+        test_skill(
+            "skirmish",
+            one(PassiveEffect::PostActionMove {
+                tiles: 1,
+                when: Condition::WeaponKindEquipped(WeaponKind::Bow),
+            }),
+        ),
+        test_skill(
+            "leadership",
+            one(PassiveEffect::AllyAura {
+                radius: 2,
+                mods: CombatMods { hit: 10, ..m() },
+            }),
+        ),
+    ]
+}
+
+/// The class whose active is `skill` (`with_<skill>`, like `fighter`).
+fn skill_class(skill: &str) -> ClassId {
+    ClassId(format!("with_{skill}"))
+}
+
+/// `fighter` and `flier` (every weapon kind), `sage` (0 weapon slots),
+/// `frost_elemental` (Fire `Weak`, Ice `Absorb`; `magic.md`), and a
+/// `with_<skill>` class like `fighter` for every active of [`skills`].
 fn classes() -> ClassTable {
     let flier = UnitTags::from_tags(&[UnitTag::Flying]);
     let sage = ClassDef {
@@ -128,6 +405,14 @@ fn classes() -> ClassTable {
         ],
         ..class("frost_elemental", UnitTags::default())
     };
+    let actives = skills()
+        .skills
+        .into_values()
+        .filter(SkillDef::is_active)
+        .map(|s| ClassDef {
+            active: Some(s.id.clone()),
+            ..class(&skill_class(&s.id.0).0, UnitTags::default())
+        });
     ClassTable {
         classes: [
             class("fighter", UnitTags::default()),
@@ -136,8 +421,10 @@ fn classes() -> ClassTable {
             elemental,
         ]
         .into_iter()
+        .chain(actives)
         .map(|c| (c.id.clone(), c))
         .collect(),
+        class_level_cap: 10,
         hard_ceilings: Stats::from_growable([99; 7], 15),
         ..ClassTable::default()
     }
@@ -426,6 +713,8 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         personal_spells: vec![],
         learned: BTreeSet::new(),
         spells: SpellState::default(),
+        learned_skills: BTreeSet::new(),
+        effects: Vec::new(),
     };
     carrying(u, &[weapon(1, 1, 3)])
 }
@@ -460,6 +749,7 @@ fn setup(units: Vec<Unit>) -> BattleSetup {
         classes: Arc::new(classes()),
         items: Arc::new(items_for(&units)),
         spells: Arc::new(spells()),
+        skills: Arc::new(skills()),
         pack: BattlePack {
             items: vec![item("potion"), item("elixir")],
             cap: 3,
@@ -500,6 +790,7 @@ fn attack(target: u32) -> UnitAction {
     UnitAction::Attack {
         target: UnitId(target),
         slot: 0,
+        active: None,
     }
 }
 
@@ -1632,6 +1923,7 @@ fn attack_with(target: u32, slot: usize) -> UnitAction {
     UnitAction::Attack {
         target: UnitId(target),
         slot,
+        active: None,
     }
 }
 
@@ -2047,6 +2339,7 @@ fn state_round_trips_through_ron_and_needs_its_tables_back() {
         Arc::new(classes()),
         Arc::new(items_for(&skirmish())),
         Arc::new(spells()),
+        Arc::new(skills()),
     );
     assert_eq!(loaded, s);
     let cmd = Command::Act {
@@ -2081,6 +2374,9 @@ fn commands_and_events_round_trip_through_ron() {
 /// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
 /// packs are all known; weapons and spells are all known.
 fn legal_commands(s: &BattleState) -> Vec<Command> {
+    if let Some(moves) = legal_moves_after(s) {
+        return moves;
+    }
     let mut out = vec![Command::EndPhase];
     let ready = s
         .units()
@@ -2124,7 +2420,11 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
                     if u.faction.is_hostile_to(t.faction)
                         && (w.min_range..=w.max_range).contains(&d)
                     {
-                        add(UnitAction::Attack { target: t.id, slot });
+                        add(UnitAction::Attack {
+                            target: t.id,
+                            slot,
+                            active: None,
+                        });
                     }
                 }
             }
@@ -2166,7 +2466,124 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
             }
         }
     }
+    let skills = legal_skill_commands(s, &out);
+    out.extend(skills);
     out
+}
+
+/// If a unit was offered a move after its attack, the only legal commands:
+/// staying, or moving to each tile it can reach.
+fn legal_moves_after(s: &BattleState) -> Option<Vec<Command>> {
+    let pending = s.pending_move()?;
+    let stay = std::iter::once(None);
+    let moves = stay
+        .chain(s.move_after_tiles().into_iter().map(Some))
+        .map(|to| Command::MoveAfter {
+            unit: pending.unit,
+            to,
+        })
+        .collect();
+    Some(moves)
+}
+
+/// Some skill commands, kept only if `s` accepts them: each ready unit's
+/// combat actives on its first attacks and casts in `commands`, its other
+/// actives on those attacks'
+/// targets, and its other actives from its own tile, with no target or on
+/// an adjacent hostile unit.
+fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
+    let mut out = Vec::new();
+    let ready = s
+        .units()
+        .iter()
+        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
+    for u in ready {
+        let usable = u.usable_skills(s.classes(), s.skills());
+        let ids = |combat: bool| -> Vec<SkillId> {
+            usable
+                .iter()
+                .filter(|d| d.is_active() && d.is_combat() == combat)
+                .map(|d| d.id.clone())
+                .collect()
+        };
+        let (combat, actions) = (ids(true), ids(false));
+        let act = |dest, action| Command::Act {
+            unit: u.id,
+            dest,
+            action,
+        };
+        let attacks = commands
+            .iter()
+            .filter_map(|c| match c {
+                Command::Act { unit, dest, action } if *unit == u.id => Some((*dest, action)),
+                _ => None,
+            })
+            .filter(|(_, a)| {
+                matches!(
+                    a,
+                    UnitAction::Attack { .. }
+                        | UnitAction::Cast {
+                            target: CastTarget::Unit(_),
+                            ..
+                        }
+                )
+            })
+            .take(2);
+        for (dest, action) in attacks {
+            for variant in attack_variants(action, &combat) {
+                out.push(act(dest, variant));
+            }
+            if let UnitAction::Attack { target, .. } = action {
+                for skill in &actions {
+                    out.push(act(
+                        dest,
+                        UnitAction::UseSkill {
+                            skill: skill.clone(),
+                            target: Some(*target),
+                        },
+                    ));
+                }
+            }
+        }
+        let targets: Vec<Option<UnitId>> = std::iter::once(None)
+            .chain(
+                s.units()
+                    .iter()
+                    .filter(|t| {
+                        u.faction.is_hostile_to(t.faction) && Pos::manhattan(u.pos, t.pos) == 1
+                    })
+                    .map(|t| Some(t.id)),
+            )
+            .collect();
+        for skill in &actions {
+            for &target in &targets {
+                let skill = skill.clone();
+                out.push(act(u.pos, UnitAction::UseSkill { skill, target }));
+            }
+        }
+    }
+    out.retain(|c| s.clone().apply(c).is_ok());
+    out
+}
+
+/// `action` (an attack or a cast at a unit) with each of `combat` actives.
+fn attack_variants(action: &UnitAction, combat: &[SkillId]) -> Vec<UnitAction> {
+    combat
+        .iter()
+        .filter_map(|skill| match action.clone() {
+            UnitAction::Attack { target, slot, .. } => Some(UnitAction::Attack {
+                target,
+                slot,
+                active: Some(skill.clone()),
+            }),
+            UnitAction::Cast { spell, target, .. } => Some(UnitAction::Cast {
+                spell,
+                target,
+                active: Some(skill.clone()),
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Every spell `u` can cast from `dest`: each learned spell with a use left,
@@ -2186,6 +2603,7 @@ fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
                 out.push(UnitAction::Cast {
                     spell: spell.clone(),
                     target: CastTarget::Unit(t.id),
+                    active: None,
                 });
             }
         }
@@ -2199,6 +2617,7 @@ fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
                 out.push(UnitAction::Cast {
                     spell: spell.clone(),
                     target: CastTarget::Tile(pos),
+                    active: None,
                 });
             }
         }
@@ -2291,6 +2710,16 @@ fn spell_uses(s: &BattleState) -> BTreeMap<(UnitId, SpellId), u8> {
         .collect()
 }
 
+/// Durability left of unit `id`'s weapon in `slot` (on the map or fallen).
+fn durability(s: &BattleState, id: UnitId, slot: usize) -> Option<u32> {
+    s.units()
+        .iter()
+        .chain(s.fallen())
+        .find(|u| u.id == id)
+        .and_then(|u| u.loadout.weapon(slot))
+        .map(|w| w.durability_left)
+}
+
 /// The change in gold `events` account for.
 fn gold_flow(events: &[Event]) -> i64 {
     events
@@ -2347,8 +2776,21 @@ prop_compose! {
         res in 0..=3,
         spells in prop::sample::subsequence(vec!["bolt", "fire", "frost", "heal", "mend"], 0..=3),
         spell_equipped in prop::bool::weighted(0.3),
+        class in prop::sample::select(vec![
+            "fighter", "keen", "flurry", "long_shot", "guarding", "swoop", "overcast", "siphon",
+            "brace", "war_cry", "inspire", "sanctuary", "sanctuary_2", "shove",
+        ]),
+        passives in prop::sample::subsequence(
+            vec!["focus", "steadfast", "fury", "charge", "sky_dodge", "white_magic_1",
+                 "black_magic", "skirmish", "leadership"],
+            0..=3,
+        ),
     ) -> Unit {
         let mut u = unit(0, Faction::Player, p(0, 0));
+        if class != "fighter" {
+            u.class = skill_class(class);
+        }
+        u.learned_skills = passives.iter().map(|sk| SkillId::new(sk)).collect();
         u.stats = Stats::from_growable([hp, str, mag, dex, spd, def, res], mov);
         u.hp = (hp - wounds).max(1);
         let mut weapons = Vec::new();
@@ -2438,7 +2880,12 @@ prop_compose! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(512))]
+    // Shrinking a failing battle replays it many times; bounded so a
+    // failure is reported in seconds (cargo-mutants times out otherwise).
+    #![proptest_config(ProptestConfig {
+        max_shrink_iters: 256,
+        ..ProptestConfig::with_cases(512)
+    })]
 
     #[test]
     fn random_legal_play_keeps_the_invariants(
@@ -2459,6 +2906,12 @@ proptest! {
             let gold = s.gold();
             let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
             let uses_before = spell_uses(&s);
+            let durability_before: BTreeMap<(UnitId, usize), Option<u32>> = s
+                .units()
+                .iter()
+                .flat_map(|u| (0..WEAPON_SLOTS).map(move |slot| (u.id, slot)))
+                .map(|key| (key, durability(&s, key.0, key.1)))
+                .collect();
             let mut tiles = s.map().tiles.clone();
             let before: BTreeMap<UnitId, Pos> = s.units().iter().map(|u| (u.id, u.pos)).collect();
             let events = s.apply(cmd);
@@ -2479,7 +2932,38 @@ proptest! {
                     Event::SpellUsesChanged { unit, spell, .. } if (unit, spell) == (&key.0, &key.1)
                 )).count();
                 prop_assert_eq!(u32::from(before) - u32::from(after), u32::try_from(spent).unwrap());
-                prop_assert!(spent <= 1);
+                // A cast, plus a spell active's extra use.
+                prop_assert!(spent <= 2);
+            }
+            // Durability never rises above the weapon's, and drops only by
+            // what the events say (or a sale, purchase or repair).
+            for u in s.units().iter().chain(s.fallen()) {
+                for w in u.loadout.weapons.iter().flatten() {
+                    prop_assert!(w.durability_left <= s.items().weapon(&w.def).unwrap().durability);
+                }
+            }
+            for (key, before) in &durability_before {
+                let after = durability(&s, key.0, key.1);
+                let shop = events.iter().any(|e| matches!(
+                    e,
+                    Event::Repaired { unit, .. } | Event::Sold { unit, .. } | Event::Bought { unit, .. }
+                        if *unit == key.0
+                ));
+                let paid: u32 = events.iter().map(|e| match e {
+                    Event::DurabilitySpent { unit, slot, amount, .. } if (*unit, *slot) == *key => *amount,
+                    _ => 0,
+                }).sum();
+                if !shop {
+                    prop_assert_eq!(before.map(|b| b - paid), after);
+                }
+            }
+            // Effects of a phase are gone once it has started.
+            for e in &events {
+                if let Event::PhaseStarted { phase, .. } = e {
+                    for u in s.units() {
+                        prop_assert!(u.effects.iter().all(|x| x.until != *phase || s.phase() != *phase));
+                    }
+                }
             }
             // Gold moves only by what the events say, and never below 0.
             prop_assert_eq!(i64::from(s.gold()), i64::from(gold) + gold_flow(&events));
@@ -2560,5 +3044,6 @@ proptest! {
 }
 
 mod shop;
+mod skill;
 mod spell;
 mod terrain;

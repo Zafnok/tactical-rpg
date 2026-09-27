@@ -10,6 +10,7 @@ pub mod map;
 pub mod movement;
 pub mod rng;
 pub mod shop;
+pub mod skill;
 pub mod spell;
 pub mod stats;
 pub mod terrain;
@@ -18,15 +19,15 @@ pub mod weapon;
 
 pub use battle::{
     BattleSetup, BattleState, Burning, CastTarget, Command, CommandError, Destination, Event,
-    Objective, Outcome, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
+    Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
 };
 pub use class::{
-    ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, SkillId, Tier, UnitTag,
-    UnitTags, WeaponProficiency,
+    ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,
+    WeaponProficiency,
 };
 pub use combat::{
-    CombatHp, CombatOutcome, CombatRules, CombatantInput, DamageType, Forecast, Side, SideForecast,
-    Strike, WeaponStats, WeaponTrait, forecast, resolve, roll_hit,
+    CombatHp, CombatMods, CombatOutcome, CombatRules, CombatantInput, DamageType, Forecast, Side,
+    SideForecast, Strike, WeaponStats, WeaponTrait, forecast, resolve, roll_hit,
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
 pub use item::{
@@ -42,6 +43,11 @@ pub use movement::{
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
+pub use skill::{
+    ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, Paid, PassiveEffect,
+    SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance, TimedEffect,
+    TimedMods, WeaponReq, check_cost, pay_cost,
+};
 pub use spell::{
     EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,
     TerrainEffect,

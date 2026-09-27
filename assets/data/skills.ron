@@ -1,0 +1,273 @@
+// Every class skill. Source: docs/design/progression.md (0005), "Skill list:
+// tiers 1-2" and the Flier's row of "Flying line skills"; costs from
+// docs/design/combat-arts.md (0014), "Class actives now cost durability".
+// Every number is TUNABLE (placeholder skills until the playtest; FE-sized
+// until ticket 0013). Loaded by trpg_content::skill; the rules are in
+// trpg_core::skill and trpg_core::battle.
+//
+// id: unique. family / rank: a higher rank of a family supersedes a lower
+//   one (both default to the id and 1). (family, rank) is unique.
+// kind: Passive([effects]) or Active(cost: C, effect: E).
+//
+// Passive effects:
+//   StatWhile(stat: Def, amount: n, when: W)   a stat bonus in combat
+//   CombatMod(mods: M, when: W)                combat bonuses
+//   HealBonus(n)                               heal spells restore n more
+//   SpellMight(n)                              attack spells get might +n
+//   PostActionMove(tiles: n, when: W)          may move n tiles after attacking
+//                                              (chosen after the combat)
+//   AllyAura(radius: n, mods: M)               other allies within n tiles
+// When (W): Always, WeaponKindEquipped(kind), NotOwnPhase, HpAtMostHalf,
+//   MovedAtLeast(tiles), AgainstWeaponKind(kind).
+// Combat mods (M), all optional: (hit: n, crit: n, might: n, avoid: n,
+//   attack_speed: n, extra_strikes: n, single_strike: bool,
+//   double_crit: bool, ignore_terrain: bool, pierce: n). "might" adds to
+//   the weapon's might: halved when broken, multiplied by effectiveness
+//   (Nick). "Damage +n" skills use it too.
+//
+// Cost (C): Durability(n >= 1), or ExtraSpellUse (spell actives only).
+// Active effects (E):
+//   Strike(with: Any | Kind(kind) | Spell, mods: M, range: n, stance: T,
+//          post_move: n, drain: bool)   a combat active; all but `with`
+//          optional. `mods` count in this combat only. A stance rider,
+//          `stance: Some((mods: (stats: [...], combat: M), this_combat: b))`,
+//          lasts from the attack until the user's next phase, and counts in
+//          the attack's own combat too if `this_combat: true` (Nick). After
+//          the combat the user is offered a `post_move` of n tiles, chosen
+//          then. Spell (and only Spell) uses ExtraSpellUse.
+//   Buff(area: Own | Allies(radius: n), mods: (stats: [(stat, n)], combat: M))
+//          until the start of the user's next phase.
+//   Heal(radius: n, power: n)   other allies within n tiles, Mag + power
+//                               (+ White Magic's bonus, Nick).
+//   Push(collision: n)          Shove: pushes an adjacent enemy 1 tile; if
+//                               it can't move there (or hits fire) it takes
+//                               n collision damage (n >= 0).
+(
+    skills: [
+        // ───────────────────────────── Tier 1 ─────────────────────────────
+        // Swordsman
+        (
+            id: "keen_edge", name: "Keen Edge",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Sword), mods: (hit: 30, crit: 10))),
+        ),
+        (
+            id: "sword_focus_1", name: "Sword Focus 1", family: "sword_focus", rank: 1,
+            kind: Passive([CombatMod(mods: (crit: 10), when: WeaponKindEquipped(Sword))]),
+        ),
+        // Brawler
+        (
+            id: "flurry", name: "Flurry",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Gauntlet), mods: (extra_strikes: 1))),
+        ),
+        (
+            id: "light_feet_1", name: "Light Feet 1", family: "light_feet", rank: 1,
+            kind: Passive([CombatMod(mods: (attack_speed: 2), when: WeaponKindEquipped(Gauntlet))]),
+        ),
+        // Raider
+        (
+            id: "heavy_blow", name: "Heavy Blow",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Axe), mods: (might: 5, single_strike: true))),
+        ),
+        (
+            id: "axe_focus_1", name: "Axe Focus 1", family: "axe_focus", rank: 1,
+            kind: Passive([CombatMod(mods: (hit: 10), when: WeaponKindEquipped(Axe))]),
+        ),
+        // Archer (Nick, reviewing ticket 0311: Vault replaces Long Shot, which
+        // moves to the Marksman, and replaces the Skirmish passive)
+        (
+            id: "vault", name: "Vault",
+            kind: Active(cost: Durability(1), effect: Strike(with: Kind(Bow), post_move: 1)),
+        ),
+        (
+            id: "bow_focus_1", name: "Bow Focus 1", family: "bow_focus", rank: 1,
+            kind: Passive([CombatMod(mods: (hit: 5), when: WeaponKindEquipped(Bow))]),
+        ),
+        // Guard
+        (
+            id: "brace", name: "Brace",
+            kind: Active(cost: Durability(3), effect: Buff(area: Own, mods: (stats: [(Def, 5), (Res, 5)]))),
+        ),
+        (
+            id: "steadfast_1", name: "Steadfast 1", family: "steadfast", rank: 1,
+            kind: Passive([StatWhile(stat: Def, amount: 2, when: NotOwnPhase)]),
+        ),
+        // Rider
+        (
+            id: "lance_rush", name: "Lance Rush",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Spear), mods: (might: 5))),
+        ),
+        (
+            id: "charge_1", name: "Charge 1", family: "charge", rank: 1,
+            kind: Passive([CombatMod(mods: (might: 2), when: MovedAtLeast(4))]),
+        ),
+        // Mage (and Sorcerer)
+        (
+            id: "overcast", name: "Overcast",
+            kind: Active(cost: ExtraSpellUse, effect: Strike(with: Spell, mods: (might: 5))),
+        ),
+        (
+            id: "black_magic_1", name: "Black Magic 1", family: "black_magic", rank: 1,
+            kind: Passive([SpellMight(1)]),
+        ),
+        // Cleric
+        (
+            id: "sanctuary", name: "Sanctuary", family: "sanctuary", rank: 1,
+            kind: Active(cost: Durability(5), effect: Heal(radius: 1, power: 5)),
+        ),
+        (
+            id: "white_magic_1", name: "White Magic 1", family: "white_magic", rank: 1,
+            kind: Passive([HealBonus(2)]),
+        ),
+        // Exile (lord)
+        (
+            id: "inspire", name: "Inspire",
+            kind: Active(cost: Durability(3), effect: Buff(area: Allies(radius: 2), mods: (combat: (hit: 10, avoid: 10)))),
+        ),
+        (
+            id: "leadership_1", name: "Leadership 1", family: "leadership", rank: 1,
+            kind: Passive([AllyAura(radius: 2, mods: (hit: 10))]),
+        ),
+        // ───────────────────────────── Tier 2 ─────────────────────────────
+        // Duelist
+        (
+            id: "blade_flurry", name: "Blade Flurry",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Sword), mods: (extra_strikes: 1))),
+        ),
+        (
+            id: "sword_focus_2", name: "Sword Focus 2", family: "sword_focus", rank: 2,
+            kind: Passive([CombatMod(mods: (crit: 20), when: WeaponKindEquipped(Sword))]),
+        ),
+        // Shadowblade
+        (
+            id: "deadly_blow", name: "Deadly Blow",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Sword), mods: (double_crit: true))),
+        ),
+        (
+            id: "evasion_1", name: "Evasion 1", family: "evasion", rank: 1,
+            kind: Passive([CombatMod(mods: (avoid: 10), when: Always)]),
+        ),
+        // Striker
+        (
+            id: "hundred_fists", name: "Hundred Fists",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Gauntlet), mods: (extra_strikes: 1, hit: 10))),
+        ),
+        (
+            id: "light_feet_2", name: "Light Feet 2", family: "light_feet", rank: 2,
+            kind: Passive([CombatMod(mods: (attack_speed: 4), when: WeaponKindEquipped(Gauntlet))]),
+        ),
+        // Grappler
+        (
+            id: "shove", name: "Shove",
+            kind: Active(cost: Durability(3), effect: Push(collision: 5)),
+        ),
+        (
+            id: "iron_grip", name: "Iron Grip",
+            kind: Passive([StatWhile(stat: Def, amount: 3, when: WeaponKindEquipped(Gauntlet))]),
+        ),
+        // Berserker
+        (
+            id: "rampage", name: "Rampage",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Axe), mods: (might: 8, avoid: -20))),
+        ),
+        (
+            id: "fury", name: "Fury",
+            kind: Passive([CombatMod(mods: (crit: 15), when: HpAtMostHalf)]),
+        ),
+        // Vanguard
+        (
+            id: "war_cry", name: "War Cry",
+            kind: Active(cost: Durability(5), effect: Buff(area: Allies(radius: 1), mods: (stats: [(Str, 2)]))),
+        ),
+        (
+            id: "axe_focus_2", name: "Axe Focus 2", family: "axe_focus", rank: 2,
+            kind: Passive([CombatMod(mods: (hit: 20), when: WeaponKindEquipped(Axe))]),
+        ),
+        // Marksman
+        (
+            id: "long_shot", name: "Long Shot",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Bow), range: 2)),
+        ),
+        (
+            id: "bow_focus_2", name: "Bow Focus 2", family: "bow_focus", rank: 2,
+            kind: Passive([CombatMod(mods: (hit: 10, crit: 5), when: WeaponKindEquipped(Bow))]),
+        ),
+        // Outrider (passives: bow_focus_1, charge_1)
+        (
+            id: "volley", name: "Volley",
+            kind: Active(cost: Durability(5), effect: Strike(with: Kind(Bow), mods: (extra_strikes: 1))),
+        ),
+        // Bulwark
+        (
+            id: "fortify", name: "Fortify",
+            kind: Active(cost: Durability(5), effect: Buff(area: Own, mods: (stats: [(Def, 8), (Res, 8)]))),
+        ),
+        (
+            id: "steadfast_2", name: "Steadfast 2", family: "steadfast", rank: 2,
+            kind: Passive([StatWhile(stat: Def, amount: 4, when: NotOwnPhase)]),
+        ),
+        // Iron Rider (passives: charge_1, steadfast_1)
+        (
+            id: "trample", name: "Trample",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Axe), mods: (might: 4, ignore_terrain: true))),
+        ),
+        // Lancer
+        (
+            id: "piercing_lance", name: "Piercing Lance",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Spear), mods: (pierce: 5))),
+        ),
+        (
+            id: "charge_2", name: "Charge 2", family: "charge", rank: 2,
+            kind: Passive([CombatMod(mods: (might: 4), when: MovedAtLeast(4))]),
+        ),
+        // Sorcerer (active: overcast)
+        (
+            id: "black_magic_2", name: "Black Magic 2", family: "black_magic", rank: 2,
+            kind: Passive([SpellMight(3)]),
+        ),
+        // Mystic (passives: black_magic_1, white_magic_1)
+        (
+            id: "siphon", name: "Siphon",
+            kind: Active(cost: ExtraSpellUse, effect: Strike(with: Spell, drain: true)),
+        ),
+        // Priest
+        (
+            id: "sanctuary_2", name: "Sanctuary 2", family: "sanctuary", rank: 2,
+            kind: Active(cost: Durability(5), effect: Heal(radius: 2, power: 5)),
+        ),
+        (
+            id: "white_magic_2", name: "White Magic 2", family: "white_magic", rank: 2,
+            kind: Passive([HealBonus(4)]),
+        ),
+        // Blade Heir (lord)
+        (
+            id: "crest_strike", name: "Crest Strike",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Sword), mods: (might: 4, hit: 15))),
+        ),
+        (
+            id: "resolve", name: "Resolve",
+            kind: Passive([
+                StatWhile(stat: Str, amount: 3, when: HpAtMostHalf),
+                StatWhile(stat: Spd, amount: 3, when: HpAtMostHalf),
+            ]),
+        ),
+        // Commander (lord)
+        (
+            id: "rally", name: "Rally",
+            kind: Active(cost: Durability(5), effect: Buff(area: Allies(radius: 2), mods: (stats: [(Str, 3), (Def, 3)]))),
+        ),
+        (
+            id: "leadership_2", name: "Leadership 2", family: "leadership", rank: 2,
+            kind: Passive([AllyAura(radius: 2, mods: (hit: 10, avoid: 10))]),
+        ),
+        // ───────────────────────────── Tier 3 ─────────────────────────────
+        // Flier (the only tier-3 skills designed so far; ticket 1001)
+        (
+            id: "swoop", name: "Swoop",
+            kind: Active(cost: Durability(3), effect: Strike(with: Kind(Spear), post_move: 1)),
+        ),
+        (
+            id: "sky_dodge_1", name: "Sky Dodge 1", family: "sky_dodge", rank: 1,
+            kind: Passive([CombatMod(mods: (avoid: 10), when: AgainstWeaponKind(Bow))]),
+        ),
+    ],
+)

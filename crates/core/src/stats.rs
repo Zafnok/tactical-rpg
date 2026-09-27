@@ -12,7 +12,7 @@ pub type StatValue = i32;
 pub type GrowthValue = u16;
 
 /// One of the unit stats. Order is the fixed stat order of the design docs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum StatKind {
     /// Max hit points.
     Hp,

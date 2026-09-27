@@ -36,6 +36,25 @@
 //! side's strikes 2..N. Each strike rolls `r1`, `r2` and hits iff
 //! `r1 + r2 < 2 * hit`; only a hit rolls `r3` and crits iff `r3 < crit`.
 //! Combat stops as soon as a unit reaches 0 HP.
+//!
+//! # Skill modifiers
+//!
+//! Each side carries [`CombatMods`] gathered from skills (ticket 0311,
+//! [`crate::skill`]); all zero, they change nothing. For `A` striking `B`:
+//!
+//! ```text
+//! might      = weapon.might + A.might      (then halved if broken, × eff_mult)
+//! mitigation  = max(0, stat - A.pierce) + (A.ignore_terrain ? 0 : terrain)
+//! avoid_B    += B.avoid                    (and no terrain avoid if A.ignore_terrain)
+//! hit        += A.hit
+//! crit        = (crit + A.crit) * (A.double_crit ? 2 : 1)   then clamped
+//! AS         += A.attack_speed
+//! strikes     = A.single_strike ? 1 : min(strikes + A.extra_strikes, max)
+//! ```
+//!
+//! When both sides have strikes 2..N (only possible with extra strikes),
+//! those strikes alternate after the first two, attacker first
+//! (*Claude's starting rule*).
 
 use serde::{Deserialize, Serialize};
 
@@ -206,8 +225,53 @@ impl CombatRules {
     }
 }
 
+/// Bonuses from skills to one side of a combat (see the module docs). The
+/// default changes nothing. Written in skill data as e.g. `(hit: 30)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CombatMods {
+    /// Added to hit.
+    pub hit: StatValue,
+    /// Added to crit.
+    pub crit: StatValue,
+    /// Added to the weapon's might (so it is halved when broken and
+    /// multiplied by effectiveness, Nick).
+    pub might: StatValue,
+    /// Added to this side's avoid.
+    pub avoid: StatValue,
+    /// Added to attack speed.
+    pub attack_speed: StatValue,
+    /// Strikes added after the attack-speed count (never above the maximum).
+    pub extra_strikes: u8,
+    /// This side strikes once only.
+    pub single_strike: bool,
+    /// Crit is doubled (then clamped to 100).
+    pub double_crit: bool,
+    /// The target's terrain Def and avoid don't count.
+    pub ignore_terrain: bool,
+    /// Lowers the target's Def (or Res) by this much, not below 0.
+    pub pierce: StatValue,
+}
+
+impl CombatMods {
+    /// Adds `other` to these: numbers add, flags combine with "or".
+    pub fn add(&mut self, other: &CombatMods) {
+        self.hit += other.hit;
+        self.crit += other.crit;
+        self.might += other.might;
+        self.avoid += other.avoid;
+        self.attack_speed += other.attack_speed;
+        self.extra_strikes = self.extra_strikes.saturating_add(other.extra_strikes);
+        self.single_strike |= other.single_strike;
+        self.double_crit |= other.double_crit;
+        self.ignore_terrain |= other.ignore_terrain;
+        self.pierce += other.pierce;
+    }
+}
+
 /// One side of a combat, as the combat maths sees it. Built by the battle
-/// state from a unit (tickets 0305/0306/0309).
+/// state from a unit (tickets 0305/0306/0309), with its skills' bonuses
+/// (0311).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CombatantInput<'a> {
     /// Gear-adjusted stats (`stats.hp` is max HP).
@@ -224,6 +288,8 @@ pub struct CombatantInput<'a> {
     pub armour_weight: StatValue,
     /// The terrain the unit stands on.
     pub terrain: &'a TerrainRules,
+    /// Skill bonuses.
+    pub mods: CombatMods,
 }
 
 impl CombatantInput<'_> {
@@ -238,21 +304,21 @@ impl CombatantInput<'_> {
         };
         let carried = self.stats.str / rules.str_per_weight;
         let burden = (weight + self.armour_weight - carried).max(0);
-        self.stats.spd + rank_bonus - burden
+        self.stats.spd + rank_bonus - burden + self.mods.attack_speed
     }
 
-    /// Terrain Def (0 for fliers).
-    fn terrain_defense(&self) -> StatValue {
-        if self.tags.flying {
+    /// Terrain Def (0 for fliers, or when the attacker ignores terrain).
+    fn terrain_defense(&self, ignore_terrain: bool) -> StatValue {
+        if self.tags.flying || ignore_terrain {
             0
         } else {
             StatValue::from(self.terrain.defense)
         }
     }
 
-    /// Avoid against any attack.
-    fn avoid(&self, rules: &CombatRules) -> StatValue {
-        let terrain = if self.tags.flying {
+    /// Avoid against an attack (which may ignore terrain).
+    fn avoid(&self, rules: &CombatRules, ignore_terrain: bool) -> StatValue {
+        let terrain = if self.tags.flying || ignore_terrain {
             0
         } else {
             StatValue::from(self.terrain.avoid)
@@ -261,7 +327,7 @@ impl CombatantInput<'_> {
             Some(WeaponTrait::GauntletAvoid(v)) => v,
             _ => 0,
         };
-        self.stats.spd * rules.avoid_per_spd + terrain + gauntlet
+        self.stats.spd * rules.avoid_per_spd + terrain + gauntlet + self.mods.avoid
     }
 }
 
@@ -351,17 +417,19 @@ fn side(
     let weak_mult = (affinity == Some(Affinity::Weak)).then_some(rules.weak_multiplier);
     let eff_mult = tag_mult.max(weak_mult).unwrap_or(1).max(1);
 
+    let might = weapon.might + a.mods.might;
     let might = if weapon.broken {
-        weapon.might / rules.broken_might_divisor
+        might / rules.broken_might_divisor
     } else {
-        weapon.might
+        might
     };
     let (power_stat, mitigation_stat) = match weapon.damage_type {
         DamageType::Physical => (a.stats.str, b.stats.def),
         DamageType::Magical => (a.stats.mag, b.stats.res),
     };
     let power = power_stat + might * StatValue::from(eff_mult);
-    let mitigation = mitigation_stat + b.terrain_defense();
+    let pierced = mitigation_stat - a.mods.pierce.clamp(0, mitigation_stat.max(0));
+    let mitigation = pierced + b.terrain_defense(a.mods.ignore_terrain);
     let mut damage = (power - mitigation).max(0);
     if affinity == Some(Affinity::Resist) {
         damage /= rules.resist_divisor;
@@ -381,12 +449,23 @@ fn side(
     } else {
         0
     };
-    let hit = weapon.hit - broken_penalty + a.stats.dex * rules.hit_per_dex - b.avoid(rules);
+    let hit = weapon.hit - broken_penalty + a.stats.dex * rules.hit_per_dex + a.mods.hit
+        - b.avoid(rules, a.mods.ignore_terrain);
     let crit = if affinity == Some(Affinity::Absorb) {
         0
     } else {
-        weapon.crit + a.stats.dex / rules.crit_dex_divisor
+        let crit = weapon.crit + a.stats.dex / rules.crit_dex_divisor
             - b.stats.dex / rules.crit_avoid_dex_divisor
+            + a.mods.crit;
+        if a.mods.double_crit { crit * 2 } else { crit }
+    };
+    let strikes = if a.mods.single_strike {
+        1
+    } else {
+        rules
+            .strikes(diff)
+            .saturating_add(a.mods.extra_strikes)
+            .min(rules.max_strikes())
     };
 
     Some(SideForecast {
@@ -394,7 +473,7 @@ fn side(
         followup_damage,
         hit: percent(hit),
         crit: percent(crit),
-        strikes: rules.strikes(diff),
+        strikes,
         effective: eff_mult > 1,
         broken: weapon.broken,
         affinity,
@@ -461,7 +540,8 @@ pub fn roll_hit(rng: &mut impl RandomSource, hit: u8) -> bool {
 }
 
 /// Plays out `forecast` with `rng`: strikes in order (attacker, defender,
-/// then the faster side's strikes 2..N), stopping when a unit reaches 0 HP.
+/// then the strikes 2..N, alternating attacker first if both sides have
+/// some), stopping when a unit reaches 0 HP.
 pub fn resolve(
     rules: &CombatRules,
     forecast: &Forecast,
@@ -474,12 +554,15 @@ pub fn resolve(
         order.push(Side::Defender);
     }
     let extra = |s: Option<SideForecast>| s.map_or(0, |s| s.strikes.saturating_sub(1));
-    let (faster, extra_strikes) = if extra(forecast.defender) > 0 {
-        (Side::Defender, extra(forecast.defender))
-    } else {
-        (Side::Attacker, extra(Some(forecast.attacker)))
-    };
-    order.extend(std::iter::repeat_n(faster, usize::from(extra_strikes)));
+    let (a_extra, d_extra) = (extra(Some(forecast.attacker)), extra(forecast.defender));
+    for i in 0..a_extra.max(d_extra) {
+        if i < a_extra {
+            order.push(Side::Attacker);
+        }
+        if i < d_extra {
+            order.push(Side::Defender);
+        }
+    }
 
     let mut hp = [attacker, defender];
     let mut struck = [0u8; 2];

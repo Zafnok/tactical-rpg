@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
 use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
+use crate::skill::{SkillId, TimedEffect};
 use crate::spell::{SpellId, SpellState};
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::weapon::{WeaponKind, WeaponRank};
@@ -147,6 +148,10 @@ pub struct Unit {
     pub learned: BTreeSet<SpellId>,
     /// Spell uses left in the current battle.
     pub spells: SpellState,
+    /// Passive skills learned by mastering classes; see [`crate::skill`].
+    pub learned_skills: BTreeSet<SkillId>,
+    /// Timed effects on the unit; see [`crate::skill`].
+    pub effects: Vec<TimedEffect>,
 }
 
 /// Letters in a map label.
@@ -299,6 +304,8 @@ impl Unit {
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),
+            learned_skills: BTreeSet::new(),
+            effects: Vec::new(),
         }
     }
 }
@@ -472,6 +479,8 @@ mod tests {
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),
+            learned_skills: BTreeSet::new(),
+            effects: Vec::new(),
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -592,6 +601,8 @@ mod tests {
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),
+            learned_skills: BTreeSet::new(),
+            effects: Vec::new(),
         };
         assert_eq!(unit, Ok(expected));
     }

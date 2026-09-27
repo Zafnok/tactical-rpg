@@ -205,7 +205,7 @@ replaces "uses per battle" for actives in `progression.md`. Nick chose
 
 | Kind of active | Examples | Pays with |
 | -------------- | -------- | --------- |
-| **Combat active** (with a weapon attack) | Keen Edge, Flurry, Heavy Blow, Long Shot | The attacking weapon's durability |
+| **Combat active** (with a weapon attack) | Keen Edge, Flurry, Heavy Blow, Vault, Long Shot | The attacking weapon's durability |
 | **Non-attack active** (an action of its own) | Brace, Fortify, War Cry, Sanctuary, Shove | The **equipped** weapon's durability |
 | **Spell active** (with a spell) | Overcast, Siphon | **1 extra use** of the spell being cast |
 
@@ -232,7 +232,7 @@ replaces "uses per battle" for actives in `progression.md`. Nick chose
 | Keen Edge | Swordsman | 2/battle | 3 dur |
 | Flurry | Brawler | 1/battle | 5 dur |
 | Heavy Blow | Raider | 2/battle | 3 dur |
-| Long Shot | Archer | 2/battle | 3 dur |
+| Vault | Archer | (was the Skirmish passive) | 1 dur (Nick, 0311's PR) |
 | Brace | Guard | 2/battle | 3 dur (equipped) |
 | Lance Rush | Rider | 2/battle | 3 dur |
 | Swoop | Flier, Sky Lancer | 2/battle | 3 dur |
@@ -244,7 +244,7 @@ replaces "uses per battle" for actives in `progression.md`. Nick chose
 | Shove | Grappler | 2/battle | 3 dur (equipped) |
 | Rampage | Berserker | 1/battle | 5 dur |
 | War Cry | Vanguard | 1/battle | 5 dur (equipped) |
-| Long Shot 2 | Marksman | 2/battle | 3 dur |
+| Long Shot | Marksman (was Archer; range +2) | 2/battle | 3 dur |
 | Volley | Outrider | 1/battle | 5 dur |
 | Fortify | Bulwark | 1/battle | 5 dur (equipped) |
 | Trample | Iron Rider | 2/battle | 3 dur |
@@ -267,8 +267,8 @@ functions. The closest pairs, all judged in the playtest:
   weakness and Keen Edge is a swordsman's precision.
 - **Sidestep** (gauntlet stance, avoid) and **Brace / Fortify** (Guard
   stances, Def/Res): both are stances, but they defend in different ways.
-- **Close Shot** (bow min range 1) and **Long Shot** (bow max range +1):
-  opposite ends of the bow's range.
+- **Close Shot** (bow min range 1) and **Long Shot** (Marksman, bow max
+  range +2): opposite ends of the bow's range.
 
 ## Enemies: bosses only
 

@@ -145,6 +145,11 @@ Both sides use the same formulas; the defender may also get extra strikes.
 1. Attacker's first strike.
 2. Defender's first strike (if it can counter).
 3. The faster side's extra strikes (strikes 2..N), one after another.
+4. If **both** sides have extra strikes (only possible with "+1 strike"
+   skills, `progression.md`), they alternate: attacker's 2nd, defender's
+   2nd, attacker's 3rd, and so on (Nick, reviewing ticket 0311's PR: "the
+   strikes should just alternate no matter what like first strike, first
+   strike, second strike, second strike").
 
 Combat stops the moment either unit reaches 0 HP. A strike that deals 0
 damage still happens (and can still "hit").

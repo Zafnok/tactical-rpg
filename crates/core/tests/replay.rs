@@ -8,12 +8,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use trpg_core::{
-    BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassDef, ClassId, ClassTable,
-    Command, ConsumableDef, ConsumableEffect, DamageType, EffectDuration, Element, Equipped, Event,
-    Faction, Grid, Growths, ItemDef, ItemId, ItemTable, LoadoutDef, MovementTypeId, Objective, Pos,
-    SpellDef, SpellId, SpellKind, SpellState, SpellTable, Stats, Stock, TerrainEffect, TerrainId,
-    TerrainRules, TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind,
-    WeaponProficiency, WeaponRank,
+    ActiveEffect, BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassDef, ClassId,
+    ClassTable, CombatMods, Command, ConsumableDef, ConsumableEffect, DamageType, EffectDuration,
+    Element, Equipped, Event, Faction, Grid, Growths, ItemDef, ItemId, ItemTable, LoadoutDef,
+    MovementTypeId, Objective, Pos, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, SpellDef,
+    SpellId, SpellKind, SpellState, SpellTable, Stance, StatKind, Stats, Stock, TerrainEffect,
+    TerrainId, TerrainRules, TerrainTable, TimedMods, Unit, UnitAction, UnitId, UnitTags,
+    WeaponDef, WeaponKind, WeaponProficiency, WeaponRank, WeaponReq,
 };
 
 const FOREST: TerrainId = TerrainId(1);
@@ -62,7 +63,7 @@ fn classes() -> Arc<ClassTable> {
         armour: vec![],
         tags: UnitTags::default(),
         promotes_to: vec![],
-        active: None,
+        active: Some(SkillId::new("guard_strike")),
         passives: vec![],
         enemy_only: false,
         lord_only: false,
@@ -144,9 +145,45 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
             SpellId::new("frost"),
         ]),
         spells: SpellState::default(),
+        learned_skills: BTreeSet::new(),
+        effects: Vec::new(),
     }
     .with_loadout(&loadout, &classes(), &items())
     .unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// `guard_strike`: a combat active (2 durability) with hit +10 and a stance
+/// rider, Def +2 until the user's next phase.
+fn skills() -> Arc<SkillTable> {
+    let def = SkillDef {
+        id: SkillId::new("guard_strike"),
+        name: "Guard Strike".into(),
+        family: "guard_strike".into(),
+        rank: 1,
+        kind: SkillKind::Active {
+            cost: SkillCost::Durability(2),
+            effect: ActiveEffect::Strike {
+                with: WeaponReq::Any,
+                mods: CombatMods {
+                    hit: 10,
+                    ..CombatMods::default()
+                },
+                range: 0,
+                stance: Some(Stance {
+                    mods: TimedMods {
+                        stats: vec![(StatKind::Def, 2)],
+                        combat: CombatMods::default(),
+                    },
+                    this_combat: true,
+                }),
+                post_move: 0,
+                drain: false,
+            },
+        },
+    };
+    Arc::new(SkillTable {
+        skills: BTreeMap::from([(def.id.clone(), def)]),
+    })
 }
 
 /// `bolt`: an attack spell with the blade's numbers (60 hit, 5 might), range
@@ -215,6 +252,7 @@ fn setup(seed: u64) -> BattleSetup {
         classes: classes(),
         items: items(),
         spells: spells(),
+        skills: skills(),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 1,
@@ -228,7 +266,7 @@ fn setup(seed: u64) -> BattleSetup {
             unit(4, Faction::Enemy, 3, 2),
         ],
         reinforcements: vec![],
-        objective: Objective::Survive { turns: 7 },
+        objective: Objective::Survive { turns: 8 },
         rewind_charges: 3,
         seed,
     }
@@ -241,6 +279,7 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
         action: UnitAction::Attack {
             target: UnitId(target),
             slot: 0,
+            active: None,
         },
     }
 }
@@ -248,7 +287,8 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
 /// Three turns of both sides trading blows, then equips (a weapon, then a
 /// spell), potions, a wait, an enemy spell (countered with the equipped
 /// spell), a player spell out of the target's reach, then a forest burnt
-/// (it burns out a round later) and water frozen.
+/// (it burns out a round later), water frozen, and an attack with a combat
+/// active whose stance lasts through the enemy phase.
 fn script() -> Vec<Command> {
     let mut cmds = Vec::new();
     for _ in 0..3 {
@@ -300,6 +340,18 @@ fn script() -> Vec<Command> {
         Command::EndPhase,
         tile_cast(1, 2, 3, "frost", 2, 4),
         Command::EndPhase,
+        Command::EndPhase,
+        Command::Act {
+            unit: UnitId(1),
+            dest: Pos::new(2, 2),
+            action: UnitAction::Attack {
+                target: UnitId(4),
+                slot: 0,
+                active: Some(SkillId::new("guard_strike")),
+            },
+        },
+        Command::EndPhase,
+        Command::EndPhase,
     ]);
     cmds
 }
@@ -311,6 +363,7 @@ fn tile_cast(unit: u32, x: i32, y: i32, spell: &str, tx: i32, ty: i32) -> Comman
         action: UnitAction::Cast {
             spell: SpellId::new(spell),
             target: CastTarget::Tile(Pos::new(tx, ty)),
+            active: None,
         },
     }
 }
@@ -322,6 +375,7 @@ fn cast(unit: u32, x: i32, y: i32, target: u32) -> Command {
         action: UnitAction::Cast {
             spell: SpellId::new("bolt"),
             target: CastTarget::Unit(UnitId(target)),
+            active: None,
         },
     }
 }
@@ -354,13 +408,28 @@ fn same_seed_and_commands_give_identical_events() {
         })
         .flatten()
         .collect();
-    // 12 combats of one strike each way, then 2 casts (one not countered).
-    assert_eq!(strikes.len(), 27);
+    // 12 combats of one strike each way, then 2 casts (one not countered),
+    // then the combat with the active.
+    assert_eq!(strikes.len(), 29);
+    let skill_events = a
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Event::SkillUsed { .. }
+                    | Event::DurabilitySpent { .. }
+                    | Event::EffectApplied { .. }
+                    | Event::EffectExpired { .. }
+            )
+        })
+        .count();
+    assert_eq!(skill_events, 4);
+    // Four casts, and two counters with an equipped spell.
     assert_eq!(
         a.iter()
             .filter(|e| matches!(e, Event::SpellUsesChanged { .. }))
             .count(),
-        5
+        6
     );
     assert!(strikes.contains(&true) && strikes.contains(&false));
     // The forest burnt then burnt out, and the water froze.
@@ -385,7 +454,7 @@ fn saving_and_loading_mid_battle_changes_nothing() {
         log.extend(run(&mut state, &cmds[..split]));
         let saved = ron::to_string(&state).unwrap();
         let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-        loaded.restore_tables(terrain(), classes(), items(), spells());
+        loaded.restore_tables(terrain(), classes(), items(), spells(), skills());
         assert_eq!(loaded, state, "split {split}");
         log.extend(run(&mut loaded, &cmds[split..]));
         assert_eq!(log, events, "split {split}");
