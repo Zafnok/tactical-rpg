@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use trpg_core::{
-    ClassTable, Element, SpellDef, SpellId, SpellKind, SpellTable, StatValue, TerrainEffectId,
-    UnitTag,
+    ClassTable, EffectDuration, Element, SpellDef, SpellId, SpellKind, SpellTable, StatValue,
+    TerrainEffect, TerrainId, UnitTag,
 };
 
 use crate::bundle;
@@ -13,7 +13,7 @@ use crate::character::{CHARACTERS_PATH, CharacterTable};
 use crate::class::CLASSES_PATH;
 use crate::error::ContentError;
 use crate::ron_loader::parse_ron;
-use crate::terrain::line_of;
+use crate::terrain::{TerrainDisplayTable, line_of};
 
 /// Path of the spell file inside the asset bundle.
 pub const SPELLS_PATH: &str = "data/spells.ron";
@@ -34,7 +34,22 @@ struct RawSpell {
     range: (u32, u32),
     uses: u8,
     #[serde(default)]
-    terrain_effect: Option<String>,
+    terrain_effect: Option<RawTerrainEffect>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawTerrainEffect {
+    from: Vec<String>,
+    to: String,
+    lasts: RawLasts,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+enum RawLasts {
+    Permanent,
+    UntilCastersNextPhase { then: String },
 }
 
 #[derive(Deserialize)]
@@ -52,8 +67,10 @@ enum RawKind {
     },
 }
 
-/// Loads and validates the embedded spell file.
-pub fn load() -> Result<SpellTable, Vec<ContentError>> {
+/// Loads and validates the embedded spell file. Terrain effects name
+/// terrains of `terrain`; when it is `None` (the terrain file failed to
+/// load) they are dropped, to avoid a flood of follow-on errors.
+pub fn load(terrain: Option<&TerrainDisplayTable>) -> Result<SpellTable, Vec<ContentError>> {
     let display = bundle::display_path(SPELLS_PATH);
     let source = bundle::file(SPELLS_PATH).ok_or_else(|| {
         vec![ContentError::new(
@@ -61,12 +78,16 @@ pub fn load() -> Result<SpellTable, Vec<ContentError>> {
             "file not found in asset bundle",
         )]
     })?;
-    from_source(&display, source)
+    from_source(&display, source, terrain)
 }
 
-/// Parses and validates spell `source`, attributing errors to `file`.
-/// Reports every problem found.
-pub fn from_source(file: &str, source: &str) -> Result<SpellTable, Vec<ContentError>> {
+/// Parses and validates spell `source`, attributing errors to `file`, with
+/// terrain ids from `terrain` (see [`load`]). Reports every problem found.
+pub fn from_source(
+    file: &str,
+    source: &str,
+    terrain: Option<&TerrainDisplayTable>,
+) -> Result<SpellTable, Vec<ContentError>> {
     let raw: RawFile = parse_ron(file, source).map_err(|e| vec![e])?;
     let mut errors = Vec::new();
     let mut spells = BTreeMap::new();
@@ -115,6 +136,14 @@ pub fn from_source(file: &str, source: &str) -> Result<SpellTable, Vec<ContentEr
                 SpellKind::Heal { heal_power }
             }
         };
+        let terrain_effect = match (s.terrain_effect, terrain) {
+            (Some(raw), Some(table)) => {
+                let (effect, problems) = resolve_effect(raw, table);
+                errors.extend(problems.into_iter().map(|p| at(format!("{what}: {p}"))));
+                effect
+            }
+            _ => None,
+        };
         let id = SpellId(s.id.clone());
         let def = SpellDef {
             id: id.clone(),
@@ -124,7 +153,7 @@ pub fn from_source(file: &str, source: &str) -> Result<SpellTable, Vec<ContentEr
             min_range,
             max_range,
             uses: s.uses,
-            terrain_effect: s.terrain_effect.map(TerrainEffectId),
+            terrain_effect,
         };
         if spells.insert(id, def).is_some() {
             errors.push(at(format!("duplicate spell id \"{}\"", s.id)));
@@ -135,6 +164,35 @@ pub fn from_source(file: &str, source: &str) -> Result<SpellTable, Vec<ContentEr
     } else {
         Err(errors)
     }
+}
+
+/// The terrain effect `raw` with its terrain ids looked up in `table`, and
+/// what is wrong with it (then the effect is `None`).
+fn resolve_effect(
+    raw: RawTerrainEffect,
+    table: &TerrainDisplayTable,
+) -> (Option<TerrainEffect>, Vec<String>) {
+    let mut problems = Vec::new();
+    let mut id = |name: &str| {
+        let found = table.id_of(name);
+        if found.is_none() {
+            problems.push(format!("unknown terrain \"{name}\""));
+        }
+        found.unwrap_or(TerrainId(0))
+    };
+    let from: Vec<TerrainId> = raw.from.iter().map(|t| id(t)).collect();
+    let to = id(&raw.to);
+    let lasts = match raw.lasts {
+        RawLasts::Permanent => EffectDuration::Permanent,
+        RawLasts::UntilCastersNextPhase { then } => {
+            EffectDuration::UntilCastersNextPhase { then: id(&then) }
+        }
+    };
+    if from.is_empty() {
+        problems.push("terrain_effect.from is empty".into());
+    }
+    let effect = TerrainEffect { from, to, lasts };
+    (problems.is_empty().then_some(effect), problems)
 }
 
 /// Checks that every class spell and personal spell names a spell in
@@ -181,8 +239,20 @@ mod tests {
 
     use super::*;
 
+    fn terrain() -> TerrainDisplayTable {
+        crate::terrain::TerrainDef::load(None)
+            .unwrap_or_default()
+            .display
+    }
+
+    fn tid(id: &str) -> TerrainId {
+        terrain()
+            .id_of(id)
+            .unwrap_or_else(|| panic!("no terrain {id}"))
+    }
+
     fn spells() -> SpellTable {
-        let t = load();
+        let t = load(Some(&terrain()));
         assert!(t.is_ok(), "{t:?}");
         t.unwrap_or_default()
     }
@@ -197,7 +267,7 @@ mod tests {
         element: Element,
         [might, hit, crit]: [StatValue; 3],
         uses: u8,
-        effect: Option<&str>,
+        effect: Option<TerrainEffect>,
     ) -> SpellDef {
         SpellDef {
             id: SpellId::new(id),
@@ -212,7 +282,7 @@ mod tests {
             min_range: 1,
             max_range: 2,
             uses,
-            terrain_effect: effect.map(|e| TerrainEffectId(e.into())),
+            terrain_effect: effect,
         }
     }
 
@@ -239,7 +309,11 @@ mod tests {
                 Element::Fire,
                 [5, 90, 0],
                 10,
-                Some("burn_forest"),
+                Some(TerrainEffect {
+                    from: vec![tid("forest")],
+                    to: tid("burning"),
+                    lasts: EffectDuration::UntilCastersNextPhase { then: tid("burnt") },
+                }),
             ),
             attack(
                 "frost",
@@ -247,7 +321,11 @@ mod tests {
                 Element::Ice,
                 [4, 95, 0],
                 10,
-                Some("freeze_water"),
+                Some(TerrainEffect {
+                    from: vec![tid("water"), tid("sea")],
+                    to: tid("ice"),
+                    lasts: EffectDuration::Permanent,
+                }),
             ),
             attack("force", "Force", Element::None, [6, 80, 5], 8, None),
             heal("heal", "Heal", 10, 8),
@@ -260,7 +338,7 @@ mod tests {
     }
 
     fn check(src: &str) -> Vec<String> {
-        match from_source("s.ron", src) {
+        match from_source("s.ron", src, Some(&terrain())) {
             Ok(_) => vec![],
             Err(e) => e.iter().map(ToString::to_string).collect(),
         }
@@ -274,7 +352,7 @@ mod tests {
 
     #[test]
     fn parses_every_field() {
-        let t = from_source("s.ron", &one(OK)).unwrap_or_default();
+        let t = from_source("s.ron", &one(OK), Some(&terrain())).unwrap_or_default();
         assert_eq!(
             t.get(&SpellId::new("x")),
             Some(&SpellDef {
@@ -336,6 +414,48 @@ mod tests {
                 .replace("hit: 2", "hit: 0")
                 .replace("crit: 3", "crit: 0")))
             .is_empty()
+        );
+    }
+
+    #[test]
+    fn terrain_effects() {
+        let with = |effect: &str| one(&format!("{OK}, terrain_effect: Some({effect})"));
+        let burn = "(from: [\"forest\", \"plain\"], to: \"burning\", lasts: UntilCastersNextPhase(then: \"burnt\"))";
+        let t = from_source("s.ron", &with(burn), Some(&terrain())).unwrap_or_default();
+        assert_eq!(
+            t.get(&SpellId::new("x"))
+                .and_then(|s| s.terrain_effect.clone()),
+            Some(TerrainEffect {
+                from: vec![tid("forest"), tid("plain")],
+                to: tid("burning"),
+                lasts: EffectDuration::UntilCastersNextPhase { then: tid("burnt") },
+            })
+        );
+        // Dropped without a terrain table (the terrain file failed).
+        let t = from_source("s.ron", &with(burn), None).unwrap_or_default();
+        assert_eq!(
+            t.get(&SpellId::new("x"))
+                .map(|s| s.terrain_effect.is_none()),
+            Some(true)
+        );
+        let bad = |effect: &str, msgs: &[&str]| {
+            let want: Vec<String> = msgs
+                .iter()
+                .map(|m| format!("s.ron:3: spell \"x\": {m}"))
+                .collect();
+            assert_eq!(check(&with(effect)), want, "{effect}");
+        };
+        bad(
+            "(from: [\"lava\"], to: \"ice\", lasts: Permanent)",
+            &["unknown terrain \"lava\""],
+        );
+        bad(
+            "(from: [\"sea\"], to: \"slush\", lasts: UntilCastersNextPhase(then: \"mud\"))",
+            &["unknown terrain \"slush\"", "unknown terrain \"mud\""],
+        );
+        bad(
+            "(from: [], to: \"ice\", lasts: Permanent)",
+            &["terrain_effect.from is empty"],
         );
     }
 

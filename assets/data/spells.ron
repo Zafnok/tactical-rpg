@@ -9,17 +9,26 @@
 // element: Fire | Ice | None (affinities, tile casts).
 // range: (min, max) in tiles; 1 <= min <= max.
 // uses: uses per battle, refilled at every battle start; at least 1.
-// terrain_effect: Some(id) if the spell can be cast on a tile (ticket 0310).
+// terrain_effect: Some((from: [terrain ids], to: terrain id, lasts: L)) if the
+//   spell can be cast on an empty tile of a `from` terrain, which becomes
+//   `to` (magic.md, "Terrain magic"). L is Permanent, or
+//   UntilCastersNextPhase(then: terrain id): the tile becomes `then` at the
+//   start of the caster's side's next phase. Terrain ids are terrain.ron's.
 // Ids are unique.
 (
     spells: [
         (
             id: "fire", name: "Fire", kind: Attack(might: 5, hit: 90, crit: 0),
-            element: Fire, range: (1, 2), uses: 10, terrain_effect: Some("burn_forest"),
+            element: Fire, range: (1, 2), uses: 10, terrain_effect: Some((
+                from: ["forest"], to: "burning",
+                lasts: UntilCastersNextPhase(then: "burnt"),
+            )),
         ),
         (
             id: "frost", name: "Frost", kind: Attack(might: 4, hit: 95, crit: 0),
-            element: Ice, range: (1, 2), uses: 10, terrain_effect: Some("freeze_water"),
+            element: Ice, range: (1, 2), uses: 10, terrain_effect: Some((
+                from: ["water", "sea"], to: "ice", lasts: Permanent,
+            )),
         ),
         (
             id: "force", name: "Force", kind: Attack(might: 6, hit: 80, crit: 5),

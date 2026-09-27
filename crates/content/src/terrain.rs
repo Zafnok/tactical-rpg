@@ -535,6 +535,8 @@ mod tests {
             ("water", 0, 10, 0),
             ("sea", 0, 10, 0),
             ("fort", 2, 20, 0),
+            ("burnt", 0, 0, 0),
+            ("ice", 0, 0, 0),
         ];
         for &(id, def, avoid, heal) in expected {
             let rules = t.display.id_of(id).and_then(|i| t.rules.get(i));
@@ -548,7 +550,7 @@ mod tests {
                 "{id}"
             );
         }
-        for id in ["thicket", "door", "wall"] {
+        for id in ["thicket", "door", "wall", "burning"] {
             let rules = t.display.id_of(id).and_then(|i| t.rules.get(i));
             assert!(
                 rules.is_some_and(|r| r.move_cost.iter().all(Option::is_none)),
@@ -577,6 +579,11 @@ mod tests {
             ("thicket", [None; 4]),
             ("wall", [None; 4]),
             ("door", [None; 4]),
+            // Terrain magic (`magic.md`): burning blocks flyers too; burnt
+            // and ice cost as plain.
+            ("burning", [None; 4]),
+            ("burnt", open),
+            ("ice", open),
         ];
         assert_eq!(t.rules.terrains.len(), expected.len());
         for (id, costs) in expected {

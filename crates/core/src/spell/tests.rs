@@ -27,7 +27,11 @@ fn attack(id: &str, uses: u8) -> SpellDef {
         min_range: 1,
         max_range: 2,
         uses,
-        terrain_effect: Some(TerrainEffectId("burn_forest".into())),
+        terrain_effect: Some(TerrainEffect {
+            from: vec![TerrainId(1)],
+            to: TerrainId(2),
+            lasts: EffectDuration::UntilCastersNextPhase { then: TerrainId(3) },
+        }),
     }
 }
 

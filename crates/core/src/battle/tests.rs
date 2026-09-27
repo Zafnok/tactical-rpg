@@ -1,5 +1,7 @@
 //! Tests of the battle rules. Maps are drawn in ASCII: `.` plain, `f` forest
-//! (cost 2, +2 Def), `#` wall, `?` a terrain id missing from the table.
+//! (cost 2, +2 Def), `#` wall, `~` water (cost 5), `s` sea (impassable),
+//! `?` a terrain id missing from the table. The table also has `burning`
+//! (impassable), `burnt` and `ice` (cost 1) for terrain magic.
 //!
 //! Test units have 10 HP and 0 in every other stat except Mov 3, so combat
 //! is exact: every strike hits (hit 100, no avoid), never crits, deals the
@@ -27,7 +29,7 @@ use crate::magic::{Affinity, Element};
 use crate::map::TileFeature;
 use crate::movement::reachable;
 use crate::shop::{Loot, ShopKind};
-use crate::spell::{SpellState, TerrainEffectId};
+use crate::spell::{EffectDuration, SpellState, TerrainEffect};
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
 use crate::weapon::WeaponKind;
@@ -39,6 +41,13 @@ const OPEN: [&str; 5] = [
     "........", //
     "........", //
 ];
+
+const FOREST: TerrainId = TerrainId(1);
+const BURNING: TerrainId = TerrainId(3);
+const BURNT: TerrainId = TerrainId(4);
+const WATER: TerrainId = TerrainId(5);
+const SEA: TerrainId = TerrainId(6);
+const ICE: TerrainId = TerrainId(7);
 
 fn p(x: i32, y: i32) -> Pos {
     Pos::new(x, y)
@@ -58,6 +67,11 @@ fn terrain() -> TerrainTable {
             rules("Plain", Some(1), 0),
             rules("Forest", Some(2), 2),
             rules("Wall", None, 0),
+            rules("Burning", None, 0),
+            rules("Burnt", Some(1), 0),
+            rules("Water", Some(5), 0),
+            rules("Sea", None, 0),
+            rules("Ice", Some(1), 0),
         ],
     }
 }
@@ -129,28 +143,31 @@ fn classes() -> ClassTable {
     }
 }
 
-/// The starter spells of `magic.md` (`fire`, `frost`, `force`, `heal`,
-/// `mend`), plus `bolt`: a hit-100, might-3 attack spell, range 1–2, 2 uses,
-/// for exact combats.
+/// The starter spells of `magic.md` (`fire`: forest → burning, then burnt;
+/// `frost`: water or sea → ice; `force`, `heal`, `mend`), plus `bolt`: a
+/// hit-100, might-3 attack spell, range 1–2, 2 uses, for exact combats.
 fn spells() -> SpellTable {
-    let attack =
-        |id: &str, element, [might, hit, crit]: [StatValue; 3], uses, effect: Option<&str>| {
-            SpellDef {
-                id: SpellId::new(id),
-                name: id.into(),
-                kind: SpellKind::Attack {
-                    might,
-                    hit,
-                    crit,
-                    effective: vec![],
-                },
-                element,
-                min_range: 1,
-                max_range: 2,
-                uses,
-                terrain_effect: effect.map(|e| TerrainEffectId(e.into())),
-            }
-        };
+    let attack = |id: &str,
+                  element,
+                  [might, hit, crit]: [StatValue; 3],
+                  uses,
+                  effect: Option<TerrainEffect>| {
+        SpellDef {
+            id: SpellId::new(id),
+            name: id.into(),
+            kind: SpellKind::Attack {
+                might,
+                hit,
+                crit,
+                effective: vec![],
+            },
+            element,
+            min_range: 1,
+            max_range: 2,
+            uses,
+            terrain_effect: effect,
+        }
+    };
     let heal = |id: &str, heal_power, uses| SpellDef {
         id: SpellId::new(id),
         name: id.into(),
@@ -161,9 +178,19 @@ fn spells() -> SpellTable {
         uses,
         terrain_effect: None,
     };
+    let burn = TerrainEffect {
+        from: vec![FOREST],
+        to: BURNING,
+        lasts: EffectDuration::UntilCastersNextPhase { then: BURNT },
+    };
+    let freeze = TerrainEffect {
+        from: vec![WATER, SEA],
+        to: ICE,
+        lasts: EffectDuration::Permanent,
+    };
     let all = [
-        attack("fire", Element::Fire, [5, 90, 0], 10, Some("burn_forest")),
-        attack("frost", Element::Ice, [4, 95, 0], 10, Some("freeze_water")),
+        attack("fire", Element::Fire, [5, 90, 0], 10, Some(burn)),
+        attack("frost", Element::Ice, [4, 95, 0], 10, Some(freeze)),
         attack("force", Element::None, [6, 80, 5], 8, None),
         heal("heal", 10, 8),
         heal("mend", 20, 4),
@@ -182,6 +209,8 @@ fn map(rows: &[&str]) -> BattleMap {
             '.' => TerrainId(0),
             'f' => TerrainId(1),
             '#' => TerrainId(2),
+            '~' => WATER,
+            's' => SEA,
             _ => TerrainId(9),
         })
         .collect();
@@ -2139,7 +2168,7 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
 
 /// Every spell `u` can cast from `dest`: each learned spell with a use left,
 /// on each hostile unit (attack) or wounded ally other than itself (heal) in
-/// its range.
+/// its range, and on each empty tile in range its terrain effect can change.
 fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
     let mut out = Vec::new();
     for spell in u.learned.iter().filter(|sp| u.spells.uses_left(sp) > 0) {
@@ -2154,6 +2183,19 @@ fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
                 out.push(UnitAction::Cast {
                     spell: spell.clone(),
                     target: CastTarget::Unit(t.id),
+                });
+            }
+        }
+        let Some(effect) = &def.terrain_effect else {
+            continue;
+        };
+        for pos in s.map().tiles.positions() {
+            let terrain = s.map().tiles.get(pos).unwrap();
+            let empty = pos != dest && !s.units().iter().any(|t| t.pos == pos && t.id != u.id);
+            if empty && effect.from.contains(terrain) && def.in_range(Pos::manhattan(dest, pos)) {
+                out.push(UnitAction::Cast {
+                    spell: spell.clone(),
+                    target: CastTarget::Tile(pos),
                 });
             }
         }
@@ -2265,8 +2307,8 @@ fn gold_flow(events: &[Event]) -> i64 {
 
 const PROP_MAP: [&str; 6] = [
     "........", //
-    "..#..f..", //
-    "..#.....", //
+    "..#..f~s", //
+    "..#...~s", //
     "....ff..", //
     ".#......", //
     "........", //
@@ -2414,6 +2456,7 @@ proptest! {
             let gold = s.gold();
             let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
             let uses_before = spell_uses(&s);
+            let mut tiles = s.map().tiles.clone();
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
@@ -2446,6 +2489,23 @@ proptest! {
                 prop_assert!(!was || s.is_opened(c));
             }
             prop_assert!(s.turn() >= turn);
+            // Terrain changes only with its events; nobody stands on a
+            // burning tile, and every burning tile is `BURNING`.
+            for e in &events {
+                if let Event::TerrainChanged { pos, from, to } = e {
+                    prop_assert_eq!(tiles.get(*pos), Some(from));
+                    if let Some(t) = tiles.get_mut(*pos) {
+                        *t = *to;
+                    }
+                }
+            }
+            prop_assert_eq!(&tiles, &s.map().tiles);
+            for u in s.units() {
+                prop_assert_ne!(s.map().tiles.get(u.pos), Some(&BURNING), "{:?}", u);
+            }
+            for b in s.burning() {
+                prop_assert_eq!(s.map().tiles.get(b.pos), Some(&BURNING));
+            }
             // No two units on one tile; HP within 1..=max on the map, 0 when
             // fallen.
             let mut tiles: Vec<Pos> = s.units().iter().map(|u| u.pos).collect();
@@ -2483,3 +2543,4 @@ proptest! {
 
 mod shop;
 mod spell;
+mod terrain;

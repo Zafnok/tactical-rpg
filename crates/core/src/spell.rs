@@ -34,6 +34,7 @@ use crate::class::{ClassTable, UnitTag};
 use crate::combat::{DamageType, WeaponStats, WeaponTrait};
 use crate::magic::Element;
 use crate::stats::StatValue;
+use crate::terrain::TerrainId;
 use crate::unit::Unit;
 
 /// String id of a spell, e.g. `"fire"`.
@@ -47,10 +48,31 @@ impl SpellId {
     }
 }
 
-/// Names the terrain change a spell makes when cast on a tile, e.g.
-/// `"burn_forest"`. Tile casts and their effects are ticket 0310.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct TerrainEffectId(pub String);
+/// The terrain change a spell makes when cast on a tile (`magic.md`,
+/// "Terrain magic"): a tile whose terrain is in `from` becomes `to`, for as
+/// long as `lasts` says.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TerrainEffect {
+    /// Terrains the spell can be cast on.
+    pub from: Vec<TerrainId>,
+    /// What the tile becomes at once.
+    pub to: TerrainId,
+    /// How long `to` lasts.
+    pub lasts: EffectDuration,
+}
+
+/// How long a [`TerrainEffect`]'s new terrain lasts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum EffectDuration {
+    /// For the rest of the battle.
+    Permanent,
+    /// Until the start of the caster's side's next phase, when the tile
+    /// becomes `then` for the rest of the battle.
+    UntilCastersNextPhase {
+        /// The terrain after that.
+        then: TerrainId,
+    },
+}
 
 /// What a spell does.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,7 +104,7 @@ pub struct SpellDef {
     pub name: String,
     /// Attack or heal, with its numbers.
     pub kind: SpellKind,
-    /// Element (affinities; the tile cast, 0310).
+    /// Element (affinities).
     pub element: Element,
     /// Smallest range, in tiles (Manhattan).
     pub min_range: u32,
@@ -90,8 +112,8 @@ pub struct SpellDef {
     pub max_range: u32,
     /// Uses per battle.
     pub uses: u8,
-    /// The terrain change of a tile cast, if the spell allows one (0310).
-    pub terrain_effect: Option<TerrainEffectId>,
+    /// The terrain change of a tile cast, if the spell allows one.
+    pub terrain_effect: Option<TerrainEffect>,
 }
 
 impl SpellDef {
