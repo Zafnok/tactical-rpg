@@ -443,6 +443,9 @@ mod tests {
                 },
             })
         );
+        // No damage at all is fine.
+        let harmless = burn.replace("damage: 5", "damage: 0");
+        assert!(check(&with(&harmless)).is_empty());
         // Dropped without a terrain table (the terrain file failed).
         let t = from_source("s.ron", &with(burn), None).unwrap_or_default();
         assert_eq!(
