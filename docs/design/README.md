@@ -13,7 +13,7 @@ here.
 | Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003 | ✅ decided 2026-09-25 |
 | Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 |
 | Combat Arts for ranks C–S, special weapons | `combat-arts.md` | 0018 | ⏳ after playtest 0804 |
-| Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 (spells after a class change revised 2026-09-27) |
+| Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 (spells after a class change and terrain magic details revised 2026-09-27) |
 | Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017) |
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |

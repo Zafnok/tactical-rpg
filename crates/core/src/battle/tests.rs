@@ -181,7 +181,10 @@ fn spells() -> SpellTable {
     let burn = TerrainEffect {
         from: vec![FOREST],
         to: BURNING,
-        lasts: EffectDuration::UntilCastersNextPhase { then: BURNT },
+        lasts: EffectDuration::UntilCastersNextPhase {
+            then: BURNT,
+            damage: 5,
+        },
     };
     let freeze = TerrainEffect {
         from: vec![WATER, SEA],
@@ -2457,6 +2460,7 @@ proptest! {
             let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
             let uses_before = spell_uses(&s);
             let mut tiles = s.map().tiles.clone();
+            let before: BTreeMap<UnitId, Pos> = s.units().iter().map(|u| (u.id, u.pos)).collect();
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
@@ -2489,8 +2493,9 @@ proptest! {
                 prop_assert!(!was || s.is_opened(c));
             }
             prop_assert!(s.turn() >= turn);
-            // Terrain changes only with its events; nobody stands on a
-            // burning tile, and every burning tile is `BURNING`.
+            // Terrain changes only with its events; nobody moves onto a
+            // burning tile (a unit there arrived there, just now or before),
+            // and every burning tile is `BURNING`.
             for e in &events {
                 if let Event::TerrainChanged { pos, from, to } = e {
                     prop_assert_eq!(tiles.get(*pos), Some(from));
@@ -2500,8 +2505,21 @@ proptest! {
                 }
             }
             prop_assert_eq!(&tiles, &s.map().tiles);
+            let arrived: Vec<UnitId> = events
+                .iter()
+                .flat_map(|e| match e {
+                    Event::UnitsArrived { units } => units.clone(),
+                    _ => vec![],
+                })
+                .collect();
             for u in s.units() {
-                prop_assert_ne!(s.map().tiles.get(u.pos), Some(&BURNING), "{:?}", u);
+                if s.map().tiles.get(u.pos) == Some(&BURNING) {
+                    prop_assert!(
+                        before.get(&u.id) == Some(&u.pos) || arrived.contains(&u.id),
+                        "{:?}",
+                        u
+                    );
+                }
             }
             for b in s.burning() {
                 prop_assert_eq!(s.map().tiles.get(b.pos), Some(&BURNING));

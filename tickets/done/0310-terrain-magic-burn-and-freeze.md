@@ -107,17 +107,18 @@ None.
   save-load test burns a forest and freezes water.
 - **Follow-up ticket:** 0209 (the debug glyph sampler's demo panels are now
   pushed off screen by the longer palette; snapshot accepted as is).
+- **Nick's review (2026-09-27)** changed three of the starting rules, now
+  recorded in `magic.md`: a reinforcement **arrives on a burning tile
+  anyway**; when the tile burns out, the fire first **burns the unit on it**
+  (`Event::BurnDamage`, before `TerrainChanged` and before reinforcements);
+  and a tile cast **equips the spell**. The burn damage is data
+  (`UntilCastersNextPhase(then, damage)` in `spells.ron`).
 - **Claude's starting rules** (gameplay, where the design docs were silent):
   1. A burning tile burns out when its caster's side's phase comes round
      **even if that phase is skipped** because the side has no units left
      (otherwise a fire lit by a wiped-out side would burn for ever).
-  2. A **reinforcement whose tile is burning waits** and tries again next
-     turn, as if the tile were occupied (nobody ever stands on a burning
-     tile).
+  2. Burn damage is **5 HP** (*tunable*, the same as push collision damage),
+     not reduced by Def or Res, and **never takes a unit below 1 HP**.
   3. The tile-cast target must be empty **after the move**: the caster's
      old tile counts as empty once it moves off, and its destination tile
      is never a valid target.
-  4. A tile cast **doesn't equip** the spell (it isn't an attack).
-  5. When a burning tile burns out, the change happens at phase start
-     **before** reinforcements arrive and before the phase banner.
-

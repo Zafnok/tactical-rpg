@@ -30,7 +30,10 @@ fn attack(id: &str, uses: u8) -> SpellDef {
         terrain_effect: Some(TerrainEffect {
             from: vec![TerrainId(1)],
             to: TerrainId(2),
-            lasts: EffectDuration::UntilCastersNextPhase { then: TerrainId(3) },
+            lasts: EffectDuration::UntilCastersNextPhase {
+                then: TerrainId(3),
+                damage: 5,
+            },
         }),
     }
 }

@@ -52,6 +52,14 @@ Follow-ups:
 > **Keeping class spells** (2026-09-27, reviewing ticket 0309's PR): "they
 > should only keep the class abilities if they master the class. If they
 > class change without mastering it should be ephemeral."
+>
+> **Terrain magic details** (2026-09-27, reviewing ticket 0310's PR, on
+> three of Claude's starting rules):
+> - Reinforcements on a burning tile: "I think this can be changed to they
+>   arrive anyway and just take the damage on their activating turn"
+> - A tile cast equipping the spell: "I think it can"
+> - The burn-out at phase start: "yes, but, fire will damage whatever unit
+>   was present there before burning out. And then reinforcements can come."
 
 So: magic is **innate spells**, never items in the 3-weapon loadout. Each
 spell has **uses per battle** that refill at the start of every battle.
@@ -205,15 +213,16 @@ the ambush.`
 
 A Fire or Ice attack spell can be cast **on an empty tile** in range instead
 of at a unit. Casting on a tile costs 1 use, **ends the action**, deals no
-damage, and changes the terrain as below. Casting **at a unit** never changes
-terrain (*Claude's starting rule*: this keeps Nick's "never walkable while
-burning", since a unit can never be standing on a burning tile). The target
-tile must be empty and must be one of the listed terrains, or the cast isn't
-allowed.
+damage, **equips the spell** as an attack would (Nick), and changes the
+terrain as below. Casting **at a unit** never changes terrain (*Claude's
+starting rule*: this keeps Nick's "never walkable while burning"). The target
+tile must be empty after the caster's move (the tile it left counts as
+empty; *Claude's starting rule*) and must be one of the listed terrains, or
+the cast isn't allowed.
 
 | Spell element | Target terrain | Becomes | When / how long |
 | ------------- | -------------- | ------- | --------------- |
-| Fire | `forest` | `burning` | At once. Lasts **one round**: it turns into `burnt` at the **start of the caster's side's next phase**, before anyone acts. |
+| Fire | `forest` | `burning` | At once. Lasts **one round**: it turns into `burnt` at the **start of the caster's side's next phase**, before anyone acts and before reinforcements arrive. |
 | — | `burning` | `burnt` | Permanent for the rest of the battle. |
 | Ice | `water`, `sea` | `ice` | **At once, permanent** for the battle (Nick). |
 
@@ -231,7 +240,18 @@ and belong to the terrain display data):
 | `burnt` | As `plain` | 0 | 0 | 0 | The forest's cover is gone for good |
 | `ice` | As `plain` for all ground movement types; flyers as usual | 0 | 0 | 0 | Lets ground units cross sea; removes the water avoid bonus |
 
-- A burning tile deals **no damage**, because nobody can be on it (Nick).
+- **Burn damage.** Nobody can move onto a burning tile, but a
+  **reinforcement arrives on one anyway** (Nick). When the tile burns out,
+  the fire first **damages the unit standing on it** (Nick): **5** HP
+  (*tunable*, the same as push collision damage, not reduced by Def or Res),
+  never taking it below **1 HP** (*Claude's starting rule*: a unit that had
+  no say in where it arrived shouldn't die of it). Then the tile becomes
+  `burnt`, and only then do that phase's reinforcements arrive (Nick). The
+  burn-out always comes before the burnt unit's first own phase, so this is
+  the damage "on their activating turn".
+- A burning tile still burns out at its caster's side's phase slot even if
+  that phase is skipped because the side has no units left (*Claude's
+  starting rule*; otherwise it would burn for ever).
 - Other interactions (fire on `thicket` or `ice`, ice on `burning`, fire
   spreading) **don't exist yet**. Adding one is a design change.
 - **Push spells (future rule, Nick):** no Chapter 1 spell pushes. If one is

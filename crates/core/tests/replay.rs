@@ -175,7 +175,10 @@ fn spells() -> Arc<SpellTable> {
         terrain_effect: Some(TerrainEffect {
             from: vec![FOREST],
             to: BURNING,
-            lasts: EffectDuration::UntilCastersNextPhase { then: BURNT },
+            lasts: EffectDuration::UntilCastersNextPhase {
+                then: BURNT,
+                damage: 5,
+            },
         }),
         ..bolt.clone()
     };

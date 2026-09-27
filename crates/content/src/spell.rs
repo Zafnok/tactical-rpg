@@ -49,7 +49,7 @@ struct RawTerrainEffect {
 #[serde(deny_unknown_fields)]
 enum RawLasts {
     Permanent,
-    UntilCastersNextPhase { then: String },
+    UntilCastersNextPhase { then: String, damage: StatValue },
 }
 
 #[derive(Deserialize)]
@@ -184,12 +184,18 @@ fn resolve_effect(
     let to = id(&raw.to);
     let lasts = match raw.lasts {
         RawLasts::Permanent => EffectDuration::Permanent,
-        RawLasts::UntilCastersNextPhase { then } => {
-            EffectDuration::UntilCastersNextPhase { then: id(&then) }
-        }
+        RawLasts::UntilCastersNextPhase { then, damage } => EffectDuration::UntilCastersNextPhase {
+            then: id(&then),
+            damage,
+        },
     };
     if from.is_empty() {
         problems.push("terrain_effect.from is empty".into());
+    }
+    if let EffectDuration::UntilCastersNextPhase { damage, .. } = lasts
+        && damage < 0
+    {
+        problems.push("terrain_effect damage can't be negative".into());
     }
     let effect = TerrainEffect { from, to, lasts };
     (problems.is_empty().then_some(effect), problems)
@@ -312,7 +318,10 @@ mod tests {
                 Some(TerrainEffect {
                     from: vec![tid("forest")],
                     to: tid("burning"),
-                    lasts: EffectDuration::UntilCastersNextPhase { then: tid("burnt") },
+                    lasts: EffectDuration::UntilCastersNextPhase {
+                        then: tid("burnt"),
+                        damage: 5,
+                    },
                 }),
             ),
             attack(
@@ -420,7 +429,7 @@ mod tests {
     #[test]
     fn terrain_effects() {
         let with = |effect: &str| one(&format!("{OK}, terrain_effect: Some({effect})"));
-        let burn = "(from: [\"forest\", \"plain\"], to: \"burning\", lasts: UntilCastersNextPhase(then: \"burnt\"))";
+        let burn = "(from: [\"forest\", \"plain\"], to: \"burning\", lasts: UntilCastersNextPhase(then: \"burnt\", damage: 5))";
         let t = from_source("s.ron", &with(burn), Some(&terrain())).unwrap_or_default();
         assert_eq!(
             t.get(&SpellId::new("x"))
@@ -428,7 +437,10 @@ mod tests {
             Some(TerrainEffect {
                 from: vec![tid("forest"), tid("plain")],
                 to: tid("burning"),
-                lasts: EffectDuration::UntilCastersNextPhase { then: tid("burnt") },
+                lasts: EffectDuration::UntilCastersNextPhase {
+                    then: tid("burnt"),
+                    damage: 5,
+                },
             })
         );
         // Dropped without a terrain table (the terrain file failed).
@@ -450,8 +462,12 @@ mod tests {
             &["unknown terrain \"lava\""],
         );
         bad(
-            "(from: [\"sea\"], to: \"slush\", lasts: UntilCastersNextPhase(then: \"mud\"))",
+            "(from: [\"sea\"], to: \"slush\", lasts: UntilCastersNextPhase(then: \"mud\", damage: 5))",
             &["unknown terrain \"slush\"", "unknown terrain \"mud\""],
+        );
+        bad(
+            "(from: [\"sea\"], to: \"ice\", lasts: UntilCastersNextPhase(then: \"sea\", damage: -1))",
+            &["terrain_effect damage can't be negative"],
         );
         bad(
             "(from: [], to: \"ice\", lasts: Permanent)",

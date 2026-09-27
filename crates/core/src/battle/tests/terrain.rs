@@ -71,6 +71,10 @@ fn a_player_fire_burns_until_the_next_player_phase() {
     assert_eq!(
         events,
         [
+            Event::Equipped {
+                unit: UnitId(1),
+                equipped: Equipped::Spell(sid("fire")),
+            },
             Event::SpellCast {
                 unit: UnitId(1),
                 spell: sid("fire"),
@@ -92,12 +96,13 @@ fn a_player_fire_burns_until_the_next_player_phase() {
             pos: WOOD,
             phase: Phase::Player,
             then: BURNT,
+            damage: 5,
         }]
     );
-    // No equip: a tile cast isn't an attack.
+    // The cast equips the spell, as an attack would (Nick).
     assert_eq!(
         s.unit(UnitId(1)).unwrap().loadout.equipped,
-        Some(Equipped::Spell(sid("force")))
+        Some(Equipped::Spell(sid("fire")))
     );
     // Impassable for everyone through the Enemy and Other phases.
     assert!(!passable(&s, 1, WOOD));
@@ -166,29 +171,98 @@ fn a_burning_tile_burns_out_even_if_its_phase_is_skipped() {
 }
 
 #[test]
-fn a_reinforcement_waits_while_its_tile_burns() {
-    let arriving = unit(9, Faction::Enemy, WOOD);
+fn an_already_equipped_spell_isnt_equipped_again() {
+    let mut s = start(setup(burn_cast()));
+    let events = act(&mut s, 1, p(0, 2), on_tile("fire", WOOD));
+    assert!(matches!(events[0], Event::SpellCast { .. }), "{events:?}");
+}
+
+#[test]
+fn a_reinforcement_arrives_on_a_burning_tile_and_is_burnt() {
+    // Unit 9 (10 HP) lands on the fire; unit 8 (3 HP) on a second one.
+    let mut burnt = unit(8, Faction::Enemy, p(2, 3));
+    burnt.hp = 3;
+    let rows = [
+        "........", //
+        "........", //
+        "..f.....", //
+        "..f.....", //
+        "........", //
+    ];
+    let mut units = burn_cast();
+    units[2].pos = p(5, 3);
+    units[4].pos = p(5, 4);
+    units.push(mage(6, Faction::Player, p(0, 3), &["fire"]));
     let mut s = start(BattleSetup {
-        reinforcements: vec![reinforcement(1, arriving)],
-        ..setup(burn_cast())
+        map: map(&rows),
+        reinforcements: vec![
+            reinforcement(1, unit(9, Faction::Enemy, WOOD)),
+            reinforcement(1, burnt),
+        ],
+        ..setup(units)
     });
     act(&mut s, 1, p(0, 2), on_tile("fire", WOOD));
-    assert_eq!(end(&mut s), [started(1, Phase::Enemy)]);
-    assert!(s.unit(UnitId(9)).is_none());
-    assert_eq!(end(&mut s), [started(1, Phase::Other)]);
-    assert_eq!(
-        end(&mut s),
-        [changed(WOOD, BURNING, BURNT), started(2, Phase::Player)]
-    );
+    act(&mut s, 6, p(0, 3), on_tile("fire", p(2, 3)));
+    // They arrive anyway.
     assert_eq!(
         end(&mut s),
         [
+            Event::UnitsArrived {
+                units: vec![UnitId(9), UnitId(8)]
+            },
+            started(1, Phase::Enemy)
+        ]
+    );
+    assert_eq!(s.unit(UnitId(9)).unwrap().pos, WOOD);
+    assert_eq!(end(&mut s), [started(1, Phase::Other)]);
+    // The fire burns them as it burns out, in the order it was lit, before
+    // anything else; never below 1 HP.
+    let burn = |unit, pos, amount| Event::BurnDamage {
+        unit: UnitId(unit),
+        pos,
+        amount,
+    };
+    assert_eq!(
+        end(&mut s),
+        [
+            burn(9, WOOD, 5),
+            changed(WOOD, BURNING, BURNT),
+            burn(8, p(2, 3), 2),
+            changed(p(2, 3), BURNING, BURNT),
+            started(2, Phase::Player)
+        ]
+    );
+    assert_eq!(s.unit(UnitId(9)).unwrap().hp, 5);
+    assert_eq!(s.unit(UnitId(8)).unwrap().hp, 1);
+    // They act on their own next phase.
+    end(&mut s);
+    act(&mut s, 9, p(3, 2), UnitAction::Wait);
+}
+
+#[test]
+fn burn_damage_comes_before_reinforcements() {
+    // Enemy fire; an enemy reinforcement due on turn 2 at the same tile
+    // arrives once the fire is out, and isn't burnt.
+    let mut units = burn_cast();
+    units[2] = mage(3, Faction::Enemy, p(3, 3), &["fire"]);
+    let mut s = start(BattleSetup {
+        reinforcements: vec![reinforcement(2, unit(9, Faction::Enemy, WOOD))],
+        ..setup(units)
+    });
+    end(&mut s);
+    act(&mut s, 3, p(3, 3), on_tile("fire", WOOD));
+    walk(&mut s, 2);
+    assert_eq!(
+        end(&mut s),
+        [
+            changed(WOOD, BURNING, BURNT),
             Event::UnitsArrived {
                 units: vec![UnitId(9)]
             },
             started(2, Phase::Enemy)
         ]
     );
+    assert_eq!(s.unit(UnitId(9)).unwrap().hp, 10);
 }
 
 #[test]

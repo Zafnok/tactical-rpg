@@ -61,19 +61,24 @@
 //!     needs a spell with a [`terrain_effect`](SpellDef::terrain_effect). The
 //!     tile must be on the map, in the spell's range from `dest`, empty (no
 //!     unit, the caster at `dest` included) and of a terrain in the effect's
-//!     `from`. The tile becomes `to` at once ([`Event::SpellCast`],
-//!     [`Event::TerrainChanged`], [`Event::SpellUsesChanged`]); no damage, no
-//!     counter, no equip. Casting at a unit never changes terrain.
+//!     `from`. An attack spell is equipped, as for an attack
+//!     ([`Event::Equipped`] if it changed; Nick). The tile becomes `to` at
+//!     once ([`Event::SpellCast`], [`Event::TerrainChanged`],
+//!     [`Event::SpellUsesChanged`]); no damage, no counter. Casting at a unit
+//!     never changes terrain.
 //! - **Terrain** lives in the battle's own copy of the map
 //!   ([`BattleState::map`]), which movement and combat read, so a changed
 //!   tile counts at once. It changes only with an [`Event::TerrainChanged`].
 //!   A tile whose effect lasts
 //!   [until the caster's next phase](EffectDuration::UntilCastersNextPhase)
-//!   (a burning forest) is [`Burning`]: it becomes its `then` terrain when
-//!   the caster's side's phase next comes round, first thing, before
-//!   reinforcements arrive. This happens even if that phase is then skipped
-//!   for having no units (*Claude's starting rule*: otherwise a fire cast by
-//!   a side that was wiped out would burn for ever).
+//!   (a burning forest) is [`Burning`]: when the caster's side's phase next
+//!   comes round, first thing, a unit standing on it takes its `damage`
+//!   ([`Event::BurnDamage`]; never below 1 HP, not reduced by Def or Res),
+//!   then it becomes its `then` terrain; only then do reinforcements arrive
+//!   (Nick). The only unit that can be on a burning tile is a reinforcement
+//!   that arrived there. This happens even if that phase is then skipped for
+//!   having no units (*Claude's starting rule*: otherwise a fire cast by a
+//!   side that was wiped out would burn for ever).
 //! - **Weapon EXP.** After a combat, each side still on the map that struck
 //!   gains weapon EXP in its weapon's kind ([`Event::WeaponExpGained`], then
 //!   [`Event::WeaponRankUp`] if its rank rose; attacker first), before
@@ -121,8 +126,8 @@
 //!   of their faction's phase on turn `N`, never acting on arrival. One whose
 //!   tile is occupied waits and tries again at the same point next turn;
 //!   the others of its wave still arrive. Earlier entries go first. A
-//!   burning tile counts as occupied (*Claude's starting rule*: nobody ever
-//!   stands on a burning tile).
+//!   reinforcement arrives on a burning tile anyway, and takes the fire's
+//!   damage when it burns out (Nick).
 //! - **Errors change nothing.** [`BattleState::apply`] validates the whole
 //!   command before touching the state, so on `Err` the state is unchanged.
 //!
@@ -364,6 +369,8 @@ pub struct Burning {
     pub phase: Phase,
     /// The terrain it becomes then.
     pub then: TerrainId,
+    /// Damage to a unit standing on it then.
+    pub damage: StatValue,
 }
 
 /// One transaction of a [`UnitAction::Shop`].
@@ -486,6 +493,16 @@ pub enum Event {
         from: TerrainId,
         /// Its terrain now.
         to: TerrainId,
+    },
+    /// A burning tile burnt a unit standing on it, as it burnt out (just
+    /// before its [`Event::TerrainChanged`]).
+    BurnDamage {
+        /// The unit.
+        unit: UnitId,
+        /// Its tile.
+        pos: Pos,
+        /// HP lost (the unit keeps at least 1).
+        amount: StatValue,
     },
     /// A unit spent a spell use.
     SpellUsesChanged {
@@ -1750,19 +1767,32 @@ impl BattleState {
         effect: &TerrainEffect,
         events: &mut Vec<Event>,
     ) {
+        let with = Equipped::Spell(spell.clone());
+        let equip = self
+            .tables
+            .spells
+            .get(spell)
+            .is_some_and(SpellDef::is_attack)
+            && self
+                .unit(id)
+                .is_some_and(|u| u.loadout.equipped.as_ref() != Some(&with));
+        if equip {
+            self.equip(id, with, events);
+        }
         events.push(Event::SpellCast {
             unit: id,
             spell: spell.clone(),
             target: CastTarget::Tile(pos),
         });
         self.set_terrain(pos, from, effect.to, events);
-        if let EffectDuration::UntilCastersNextPhase { then } = effect.lasts
+        if let EffectDuration::UntilCastersNextPhase { then, damage } = effect.lasts
             && let Some(u) = self.unit(id)
         {
             self.burning.push(Burning {
                 pos,
                 phase: Phase::of(u.faction),
                 then,
+                damage,
             });
         }
         self.spend_spell(id, spell, events);
@@ -1778,7 +1808,7 @@ impl BattleState {
     }
 
     /// Burns out the tiles the current phase's side set burning, in the
-    /// order they were set.
+    /// order they were set, burning whoever stands on them first.
     fn burn_out(&mut self, events: &mut Vec<Event>) {
         let phase = self.phase;
         let (done, left) = std::mem::take(&mut self.burning)
@@ -1786,6 +1816,15 @@ impl BattleState {
             .partition(|b| b.phase == phase);
         self.burning = left;
         for b in done {
+            if let Some(u) = self.units.iter_mut().find(|u| u.pos == b.pos) {
+                let amount = b.damage.clamp(0, (u.hp - 1).max(0));
+                u.hp -= amount;
+                events.push(Event::BurnDamage {
+                    unit: u.id,
+                    pos: b.pos,
+                    amount,
+                });
+            }
             if let Some(&from) = self.map.tiles.get(b.pos) {
                 self.set_terrain(b.pos, from, b.then, events);
             }
@@ -1995,9 +2034,7 @@ impl BattleState {
         let mut waiting = Vec::new();
         for r in std::mem::take(&mut self.pending) {
             let due = r.turn <= self.turn && Phase::of(r.unit.faction) == self.phase;
-            let blocked = self.units.iter().any(|u| u.pos == r.unit.pos)
-                || self.burning.iter().any(|b| b.pos == r.unit.pos);
-            if due && !blocked {
+            if due && !self.units.iter().any(|u| u.pos == r.unit.pos) {
                 let mut unit = r.unit;
                 unit.acted = true;
                 arrived.push(unit.id);

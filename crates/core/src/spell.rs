@@ -66,11 +66,14 @@ pub struct TerrainEffect {
 pub enum EffectDuration {
     /// For the rest of the battle.
     Permanent,
-    /// Until the start of the caster's side's next phase, when the tile
-    /// becomes `then` for the rest of the battle.
+    /// Until the start of the caster's side's next phase, when a unit
+    /// standing on the tile takes `damage` and the tile becomes `then` for
+    /// the rest of the battle.
     UntilCastersNextPhase {
         /// The terrain after that.
         then: TerrainId,
+        /// Damage to a unit standing on the tile then (never below 1 HP).
+        damage: StatValue,
     },
 }
 
