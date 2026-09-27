@@ -63,4 +63,11 @@
     "stone_bg": "#222020",
     "fort": "#d0a860",
     "fort_bg": "#2c2418",
+    // Terrain magic (ticket 0310): placeholders, TUNABLE (0011).
+    "fire": "#e8783a",
+    "fire_bg": "#3a1608",
+    "ash": "#6e665e",
+    "ash_bg": "#1a1714",
+    "ice": "#c8e4f0",
+    "ice_bg": "#243a4a",
 }

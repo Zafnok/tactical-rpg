@@ -1,29 +1,46 @@
 //! Replay and save/load determinism (ADR-0007 layer 5): the same setup, seed
 //! and commands give identical events, and a battle saved mid-way, loaded and
-//! continued gives the same events as one played straight through.
+//! continued gives the same events as one played straight through. The
+//! script includes terrain magic, so the changed tiles and the burning
+//! forest are part of what must replay and survive a save.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use trpg_core::{
     BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassDef, ClassId, ClassTable,
-    Command, ConsumableDef, ConsumableEffect, DamageType, Element, Equipped, Event, Faction, Grid,
-    Growths, ItemDef, ItemId, ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, SpellDef,
-    SpellId, SpellKind, SpellState, SpellTable, Stats, Stock, TerrainId, TerrainRules,
-    TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind, WeaponProficiency,
-    WeaponRank,
+    Command, ConsumableDef, ConsumableEffect, DamageType, EffectDuration, Element, Equipped, Event,
+    Faction, Grid, Growths, ItemDef, ItemId, ItemTable, LoadoutDef, MovementTypeId, Objective, Pos,
+    SpellDef, SpellId, SpellKind, SpellState, SpellTable, Stats, Stock, TerrainEffect, TerrainId,
+    TerrainRules, TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind,
+    WeaponProficiency, WeaponRank,
 };
 
+const FOREST: TerrainId = TerrainId(1);
+const BURNING: TerrainId = TerrainId(2);
+const BURNT: TerrainId = TerrainId(3);
+const WATER: TerrainId = TerrainId(4);
+const ICE: TerrainId = TerrainId(5);
+
+/// Plain, forest, burning, burnt, water and ice.
 fn terrain() -> Arc<TerrainTable> {
+    let rules = |name: &str, cost| TerrainRules {
+        name: name.into(),
+        move_cost: vec![cost],
+        defense: 0,
+        avoid: 0,
+        heal_percent: 0,
+    };
     Arc::new(TerrainTable {
         movement_types: vec!["foot".into()],
-        terrains: vec![TerrainRules {
-            name: "Plain".into(),
-            move_cost: vec![Some(1)],
-            defense: 0,
-            avoid: 0,
-            heal_percent: 0,
-        }],
+        terrains: vec![
+            rules("Plain", Some(1)),
+            rules("Forest", Some(2)),
+            rules("Burning", None),
+            rules("Burnt", Some(1)),
+            rules("Water", Some(5)),
+            rules("Ice", Some(1)),
+        ],
     })
 }
 
@@ -121,7 +138,11 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         loadout: trpg_core::Loadout::default(),
         consumables: vec![ItemId::new("potion")],
         personal_spells: vec![],
-        learned: BTreeSet::from([SpellId::new("bolt")]),
+        learned: BTreeSet::from([
+            SpellId::new("bolt"),
+            SpellId::new("fire"),
+            SpellId::new("frost"),
+        ]),
         spells: SpellState::default(),
     }
     .with_loadout(&loadout, &classes(), &items())
@@ -129,7 +150,8 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
 }
 
 /// `bolt`: an attack spell with the blade's numbers (60 hit, 5 might), range
-/// 1–2, 3 uses.
+/// 1–2, 3 uses; `fire` (forest → burning, then burnt) and `frost` (water →
+/// ice), for tile casts.
 fn spells() -> Arc<SpellTable> {
     let bolt = SpellDef {
         id: SpellId::new("bolt"),
@@ -146,14 +168,49 @@ fn spells() -> Arc<SpellTable> {
         uses: 3,
         terrain_effect: None,
     };
+    let fire = SpellDef {
+        id: SpellId::new("fire"),
+        name: "Fire".into(),
+        element: Element::Fire,
+        terrain_effect: Some(TerrainEffect {
+            from: vec![FOREST],
+            to: BURNING,
+            lasts: EffectDuration::UntilCastersNextPhase {
+                then: BURNT,
+                damage: 5,
+            },
+        }),
+        ..bolt.clone()
+    };
+    let frost = SpellDef {
+        id: SpellId::new("frost"),
+        name: "Frost".into(),
+        element: Element::Ice,
+        terrain_effect: Some(TerrainEffect {
+            from: vec![WATER],
+            to: ICE,
+            lasts: EffectDuration::Permanent,
+        }),
+        ..bolt.clone()
+    };
     Arc::new(SpellTable {
-        spells: BTreeMap::from([(bolt.id.clone(), bolt)]),
+        spells: [bolt, fire, frost]
+            .into_iter()
+            .map(|s| (s.id.clone(), s))
+            .collect(),
     })
 }
 
+/// Plain, with a forest at (1,4) and water at (2,4).
 fn setup(seed: u64) -> BattleSetup {
+    let mut tiles = Grid::filled(8, 5, TerrainId(0));
+    for (x, t) in [(1, FOREST), (2, WATER)] {
+        if let Some(tile) = tiles.get_mut(Pos::new(x, 4)) {
+            *tile = t;
+        }
+    }
     BattleSetup {
-        map: BattleMap::new("Replay", Grid::filled(8, 5, TerrainId(0))),
+        map: BattleMap::new("Replay", tiles),
         terrain: terrain(),
         classes: classes(),
         items: items(),
@@ -171,7 +228,7 @@ fn setup(seed: u64) -> BattleSetup {
             unit(4, Faction::Enemy, 3, 2),
         ],
         reinforcements: vec![],
-        objective: Objective::Survive { turns: 5 },
+        objective: Objective::Survive { turns: 7 },
         rewind_charges: 3,
         seed,
     }
@@ -190,7 +247,8 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
 
 /// Three turns of both sides trading blows, then equips (a weapon, then a
 /// spell), potions, a wait, an enemy spell (countered with the equipped
-/// spell) and a player spell out of the target's reach.
+/// spell), a player spell out of the target's reach, then a forest burnt
+/// (it burns out a round later) and water frozen.
 fn script() -> Vec<Command> {
     let mut cmds = Vec::new();
     for _ in 0..3 {
@@ -237,8 +295,24 @@ fn script() -> Vec<Command> {
         cast(4, 3, 2, 2),
         Command::EndPhase,
         cast(1, 2, 1, 3),
+        tile_cast(2, 1, 3, "fire", 1, 4),
+        Command::EndPhase,
+        Command::EndPhase,
+        tile_cast(1, 2, 3, "frost", 2, 4),
+        Command::EndPhase,
     ]);
     cmds
+}
+
+fn tile_cast(unit: u32, x: i32, y: i32, spell: &str, tx: i32, ty: i32) -> Command {
+    Command::Act {
+        unit: UnitId(unit),
+        dest: Pos::new(x, y),
+        action: UnitAction::Cast {
+            spell: SpellId::new(spell),
+            target: CastTarget::Tile(Pos::new(tx, ty)),
+        },
+    }
 }
 
 fn cast(unit: u32, x: i32, y: i32, target: u32) -> Command {
@@ -286,9 +360,18 @@ fn same_seed_and_commands_give_identical_events() {
         a.iter()
             .filter(|e| matches!(e, Event::SpellUsesChanged { .. }))
             .count(),
-        3
+        5
     );
     assert!(strikes.contains(&true) && strikes.contains(&false));
+    // The forest burnt then burnt out, and the water froze.
+    let terrain: Vec<(TerrainId, TerrainId)> = a
+        .iter()
+        .filter_map(|e| match e {
+            Event::TerrainChanged { from, to, .. } => Some((*from, *to)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(terrain, [(FOREST, BURNING), (BURNING, BURNT), (WATER, ICE)]);
     // …so another seed plays out differently.
     assert_ne!(play(43).1, a);
 }

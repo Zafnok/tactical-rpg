@@ -17,8 +17,8 @@ pub mod unit;
 pub mod weapon;
 
 pub use battle::{
-    BattleSetup, BattleState, CastTarget, Command, CommandError, Destination, Event, Objective,
-    Outcome, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
+    BattleSetup, BattleState, Burning, CastTarget, Command, CommandError, Destination, Event,
+    Objective, Outcome, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, SkillId, Tier, UnitTag,
@@ -43,7 +43,8 @@ pub use movement::{
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use spell::{
-    SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable, TerrainEffectId,
+    EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,
+    TerrainEffect,
 };
 pub use stats::{GrowthValue, Growths, StatKind, StatValue, Stats};
 pub use terrain::{MovementTypeId, TerrainId, TerrainRules, TerrainTable};

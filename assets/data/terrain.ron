@@ -76,6 +76,29 @@
             move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },
             defense: 0, avoid: 0, heal_percent: 0,
         ),
+        // Terrain magic (docs/design/magic.md, ticket 0310). Rules are the
+        // design's *tunable* numbers. Glyphs and colours are placeholders:
+        // TUNABLE (0011).
+        (
+            // A forest set on fire by a Fire tile cast; burns out into
+            // `burnt` at the start of the caster's side's next phase.
+            // Impassable for everyone, flyers included.
+            id: "burning", name: "Burning", glyphs: "**", fg: "fire", bg: "fire_bg",
+            move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            id: "burnt", name: "Burnt", glyphs: ",,", fg: "ash", bg: "ash_bg",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
+        (
+            // Water or sea frozen by an Ice tile cast, for the rest of the
+            // battle.
+            id: "ice", name: "Ice", glyphs: "▒▒", fg: "ice", bg: "ice_bg",
+            move_cost: { "foot": Some(1), "mounted": Some(1), "armored": Some(1), "flying": Some(1) },
+            defense: 0, avoid: 0, heal_percent: 0,
+        ),
         (
             id: "wall", name: "Wall", glyphs: "▓▓", fg: "stone", bg: "stone_bg",
             move_cost: { "foot": None, "mounted": None, "armored": None, "flying": None },

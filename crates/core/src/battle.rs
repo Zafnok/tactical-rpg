@@ -18,6 +18,8 @@
 //! - **Phase start**, in this order: every unit of the phase becomes ready
 //!   (`acted = false`); the phase's reinforcements that are due arrive,
 //!   already done ([`Event::UnitsArrived`]); then [`Event::PhaseStarted`]
+//!   (before all that, tiles the phase's side set burning burn out, see
+//!   *Terrain* below)
 //!   (the banner). Units of other phases keep their `acted` flag (drawn
 //!   dimmed until their own phase).
 //! - **Auto-end is not here.** Ending the player phase when every unit has
@@ -55,6 +57,28 @@
 //!     `min(heal_power + Mag, max HP − HP)` (gear-adjusted Mag), with no roll
 //!     and no counter ([`Event::SpellCast`], [`Event::Healed`],
 //!     [`Event::SpellUsesChanged`]).
+//!   - A **tile cast** ([`CastTarget::Tile`], `magic.md` "Terrain magic")
+//!     needs a spell with a [`terrain_effect`](SpellDef::terrain_effect). The
+//!     tile must be on the map, in the spell's range from `dest`, empty (no
+//!     unit, the caster at `dest` included) and of a terrain in the effect's
+//!     `from`. An attack spell is equipped, as for an attack
+//!     ([`Event::Equipped`] if it changed; Nick). The tile becomes `to` at
+//!     once ([`Event::SpellCast`], [`Event::TerrainChanged`],
+//!     [`Event::SpellUsesChanged`]); no damage, no counter. Casting at a unit
+//!     never changes terrain.
+//! - **Terrain** lives in the battle's own copy of the map
+//!   ([`BattleState::map`]), which movement and combat read, so a changed
+//!   tile counts at once. It changes only with an [`Event::TerrainChanged`].
+//!   A tile whose effect lasts
+//!   [until the caster's next phase](EffectDuration::UntilCastersNextPhase)
+//!   (a burning forest) is [`Burning`]: when the caster's side's phase next
+//!   comes round, first thing, a unit standing on it takes its `damage`
+//!   ([`Event::BurnDamage`]; never below 1 HP, not reduced by Def or Res),
+//!   then it becomes its `then` terrain; only then do reinforcements arrive
+//!   (Nick). The only unit that can be on a burning tile is a reinforcement
+//!   that arrived there. This happens even if that phase is then skipped for
+//!   having no units (*Claude's starting rule*: otherwise a fire cast by a
+//!   side that was wiped out would burn for ever).
 //! - **Weapon EXP.** After a combat, each side still on the map that struck
 //!   gains weapon EXP in its weapon's kind ([`Event::WeaponExpGained`], then
 //!   [`Event::WeaponRankUp`] if its rank rose; attacker first), before
@@ -101,7 +125,9 @@
 //! - **Reinforcements** ([`Reinforcement`]) for turn `N` arrive at the start
 //!   of their faction's phase on turn `N`, never acting on arrival. One whose
 //!   tile is occupied waits and tries again at the same point next turn;
-//!   the others of its wave still arrive. Earlier entries go first.
+//!   the others of its wave still arrive. Earlier entries go first. A
+//!   reinforcement arrives on a burning tile anyway, and takes the fire's
+//!   damage when it burns out (Nick).
 //! - **Errors change nothing.** [`BattleState::apply`] validates the whole
 //!   command before touching the state, so on `Err` the state is unchanged.
 //!
@@ -118,14 +144,15 @@
 //! # Saving
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
-//! the map, units, fallen units, pending reinforcements, objective, turn,
+//! the map (with its current terrain), burning tiles, units, fallen units,
+//! pending reinforcements, objective, turn,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
 //! **terrain, class, item and spell tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
-//! saved because it is battle state (terrain magic changes tiles, 0310).
+//! saved because it is battle state (terrain magic changes tiles).
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -143,9 +170,9 @@ use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
 use crate::rng::SimRng;
 use crate::shop::{self, Gold, Loot, Shop, ShopError};
-use crate::spell::{SpellDef, SpellId, SpellKind, SpellTable};
+use crate::spell::{EffectDuration, SpellDef, SpellId, SpellKind, SpellTable, TerrainEffect};
 use crate::stats::StatValue;
-use crate::terrain::TerrainTable;
+use crate::terrain::{TerrainId, TerrainTable};
 use crate::unit::{Faction, Unit, UnitId};
 use crate::weapon::{WeaponKind, WeaponRank};
 
@@ -329,6 +356,21 @@ pub enum UnitAction {
 pub enum CastTarget {
     /// A unit: a hostile one for an attack spell, an ally for a heal.
     Unit(UnitId),
+    /// An empty tile, to change its terrain (spells with a terrain effect).
+    Tile(Pos),
+}
+
+/// A tile set burning by a tile cast, waiting to burn out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Burning {
+    /// The tile.
+    pub pos: Pos,
+    /// The caster's phase: the tile burns out when it next starts.
+    pub phase: Phase,
+    /// The terrain it becomes then.
+    pub then: TerrainId,
+    /// Damage to a unit standing on it then.
+    pub damage: StatValue,
 }
 
 /// One transaction of a [`UnitAction::Shop`].
@@ -441,6 +483,26 @@ pub enum Event {
         spell: SpellId,
         /// What it was cast on.
         target: CastTarget,
+    },
+    /// A tile's terrain changed (a tile cast, or a burning tile burning
+    /// out).
+    TerrainChanged {
+        /// The tile.
+        pos: Pos,
+        /// Its terrain before.
+        from: TerrainId,
+        /// Its terrain now.
+        to: TerrainId,
+    },
+    /// A burning tile burnt a unit standing on it, as it burnt out (just
+    /// before its [`Event::TerrainChanged`]).
+    BurnDamage {
+        /// The unit.
+        unit: UnitId,
+        /// Its tile.
+        pos: Pos,
+        /// HP lost (the unit keeps at least 1).
+        amount: StatValue,
     },
     /// A unit spent a spell use.
     SpellUsesChanged {
@@ -678,6 +740,21 @@ pub enum CommandError {
     BadHealTarget(UnitId),
     /// A heal's target is already at max HP.
     FullHp(UnitId),
+    /// The spell can't be cast on a tile.
+    NoTerrainEffect(SpellId),
+    /// A tile cast's tile is outside the map.
+    TileOffMap(Pos),
+    /// A tile cast's tile is outside the spell's range from `dest`.
+    TileOutOfRange {
+        /// The tile.
+        pos: Pos,
+        /// Its distance from `dest`.
+        distance: u32,
+    },
+    /// A tile cast's tile holds a unit.
+    TileOccupied(Pos),
+    /// The spell can't change this tile's terrain.
+    WrongTerrain(Pos),
 }
 
 impl From<MoveError> for CommandError {
@@ -745,6 +822,23 @@ impl fmt::Display for CommandError {
             }
             CommandError::BadHealTarget(id) => write!(f, "unit {} can't be healed by it", id.0),
             CommandError::FullHp(id) => write!(f, "unit {} is at full HP", id.0),
+            CommandError::NoTerrainEffect(s) => {
+                write!(f, "\"{}\" can't be cast on a tile", s.0)
+            }
+            CommandError::TileOffMap(p) => write!(f, "({}, {}) is outside the map", p.x, p.y),
+            CommandError::TileOutOfRange { pos, distance } => write!(
+                f,
+                "({}, {}) is out of range ({distance} tiles)",
+                pos.x, pos.y
+            ),
+            CommandError::TileOccupied(p) => write!(f, "({}, {}) is occupied", p.x, p.y),
+            CommandError::WrongTerrain(p) => {
+                write!(
+                    f,
+                    "the spell can't change the terrain at ({}, {})",
+                    p.x, p.y
+                )
+            }
         }
     }
 }
@@ -766,6 +860,7 @@ pub struct BattleState {
     #[serde(skip)]
     tables: Tables,
     map: BattleMap,
+    burning: Vec<Burning>,
     turn: Turn,
     phase: Phase,
     units: Vec<Unit>,
@@ -795,6 +890,13 @@ enum Step {
         spell: SpellId,
         target: UnitId,
         amount: StatValue,
+    },
+    /// A tile cast.
+    Terrain {
+        spell: SpellId,
+        pos: Pos,
+        from: TerrainId,
+        effect: TerrainEffect,
     },
     UseItem {
         index: usize,
@@ -991,6 +1093,7 @@ impl BattleState {
                 spells: setup.spells,
             },
             map: setup.map,
+            burning: Vec::new(),
             turn: 1,
             phase: Phase::Player,
             units,
@@ -1035,6 +1138,11 @@ impl BattleState {
     /// The battlefield.
     pub fn map(&self) -> &BattleMap {
         &self.map
+    }
+
+    /// Tiles burning now, in the order they were set burning.
+    pub fn burning(&self) -> &[Burning] {
+        &self.burning
     }
 
     /// Terrain rules.
@@ -1189,6 +1297,10 @@ impl BattleState {
                 ref spell,
                 target: CastTarget::Unit(target),
             } => self.plan_cast(unit, dest, spell, target)?,
+            UnitAction::Cast {
+                ref spell,
+                target: CastTarget::Tile(pos),
+            } => self.plan_tile_cast(unit, dest, spell, pos)?,
         };
         Ok((path, step))
     }
@@ -1283,6 +1395,18 @@ impl BattleState {
         })
     }
 
+    /// The spell `spell` if `unit` has learned it and has a use left.
+    fn castable(&self, unit: &Unit, spell: &SpellId) -> Result<&SpellDef, CommandError> {
+        let def = self.known_spell(unit, spell)?;
+        if unit.spells.uses_left(spell) == 0 {
+            return Err(CommandError::NoUsesLeft {
+                unit: unit.id,
+                spell: spell.clone(),
+            });
+        }
+        Ok(def)
+    }
+
     /// Validates `unit` casting `spell` on unit `target` from `dest`.
     fn plan_cast(
         &self,
@@ -1291,13 +1415,7 @@ impl BattleState {
         spell: &SpellId,
         target: UnitId,
     ) -> Result<Step, CommandError> {
-        let def = self.known_spell(unit, spell)?;
-        if unit.spells.uses_left(spell) == 0 {
-            return Err(CommandError::NoUsesLeft {
-                unit: unit.id,
-                spell: spell.clone(),
-            });
-        }
+        let def = self.castable(unit, spell)?;
         let heal_power = match def.kind {
             SpellKind::Attack { .. } => {
                 return self.plan_attack(unit, dest, target, Equipped::Spell(spell.clone()));
@@ -1323,6 +1441,44 @@ impl BattleState {
             spell: spell.clone(),
             target,
             amount: heal_power.saturating_add(mag).clamp(0, missing),
+        })
+    }
+
+    /// Validates `unit` casting `spell` on the tile `pos` from `dest`.
+    fn plan_tile_cast(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        spell: &SpellId,
+        pos: Pos,
+    ) -> Result<Step, CommandError> {
+        let def = self.castable(unit, spell)?;
+        let effect = def
+            .terrain_effect
+            .as_ref()
+            .ok_or_else(|| CommandError::NoTerrainEffect(spell.clone()))?;
+        let from = *self
+            .map
+            .tiles
+            .get(pos)
+            .ok_or(CommandError::TileOffMap(pos))?;
+        let distance = Pos::manhattan(dest, pos);
+        if !def.in_range(distance) {
+            return Err(CommandError::TileOutOfRange { pos, distance });
+        }
+        // The caster stands on `dest` once it has moved, not on its old tile.
+        let occupied = pos == dest || self.units.iter().any(|u| u.pos == pos && u.id != unit.id);
+        if occupied {
+            return Err(CommandError::TileOccupied(pos));
+        }
+        if !effect.from.contains(&from) {
+            return Err(CommandError::WrongTerrain(pos));
+        }
+        Ok(Step::Terrain {
+            spell: spell.clone(),
+            pos,
+            from,
+            effect: effect.clone(),
         })
     }
 
@@ -1524,6 +1680,12 @@ impl BattleState {
                 }
                 self.spend_spell(id, &spell, events);
             }
+            Step::Terrain {
+                spell,
+                pos,
+                from,
+                effect,
+            } => self.cast_on_tile(id, &spell, pos, from, &effect, events),
             Step::UseItem {
                 index,
                 item,
@@ -1591,6 +1753,81 @@ impl BattleState {
         if let Some(u) = self.unit_mut(id) {
             u.loadout.equipped = Some(equipped.clone());
             events.push(Event::Equipped { unit: id, equipped });
+        }
+    }
+
+    /// Carries out unit `id`'s validated tile cast of `spell` on `pos` (now
+    /// `from`).
+    fn cast_on_tile(
+        &mut self,
+        id: UnitId,
+        spell: &SpellId,
+        pos: Pos,
+        from: TerrainId,
+        effect: &TerrainEffect,
+        events: &mut Vec<Event>,
+    ) {
+        let with = Equipped::Spell(spell.clone());
+        let equip = self
+            .tables
+            .spells
+            .get(spell)
+            .is_some_and(SpellDef::is_attack)
+            && self
+                .unit(id)
+                .is_some_and(|u| u.loadout.equipped.as_ref() != Some(&with));
+        if equip {
+            self.equip(id, with, events);
+        }
+        events.push(Event::SpellCast {
+            unit: id,
+            spell: spell.clone(),
+            target: CastTarget::Tile(pos),
+        });
+        self.set_terrain(pos, from, effect.to, events);
+        if let EffectDuration::UntilCastersNextPhase { then, damage } = effect.lasts
+            && let Some(u) = self.unit(id)
+        {
+            self.burning.push(Burning {
+                pos,
+                phase: Phase::of(u.faction),
+                then,
+                damage,
+            });
+        }
+        self.spend_spell(id, spell, events);
+    }
+
+    /// Changes the terrain at `pos` (on the map, now `from`) to `to`, with its
+    /// event.
+    fn set_terrain(&mut self, pos: Pos, from: TerrainId, to: TerrainId, events: &mut Vec<Event>) {
+        if let Some(tile) = self.map.tiles.get_mut(pos) {
+            *tile = to;
+            events.push(Event::TerrainChanged { pos, from, to });
+        }
+    }
+
+    /// Burns out the tiles the current phase's side set burning, in the
+    /// order they were set, burning whoever stands on them first.
+    fn burn_out(&mut self, events: &mut Vec<Event>) {
+        let phase = self.phase;
+        let (done, left) = std::mem::take(&mut self.burning)
+            .into_iter()
+            .partition(|b| b.phase == phase);
+        self.burning = left;
+        for b in done {
+            if let Some(u) = self.units.iter_mut().find(|u| u.pos == b.pos) {
+                let amount = b.damage.clamp(0, (u.hp - 1).max(0));
+                u.hp -= amount;
+                events.push(Event::BurnDamage {
+                    unit: u.id,
+                    pos: b.pos,
+                    amount,
+                });
+            }
+            if let Some(&from) = self.map.tiles.get(b.pos) {
+                self.set_terrain(b.pos, from, b.then, events);
+            }
         }
     }
 
@@ -1763,10 +2000,11 @@ impl BattleState {
         }
     }
 
-    /// Starts the current phase (see the module docs). Returns `false`, with
-    /// no events, if it is skipped: no units of its factions, even after
-    /// arrivals.
+    /// Starts the current phase (see the module docs). Returns `false` if it
+    /// is skipped: no units of its factions, even after arrivals. A skipped
+    /// phase still burns out its tiles (their only events).
     fn start_phase(&mut self, events: &mut Vec<Event>) -> bool {
+        self.burn_out(events);
         let phase = self.phase;
         for u in self
             .units

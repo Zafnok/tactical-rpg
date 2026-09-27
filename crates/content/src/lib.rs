@@ -72,7 +72,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     let maps = check_map_features(maps, items.as_ref().ok(), terrain.as_ref().ok());
     let characters = character::load(classes.as_ref().ok(), items.as_ref().ok());
     let spells = check_spell_references(
-        spell::load(),
+        spell::load(terrain.as_ref().ok().map(|t| &t.display)),
         classes.as_ref().ok(),
         characters.as_ref().ok(),
     );
@@ -199,11 +199,15 @@ mod tests {
         character::load(ok_classes().ok().as_ref(), item::load().ok().as_ref())
     }
 
+    fn ok_spells() -> Result<SpellTable, Vec<ContentError>> {
+        spell::load(Some(&ok_terrain().unwrap_or_default().display))
+    }
+
     fn ok_units() -> Loaded {
         Loaded {
             classes: ok_classes(),
             items: item::load(),
-            spells: spell::load(),
+            spells: ok_spells(),
             characters: ok_characters(),
         }
     }
@@ -246,7 +250,7 @@ mod tests {
         );
         assert_eq!(
             content.as_ref().map(|c| &c.spells),
-            spell::load().ok().as_ref()
+            ok_spells().ok().as_ref()
         );
         assert_eq!(
             content.as_ref().map(|c| &c.characters),
@@ -307,7 +311,7 @@ mod tests {
                 Loaded {
                     classes: if i == 5 { Err(e("c")) } else { ok_classes() },
                     items: if i == 6 { Err(e("i")) } else { item::load() },
-                    spells: if i == 7 { Err(e("s")) } else { spell::load() },
+                    spells: if i == 7 { Err(e("s")) } else { ok_spells() },
                     characters: if i == 8 { Err(e("u")) } else { ok_characters() },
                 },
             )
@@ -354,7 +358,7 @@ mod tests {
     fn spell_reference_checks_join_the_spell_errors() {
         let classes = ok_classes().ok();
         let characters = ok_characters().ok();
-        let spells = spell::load();
+        let spells = ok_spells();
         assert_eq!(
             check_spell_references(spells.clone(), classes.as_ref(), characters.as_ref()),
             spells
