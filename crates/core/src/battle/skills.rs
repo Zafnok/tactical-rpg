@@ -4,7 +4,7 @@
 
 use std::collections::{BTreeMap, VecDeque};
 
-use super::arts::{ArtUse, check_boss};
+use super::arts::{ArtUse, check_arts_allowed};
 use super::{BattleState, CommandError, Event, PendingMove, Step};
 use crate::art::ArtId;
 use crate::combat::{CombatMods, CombatantInput};
@@ -386,7 +386,7 @@ impl BattleState {
         id: &SkillId,
         target: Option<UnitId>,
     ) -> Result<Step, CommandError> {
-        check_boss(unit)?;
+        check_arts_allowed(unit)?;
         let def = self.usable_active(unit, id)?;
         let SkillKind::Active { cost, effect } = &def.kind else {
             return Err(CommandError::WrongSkillKind(id.clone()));

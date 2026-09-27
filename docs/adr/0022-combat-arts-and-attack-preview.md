@@ -45,8 +45,10 @@ numbers itself (ADR-0004).
    after, the art's `ArtNote`s, the pierce's numbers). It runs the same
    validation as `apply`, with the same errors and no state change. The UI
    and the AI use it instead of building combat inputs themselves.
-5. **`Unit::boss`** (saved, default `false`) marks the only non-player
-   units allowed to use arts and actives (`CommandError::NotABoss`).
+5. **`Unit::role`** (`Regular`, `Boss` or `Noncombatant`; saved, default
+   `Regular`) says which non-player units may use arts and actives: enemy
+   bosses, and green units that aren't non-combat ones
+   (`CommandError::ArtsNotAllowed` for the rest).
 
 ## Consequences
 

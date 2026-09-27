@@ -163,9 +163,10 @@
 //!     ([`Event::EffectExpired`]).
 //!   - **Heal spells** and Sanctuary restore the caster's passives'
 //!     [`heal_bonus`] more (White Magic; Nick).
-//!   - **Bosses only**: a non-player unit that isn't a
-//!     [boss](Unit::boss) can't use actives or arts
-//!     ([`CommandError::NotABoss`]; `combat-arts.md`).
+//!   - **Who uses them**: player units, enemy [bosses](crate::unit::Role::Boss) and
+//!     green units that aren't [non-combat](crate::unit::Role::Noncombatant) ones; any
+//!     other unit is refused actives and arts
+//!     ([`CommandError::ArtsNotAllowed`]; `combat-arts.md`).
 //! - **Combat Arts** ([`crate::art`] has the art rules;
 //!   `docs/design/combat-arts.md`): an option of a weapon attack
 //!   ([`UnitAction::Attack`]'s `art`), never of a counter or a cast. An
@@ -183,9 +184,9 @@
 //!     the target still stands ([`Event::EffectApplied`], until the end of
 //!     the target's next phase; the same art refreshes it). Mov and Spd
 //!     debuffs feed movement, the danger zone and attack speed;
-//!   - **Line Pierce**: if the attacker still stands and the tile
-//!     `target + (target − dest)` (attacker and target in a straight line)
-//!     holds a unit hostile to it, one strike at that unit, even if the
+//!   - **Line Pierce**: if the attacker still stands and the tile one step
+//!     past the target, on the straight or diagonal line from `dest`, holds
+//!     a unit hostile to it (any other angle has no such tile), one strike at that unit, even if the
 //!     target fell: the normal formulas against that unit, no counter, no
 //!     extra strikes, rolled after the combat's strikes. It is its own
 //!     [`Event::CombatResolved`] (a second combat for unit EXP and class
@@ -236,7 +237,7 @@
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
 //! the map (with its current terrain), burning tiles, units (with their
-//! learned skills, timed effects and boss flag), fallen units,
+//! learned skills, timed effects and role), fallen units,
 //! pending reinforcements, objective, turn,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
@@ -1017,8 +1018,9 @@ pub enum CommandError {
     },
     /// An attack chose both a Combat Art and a combat active.
     ArtWithActive,
-    /// Only bosses among non-player units use arts and active skills.
-    NotABoss(UnitId),
+    /// The unit may not use arts and active skills: among enemies only
+    /// bosses do, and non-combat green units never do.
+    ArtsNotAllowed(UnitId),
     /// The action isn't an attack (for [`BattleState::preview_attack`]).
     NotAnAttack,
 }
@@ -1147,12 +1149,8 @@ impl CommandError {
             CommandError::ArtWithActive => {
                 f.write_str("an attack uses one art or one active, not both")
             }
-            CommandError::NotABoss(id) => {
-                write!(
-                    f,
-                    "unit {} isn't a boss: only bosses use arts and actives",
-                    id.0
-                )
+            CommandError::ArtsNotAllowed(id) => {
+                write!(f, "unit {} doesn't use arts or actives", id.0)
             }
             CommandError::NotAnAttack => f.write_str("the action isn't an attack"),
             other => write!(f, "{other:?}"),
@@ -1772,7 +1770,7 @@ impl BattleState {
             return Err(CommandError::ArtWithActive);
         }
         if active.is_some() || art.is_some() {
-            check_boss(unit)?;
+            check_arts_allowed(unit)?;
         }
         let active = active
             .map(|id| self.plan_active(unit, id, &with))
@@ -2623,7 +2621,7 @@ mod arts;
 mod skills;
 
 pub use arts::AttackPreview;
-use arts::{ArtUse, check_boss};
+use arts::{ArtUse, check_arts_allowed};
 use skills::{ActiveUse, AttackPlan, Fight, SkillStep};
 
 #[cfg(test)]

@@ -37,6 +37,7 @@ use crate::skill::{
 use crate::spell::{EffectDuration, SpellState, TerrainEffect};
 use crate::stats::{Growths, StatKind, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
+use crate::unit::Role;
 use crate::weapon::WeaponKind;
 
 const OPEN: [&str; 5] = [
@@ -876,7 +877,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         pos,
         acted: false,
         is_lord: false,
-        boss: false,
+        role: Role::Regular,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
@@ -3011,7 +3012,7 @@ prop_compose! {
             vec!["flier_bow", "master_sword", "axe", "pike", "knuckles"],
         )),
         rank in prop::sample::select(vec![WeaponRank::E, WeaponRank::D]),
-        boss in prop::bool::weighted(0.4),
+        role in prop::sample::select(vec![Role::Regular, Role::Boss, Role::Noncombatant]),
         armour in prop::option::of(prop::sample::select(vec!["vest", "mail"])),
         consumables in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=2),
         wounds in 0..=10_i32,
@@ -3045,7 +3046,7 @@ prop_compose! {
         .into_iter()
         .map(|kind| (kind, rank))
         .collect();
-        u.boss = boss;
+        u.role = role;
         u.stats = Stats::from_growable([hp, str, mag, dex, spd, def, res], mov);
         u.hp = (hp - wounds).max(1);
         let mut weapons = Vec::new();

@@ -55,6 +55,17 @@ After the PR was opened, Nick added:
 > durability is that these do not use durability whatsoever they simply tap
 > the spell counter."
 
+Reviewing ticket 0312 (2026-09-27), Nick added:
+
+> **Line Pierce on a diagonal:** "for line pierce I am ok with it except for
+> diagonal attack. Since diagonal should be Rng 2 like FE handles it. So if
+> you happen to have a spear with Rng 2 then I think line pierce should work
+> diagonally"
+>
+> **Green units:** "I think green units can use arts/actives so long as
+> they're combat green units... not like villagers you have to protect or
+> wild beasts you slay for materials and nothing more..."
+
 So:
 
 - **Combat Arts** are weapon techniques. A unit learns a weapon kind's arts by
@@ -71,7 +82,9 @@ So:
   for its weapon or class. Overlaps between them should be **rare and make
   sense** (Nick's example: a unique blade whose art hits Res, and a Spellsword
   class whose active does the same for a turn).
-- **Only bosses** among enemies use arts and actives.
+- **Only bosses** among enemies use arts and actives. **Combat green units**
+  use them too; non-combat green units (villagers, wild beasts) never do
+  (Nick, 0312 review).
 - **Weapon EXP** is a base (2, or 4 with an art) **plus a bonus from the
   damage dealt** (Nick).
 - **Spells are the only per-battle resource.** Casting never touches
@@ -165,10 +178,15 @@ Details:
 - **Armor Cleave** adds `(Armored, 2)` to the weapon's effective list for
   this combat. It uses the largest-multiplier rule too.
 - **Line Pierce, exact:**
-  - "Directly behind" is the tile `target + (target − attacker)`. It only
-    exists when attacker and target are in a straight line (always true at
-    distance 1, which is every spear today). At a diagonal distance-2 attack,
-    there is no pierce.
+  - "Directly behind" is the next tile past the target on the line from the
+    attacker: one step further in the attack's direction. The line is
+    either straight (same row or column) or **diagonal** (Nick: a diagonal
+    attack is a range-2 attack, as in FE, and pierces diagonally). So from
+    `(0,0)`: a target at `(1,0)` or `(2,0)` has `(2,0)` or `(3,0)` behind
+    it, and a diagonal target at `(1,1)` has `(2,2)` behind it.
+  - Any other angle (only possible with range 3 or more, e.g. a target at
+    `(1,2)`) has no tile behind it and no pierce (*Claude's starting
+    rule*; no spear has range 3 yet).
   - The pierce happens **even if the main target died**, as long as the
     attacker is still alive and the tile holds a unit **hostile** to the
     attacker.
@@ -270,16 +288,20 @@ functions. The closest pairs, all judged in the playtest:
 - **Close Shot** (bow min range 1) and **Long Shot** (Marksman, bow max
   range +2): opposite ends of the bow's range.
 
-## Enemies: bosses only
+## Enemies: bosses only; combat green units too
 
-- Only units marked **boss** in chapter data use arts and actives. They follow
-  the same rules and pay with their own weapon's durability (Nick: "Bosses
-  only").
-- Ordinary enemies and green (Other-phase) units never use arts or actives.
-  Their passives still apply (at class level 1, generic units have none).
-- When a boss attacks with an art or active, the enemy-phase forecast and
-  playback show its name.
-- How the boss AI chooses: ticket 0503.
+- Among enemies, only units marked **boss** in chapter data use arts and
+  actives. They follow the same rules and pay with their own weapon's
+  durability (Nick: "Bosses only").
+- **Green (Other-phase) units** use arts and actives when they are **combat
+  units** (allied soldiers, mercenaries…), with the same rules (Nick, 0312
+  review). **Non-combat** green units, marked so in chapter data (villagers
+  to protect, wild beasts that only give materials), never do.
+- Ordinary enemies never use arts or actives. Their passives still apply
+  (at class level 1, generic units have none).
+- When a boss or a green unit attacks with an art or active, the forecast
+  and playback show its name.
+- How the boss and green AI choose: ticket 0503.
 
 ## Forecast display
 

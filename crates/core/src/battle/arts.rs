@@ -10,7 +10,7 @@ use crate::item::{Equipped, ItemId};
 use crate::skill::{
     CostSource, EffectSource, SkillCost, SkillId, TimedEffect, check_cost, pay_cost,
 };
-use crate::unit::{Faction, Unit, UnitId};
+use crate::unit::{Faction, Role, Unit, UnitId};
 
 /// A validated use of a Combat Art in an attack.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,13 +50,19 @@ pub struct AttackPreview {
     pub pierce: Option<(UnitId, SideForecast)>,
 }
 
-/// Whether `unit` may use arts and active skills: every player unit, and
-/// bosses (`combat-arts.md`, *Enemies: bosses only*).
-pub(super) fn check_boss(unit: &Unit) -> Result<(), CommandError> {
-    if unit.faction == Faction::Player || unit.boss {
+/// Whether `unit` may use arts and active skills (`combat-arts.md`,
+/// *Enemies: bosses only; combat green units too*): every player unit,
+/// bosses among enemies, and green units that aren't non-combat ones.
+pub(super) fn check_arts_allowed(unit: &Unit) -> Result<(), CommandError> {
+    let allowed = match unit.faction {
+        Faction::Player => true,
+        Faction::Enemy => unit.role == Role::Boss,
+        Faction::Ally | Faction::Neutral => unit.role != Role::Noncombatant,
+    };
+    if allowed {
         Ok(())
     } else {
-        Err(CommandError::NotABoss(unit.id))
+        Err(CommandError::ArtsNotAllowed(unit.id))
     }
 }
 
@@ -108,9 +114,10 @@ impl BattleState {
 
     /// Line Pierce's strike for `unit` attacking `defender` as `fight` says,
     /// from `distance` tiles: the hostile unit on the tile directly behind
-    /// the target (`target + (target − dest)`, only in a straight line) and
-    /// the numbers of one strike at it, with no counter. The strike ignores
-    /// range, so its forecast is worked out at the target's distance.
+    /// the target (one step past it, on a straight or diagonal line from
+    /// `dest`; any other angle has none) and the numbers of one strike at
+    /// it, with no counter. The strike ignores range, so its forecast is
+    /// worked out at the target's distance.
     pub(super) fn plan_pierce(
         &self,
         unit: &Unit,
@@ -119,10 +126,10 @@ impl BattleState {
         distance: u32,
     ) -> Result<Option<(UnitId, Forecast)>, CommandError> {
         let (dx, dy) = (defender.pos.x - fight.dest.x, defender.pos.y - fight.dest.y);
-        if dx != 0 && dy != 0 {
+        if dx != 0 && dy != 0 && dx.abs() != dy.abs() {
             return Ok(None);
         }
-        let behind = Pos::new(defender.pos.x + dx, defender.pos.y + dy);
+        let behind = Pos::new(defender.pos.x + dx.signum(), defender.pos.y + dy.signum());
         // The attacker has left its own tile, and is never hostile to itself.
         let Some(victim) = self
             .units

@@ -883,8 +883,9 @@ A generic unit of class `C` at character level `L` has
 talent and no randomness (Nick: fixed average stats, so a map plays the
 same way every time and you can plan exactly). Its weapon ranks are the class's start ranks
 unless the chapter data says otherwise. Its class level is 1, with the
-class's active (it hasn't mastered anything), but **only bosses use actives
-and Combat Arts** (Nick, `combat-arts.md`). Chapter data may give a
+class's active (it hasn't mastered anything), but among enemies **only
+bosses use actives and Combat Arts** (Nick, `combat-arts.md`; combat green
+units use them too). Chapter data may give a
 generic enemy extra skills or spells.
 
 ### Named characters

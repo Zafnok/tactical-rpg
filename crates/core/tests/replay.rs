@@ -134,7 +134,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         pos: Pos::new(x, y),
         acted: false,
         is_lord: id == 1,
-        boss: false,
+        role: trpg_core::Role::Regular,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),

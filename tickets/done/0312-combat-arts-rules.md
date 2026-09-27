@@ -149,9 +149,10 @@ None. Every rule and number is in `combat-arts.md`.
     in turn, even a skipped one, so this is the same moment.
   - Timed effects are now keyed by `EffectSource` (`Skill` or `Art`);
     `EffectApplied`/`EffectExpired` carry `source` instead of `skill`.
-  - The boss check also covers class actives (`UseSkill` and actives in
-    attacks and casts), per `combat-arts.md` ("Only units marked boss …
-    use arts and actives").
+  - The "who may use arts" check also covers class actives (`UseSkill` and
+    actives in attacks and casts), per `combat-arts.md` ("use arts and
+    actives"). Units have a `role` (`Regular`, `Boss`, `Noncombatant`)
+    instead of a `boss` flag.
   - Unit EXP and class points (0601) don't exist yet: Line Pierce's strike
     is its own `CombatResolved` event, so 0601 can award it as a second
     combat.
@@ -167,16 +168,29 @@ None. Every rule and number is in `combat-arts.md`.
      (none of the current skills change Mov, so nothing else changes).
   5. A unit only "knows" arts for weapon kinds it has a rank in; after a
      reclass it keeps knowing them but can't use them.
-  6. Green (Ally/Neutral) units are held to the same "bosses only" rule as
-     enemies.
+  6. Line Pierce at an angle that is neither straight nor diagonal (only
+     possible with range 3, which no spear has) has no tile behind and
+     doesn't pierce.
+- **Nick's review (2026-09-27)**, recorded in `combat-arts.md`:
+  - "diagonal should be Rng 2 like FE handles it … line pierce should work
+    diagonally": Line Pierce now strikes the next tile past the target on
+    a straight **or diagonal** line. "Behind" is one step past the target,
+    so a straight range-2 attack pierces the tile right behind the target
+    (the old `target + (target − attacker)` formula skipped a tile at
+    range 2).
+  - "green units can use arts/actives so long as they're combat green
+    units... not like villagers you have to protect or wild beasts": green
+    units use arts and actives unless chapter data gives them
+    `role: Noncombatant`. Enemies stay bosses only. 0503 (AI) and 0414
+    (playback banner) now cover combat green units too.
 - **Tests:** `core::art` unit tests (every effect field, notes, learning by
   rank, weapon arts, reclass, costs); `combat` tests (W1 with each sword
   art, Unhorse, Armor Cleave, Crushing Swing, Close Shot, the follow-up
   ratio); `skill` tests (stat floor at 0, `move_points`, debuff expiry,
   effect sources); `battle/tests/art.rs` (one test per art, Line Pierce
   geometry/kill/attacker falls, debuff and stance expiry, refusals leave the
-  state unchanged, break after the combat, counters never use arts, bosses
-  only, weapon EXP doubling, the preview). The random-play property test
+  state unchanged, break after the combat, counters never use arts, who may
+  use arts by faction and role, weapon EXP doubling, the preview). The random-play property test
   now plays art attacks (every art turns up) and checks strike counts
   against each forecast and that Mov/Spd never go below 0. `trpg-content`:
   the table matches the design (all 10: name, kind, rank, cost, effect),

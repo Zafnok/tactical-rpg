@@ -30,7 +30,7 @@ fn typed(kind: WeaponKind, min: u32, max: u32, might: StatValue) -> WeaponDef {
 
 /// `blade` (sword 3), `big_blade` (sword 10), `moon_blade` (sword 3 with
 /// the `riposte` weapon art), `pike` (spear 3), `long_pike` (spear 3, range
-/// 1–2), `hatchet` (axe 1), `heavy_axe` (axe 3), `longbow` (bow 3, range
+/// 1–2), `far_pike` (spear 3, range 1–3), `hatchet` (axe 1), `heavy_axe` (axe 3), `longbow` (bow 3, range
 /// 2), `knuckles` (gauntlet 3).
 fn art_weapons() -> Vec<(&'static str, WeaponDef)> {
     use WeaponKind::{Axe, Bow, Gauntlet, Spear, Sword};
@@ -46,6 +46,7 @@ fn art_weapons() -> Vec<(&'static str, WeaponDef)> {
         ),
         ("pike", typed(Spear, 1, 1, 3)),
         ("long_pike", typed(Spear, 1, 2, 3)),
+        ("far_pike", typed(Spear, 1, 3, 3)),
         ("hatchet", typed(Axe, 1, 1, 1)),
         ("heavy_axe", typed(Axe, 1, 1, 3)),
         ("longbow", typed(Bow, 2, 2, 3)),
@@ -345,27 +346,52 @@ fn line_pierce_strikes_the_unit_behind_the_target() {
     );
 }
 
+/// The unit Line Pierce would strike: unit 1 with `weapon` at `(0,0)`
+/// attacking unit 3 at `target`, with enemies 4.. at `others`.
+fn pierced(weapon: &str, target: Pos, others: &[Pos]) -> Option<UnitId> {
+    let mut units = vec![artist(1, p(0, 0), weapon), unit(3, Faction::Enemy, target)];
+    units.extend(
+        (4..)
+            .zip(others)
+            .map(|(id, &pos)| unit(id, Faction::Enemy, pos)),
+    );
+    preview(&battle(units), 1, p(0, 0), &art_attack(3, "line_pierce"))
+        .pierce
+        .map(|(id, _)| id)
+}
+
 #[test]
-fn line_pierce_needs_a_hostile_unit_in_a_straight_line() {
-    // Diagonal (distance 2 with a long pike): no tile "behind".
-    let diagonal = battle(vec![
-        artist(1, p(0, 0), "long_pike"),
-        unit(3, Faction::Enemy, p(1, 1)),
-        unit(4, Faction::Enemy, p(2, 2)),
+fn line_pierce_follows_straight_and_diagonal_lines() {
+    // Straight at distance 2: the next tile on, not 2 further.
+    assert_eq!(
+        pierced("long_pike", p(0, 2), &[p(0, 3), p(0, 4)]),
+        Some(UnitId(4))
+    );
+    assert_eq!(pierced("long_pike", p(0, 2), &[p(0, 4)]), None);
+    // Diagonal (a range-2 attack, Nick): the next diagonal tile.
+    assert_eq!(
+        pierced("long_pike", p(1, 1), &[p(2, 2), p(2, 1), p(1, 2)]),
+        Some(UnitId(4))
+    );
+    // Any other angle (range 3) has no tile behind.
+    assert_eq!(
+        pierced("far_pike", p(1, 2), &[p(2, 3), p(2, 4), p(1, 3)]),
+        None
+    );
+    // Towards the map's top-left too.
+    let mut s = battle(vec![
+        artist(1, p(3, 3), "long_pike"),
+        unit(3, Faction::Enemy, p(2, 2)),
+        unit(4, Faction::Enemy, p(1, 1)),
     ]);
-    let shown = preview(&diagonal, 1, p(0, 0), &art_attack(3, "line_pierce"));
-    assert_eq!(shown.pierce, None);
-    let mut copy = diagonal.clone();
-    let events = act(&mut copy, 1, p(0, 0), art_attack(3, "line_pierce"));
-    assert_eq!(combats(&events).len(), 1);
-    // Straight at distance 2: the tile behind is 2 further on.
-    let far = battle(vec![
-        artist(1, p(0, 0), "long_pike"),
-        unit(3, Faction::Enemy, p(0, 2)),
-        unit(4, Faction::Enemy, p(0, 4)),
-    ]);
-    let shown = preview(&far, 1, p(0, 0), &art_attack(3, "line_pierce"));
-    assert_eq!(shown.pierce.map(|(id, _)| id), Some(UnitId(4)));
+    let events = act(&mut s, 1, p(3, 3), art_attack(3, "line_pierce"));
+    let fights = combats(&events);
+    assert_eq!(fights.len(), 2);
+    assert_eq!(fights[1].0, UnitId(4));
+}
+
+#[test]
+fn line_pierce_needs_a_hostile_unit_behind() {
     // An ally behind is never struck; nor is an empty tile.
     let ally = battle(vec![
         artist(1, p(0, 0), "pike"),
@@ -584,7 +610,7 @@ fn a_boss_debuff_on_a_player_unit_lasts_through_the_next_player_phase() {
     let mut s = battle(vec![
         lord(1, p(0, 0)),
         Unit {
-            boss: true,
+            role: Role::Boss,
             ..ranked(
                 with(unit(3, Faction::Enemy, p(2, 0)), "longbow"),
                 WeaponRank::D,
@@ -882,7 +908,7 @@ fn a_counter_never_uses_an_art() {
         stats(artist(1, p(0, 0), "big_blade"), [30, 0, 0, 0, 4, 0, 0]),
         stats(
             Unit {
-                boss: true,
+                role: Role::Boss,
                 ..unit(3, Faction::Enemy, p(1, 0))
             },
             [40, 0, 0, 0, 0, 0, 0],
@@ -902,7 +928,7 @@ fn a_counter_never_uses_an_art() {
 }
 
 #[test]
-fn only_bosses_among_other_units_use_arts_and_actives() {
+fn enemy_bosses_and_combat_green_units_use_arts_and_actives() {
     let grunt = |id, faction, pos| {
         in_class(
             ranked(with(unit(id, faction, pos), "blade"), WeaponRank::D),
@@ -913,13 +939,13 @@ fn only_bosses_among_other_units_use_arts_and_actives() {
         lord(1, p(0, 0)),
         grunt(3, Faction::Enemy, p(1, 0)),
         Unit {
-            boss: true,
+            role: Role::Boss,
             ..grunt(4, Faction::Enemy, p(0, 1))
         },
         in_class(grunt(5, Faction::Enemy, p(7, 4)), &skill_class("brace").0),
     ]);
     end(&mut s);
-    let not_boss = |id| CommandError::NotABoss(UnitId(id));
+    let not_boss = |id| CommandError::ArtsNotAllowed(UnitId(id));
     refused_act(
         &mut s,
         3,
@@ -953,10 +979,21 @@ fn only_bosses_among_other_units_use_arts_and_actives() {
     act(&mut s, 3, p(1, 0), attack(1));
     let events = act(&mut s, 4, p(0, 1), art_attack(1, "flowing_cut"));
     assert_eq!(names(&events)[0], "ArtUsed");
-    // Green units aren't bosses either.
+    // Combat green units use them; non-combat ones (villagers, beasts)
+    // don't.
+    let noncombatant = |u: Unit| Unit {
+        role: Role::Noncombatant,
+        ..u
+    };
     let mut green = battle(vec![
         lord(1, p(0, 0)),
         grunt(2, Faction::Ally, p(0, 1)),
+        noncombatant(grunt(6, Faction::Ally, p(2, 0))),
+        in_class(grunt(7, Faction::Neutral, p(7, 4)), &skill_class("brace").0),
+        noncombatant(in_class(
+            grunt(8, Faction::Neutral, p(7, 2)),
+            &skill_class("brace").0,
+        )),
         unit(3, Faction::Enemy, p(1, 1)),
     ]);
     end(&mut green);
@@ -964,11 +1001,20 @@ fn only_bosses_among_other_units_use_arts_and_actives() {
     assert_eq!(green.phase(), Phase::Other);
     refused_act(
         &mut green,
-        2,
-        p(0, 1),
+        6,
+        p(2, 0),
         art_attack(3, "flowing_cut"),
-        not_boss(2),
+        not_boss(6),
     );
+    let brace = UnitAction::UseSkill {
+        skill: SkillId::new("brace"),
+        target: None,
+    };
+    refused_act(&mut green, 8, p(7, 2), brace.clone(), not_boss(8));
+    let events = act(&mut green, 2, p(0, 1), art_attack(3, "flowing_cut"));
+    assert_eq!(names(&events)[0], "ArtUsed");
+    let events = act(&mut green, 7, p(7, 4), brace);
+    assert_eq!(names(&events)[0], "SkillUsed");
 }
 
 #[test]

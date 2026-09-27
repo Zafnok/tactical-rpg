@@ -38,7 +38,8 @@ pick an art, and can you tell what it will do and what it costs?
   screen (0405).
 - Debuff markers (Pinned, Slowed) on the map and info screen, reusing 0412's
   timed-effect markers.
-- Enemy-phase playback shows the name of a boss's art or active.
+- Enemy- and Other-phase playback shows the name of a boss's or a combat
+  green unit's art or active.
 
 **Out (do not do):**
 - Core rules (0312).
@@ -63,7 +64,7 @@ pick an art, and can you tell what it will do and what it costs?
    durability `20/20`, and `broken` in the warning colour at 0.
 4. Map/info markers for debuffs, with when they expire.
 5. Enemy-phase playback: a one-line banner with the art or active name when
-   a boss uses one (`ArtUsed`/`SkillUsed` events).
+   a boss or a green unit uses one (`ArtUsed`/`SkillUsed` events).
 6. Help bar (0406) text for the arts list keys.
 
 ## Acceptance criteria
