@@ -48,6 +48,10 @@ Follow-ups:
 > **Learning spells:** "C: Class + personal (Recommended)" (the class gives
 > the basic list, kept after class change; each named character adds 1–2
 > personal signature spells).
+>
+> **Keeping class spells** (2026-09-27, reviewing ticket 0309's PR): "they
+> should only keep the class abilities if they master the class. If they
+> class change without mastering it should be ephemeral."
 
 So: magic is **innate spells**, never items in the 3-weapon loadout. Each
 spell has **uses per battle** that refill at the start of every battle.
@@ -74,12 +78,18 @@ rest in ticket 0013.
 - Each unit has a **spell list**, made of:
   - **class spells:** each class has a list of `(level, spell)` pairs. The
     unit learns a spell when it reaches that level in that class, or when it
-    enters the class at or above that level. **Learned spells are kept after
-    a class change.** The spell lists themselves are set by ticket 0005.
+    enters the class at or above that level. A class's spells are **kept
+    after a class change only if the unit mastered that class** (Nick,
+    2026-09-27; the same rule as class actives in `progression.md`).
+    Leaving an unmastered class leaves its spells behind; they come back if
+    the unit returns to the class, since its class level is saved. Promotion
+    always keeps them, because promoting needs the class mastered. The spell
+    lists themselves are set by ticket 0005.
   - **personal spells:** each named character may have **1–2 signature
     spells** of their own (character data, chosen when the cast is written
     in 0701, with numbers set by 0005 or a balance ticket). They can be
-    learned at a set level or known from the start.
+    learned at a set level or known from the start. They belong to the
+    character, not a class, so a class change never removes them.
 - Every learned spell can be used in battle. There is no "equip N spells"
   limit (*Claude's starting rule*; revisit if lists get long).
 - Any unit whose class or character grants spells can cast. Magic classes

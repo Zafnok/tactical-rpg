@@ -7,11 +7,13 @@
 //!
 //! - **Not items.** A spell takes no loadout slot, has no durability and can't
 //!   be traded. A unit casts the spells in its [`learned`](Unit::learned) set.
-//! - **Learning** ([`Unit::known_spells`], [`Unit::learn_new_spells`]): a
-//!   class spell is known once the unit's class level in that class (from
-//!   [`class_records`](Unit::class_records), for every class it has unlocked)
-//!   reaches the spell's level; a personal spell once its character level
-//!   does. Learned spells are never forgotten, so a class change keeps them.
+//! - **Knowing** ([`Unit::known_spells`], [`Unit::refresh_spells`]): a class
+//!   spell is known once the unit's class level (from
+//!   [`class_records`](Unit::class_records)) reaches the spell's level, in its
+//!   **current class** or in any class it has **mastered** (class level at
+//!   the cap). So a reclass out of an unmastered class leaves that class's
+//!   spells behind, and a return to it brings them back. A personal spell is
+//!   known once the character level reaches its level, whatever the class.
 //! - **Uses per battle** ([`SpellState`]): every learned spell refills to its
 //!   [`uses`](SpellDef::uses) at the start of each battle
 //!   ([`Unit::prepare_for_battle`]). Casting spends 1 use per combat or cast,
@@ -178,19 +180,35 @@ impl SpellState {
     }
 }
 
+/// What [`Unit::refresh_spells`] changed, each in id order.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SpellChanges {
+    /// Spells the unit now knows and didn't before.
+    pub gained: Vec<SpellId>,
+    /// Spells the unit knew and no longer does.
+    pub lost: Vec<SpellId>,
+}
+
 /// A unit's spell rules.
 impl Unit {
-    /// Every spell the unit qualifies for now (see the module docs). Class
-    /// records of classes missing from `classes` are skipped.
+    /// Every spell the unit knows now (see the module docs). Class records of
+    /// classes missing from `classes` are skipped.
     pub fn known_spells(&self, classes: &ClassTable) -> BTreeSet<SpellId> {
-        let from_classes = self.class_records.iter().flat_map(|(id, record)| {
-            classes
-                .get(id)
-                .into_iter()
-                .flat_map(|c| c.spells.iter())
-                .filter(|(level, _)| *level <= record.class_level)
-                .map(|(_, spell)| spell)
-        });
+        let counts = |id: &crate::class::ClassId, level| {
+            *id == self.class || level >= classes.class_level_cap
+        };
+        let from_classes = self
+            .class_records
+            .iter()
+            .filter(|(id, record)| counts(id, record.class_level))
+            .flat_map(|(id, record)| {
+                classes
+                    .get(id)
+                    .into_iter()
+                    .flat_map(|c| c.spells.iter())
+                    .filter(|(level, _)| *level <= record.class_level)
+                    .map(|(_, spell)| spell)
+            });
         let personal = self
             .personal_spells
             .iter()
@@ -199,18 +217,25 @@ impl Unit {
         from_classes.chain(personal).cloned().collect()
     }
 
-    /// Adds every spell the unit now qualifies for to
-    /// [`learned`](Unit::learned) and returns the new ones, in id order.
-    /// Call after a level up, a class level up, a promotion or a reclass
-    /// (0601, 0603). New spells have no uses until the next battle starts.
-    pub fn learn_new_spells(&mut self, classes: &ClassTable) -> Vec<SpellId> {
-        let new: Vec<SpellId> = self
-            .known_spells(classes)
-            .into_iter()
-            .filter(|s| !self.learned.contains(s))
-            .collect();
-        self.learned.extend(new.iter().cloned());
-        new
+    /// Sets [`learned`](Unit::learned) to the [known spells](Unit::known_spells)
+    /// and says what changed. A lost spell also loses its uses, and is
+    /// unequipped if it was equipped. Call after a level up, a class level
+    /// up, a promotion or a reclass (0601, 0603). New spells have no uses
+    /// until the next battle starts.
+    pub fn refresh_spells(&mut self, classes: &ClassTable) -> SpellChanges {
+        let known = self.known_spells(classes);
+        let changes = SpellChanges {
+            gained: known.difference(&self.learned).cloned().collect(),
+            lost: self.learned.difference(&known).cloned().collect(),
+        };
+        for spell in &changes.lost {
+            self.spells.uses_left.remove(spell);
+            if self.loadout.equipped_spell() == Some(spell) {
+                self.loadout.equipped = None;
+            }
+        }
+        self.learned = known;
+        changes
     }
 
     /// The attack spell `spell` if the unit can fight with it now: learned,

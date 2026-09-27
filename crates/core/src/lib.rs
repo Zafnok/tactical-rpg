@@ -42,7 +42,9 @@ pub use movement::{
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
-pub use spell::{SpellDef, SpellId, SpellKind, SpellState, SpellTable, TerrainEffectId};
+pub use spell::{
+    SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable, TerrainEffectId,
+};
 pub use stats::{GrowthValue, Growths, StatKind, StatValue, Stats};
 pub use terrain::{MovementTypeId, TerrainId, TerrainRules, TerrainTable};
 pub use unit::{

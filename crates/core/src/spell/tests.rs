@@ -84,7 +84,7 @@ fn class(id: &str, spells: &[(u8, &str)]) -> ClassDef {
 }
 
 /// `mage` (fire at class level 1, force at 5), `cleric` (heal at 1, mend at
-/// 3) and `sage` (mend at 1; 0 weapon slots).
+/// 3) and `sage` (mend at 1; 0 weapon slots). Class level cap 10.
 fn classes() -> ClassTable {
     let sage = ClassDef {
         weapon_slots: 0,
@@ -99,6 +99,7 @@ fn classes() -> ClassTable {
         .into_iter()
         .map(|c| (c.id.clone(), c))
         .collect(),
+        class_level_cap: 10,
         ..ClassTable::default()
     }
 }
@@ -204,37 +205,81 @@ fn known_spells_follow_class_levels_and_the_character_level() {
     assert_eq!(u.known_spells(&cs), set(&["fire", "force"]));
     u.class_records.insert(ClassId("mage".into()), record(4));
     assert_eq!(u.known_spells(&cs), set(&["fire"]));
-    // Every unlocked class counts, not just the current one.
-    u.class_records.insert(ClassId("cleric".into()), record(3));
+    // Another class counts only once mastered (class level 10).
+    u.class_records.insert(ClassId("cleric".into()), record(9));
+    assert_eq!(u.known_spells(&cs), set(&["fire"]));
+    u.class_records.insert(ClassId("cleric".into()), record(10));
     assert_eq!(u.known_spells(&cs), set(&["fire", "heal", "mend"]));
-    u.class_records.insert(ClassId("cleric".into()), record(2));
-    assert_eq!(u.known_spells(&cs), set(&["fire", "heal"]));
     // A record of a class the table doesn't have is skipped.
-    u.class_records.insert(ClassId("ghost".into()), record(9));
-    assert_eq!(u.known_spells(&cs), set(&["fire", "heal"]));
+    u.class_records.insert(ClassId("ghost".into()), record(10));
+    assert_eq!(u.known_spells(&cs), set(&["fire", "heal", "mend"]));
     // Personal spells follow the character level (3).
     u.personal_spells = vec![(3, sid("zap")), (4, sid("glow"))];
-    assert_eq!(u.known_spells(&cs), set(&["fire", "heal", "zap"]));
+    assert_eq!(u.known_spells(&cs), set(&["fire", "heal", "mend", "zap"]));
     u.level = 4;
-    assert_eq!(u.known_spells(&cs), set(&["fire", "heal", "zap", "glow"]));
+    assert_eq!(
+        u.known_spells(&cs),
+        set(&["fire", "heal", "mend", "zap", "glow"])
+    );
 }
 
+fn changes(gained: &[&str], lost: &[&str]) -> SpellChanges {
+    SpellChanges {
+        gained: gained.iter().map(|s| sid(s)).collect(),
+        lost: lost.iter().map(|s| sid(s)).collect(),
+    }
+}
+
+/// Nick (2026-09-27): class spells are kept after a class change only if the
+/// class was mastered.
 #[test]
-fn learned_spells_survive_a_class_change() {
+fn class_spells_stay_after_a_class_change_only_if_mastered() {
     let cs = classes();
     let mut u = mage(1);
+    u.personal_spells = vec![(1, sid("zap"))];
     u.class_records.insert(ClassId("mage".into()), record(5));
-    assert_eq!(u.learn_new_spells(&cs), [sid("fire"), sid("force")]);
-    // Promotion into sage: mage progress is kept, sage adds mend.
+    assert_eq!(
+        u.refresh_spells(&cs),
+        changes(&["fire", "force", "zap"], &[])
+    );
+    u.spells = SpellState::full(&u.learned, &table());
+    u.loadout.equipped = Some(crate::item::Equipped::Spell(sid("fire")));
+    // Reclass to cleric with mage unmastered: mage's spells stay behind
+    // (their uses too, and fire is unequipped); the personal spell stays.
+    u.class = ClassId("cleric".into());
+    u.class_records
+        .insert(ClassId("cleric".into()), ClassRecord::UNLOCKED);
+    assert_eq!(
+        u.refresh_spells(&cs),
+        changes(&["heal"], &["fire", "force"])
+    );
+    assert_eq!(u.learned, set(&["heal", "zap"]));
+    assert_eq!(u.spells.uses_left(&sid("fire")), 0);
+    assert!(!u.spells.uses_left.contains_key(&sid("force")));
+    assert_eq!(u.loadout.equipped, None);
+    // Back to mage: its saved class level 5 brings both back.
+    u.class = ClassId("mage".into());
+    assert_eq!(
+        u.refresh_spells(&cs),
+        changes(&["fire", "force"], &["heal"])
+    );
+    // Mastered, then promoted to sage: everything from mage is kept.
+    u.class_records.insert(ClassId("mage".into()), record(10));
+    assert_eq!(u.refresh_spells(&cs), changes(&[], &[]));
     u.class = ClassId("sage".into());
     u.class_records
         .insert(ClassId("sage".into()), ClassRecord::UNLOCKED);
-    assert_eq!(u.learn_new_spells(&cs), [sid("mend")]);
-    assert_eq!(u.learned, set(&["fire", "force", "mend"]));
-    // Even if the old record went away, learned spells stay.
-    u.class_records.remove(&ClassId("mage".into()));
-    assert_eq!(u.learn_new_spells(&cs), Vec::<SpellId>::new());
-    assert_eq!(u.learned, set(&["fire", "force", "mend"]));
+    assert_eq!(u.refresh_spells(&cs), changes(&["mend"], &[]));
+    assert_eq!(u.learned, set(&["fire", "force", "mend", "zap"]));
+    // Reclass out of the unmastered sage: mend goes (cleric's mend needs
+    // class level 3); an equipped spell that is kept stays equipped.
+    u.loadout.equipped = Some(crate::item::Equipped::Spell(sid("force")));
+    u.class = ClassId("cleric".into());
+    assert_eq!(u.refresh_spells(&cs), changes(&["heal"], &["mend"]));
+    assert_eq!(
+        u.loadout.equipped,
+        Some(crate::item::Equipped::Spell(sid("force")))
+    );
 }
 
 #[test]

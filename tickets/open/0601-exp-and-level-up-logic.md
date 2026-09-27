@@ -51,7 +51,7 @@ player-faction units.
 5. `grant_class_points(unit, amount) -> Vec<Event>`: to the current class
    record only; class level = `1 + cp / cp_per_class_level[tier]` (a per-tier data table), capped at 10 (data);
    crossing a class level emits `ClassLeveledUp`, learns class spells for that
-   class level (0309's `learn_new_spells`, if it exists), and at 10 emits
+   class level (0309's `refresh_spells`), and at 10 emits
    `ClassMastered` + `SkillLearned` for each of the class's passives (its
    active becomes permanent; 0311's `usable_skills` reads mastery from
    `class_records`).

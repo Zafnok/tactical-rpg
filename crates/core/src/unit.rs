@@ -143,8 +143,7 @@ pub struct Unit {
     pub consumables: Vec<ItemId>,
     /// The character's personal spells, learned at a character level.
     pub personal_spells: Vec<(Level, SpellId)>,
-    /// Every spell the unit has learned (kept after a class change); see
-    /// [`crate::spell`].
+    /// Every spell the unit knows now; see [`crate::spell`].
     pub learned: BTreeSet<SpellId>,
     /// Spell uses left in the current battle.
     pub spells: SpellState,
@@ -234,7 +233,7 @@ impl Unit {
             personal_spells: def.personal_spells.clone(),
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
         };
-        unit.learn_new_spells(classes);
+        unit.refresh_spells(classes);
         Ok(unit)
     }
 
@@ -265,7 +264,7 @@ impl Unit {
             level,
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
         };
-        unit.learn_new_spells(classes);
+        unit.refresh_spells(classes);
         Ok(unit)
     }
 

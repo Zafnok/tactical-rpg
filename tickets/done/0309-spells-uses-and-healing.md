@@ -92,7 +92,7 @@ None (all rules are in `magic.md`).
 - [x] Uses refill at battle start; one use is spent per combat (a doubling mage spends 1); a spell at 0 uses can't be cast or counter (tests).
 - [x] Heal reproduces M3 (the amount is capped by missing HP; a full-HP ally and self are invalid targets, and the state is unchanged).
 - [x] M4: an equipped spell at 0 uses gives no counter; after `Equip` to Force, the unit counters.
-- [x] Learned spells survive a class change; a 0-slot class can't hold weapons.
+- [x] Learned spells survive a class change (revised by Nick during review: only a *mastered* class's spells survive; see the Completion notes); a 0-slot class can't hold weapons.
 - [x] Every new `CommandError` leaves the state unchanged (test).
 - [x] All gates in the `run-gates` skill pass.
 
@@ -117,12 +117,21 @@ None (all rules are in `magic.md`).
 - `core::spell` (new module; `SpellId` moved here from `magic`): `SpellDef`,
   `SpellKind::{Attack, Heal}`, `SpellTable`, `TerrainEffectId`, `SpellState`
   (`full`, `uses_left`, `spend`), and on `Unit`: `known_spells`,
-  `learn_new_spells` (for 0601/0603), `castable_attack`,
-  `first_attack_spell`. `SpellDef::weapon_stats` turns an attack spell into
+  `refresh_spells` (for 0601/0603; returns the spells gained and lost),
+  `castable_attack`, `first_attack_spell`. `SpellDef::weapon_stats` turns an attack spell into
   0304's `WeaponStats` (magical, weight 0, no kind so no rank speed, no trait,
   element set).
-- `Unit` gained `personal_spells`, `learned: BTreeSet<SpellId>` and
-  `spells: SpellState`. `Unit::from_character` and `Unit::generic` learn every
+- **Rule revised by Nick in review (2026-09-27):** a class's spells are kept
+  after a class change **only if that class was mastered** ("If they class
+  change without mastering it should be ephemeral"). `known_spells` counts
+  the current class and mastered classes (class level at the cap), plus
+  personal spells. `refresh_spells` drops the rest, together with their uses
+  and the equipped slot if one of them was equipped. Returning to the class
+  brings them back, since its class level is saved. Promotion keeps
+  everything, because it needs mastery. Recorded in `magic.md` and
+  `progression.md`; 0601 and 0603 were updated.
+- `Unit` gained `personal_spells`, `learned: BTreeSet<SpellId>` (the spells
+  it knows now) and `spells: SpellState`. `Unit::from_character` and `Unit::generic` learn every
   spell they qualify for. `Faction::is_allied_to` (same faction, or
   Player/Ally) decides heal targets.
 - `Loadout.equipped` is now `Option<Equipped>` with
@@ -148,9 +157,10 @@ None (all rules are in `magic.md`).
 
 **Rules I had to pin down** (Claude's starting rules; Nick may veto):
 
-- **At battle start, a unit with nothing equipped gets a default:** the
-  first weapon it can wield, or else its first learned attack spell (in id
-  order). The same default applies when the equipped weapon is sold or
+- **At battle start, a unit with nothing equipped gets a default,** chosen
+  only from what it already has: the first weapon in its slots it can wield,
+  or else its first known attack spell (in id order). With neither, it stays
+  unequipped and can't counter. Nick accepted this in review. The same default applies when the equipped weapon is sold or
   stowed by a promotion. Without this, a 0-slot mage would start every battle
   unable to counter.
 - **A defender spends a use only if it actually struck.** If it fell to the
