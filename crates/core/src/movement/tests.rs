@@ -199,10 +199,7 @@ fn scene_as(rows: &[&str], class: &str, mov: StatValue, mover: Faction) -> Scene
     }
     Scene {
         rows: rows.iter().map(|&r| r.to_owned()).collect(),
-        map: BattleMap {
-            name: "test".into(),
-            tiles: Grid::from_cells(width, height, tiles).unwrap(),
-        },
+        map: BattleMap::new("test", Grid::from_cells(width, height, tiles).unwrap()),
         terrain: terrain(),
         classes: classes(),
         units,
@@ -764,10 +761,7 @@ fn arb_scene() -> impl Strategy<Value = Scene> {
                 .collect::<Vec<_>>();
             Scene {
                 rows,
-                map: BattleMap {
-                    name: "random".into(),
-                    tiles: Grid::from_cells(w, h, tiles).unwrap(),
-                },
+                map: BattleMap::new("random", Grid::from_cells(w, h, tiles).unwrap()),
                 terrain: terrain(),
                 classes: classes(),
                 units,

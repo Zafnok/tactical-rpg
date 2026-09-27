@@ -20,9 +20,12 @@ use crate::class::{ArmourWeight, ClassDef, UnitTag, UnitTags, WeaponProficiency}
 use crate::combat::DamageType;
 use crate::geom::Grid;
 use crate::item::{
-    ArmourDef, ConsumableDef, ItemDef, Loadout, WEAPON_SLOTS, WeaponDef, WeaponInstance,
+    AccessoryDef, ArmourDef, ConsumableDef, ItemDef, Loadout, WEAPON_SLOTS, WeaponDef,
+    WeaponInstance,
 };
+use crate::map::TileFeature;
 use crate::movement::reachable;
+use crate::shop::{Loot, ShopKind};
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
 use crate::weapon::WeaponKind;
@@ -118,10 +121,7 @@ fn map(rows: &[&str]) -> BattleMap {
         .collect();
     let w = u16::try_from(rows[0].len()).unwrap();
     let h = u16::try_from(rows.len()).unwrap();
-    BattleMap {
-        name: "Test".into(),
-        tiles: Grid::from_cells(w, h, cells).unwrap(),
-    }
+    BattleMap::new("Test", Grid::from_cells(w, h, cells).unwrap())
 }
 
 /// A test sword's id: `w:min:max:might:hit:crit`.
@@ -172,7 +172,9 @@ fn parse_weapon(id: &ItemId) -> Option<WeaponDef> {
 
 /// Items every test table has: `flier_bow` (range 1–2, might 3, ×3 against
 /// fliers), `master_sword` (rank S), `axe`, `vest` (Def +1), `mail`
-/// (Medium, Def +2), `potion` (heals 4), `elixir` (heals all).
+/// (Medium, Def +2), `potion` (heals 4), `elixir` (heals all). Priced for
+/// shops: `iron` (sword, 400 gold), `leather` (Light armour, 200), `plate`
+/// (Medium armour, 500), `charm` (accessory, 100), `tonic` (heals 2, 50).
 fn fixed_items() -> ItemTable {
     let flier_bow = WeaponDef {
         kind: WeaponKind::Bow,
@@ -206,6 +208,10 @@ fn fixed_items() -> ItemTable {
         effect,
         price: 0,
     };
+    let priced_armour = |name: &str, weight_class, price| ArmourDef {
+        price,
+        ..armour(name, weight_class, 0)
+    };
     let entries = [
         ("flier_bow", ItemDef::Weapon(flier_bow)),
         ("master_sword", ItemDef::Weapon(master_sword)),
@@ -225,6 +231,37 @@ fn fixed_items() -> ItemTable {
         (
             "elixir",
             ItemDef::Consumable(consumable("Elixir", ConsumableEffect::HealFull)),
+        ),
+        (
+            "iron",
+            ItemDef::Weapon(WeaponDef {
+                might: 4,
+                price: 400,
+                ..sword("Iron")
+            }),
+        ),
+        (
+            "leather",
+            ItemDef::Armour(priced_armour("Leather", ArmourWeight::Light, 200)),
+        ),
+        (
+            "plate",
+            ItemDef::Armour(priced_armour("Plate", ArmourWeight::Medium, 500)),
+        ),
+        (
+            "charm",
+            ItemDef::Accessory(AccessoryDef {
+                name: "Charm".into(),
+                bonus: Stats::default(),
+                price: 100,
+            }),
+        ),
+        (
+            "tonic",
+            ItemDef::Consumable(ConsumableDef {
+                price: 50,
+                ..consumable("Tonic", ConsumableEffect::Heal(2))
+            }),
         ),
     ];
     ItemTable {
@@ -325,6 +362,8 @@ fn setup(units: Vec<Unit>) -> BattleSetup {
             items: vec![item("potion"), item("elixir")],
             cap: 3,
         },
+        gold: 0,
+        stock: Stock::default(),
         units,
         reinforcements: vec![],
         objective: Objective::Rout { turn_limit: None },
@@ -1932,7 +1971,8 @@ fn commands_and_events_round_trip_through_ron() {
 
 /// Every legal command in `s`: `EndPhase`, and for each ready unit of the
 /// phase, equipping each weapon it can wield, and each stoppable tile with
-/// `Wait`, each attack in range (per weapon), each item use and a seize.
+/// `Wait`, each attack in range (per weapon), each item use, a seize, shop
+/// visits ([`legal_shop_txns`]) and opening an unopened chest.
 /// Consumables in test packs are all known; weapons are all known.
 fn legal_commands(s: &BattleState) -> Vec<Command> {
     let mut out = vec![Command::EndPhase];
@@ -1994,9 +2034,107 @@ fn legal_commands(s: &BattleState) -> Vec<Command> {
             {
                 add(UnitAction::Seize);
             }
+            if u.faction == Faction::Player {
+                if s.map().chest(dest).is_some() && !s.is_opened(dest) {
+                    add(UnitAction::Open);
+                }
+                if let Some(shop) = s.map().shop(dest) {
+                    for txns in legal_shop_txns(s, u, shop) {
+                        add(UnitAction::Shop { txns });
+                    }
+                }
+            }
         }
     }
     out
+}
+
+/// Shop visits `u` can make at `shop`: each affordable buy (and buying the
+/// first item twice), each sale, each repair it can pay for.
+fn legal_shop_txns(s: &BattleState, u: &Unit, shop: &crate::shop::Shop) -> Vec<Vec<ShopTxn>> {
+    let mut out = Vec::new();
+    let price = |id: &ItemId| s.items().get(id).unwrap().price();
+    for id in &shop.stock {
+        if price(id) <= s.gold() {
+            out.push(vec![ShopTxn::Buy { item: id.clone() }]);
+        }
+    }
+    if let Some(first) = shop.stock.first()
+        && price(first).saturating_mul(2) <= s.gold()
+    {
+        out.push(vec![
+            ShopTxn::Buy {
+                item: first.clone()
+            };
+            2
+        ]);
+    }
+    if shop.kind.buys() {
+        let mut from: Vec<SellFrom> = (0..WEAPON_SLOTS)
+            .filter(|&slot| u.loadout.weapon(slot).is_some())
+            .map(SellFrom::Weapon)
+            .collect();
+        from.extend(u.loadout.armour.as_ref().map(|_| SellFrom::Armour));
+        from.extend(u.loadout.accessory.as_ref().map(|_| SellFrom::Accessory));
+        from.extend((!s.pack().items.is_empty()).then_some(SellFrom::Pack(0)));
+        out.extend(from.into_iter().map(|from| vec![ShopTxn::Sell { from }]));
+    }
+    if shop.kind == ShopKind::Blacksmith {
+        for slot in 0..WEAPON_SLOTS {
+            let Some(copy) = u.loadout.weapon(slot) else {
+                continue;
+            };
+            let def = s.items().weapon(&copy.def).unwrap();
+            if copy.durability_left < def.durability
+                && crate::shop::repair_cost(def, copy) <= s.gold()
+            {
+                out.push(vec![ShopTxn::Repair { slot }]);
+            }
+        }
+    }
+    out
+}
+
+/// The map of the property test, with a shop of each kind and three chests.
+fn prop_map() -> BattleMap {
+    let shop = |kind, stock: &[&str]| {
+        TileFeature::Shop(crate::shop::Shop {
+            kind,
+            stock: stock.iter().map(|s| item(s)).collect(),
+        })
+    };
+    let mut m = map(&PROP_MAP);
+    m.features = [
+        (
+            p(3, 0),
+            shop(ShopKind::Armoury, &["iron", "leather", "plate", "charm"]),
+        ),
+        (p(6, 5), shop(ShopKind::Vendor, &["tonic", "potion"])),
+        (p(0, 5), shop(ShopKind::Blacksmith, &[])),
+        (p(4, 2), TileFeature::Chest(Loot::Gold(150))),
+        (p(7, 0), TileFeature::Chest(Loot::Item(item("tonic")))),
+        (p(1, 3), TileFeature::Chest(Loot::Item(item("iron")))),
+    ]
+    .into_iter()
+    .collect();
+    m
+}
+
+/// The change in gold `events` account for.
+fn gold_flow(events: &[Event]) -> i64 {
+    events
+        .iter()
+        .map(|e| match e {
+            Event::Bought { price, .. } => -i64::from(*price),
+            Event::Repaired { cost, .. } => -i64::from(*cost),
+            Event::Sold { price, .. } => i64::from(*price),
+            Event::ChestOpened {
+                loot: Loot::Gold(n),
+                ..
+            } => i64::from(*n),
+            _ => 0,
+        })
+        .sum()
 }
 
 const PROP_MAP: [&str; 6] = [
@@ -2033,6 +2171,7 @@ prop_compose! {
         armour in prop::option::of(prop::sample::select(vec!["vest", "mail"])),
         consumables in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=2),
         wounds in 0..=10_i32,
+        wear in 0..=20_u32,
     ) -> Unit {
         let mut u = unit(0, Faction::Player, p(0, 0));
         u.stats = Stats::from_growable([hp, str, 0, dex, spd, def, 0], mov);
@@ -2043,6 +2182,9 @@ prop_compose! {
         }
         weapons.extend(second.map(item));
         u = carrying(u, &weapons);
+        if let Some(Some(w)) = u.loadout.weapons.first_mut() {
+            w.durability_left -= wear;
+        }
         u.loadout.armour = armour.map(item);
         u.consumables = consumables.into_iter().map(item).collect();
         u
@@ -2065,6 +2207,7 @@ prop_compose! {
         by_lord in any::<bool>(),
         seed in any::<u64>(),
         pack in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=4),
+        gold in 0u32..=1500,
     ) -> BattleSetup {
         let factions = [Faction::Player, Faction::Enemy, Faction::Ally, Faction::Neutral];
         let mut units = Vec::new();
@@ -2101,7 +2244,8 @@ prop_compose! {
             units.iter().chain(reinforcements.iter().map(|r| &r.unit)),
         ));
         BattleSetup {
-            map: map(&PROP_MAP),
+            map: prop_map(),
+            gold,
             reinforcements,
             objective,
             seed,
@@ -2131,8 +2275,22 @@ proptest! {
             let legal = legal_commands(&s);
             let cmd = &legal[usize::from(choice) % legal.len()];
             let turn = s.turn();
+            let gold = s.gold();
+            let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
+            let events = events.unwrap_or_default();
+            // Gold moves only by what the events say, and never below 0.
+            prop_assert_eq!(i64::from(s.gold()), i64::from(gold) + gold_flow(&events));
+            if let Some(Event::GoldChanged { gold }) =
+                events.iter().rfind(|e| matches!(e, Event::GoldChanged { .. }))
+            {
+                prop_assert_eq!(*gold, s.gold());
+            }
+            // An opened chest stays opened.
+            for (c, was) in [p(4, 2), p(7, 0), p(1, 3)].into_iter().zip(opened) {
+                prop_assert!(!was || s.is_opened(c));
+            }
             prop_assert!(s.turn() >= turn);
             // No two units on one tile; HP within 1..=max on the map, 0 when
             // fallen.
@@ -2146,9 +2304,15 @@ proptest! {
             for u in s.fallen() {
                 prop_assert_eq!(u.hp, 0);
             }
-            // No item gains exist yet: the pack only shrinks. Loadouts keep
-            // within their weapon slots.
-            prop_assert!(s.pack().items.len() <= pack);
+            // The pack only grows by buying or opening a chest. Loadouts
+            // keep within their weapon slots.
+            let gained = events.iter().any(|e| {
+                matches!(
+                    e,
+                    Event::Bought { to: Destination::Pack, .. } | Event::ChestOpened { .. }
+                )
+            });
+            prop_assert!(gained || s.pack().items.len() <= pack);
             pack = s.pack().items.len();
             for u in s.units() {
                 let slots = usize::from(s.classes().get(&u.class).unwrap().weapon_slots);
@@ -2162,3 +2326,5 @@ proptest! {
         }
     }
 }
+
+mod shop;

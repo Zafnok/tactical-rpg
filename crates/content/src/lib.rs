@@ -66,6 +66,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             .map(|t| t.rules.movement_types.as_slice()),
     );
     let items = item::load();
+    let maps = check_map_features(maps, items.as_ref().ok(), terrain.as_ref().ok());
     let characters = character::load(classes.as_ref().ok(), items.as_ref().ok());
     assemble(
         palette,
@@ -79,6 +80,26 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             characters,
         },
     )
+}
+
+/// Adds the map feature checks ([`map::check_features`]) to the maps'
+/// result. Skipped when the maps, items or terrain failed to load.
+fn check_map_features(
+    maps: Result<BTreeMap<String, MapDef>, Vec<ContentError>>,
+    items: Option<&ItemTable>,
+    terrain: Option<&TerrainDef>,
+) -> Result<BTreeMap<String, MapDef>, Vec<ContentError>> {
+    match (maps, items, terrain) {
+        (Ok(maps), Some(items), Some(terrain)) => {
+            let errors = map::check_features(&maps, items, &terrain.rules);
+            if errors.is_empty() {
+                Ok(maps)
+            } else {
+                Err(errors)
+            }
+        }
+        (maps, ..) => maps,
+    }
 }
 
 /// Loader results for the unit data (kept together to keep [`assemble`]'s
@@ -255,6 +276,39 @@ mod tests {
         for (i, f) in NAMES.iter().enumerate() {
             assert_eq!(only(i), Err(ContentErrors(e(f))));
         }
+    }
+
+    #[test]
+    fn map_feature_checks_join_the_map_errors() {
+        let terrain = ok_terrain().ok();
+        let items = item::load().ok();
+        let mut maps = ok_maps().unwrap_or_default();
+        assert_eq!(
+            check_map_features(Ok(maps.clone()), items.as_ref(), terrain.as_ref()),
+            Ok(maps.clone())
+        );
+        if let Some(def) = maps.get_mut("test_small") {
+            def.map.features.insert(
+                trpg_core::Pos::new(0, 0),
+                trpg_core::TileFeature::Chest(trpg_core::Loot::Item(trpg_core::ItemId::new("x"))),
+            );
+        }
+        let errors = check_map_features(Ok(maps.clone()), items.as_ref(), terrain.as_ref());
+        assert_eq!(errors.map_err(|e| e.len()), Err(1));
+        // Skipped when another file failed.
+        assert_eq!(
+            check_map_features(Ok(maps.clone()), None, terrain.as_ref()),
+            Ok(maps.clone())
+        );
+        assert_eq!(
+            check_map_features(Ok(maps.clone()), items.as_ref(), None),
+            Ok(maps)
+        );
+        let failed = Err(vec![ContentError::new("m", "bad")]);
+        assert_eq!(
+            check_map_features(failed.clone(), items.as_ref(), terrain.as_ref()),
+            failed
+        );
     }
 
     #[test]
