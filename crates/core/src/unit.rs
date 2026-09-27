@@ -1,7 +1,7 @@
 //! Units on the battle map, the named-character data they are made from, and
 //! factions (`docs/design/progression.md`).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
 use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
-use crate::magic::SpellId;
+use crate::spell::{SpellId, SpellState};
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::weapon::{WeaponKind, WeaponRank};
 
@@ -38,6 +38,13 @@ impl Faction {
             (self, other),
             (Enemy, Player | Ally) | (Player | Ally, Enemy)
         )
+    }
+
+    /// Whether units of `self` and `other` are on the same side: the same
+    /// faction, or Player and Ally. Heal spells target allies.
+    pub fn is_allied_to(self, other: Faction) -> bool {
+        use Faction::{Ally, Player};
+        self == other || matches!((self, other), (Player, Ally) | (Ally, Player))
     }
 }
 
@@ -134,6 +141,13 @@ pub struct Unit {
     pub loadout: Loadout,
     /// The unit's own consumables. Player units use the battle pack instead.
     pub consumables: Vec<ItemId>,
+    /// The character's personal spells, learned at a character level.
+    pub personal_spells: Vec<(Level, SpellId)>,
+    /// Every spell the unit has learned (kept after a class change); see
+    /// [`crate::spell`].
+    pub learned: BTreeSet<SpellId>,
+    /// Spell uses left in the current battle.
+    pub spells: SpellState,
 }
 
 /// Letters in a map label.
@@ -190,8 +204,9 @@ impl From<LoadoutError> for UnitError {
 impl Unit {
     /// Creates the unit of named character `def` at its data level, in its
     /// starting class. Stats are clamped to `0..=cap`; Mov comes from the
-    /// class; weapon ranks are raised to the class's start ranks. The
-    /// loadout is empty: apply `def.loadout` with [`Unit::with_loadout`].
+    /// class; weapon ranks are raised to the class's start ranks; it has
+    /// learned every spell it qualifies for. The loadout is empty: apply
+    /// `def.loadout` with [`Unit::with_loadout`].
     pub fn from_character(
         id: UnitId,
         def: &CharacterDef,
@@ -207,7 +222,7 @@ impl Unit {
         }
         let mut weapon_ranks = def.weapon_ranks.clone();
         raise_to_start_ranks(&mut weapon_ranks, class);
-        Ok(Unit {
+        let mut unit = Unit {
             character: Some(def.id.clone()),
             name: def.name.clone(),
             map_label: def
@@ -216,13 +231,17 @@ impl Unit {
                 .unwrap_or_else(|| default_map_label(&def.name)),
             level: def.level,
             is_lord: def.is_lord,
+            personal_spells: def.personal_spells.clone(),
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
-        })
+        };
+        unit.learn_new_spells(classes);
+        Ok(unit)
     }
 
     /// Creates a generic unit of class `class` at character level `level`,
     /// with the fixed average stats of `progression.md`:
-    /// `stat = min(cap, base + growth × (level − 1) / 100)`.
+    /// `stat = min(cap, base + growth × (level − 1) / 100)`, knowing its
+    /// class's class-level-1 spells.
     pub fn generic(
         id: UnitId,
         class: &ClassId,
@@ -242,10 +261,12 @@ impl Unit {
         }
         let mut weapon_ranks = BTreeMap::new();
         raise_to_start_ranks(&mut weapon_ranks, class);
-        Ok(Unit {
+        let mut unit = Unit {
             level,
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
-        })
+        };
+        unit.learn_new_spells(classes);
+        Ok(unit)
     }
 
     /// A generic, level-1 unit of `class` with the given stats.
@@ -276,6 +297,9 @@ impl Unit {
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
             consumables: Vec::new(),
+            personal_spells: Vec::new(),
+            learned: BTreeSet::new(),
+            spells: SpellState::default(),
         }
     }
 }
@@ -393,6 +417,24 @@ mod tests {
     }
 
     #[test]
+    fn alliance_truth_table() {
+        use Faction::{Ally, Enemy, Neutral, Player};
+        let all = [Player, Enemy, Ally, Neutral];
+        let allied = [
+            // Player, Enemy, Ally, Neutral
+            [true, false, true, false],  // Player
+            [false, true, false, false], // Enemy
+            [true, false, true, false],  // Ally
+            [false, false, false, true], // Neutral
+        ];
+        for (i, &a) in all.iter().enumerate() {
+            for (j, &b) in all.iter().enumerate() {
+                assert_eq!(a.is_allied_to(b), allied[i][j], "{a:?} vs {b:?}");
+            }
+        }
+    }
+
+    #[test]
     fn from_character_copies_the_data() {
         let classes = table(vec![class("brigand")]);
         let unit = Unit::from_character(
@@ -428,6 +470,9 @@ mod tests {
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
             consumables: Vec::new(),
+            personal_spells: Vec::new(),
+            learned: BTreeSet::new(),
+            spells: SpellState::default(),
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -545,6 +590,9 @@ mod tests {
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
             consumables: Vec::new(),
+            personal_spells: Vec::new(),
+            learned: BTreeSet::new(),
+            spells: SpellState::default(),
         };
         assert_eq!(unit, Ok(expected));
     }

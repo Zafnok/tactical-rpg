@@ -2,13 +2,14 @@
 //! and commands give identical events, and a battle saved mid-way, loaded and
 //! continued gives the same events as one played straight through.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use trpg_core::{
-    BattleMap, BattlePack, BattleSetup, BattleState, ClassDef, ClassId, ClassTable, Command,
-    ConsumableDef, ConsumableEffect, DamageType, Event, Faction, Grid, Growths, ItemDef, ItemId,
-    ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, Stats, Stock, TerrainId, TerrainRules,
+    BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassDef, ClassId, ClassTable,
+    Command, ConsumableDef, ConsumableEffect, DamageType, Element, Equipped, Event, Faction, Grid,
+    Growths, ItemDef, ItemId, ItemTable, LoadoutDef, MovementTypeId, Objective, Pos, SpellDef,
+    SpellId, SpellKind, SpellState, SpellTable, Stats, Stock, TerrainId, TerrainRules,
     TerrainTable, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind, WeaponProficiency,
     WeaponRank,
 };
@@ -119,9 +120,35 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         weapon_exp: BTreeMap::new(),
         loadout: trpg_core::Loadout::default(),
         consumables: vec![ItemId::new("potion")],
+        personal_spells: vec![],
+        learned: BTreeSet::from([SpellId::new("bolt")]),
+        spells: SpellState::default(),
     }
     .with_loadout(&loadout, &classes(), &items())
     .unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// `bolt`: an attack spell with the blade's numbers (60 hit, 5 might), range
+/// 1–2, 3 uses.
+fn spells() -> Arc<SpellTable> {
+    let bolt = SpellDef {
+        id: SpellId::new("bolt"),
+        name: "Bolt".into(),
+        kind: SpellKind::Attack {
+            might: 5,
+            hit: 60,
+            crit: 0,
+            effective: vec![],
+        },
+        element: Element::None,
+        min_range: 1,
+        max_range: 2,
+        uses: 3,
+        terrain_effect: None,
+    };
+    Arc::new(SpellTable {
+        spells: BTreeMap::from([(bolt.id.clone(), bolt)]),
+    })
 }
 
 fn setup(seed: u64) -> BattleSetup {
@@ -130,6 +157,7 @@ fn setup(seed: u64) -> BattleSetup {
         terrain: terrain(),
         classes: classes(),
         items: items(),
+        spells: spells(),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 1,
@@ -160,8 +188,9 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
     }
 }
 
-/// Three turns of both sides trading blows, then an equip, potions and a
-/// wait.
+/// Three turns of both sides trading blows, then equips (a weapon, then a
+/// spell), potions, a wait, an enemy spell (countered with the equipped
+/// spell) and a player spell out of the target's reach.
 fn script() -> Vec<Command> {
     let mut cmds = Vec::new();
     for _ in 0..3 {
@@ -177,7 +206,11 @@ fn script() -> Vec<Command> {
     cmds.extend([
         Command::Equip {
             unit: UnitId(2),
-            slot: 1,
+            equipped: Equipped::Weapon(1),
+        },
+        Command::Equip {
+            unit: UnitId(2),
+            equipped: Equipped::Spell(SpellId::new("bolt")),
         },
         Command::Act {
             unit: UnitId(2),
@@ -201,8 +234,22 @@ fn script() -> Vec<Command> {
                 target: UnitId(3),
             },
         },
+        cast(4, 3, 2, 2),
+        Command::EndPhase,
+        cast(1, 2, 1, 3),
     ]);
     cmds
+}
+
+fn cast(unit: u32, x: i32, y: i32, target: u32) -> Command {
+    Command::Act {
+        unit: UnitId(unit),
+        dest: Pos::new(x, y),
+        action: UnitAction::Cast {
+            spell: SpellId::new("bolt"),
+            target: CastTarget::Unit(UnitId(target)),
+        },
+    }
 }
 
 /// Applies `cmds` to `state`, returning every event.
@@ -233,7 +280,14 @@ fn same_seed_and_commands_give_identical_events() {
         })
         .flatten()
         .collect();
-    assert_eq!(strikes.len(), 24);
+    // 12 combats of one strike each way, then 2 casts (one not countered).
+    assert_eq!(strikes.len(), 27);
+    assert_eq!(
+        a.iter()
+            .filter(|e| matches!(e, Event::SpellUsesChanged { .. }))
+            .count(),
+        3
+    );
     assert!(strikes.contains(&true) && strikes.contains(&false));
     // …so another seed plays out differently.
     assert_ne!(play(43).1, a);
@@ -248,7 +302,7 @@ fn saving_and_loading_mid_battle_changes_nothing() {
         log.extend(run(&mut state, &cmds[..split]));
         let saved = ron::to_string(&state).unwrap();
         let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-        loaded.restore_tables(terrain(), classes(), items());
+        loaded.restore_tables(terrain(), classes(), items(), spells());
         assert_eq!(loaded, state, "split {split}");
         log.extend(run(&mut loaded, &cmds[split..]));
         assert_eq!(log, events, "split {split}");

@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::magic::{Affinity, Element, SpellId};
+use crate::magic::{Affinity, Element};
+use crate::spell::SpellId;
 use crate::stats::{Growths, StatValue, Stats};
 use crate::terrain::MovementTypeId;
 use crate::weapon::{WeaponKind, WeaponRank};

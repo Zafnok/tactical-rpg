@@ -1,0 +1,37 @@
+// Every spell. Source: docs/design/magic.md (0004), "Starter spells". All
+// numbers are *tunable* starting values and rescale with ticket 0013. Loaded
+// by trpg_content::spell. Spells are innate, not items: which units know
+// them comes from classes.ron (class spells) and characters.ron (personal
+// spells).
+//
+// kind: Attack(might: n, hit: n, crit: n) or Heal(heal_power: n). An attack
+//   may add effective: [(tag, multiplier)] as weapons do (none in Chapter 1).
+// element: Fire | Ice | None (affinities, tile casts).
+// range: (min, max) in tiles; 1 <= min <= max.
+// uses: uses per battle, refilled at every battle start; at least 1.
+// terrain_effect: Some(id) if the spell can be cast on a tile (ticket 0310).
+// Ids are unique.
+(
+    spells: [
+        (
+            id: "fire", name: "Fire", kind: Attack(might: 5, hit: 90, crit: 0),
+            element: Fire, range: (1, 2), uses: 10, terrain_effect: Some("burn_forest"),
+        ),
+        (
+            id: "frost", name: "Frost", kind: Attack(might: 4, hit: 95, crit: 0),
+            element: Ice, range: (1, 2), uses: 10, terrain_effect: Some("freeze_water"),
+        ),
+        (
+            id: "force", name: "Force", kind: Attack(might: 6, hit: 80, crit: 5),
+            element: None, range: (1, 2), uses: 8,
+        ),
+        (
+            id: "heal", name: "Heal", kind: Heal(heal_power: 10),
+            element: None, range: (1, 1), uses: 8,
+        ),
+        (
+            id: "mend", name: "Mend", kind: Heal(heal_power: 20),
+            element: None, range: (1, 1), uses: 4,
+        ),
+    ],
+)

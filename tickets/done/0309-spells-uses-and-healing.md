@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0004", "0302", "0304", "0306"]
 nick_input: none
-completed:
+completed: 2026-09-27
 ---
 
 # 0309 — Spells, uses per battle, Cast, healing
@@ -88,13 +88,13 @@ None (all rules are in `magic.md`).
 
 ## Acceptance criteria
 
-- [ ] `spells.ron` matches `magic.md` (a test compares at least 3 spells).
-- [ ] Uses refill at battle start; one use is spent per combat (a doubling mage spends 1); a spell at 0 uses can't be cast or counter (tests).
-- [ ] Heal reproduces M3 (the amount is capped by missing HP; a full-HP ally and self are invalid targets, and the state is unchanged).
-- [ ] M4: an equipped spell at 0 uses gives no counter; after `Equip` to Force, the unit counters.
-- [ ] Learned spells survive a class change; a 0-slot class can't hold weapons.
-- [ ] Every new `CommandError` leaves the state unchanged (test).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `spells.ron` matches `magic.md` (a test compares at least 3 spells).
+- [x] Uses refill at battle start; one use is spent per combat (a doubling mage spends 1); a spell at 0 uses can't be cast or counter (tests).
+- [x] Heal reproduces M3 (the amount is capped by missing HP; a full-HP ally and self are invalid targets, and the state is unchanged).
+- [x] M4: an equipped spell at 0 uses gives no counter; after `Equip` to Force, the unit counters.
+- [x] Learned spells survive a class change; a 0-slot class can't hold weapons.
+- [x] Every new `CommandError` leaves the state unchanged (test).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -104,3 +104,70 @@ None (all rules are in `magic.md`).
   to include `Cast` and spell `Equip`.
 
 ## Completion notes
+
+**Done.**
+
+- `assets/data/spells.ron`: Fire, Frost, Force, Heal and Mend with the
+  numbers from `magic.md`. `trpg_content::spell` loads and validates it
+  (unique non-empty ids, `1 <= min <= max` range, `uses >= 1`, no negative
+  might/hit/crit, `heal_power >= 1`), and `check_references` checks that every
+  class spell (`classes.ron`) and personal spell (`characters.ron`) exists. A
+  test compares all five spells with the design table. `Content.spells` holds
+  the table.
+- `core::spell` (new module; `SpellId` moved here from `magic`): `SpellDef`,
+  `SpellKind::{Attack, Heal}`, `SpellTable`, `TerrainEffectId`, `SpellState`
+  (`full`, `uses_left`, `spend`), and on `Unit`: `known_spells`,
+  `learn_new_spells` (for 0601/0603), `castable_attack`,
+  `first_attack_spell`. `SpellDef::weapon_stats` turns an attack spell into
+  0304's `WeaponStats` (magical, weight 0, no kind so no rank speed, no trait,
+  element set).
+- `Unit` gained `personal_spells`, `learned: BTreeSet<SpellId>` and
+  `spells: SpellState`. `Unit::from_character` and `Unit::generic` learn every
+  spell they qualify for. `Faction::is_allied_to` (same faction, or
+  Player/Ally) decides heal targets.
+- `Loadout.equipped` is now `Option<Equipped>` with
+  `Equipped::{Weapon(slot), Spell(SpellId)}`. `Command::Equip { unit,
+  equipped }` and `Event::Equipped { unit, equipped }` carry it. New helpers:
+  `Loadout::equipped_slot` / `equipped_spell`, `Unit::default_equip`,
+  `Unit::prepare_for_battle` and `Unit::fit_weapon_slots` (for 0603: moves
+  weapons the new class has no slot for into the stock and re-equips).
+- Battle: `BattleSetup.spells` and `BattleState::spells()`.
+  `restore_tables` takes the spell table as a 4th argument.
+  `BattleState::new` prepares every unit, reinforcements included.
+  `UnitAction::Cast { spell, target: CastTarget::Unit(id) }` handles attack
+  spells (the same combat path as weapons) and heals. New events:
+  `SpellCast` and `SpellUsesChanged`. Heals emit the existing `Healed`. New
+  errors: `SpellNotKnown`, `UnknownSpell`, `NoUsesLeft`, `NotAttackSpell`,
+  `BadHealTarget` and `FullHp`.
+- Tests: every rule and error (state compared before and after), M1 through
+  `apply`, M3, M4 (Fire spent to 0/10, Force to 3/8, then equip Force), the
+  validators, and a property test that uses stay within `0..=uses` and change
+  only with their event. The random-command property test now also plays
+  `Cast` (attack and heal) and spell `Equip`, and the replay/save-load test
+  includes spell casts and a spell counter.
+
+**Rules I had to pin down** (Claude's starting rules; Nick may veto):
+
+- **At battle start, a unit with nothing equipped gets a default:** the
+  first weapon it can wield, or else its first learned attack spell (in id
+  order). The same default applies when the equipped weapon is sold or
+  stowed by a promotion. Without this, a 0-slot mage would start every battle
+  unable to counter.
+- **A defender spends a use only if it actually struck.** If it fell to the
+  first blow, it didn't cast. An attacker that dies to the counter still
+  spends its use.
+- **Heal uses gear-adjusted Mag**, like combat does.
+- A spell at 0 uses can still be equipped. It just can't counter, as in M4.
+- Learned spells missing from the spell table get no uses, so they can't be
+  cast.
+
+**Deviations.** `TerrainEffectId` is just a string id for now (`burn_forest`,
+`freeze_water`). 0310 replaces it with the full `TerrainEffect` data its step
+3 describes. There is no `battle_setup` yet (0801), so only
+`BattleState::new` refills uses.
+
+**Follow-up:** 0314 counts attack spells in `Unit::attack_ranges`, so mages
+show up in threat areas and the danger zone.
+
+**Nick:** nothing to play yet. The spell menu is 0410. The Quick Battle looks
+the same (snapshots unchanged).

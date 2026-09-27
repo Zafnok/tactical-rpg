@@ -10,14 +10,15 @@ pub mod map;
 pub mod movement;
 pub mod rng;
 pub mod shop;
+pub mod spell;
 pub mod stats;
 pub mod terrain;
 pub mod unit;
 pub mod weapon;
 
 pub use battle::{
-    BattleSetup, BattleState, Command, CommandError, Destination, Event, Objective, Outcome, Phase,
-    Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
+    BattleSetup, BattleState, CastTarget, Command, CommandError, Destination, Event, Objective,
+    Outcome, Phase, Reinforcement, SellFrom, ShopTxn, Turn, UnitAction,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, SkillId, Tier, UnitTag,
@@ -29,11 +30,11 @@ pub use combat::{
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
 pub use item::{
-    AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, ItemDef, ItemId,
-    ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef, WeaponInstance,
-    WeaponRules,
+    AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, Equipped, ItemDef,
+    ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef,
+    WeaponInstance, WeaponRules,
 };
-pub use magic::{Affinity, Element, SpellId};
+pub use magic::{Affinity, Element};
 pub use map::{BattleMap, TileFeature};
 pub use movement::{
     AttackRange, MoveError, PathError, Reach, TileSet, attack_tiles, danger_zone, path_cost,
@@ -41,6 +42,7 @@ pub use movement::{
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
+pub use spell::{SpellDef, SpellId, SpellKind, SpellState, SpellTable, TerrainEffectId};
 pub use stats::{GrowthValue, Growths, StatKind, StatValue, Stats};
 pub use terrain::{MovementTypeId, TerrainId, TerrainRules, TerrainTable};
 pub use unit::{

@@ -800,7 +800,10 @@ mod tests {
             Faction::Player,
             Pos::new(0, 0),
         );
-        assert_eq!(unit.map(|u| u.loadout.equipped), Ok(Some(0)));
+        assert_eq!(
+            unit.map(|u| u.loadout.equipped),
+            Ok(Some(trpg_core::Equipped::Weapon(0)))
+        );
     }
 
     /// The placeholder file loads, and every entry makes a valid unit with

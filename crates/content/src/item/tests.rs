@@ -399,7 +399,14 @@ fn fight(a: &Unit, ta: &str, d: &Unit, td: &str, distance: u32) -> Forecast {
     let (ta, td) = (terrain(ta), terrain(td));
     let input = |u: &Unit, t| {
         let class = classes.get(&u.class).unwrap_or_else(|| unreachable!());
-        u.combat_input(class, &classes, &items, None, t)
+        u.combat_input(
+            class,
+            &classes,
+            &items,
+            &trpg_core::SpellTable::default(),
+            None,
+            t,
+        )
     };
     let f = forecast(
         &items.combat_rules(),

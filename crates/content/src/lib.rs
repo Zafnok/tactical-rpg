@@ -13,11 +13,12 @@ pub mod keymap;
 pub mod map;
 pub mod palette;
 pub mod ron_loader;
+pub mod spell;
 pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{ClassTable, ItemTable};
+use trpg_core::{ClassTable, ItemTable, SpellTable};
 
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use error::{ContentError, ContentErrors};
@@ -44,6 +45,8 @@ pub struct Content {
     pub classes: ClassTable,
     /// Items and item rules.
     pub items: ItemTable,
+    /// Spells.
+    pub spells: SpellTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
 }
@@ -68,6 +71,11 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     let items = item::load();
     let maps = check_map_features(maps, items.as_ref().ok(), terrain.as_ref().ok());
     let characters = character::load(classes.as_ref().ok(), items.as_ref().ok());
+    let spells = check_spell_references(
+        spell::load(),
+        classes.as_ref().ok(),
+        characters.as_ref().ok(),
+    );
     assemble(
         palette,
         KeymapDef::load(),
@@ -77,9 +85,31 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Loaded {
             classes,
             items,
+            spells,
             characters,
         },
     )
+}
+
+/// Adds the spell reference checks ([`spell::check_references`]: every class
+/// and personal spell exists) to the spells' result. Skipped when the
+/// spells, classes or characters failed to load.
+fn check_spell_references(
+    spells: Result<SpellTable, Vec<ContentError>>,
+    classes: Option<&ClassTable>,
+    characters: Option<&CharacterTable>,
+) -> Result<SpellTable, Vec<ContentError>> {
+    match (spells, classes, characters) {
+        (Ok(spells), Some(classes), Some(characters)) => {
+            let errors = spell::check_references(&spells, classes, characters);
+            if errors.is_empty() {
+                Ok(spells)
+            } else {
+                Err(errors)
+            }
+        }
+        (spells, ..) => spells,
+    }
 }
 
 /// Adds the map feature checks ([`map::check_features`]) to the maps'
@@ -107,6 +137,7 @@ fn check_map_features(
 struct Loaded {
     classes: Result<ClassTable, Vec<ContentError>>,
     items: Result<ItemTable, Vec<ContentError>>,
+    spells: Result<SpellTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
 }
 
@@ -138,6 +169,7 @@ fn assemble(
         maps: take(maps, &mut errors),
         classes: take(units.classes, &mut errors),
         items: take(units.items, &mut errors),
+        spells: take(units.spells, &mut errors),
         characters: take(units.characters, &mut errors),
     };
     if errors.is_empty() {
@@ -171,6 +203,7 @@ mod tests {
         Loaded {
             classes: ok_classes(),
             items: item::load(),
+            spells: spell::load(),
             characters: ok_characters(),
         }
     }
@@ -212,6 +245,10 @@ mod tests {
             item::load().ok().as_ref()
         );
         assert_eq!(
+            content.as_ref().map(|c| &c.spells),
+            spell::load().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
@@ -227,7 +264,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 8] = ["p", "k", "f", "t", "m", "c", "i", "u"];
+    const NAMES: [&str; 9] = ["p", "k", "f", "t", "m", "c", "i", "s", "u"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -242,6 +279,7 @@ mod tests {
                 Loaded {
                     classes: Err(e("c")),
                     items: Err(e("i")),
+                    spells: Err(e("s")),
                     characters: Err(e("u")),
                 },
             ),
@@ -269,7 +307,8 @@ mod tests {
                 Loaded {
                     classes: if i == 5 { Err(e("c")) } else { ok_classes() },
                     items: if i == 6 { Err(e("i")) } else { item::load() },
-                    characters: if i == 7 { Err(e("u")) } else { ok_characters() },
+                    spells: if i == 7 { Err(e("s")) } else { spell::load() },
+                    characters: if i == 8 { Err(e("u")) } else { ok_characters() },
                 },
             )
         };
@@ -307,6 +346,34 @@ mod tests {
         let failed = Err(vec![ContentError::new("m", "bad")]);
         assert_eq!(
             check_map_features(failed.clone(), items.as_ref(), terrain.as_ref()),
+            failed
+        );
+    }
+
+    #[test]
+    fn spell_reference_checks_join_the_spell_errors() {
+        let classes = ok_classes().ok();
+        let characters = ok_characters().ok();
+        let spells = spell::load();
+        assert_eq!(
+            check_spell_references(spells.clone(), classes.as_ref(), characters.as_ref()),
+            spells
+        );
+        let empty = Ok(SpellTable::default());
+        let errors = check_spell_references(empty.clone(), classes.as_ref(), characters.as_ref());
+        assert!(errors.is_err_and(|e| !e.is_empty()));
+        // Skipped when another file failed.
+        assert_eq!(
+            check_spell_references(empty.clone(), None, characters.as_ref()),
+            empty
+        );
+        assert_eq!(
+            check_spell_references(empty.clone(), classes.as_ref(), None),
+            empty
+        );
+        let failed = Err(vec![ContentError::new("s", "bad")]);
+        assert_eq!(
+            check_spell_references(failed.clone(), classes.as_ref(), characters.as_ref()),
             failed
         );
     }

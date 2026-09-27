@@ -125,7 +125,7 @@ fn bought_weapons_fill_free_slots_then_the_stock() {
     assert_eq!(u.loadout.weapon(1), Some(&copy("iron", 20)));
     assert_eq!(u.loadout.weapon(2), Some(&copy("iron", 20)));
     // Still the first weapon equipped.
-    assert_eq!(u.loadout.equipped, Some(0));
+    assert_eq!(u.loadout.equipped_slot(), Some(0));
     assert_eq!(s.gold(), 800);
     assert_eq!(s.stock().weapons, [copy("iron", 20)]);
 }
@@ -207,13 +207,13 @@ fn an_unarmed_buyer_equips_the_weapon_it_can_wield() {
             bought(1, "iron", 400, Destination::WeaponSlot(0)),
             Event::Equipped {
                 unit: UnitId(1),
-                slot: 0
+                equipped: Equipped::Weapon(0),
             },
             gold(0),
             acted(1),
         ]
     );
-    assert_eq!(u1(&s).loadout.equipped, Some(0));
+    assert_eq!(u1(&s).loadout.equipped_slot(), Some(0));
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn selling_gives_half_price_and_reequips() {
             // The equipped weapon was sold: the next one it can wield.
             Event::Equipped {
                 unit: UnitId(1),
-                slot: 1
+                equipped: Equipped::Weapon(1),
             },
             gold(210),
             sold("leather", 100),
@@ -260,7 +260,7 @@ fn selling_gives_half_price_and_reequips() {
     );
     let u = u1(&s);
     assert_eq!(u.loadout.weapon(0), None);
-    assert_eq!(u.loadout.equipped, Some(1));
+    assert_eq!(u.loadout.equipped_slot(), Some(1));
     assert_eq!((&u.loadout.armour, &u.loadout.accessory), (&None, &None));
     assert_eq!(s.pack().items, [item("potion")]);
 }
@@ -505,6 +505,7 @@ fn gold_stock_and_chests_are_saved() {
         Arc::new(s.terrain().clone()),
         Arc::new(s.classes().clone()),
         Arc::new(s.items().clone()),
+        Arc::new(s.spells().clone()),
     );
     assert_eq!(loaded, s);
     assert_eq!(loaded.gold(), 1800);
