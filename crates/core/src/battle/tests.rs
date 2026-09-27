@@ -2880,7 +2880,12 @@ prop_compose! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(512))]
+    // Shrinking a failing battle replays it many times; bounded so a
+    // failure is reported in seconds (cargo-mutants times out otherwise).
+    #![proptest_config(ProptestConfig {
+        max_shrink_iters: 256,
+        ..ProptestConfig::with_cases(512)
+    })]
 
     #[test]
     fn random_legal_play_keeps_the_invariants(

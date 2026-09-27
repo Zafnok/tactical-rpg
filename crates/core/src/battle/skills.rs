@@ -305,10 +305,10 @@ impl BattleState {
     /// `tiles` of post-action move and somewhere to go: it waits for a
     /// [`Command::MoveAfter`](super::Command::MoveAfter).
     pub(super) fn offer_move_after(&mut self, id: UnitId, tiles: u32, events: &mut Vec<Event>) {
-        let can_move = tiles > 0
-            && self
-                .unit(id)
-                .is_some_and(|u| !self.move_after_paths(u, tiles).is_empty());
+        // No tiles of move (an attack without one) find no paths.
+        let can_move = self
+            .unit(id)
+            .is_some_and(|u| !self.move_after_paths(u, tiles).is_empty());
         if can_move {
             self.pending_move = Some(PendingMove { unit: id, tiles });
             events.push(Event::MoveAfterOffered { unit: id, tiles });
