@@ -51,8 +51,33 @@ const GLYPHS_PER_ROW: usize = 48;
 const SWATCH_W: i32 = 24;
 /// Swatch columns across the console.
 const SWATCH_COLUMNS: i32 = 4;
-/// First row of the bottom half.
-const BOTTOM: i32 = 16;
+
+/// Row of the "Palette" heading: right after the glyph grid's own title and
+/// rows, no blank row between. Computed from `glyphs` (rather than a fixed
+/// constant) so the bottom half doesn't waste rows the top half didn't use,
+/// however many glyphs the font ends up with.
+fn palette_top(glyphs: &[char]) -> i32 {
+    let glyph_rows: i32 = glyphs
+        .chunks(GLYPHS_PER_ROW)
+        .count()
+        .try_into()
+        .unwrap_or(i32::MAX);
+    1 + glyph_rows
+}
+
+/// Row where [`sample_panels`] starts, for `palette`'s size and `glyphs`'
+/// row count: the palette title, its swatch rows, then the sample sentence,
+/// with no blank rows between (every row here is scarce once the palette is
+/// large).
+fn panels_top(palette: &Palette, glyphs: &[char]) -> i32 {
+    let swatch_rows: i32 = palette
+        .iter()
+        .count()
+        .div_ceil(SWATCH_COLUMNS as usize)
+        .try_into()
+        .unwrap_or(i32::MAX);
+    palette_top(glyphs) + 2 + swatch_rows
+}
 
 /// A console-sized buffer: the top half shows every glyph in `glyphs` in a
 /// grid; the bottom half shows every palette colour as a swatch plus its
@@ -70,29 +95,28 @@ pub fn glyph_sampler(palette: &Palette, glyphs: &[char]) -> GlyphBuffer {
         }
     }
 
+    let bottom = palette_top(glyphs);
     let colors: Vec<_> = palette.iter().collect();
     let title = format!("Palette ({})", colors.len());
-    b.print(1, BOTTOM, &title, c(UiColor::TextHighlight), black);
-    let mut swatch_rows = 0;
+    b.print(1, bottom, &title, c(UiColor::TextHighlight), black);
     for (i, &(name, rgb)) in (0..).zip(&colors) {
         let (x, y) = (
             1 + i % SWATCH_COLUMNS * SWATCH_W,
-            BOTTOM + 1 + i / SWATCH_COLUMNS,
+            bottom + 1 + i / SWATCH_COLUMNS,
         );
         b.print(x, y, "██", rgb, black);
         b.print(x + 3, y, name, dim, black);
-        swatch_rows = i / SWATCH_COLUMNS + 1;
     }
 
-    let y = BOTTOM + 2 + swatch_rows;
+    let panels_top = panels_top(palette, glyphs);
     b.print(
         1,
-        y,
+        panels_top - 1,
         "The quick brown fox jumps over the lazy dog. 0123456789 ÀÉÎÕÜ àéîõü ß ¿¡ «» ← ↑ → ↓",
         text,
         black,
     );
-    sample_panels(&mut b, palette, y + 1);
+    sample_panels(&mut b, palette, panels_top);
     b
 }
 
@@ -161,8 +185,9 @@ mod tests {
         let glyphs = atlas_glyphs();
         let b = glyph_sampler(&p, &glyphs);
         assert_eq!((b.width(), b.height()), (CONSOLE_W, CONSOLE_H));
+        let bottom = palette_top(&glyphs);
         let row_end = 2 + 2 * i32::try_from(GLYPHS_PER_ROW).unwrap();
-        let shown: String = (1..BOTTOM)
+        let shown: String = (1..bottom)
             .flat_map(|y| (2..row_end).step_by(2).map(move |x| (x, y)))
             .map(|(x, y)| b.get(x, y).unwrap().glyph)
             .collect();
@@ -172,7 +197,7 @@ mod tests {
             "top half must list every glyph in order"
         );
         for (name, rgb) in p.iter() {
-            let found = (BOTTOM..i32::from(CONSOLE_H)).any(|y| {
+            let found = (bottom..i32::from(CONSOLE_H)).any(|y| {
                 (0..i32::from(CONSOLE_W)).any(|x| {
                     let cell = b.get(x, y).unwrap();
                     cell.glyph == '█' && cell.fg == rgb
@@ -184,10 +209,18 @@ mod tests {
 
     #[test]
     fn glyph_grid_fits_top_half() {
-        let rows = atlas_glyphs().len().div_ceil(GLYPHS_PER_ROW);
-        assert!(rows < usize::try_from(BOTTOM).unwrap());
+        let glyphs = atlas_glyphs();
+        let rows = glyphs.len().div_ceil(GLYPHS_PER_ROW);
+        assert!(i32::try_from(rows).unwrap() < palette_top(&glyphs));
         assert!(2 + 2 * GLYPHS_PER_ROW <= usize::from(CONSOLE_W));
         assert!(SWATCH_COLUMNS * SWATCH_W < i32::from(CONSOLE_W));
+    }
+
+    #[test]
+    fn demo_panels_fit_below_the_embedded_palette() {
+        let p = game_palette();
+        let glyphs = atlas_glyphs();
+        assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 4);
     }
 
     #[test]

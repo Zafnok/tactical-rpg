@@ -5,10 +5,10 @@ type: bug
 milestone: M1 Engine
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-27
 ---
 
 # 0209 — Keep the glyph sampler's demo panels on screen as the palette grows
@@ -51,11 +51,11 @@ None.
 
 ## Acceptance criteria
 
-- [ ] The sampler snapshot shows both panels with their borders and all
+- [x] The sampler snapshot shows both panels with their borders and all
       three content rows.
-- [ ] A new unit test asserts the panels' top row is at most
+- [x] A new unit test asserts the panels' top row is at most
       `CONSOLE_H - 4` for the embedded palette.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -63,3 +63,26 @@ None.
 - Snapshot: `sampler_snapshot` updated.
 
 ## Completion notes
+
+The glyph grid (547 glyphs, `GLYPHS_PER_ROW = 48`) only needs 12 rows, but
+the palette section started at a fixed `BOTTOM = 16`, wasting rows the top
+half didn't use. Even after trimming that, 51 colours at 4 swatch columns
+(13 rows) plus the two blank separator rows (before "Palette" and before the
+sample sentence) still overflowed the console by 2 rows.
+
+Fix: replaced the fixed `BOTTOM` constant with `palette_top`, computed from
+the actual glyph row count, and dropped both blank separator rows (glyph
+grid → "Palette" title, and last swatch row → sample sentence) so every row
+is used. `panels_top` centralizes the same math and is now called from both
+`glyph_sampler` (to place the sentence and panels) and the new unit test, so
+there's one source of truth for the layout instead of a duplicated
+computation. With the current 51-colour palette this lands the panels'
+`top` row exactly at `CONSOLE_H - 4` (28) — the layout is now byte-for-byte
+as tight as it can be without also touching swatch columns or width, so a
+few more palette colours (the ticket's out of scope: not preventing that,
+just making today's palette fit) will reproduce this same bug and need a
+follow-up ticket for a more generous layout (e.g. more swatch columns with
+a narrower/truncated name field).
+
+No gameplay-affecting rules involved (debug-only screen); nothing to flag
+to Nick beyond the note above.
