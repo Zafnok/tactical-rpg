@@ -6,7 +6,7 @@ use super::*;
 use crate::class::{ClassId, UnitTags, WeaponProficiency};
 use crate::geom::Pos;
 use crate::magic::Element;
-use crate::spell::{SpellDef, SpellKind};
+use crate::spell::{SpellDef, SpellId, SpellKind, SpellTable};
 use crate::stats::Growths;
 use crate::terrain::MovementTypeId;
 use crate::unit::{Faction, UnitId};
@@ -138,6 +138,25 @@ fn classes() -> ClassTable {
     classes_with(class())
 }
 
+/// A tier-3 mage with 0 weapon slots.
+fn mage_class() -> ClassDef {
+    ClassDef {
+        weapon_slots: 0,
+        ..class()
+    }
+}
+
+fn mage_classes() -> ClassTable {
+    classes_with(mage_class())
+}
+
+/// `u` with `spell` learned and `uses` uses left.
+fn learn(mut u: Unit, spell: &str, uses: u8) -> Unit {
+    u.learned.insert(SpellId::new(spell));
+    u.spells.uses_left.insert(SpellId::new(spell), uses);
+    u
+}
+
 fn unit() -> Unit {
     let mut u = Unit::generic(
         UnitId(1),
@@ -164,6 +183,19 @@ fn equipped(weapons: &[&str], armour: Option<&str>, accessory: Option<&str>) -> 
     unit()
         .with_loadout(&loadout(weapons, armour, accessory), &classes(), &items())
         .unwrap()
+}
+
+/// A 0-slot mage with no weapons.
+fn mage() -> Unit {
+    Unit::generic(
+        UnitId(1),
+        &ClassId("fencer".into()),
+        &mage_classes(),
+        1,
+        Faction::Player,
+        Pos::new(0, 0),
+    )
+    .unwrap()
 }
 
 // ---- Weapon ranks and EXP -------------------------------------------------
@@ -388,15 +420,63 @@ fn armour_weight() {
 
 #[test]
 fn attack_ranges_of_usable_weapons() {
+    let no_spells = SpellTable::default();
     let u = equipped(&["sword", "javelin", "steel_sword"], None, None);
     // The steel sword needs rank D: skipped. (1,1) once.
-    assert_eq!(u.attack_ranges(&classes(), &items()), [(1, 1), (1, 2)]);
+    assert_eq!(
+        u.attack_ranges(&classes(), &items(), &no_spells),
+        [(1, 1), (1, 2)]
+    );
     let u = equipped(&["axe"], None, None);
-    assert!(u.attack_ranges(&classes(), &items()).is_empty());
-    assert!(unit().attack_ranges(&classes(), &items()).is_empty());
+    assert!(u.attack_ranges(&classes(), &items(), &no_spells).is_empty());
+    assert!(
+        unit()
+            .attack_ranges(&classes(), &items(), &no_spells)
+            .is_empty()
+    );
     let mut lost = equipped(&["sword"], None, None);
     lost.class = ClassId("nope".into());
-    assert!(lost.attack_ranges(&classes(), &items()).is_empty());
+    assert!(
+        lost.attack_ranges(&classes(), &items(), &no_spells)
+            .is_empty()
+    );
+}
+
+#[test]
+fn attack_ranges_of_castable_attack_spells() {
+    let spells = spells();
+    // A 0-slot mage knowing Fire with uses left has attack ranges [(1, 2)].
+    let with_fire = learn(mage(), "fire", 10);
+    assert_eq!(
+        with_fire.attack_ranges(&mage_classes(), &items(), &spells),
+        [(1, 2)]
+    );
+    // At 0 uses, no range.
+    let out_of_uses = learn(mage(), "fire", 0);
+    assert!(
+        out_of_uses
+            .attack_ranges(&mage_classes(), &items(), &spells)
+            .is_empty()
+    );
+    // Heal spells never add a range.
+    let with_heal = learn(mage(), "heal", 8);
+    assert!(
+        with_heal
+            .attack_ranges(&mage_classes(), &items(), &spells)
+            .is_empty()
+    );
+    // Not learned: no range either, even with uses recorded.
+    assert!(
+        mage()
+            .attack_ranges(&mage_classes(), &items(), &spells)
+            .is_empty()
+    );
+    // A spell range equal to a weapon's isn't repeated.
+    let with_javelin = learn(equipped(&["javelin"], None, None), "fire", 10);
+    assert_eq!(
+        with_javelin.attack_ranges(&classes(), &items(), &spells),
+        [(1, 2)]
+    );
 }
 
 #[test]

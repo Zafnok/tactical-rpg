@@ -472,9 +472,10 @@ pub fn attack_tiles(reach: &Reach, min: u32, max: u32) -> TileSet {
     out
 }
 
-/// The tiles unit `unit` threatens this turn with weapons of the given
-/// ranges (in a battle: [`Unit::attack_ranges`]): its stoppable tiles plus
-/// their attack tiles. Empty if `ranges` is empty.
+/// The tiles unit `unit` threatens this turn with attacks of the given
+/// ranges (in a battle: [`Unit::attack_ranges`], its weapons and castable
+/// attack spells): its stoppable tiles plus their attack tiles. Empty if
+/// `ranges` is empty.
 pub fn threat_area(
     map: &BattleMap,
     terrain: &TerrainTable,
@@ -495,8 +496,9 @@ pub fn threat_area(
 }
 
 /// The union of the threat areas of every unit hostile to `faction`, with
-/// each unit's weapon ranges given by `ranges` (in a battle:
-/// [`Unit::attack_ranges`], the ranges of the weapons it can wield).
+/// each unit's attack ranges given by `ranges` (in a battle:
+/// [`Unit::attack_ranges`], the ranges of the weapons it can wield and the
+/// attack spells it can cast).
 pub fn danger_zone(
     map: &BattleMap,
     terrain: &TerrainTable,

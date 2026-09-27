@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0309"]
 nick_input: none
-completed:
+completed: 2026-09-27
 ---
 
 # 0314 — Attack spells in attack ranges
@@ -68,5 +68,38 @@ attack, and one at 0 uses can't.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+`Unit::attack_ranges` now takes `spells: &SpellTable` and, after the weapon
+ranges, appends the `(min_range, max_range)` of every spell in `self.learned`
+that `Unit::castable_attack` says the unit can cast now (learned, an attack
+spell, ≥1 use left), in `learned`'s id order, skipping ranges already in the
+list — exactly as scoped. Heal spells and spells with 0 uses contribute
+nothing, matching the acceptance criteria.
+
+Doc comments in `item.rs` (`attack_ranges`) and `movement.rs` (`threat_area`,
+`danger_zone`) now describe ranges as coming from weapons *and* castable
+spells rather than weapons alone. The only caller of `attack_ranges` outside
+its own tests was `item/tests.rs`; no UI or AI code calls it yet (0405/0501
+are still open), so no other call sites needed updating.
+
+Tests added:
+- `item::tests::attack_ranges_of_castable_attack_spells`
+  (`crates/core/src/item/tests.rs`): a 0-slot mage with Fire (1–2) and uses
+  left gets `[(1, 2)]`; at 0 uses, `[]`; a learned heal spell never adds a
+  range; a spell range equal to an already-listed weapon range isn't
+  repeated.
+- `movement::tests::threat_area_of_a_mage_covers_spell_range`
+  (`crates/core/src/movement/tests.rs`): `threat_area` with a range `(1, 2)`
+  threat covers the same diamond as the existing weapon-range tests, since
+  `threat_area` takes ranges as plain data and doesn't care whether they came
+  from a weapon or a spell.
+
+No design questions or deviations from the ticket's plan. No follow-up
+tickets created.
+
+Gates run locally: `cargo fmt --all`, `cargo clippy --workspace --all-targets
+-- -D warnings`, `cargo test --workspace` (all green), `cargo doc --workspace
+--no-deps` (with `RUSTDOCFLAGS=-D warnings`), and `cargo build -p trpg-app
+--target wasm32-unknown-unknown`. `cargo deny`/`cargo machete`/`typos` aren't
+installed in this environment and this ticket added no dependencies, so
+they were skipped (per the ticket board, these gates land after 0103).
+Mutation testing runs in CI per `run-gates`.

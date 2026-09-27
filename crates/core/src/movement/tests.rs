@@ -607,6 +607,17 @@ fn threat_area_is_stoppable_plus_attack() {
 }
 
 #[test]
+fn threat_area_of_a_mage_covers_spell_range() {
+    // A 0-slot mage's attack spell (range 1-2) threatens the same tiles a
+    // weapon of that range would.
+    let s = scene(&OPEN_5, "foot", 0);
+    assert_eq!(
+        s.draw(&s.threat(MOVER, &[(1, 2)]).unwrap()),
+        ["..*..", ".***.", "*****", ".***.", "..*.."]
+    );
+}
+
+#[test]
 fn threat_area_without_weapons_is_empty() {
     let s = scene(&OPEN_5, "foot", 3);
     assert!(s.threat(MOVER, &[]).unwrap().is_empty());
