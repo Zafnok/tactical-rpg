@@ -483,8 +483,8 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
         }
         Mode::Targeting(t) => step_targeting(*t, action, state),
         Mode::Combat(mut playback) => {
-            if action == Action::Confirm {
-                playback.press();
+            if action == Action::Cancel {
+                playback.skip();
             }
             (Mode::Combat(playback), Effect::None)
         }
@@ -1156,7 +1156,7 @@ mod tests {
     }
 
     #[test]
-    fn during_a_combat_only_confirm_counts_and_the_end_goes_back_to_browsing() {
+    fn during_a_combat_only_cancel_counts_and_the_end_goes_back_to_browsing() {
         let c = ctx();
         let before = skirmish(&c, 20);
         let mut after = before.clone();
@@ -1179,7 +1179,7 @@ mod tests {
             (combat.selection(), combat.drawn_pos(UnitId(1))),
             (None, None)
         );
-        for a in [Action::Cancel, Action::CursorLeft, Action::NextUnit] {
+        for a in [Action::Confirm, Action::CursorLeft, Action::NextUnit] {
             let (m, effect) = step(combat.clone(), a, p(8, 2), &after);
             assert_eq!((&m, effect), (&combat, Effect::None));
         }
@@ -1187,10 +1187,9 @@ mod tests {
         let half = combat.clone().tick(total / 2.0, false, &after);
         assert!(matches!(half, Mode::Combat(_)));
         assert_eq!(half.tick(total, false, &after), Mode::default());
-        // A tap (press, then release) ends it at once.
-        let (pressed, _) = step(combat, Action::Confirm, p(8, 2), &after);
-        let held = pressed.tick(1.0 / 60.0, true, &after);
-        assert!(matches!(held, Mode::Combat(_)));
-        assert_eq!(held.tick(1.0 / 60.0, false, &after), Mode::default());
+        // Cancel skips: the frame's tick ends it.
+        let (skipped, effect) = step(combat, Action::Cancel, p(8, 2), &after);
+        assert_eq!(effect, Effect::None);
+        assert_eq!(skipped.tick(1.0 / 60.0, false, &after), Mode::default());
     }
 }
