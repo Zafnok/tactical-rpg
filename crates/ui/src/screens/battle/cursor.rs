@@ -348,6 +348,12 @@ mod tests {
     }
 
     #[test]
+    fn px_rect_scales_cells_to_pixels() {
+        assert_eq!(px_rect(Rect::new(3, 2, 5, 4)), Rect::new(24, 32, 40, 64));
+        assert_eq!(px_rect(MAP_VIEW), Rect::new(0, 0, 560, 480));
+    }
+
+    #[test]
     fn nothing_is_drawn_outside_the_map_viewport() {
         let p = game_palette();
         let c = Cursor::new(Pos::new(0, 0));
