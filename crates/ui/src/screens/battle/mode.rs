@@ -628,6 +628,17 @@ mod tests {
         assert!(!menu(&mode), "the hold restarted when released");
         mode = mode.tick(short, true, &s);
         assert!(menu(&mode));
+        // The hold alone skips: early in the walk, held just past the limit.
+        let Mode::Moving { sel, .. } = walk.clone() else {
+            unreachable!()
+        };
+        let nearly = Mode::Moving {
+            sel,
+            t: 0.0,
+            held: short,
+        };
+        assert!(menu(&nearly.clone().tick(short, true, &s)));
+        assert!(!menu(&nearly.tick(short, false, &s)));
         // A new press skips at once.
         let (mode, _) = step(walk, Action::Confirm, p(7, 5), &s);
         assert!(menu(&mode));

@@ -6,6 +6,7 @@
 use trpg_core::{Pos, Reach};
 
 use super::camera::Camera;
+use super::cursor::px_rect;
 use super::layout::{MAP_VIEW, TILE_W_CELLS};
 use crate::color::Rgb;
 use crate::console::{CELL_H_PX, CELL_W_PX};
@@ -19,6 +20,10 @@ pub const LINE_W: i32 = 3;
 
 /// Offset of the line from a tile's left (or top) edge: pixels 7..=9 of 16.
 const LINE_OFFSET: i32 = 7;
+
+/// The line's middle pixel from a tile's left (or top) edge; arrowheads
+/// are centred on it.
+const LINE_MID: i32 = 8;
 
 /// The arrowhead's columns (or rows), from its base (11 px across) to its
 /// tip (1 px).
@@ -58,17 +63,6 @@ fn tile_px(tile: Pos, camera: Camera) -> (i32, i32) {
     (cx * i32::from(CELL_W_PX), cy * i32::from(CELL_H_PX))
 }
 
-/// The map viewport in pixels: path overlays are clipped to it.
-fn view_px() -> PxRect {
-    let (w, h) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
-    Rect::new(
-        MAP_VIEW.x * w,
-        MAP_VIEW.y * h,
-        MAP_VIEW.w * w,
-        MAP_VIEW.h * h,
-    )
-}
-
 /// The line between the centres of adjacent tiles `a` and `b`; with
 /// `from_edge`, only the part outside `a`'s tile.
 fn segment(a: Pos, b: Pos, camera: Camera, from_edge: bool) -> PxRect {
@@ -94,7 +88,7 @@ fn segment(a: Pos, b: Pos, camera: Camera, from_edge: bool) -> PxRect {
 /// the tip, centred on the line.
 fn arrowhead(from: Pos, to: Pos, camera: Camera) -> Vec<PxRect> {
     let (px, py) = tile_px(to, camera);
-    let mid = LINE_OFFSET + LINE_W / 2;
+    let mid = LINE_MID;
     (0..ARROW_LEN)
         .map(|i| {
             let half = ARROW_LEN - 1 - i;
@@ -114,7 +108,7 @@ fn arrowhead(from: Pos, to: Pos, camera: Camera) -> Vec<PxRect> {
 /// The overlays drawing `path` (the unit's tile first) in `color`: nothing
 /// for a path of one tile. Clipped to the map viewport.
 pub fn path_overlays(path: &[Pos], camera: Camera, color: Rgb) -> Vec<Overlay> {
-    let view = view_px();
+    let view = px_rect(MAP_VIEW);
     let mut out = Vec::new();
     let mut add = |rect: PxRect, layer| {
         if let Some(rect) = rect.intersect(&view) {
@@ -290,6 +284,20 @@ mod tests {
         assert_eq!(first(&[p(1, 1), p(0, 1)]), (Layer::Under, 7, 23, 9, 3));
         assert_eq!(first(&[p(1, 1), p(1, 0)]), (Layer::Under, 23, 7, 3, 9));
         assert_eq!(first(&[p(1, 1), p(1, 2)]), (Layer::Under, 23, 32, 3, 10));
+        // Every arrowhead's 11-px base is centred on the line's middle
+        // pixel (24 on tile (1, 1)), across the direction of travel.
+        let base = |path: &[Pos]| {
+            let over: Vec<_> = rects(path)
+                .into_iter()
+                .filter(|o| o.0 == Layer::Over)
+                .collect();
+            over[0]
+        };
+        assert_eq!(base(&[p(0, 1), p(1, 1)]), (Layer::Over, 21, 19, 1, 11));
+        assert_eq!(base(&[p(2, 1), p(1, 1)]), (Layer::Over, 26, 19, 1, 11));
+        assert_eq!(base(&[p(1, 0), p(1, 1)]), (Layer::Over, 19, 21, 11, 1));
+        assert_eq!(base(&[p(1, 2), p(1, 1)]), (Layer::Over, 19, 26, 11, 1));
+        assert_eq!(LINE_OFFSET + LINE_W / 2, LINE_MID);
     }
 
     #[test]
