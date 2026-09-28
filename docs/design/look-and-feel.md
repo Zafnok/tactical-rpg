@@ -82,6 +82,10 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
   values are in `assets/data/palette.ron` *(tunable)*.
 - Terrain draws its glyphs in `<terrain>` and its background in
   `<terrain>_bg` (e.g. `forest` / `forest_bg`).
+- **Fort glyph is `╦╦` (battlements)**, in `fort` gold (decided 2026-09-28,
+  ticket 0422). Nick: "not a fan of the fort glyph it looks too similar to a
+  cursor" … "I like C for the fort". The old `[]` read as the cursor's
+  brackets; terrain glyphs should never look like the cursor.
 - Move/attack/heal/danger overlays blend their colour over the terrain
   background at about **75%** *(tunable)*, so the ground stays visible
   underneath. Nick liked the move and attack range colours as shown.
