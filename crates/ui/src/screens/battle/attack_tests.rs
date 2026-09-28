@@ -1,5 +1,5 @@
 //! Harness tests of attacking (ticket 0404): the weapon list, targeting,
-//! the forecast against `core`'s numbers, the combat playback (skip, fast
+//! the forecast against `core`'s numbers, the combat playback (Cancel skips, fast
 //! forward, falls) and the battle it leaves.
 
 use insta::assert_snapshot;
@@ -227,7 +227,7 @@ fn playback_mid_strike_snapshot() {
         .find(|s| matches!(s.beat, Beat::Result { strike: 0, .. }))
         .expect("a first strike");
     h.wait(result.start + 0.1 - confirm_frames());
-    assert_eq!(help(&h), "f skip · hold f fast");
+    assert_eq!(help(&h), "d skip · hold f fast");
     assert_snapshot!(h.snapshot());
 }
 
@@ -273,7 +273,7 @@ fn a_kill_fades_the_unit_out_with_a_message_and_removes_it() {
     assert_eq!(message(&h), "Brigand has fallen.");
     // Faded, while the box stays up: nobody on its tile in the panel.
     h.wait(fall.len);
-    assert_eq!(help(&h), "f skip · hold f fast");
+    assert_eq!(help(&h), "d skip · hold f fast");
     assert_eq!(panel(&h, 5), "");
     // Afterwards: the terrain where it stood, nobody in the panel.
     h.wait(pb.total());
@@ -284,9 +284,12 @@ fn a_kill_fades_the_unit_out_with_a_message_and_removes_it() {
 }
 
 #[test]
-fn a_tap_skips_the_playback_and_the_next_keys_work() {
+fn cancel_skips_the_playback_and_the_next_keys_work() {
     let mut h = lord_on_brigand(20);
+    // A Confirm tap doesn't skip (holding it only speeds up).
     h.keys("f f");
+    assert_eq!(help(&h), "d skip · hold f fast");
+    h.keys("d");
     // Browsing already: the keys after the skip move the cursor.
     assert_eq!(
         help(&h),
@@ -306,7 +309,7 @@ fn holding_confirm_plays_four_times_as_fast() {
     let quarter = total / TIMINGS.fast + 0.1;
     let mut slow = lord_on_brigand(20);
     slow.keys("f").wait(quarter);
-    assert_eq!(help(&slow), "f skip · hold f fast");
+    assert_eq!(help(&slow), "d skip · hold f fast");
     let mut fast = lord_on_brigand(20);
     fast.keys("f").hold("f", quarter);
     assert_eq!(

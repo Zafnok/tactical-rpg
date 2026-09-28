@@ -146,9 +146,11 @@ Worked by Opus 5.5 instead of Fable 5.1, at Nick's request.
   names"):
   - Every proper noun has a stable id, and character sheets are named by
     role id, not by name.
-  - Ticket **0702** now requires speaker ids to be role ids, a names table in
-    game data, and name tokens in text, with a validator error for a
-    registered name written literally. So a rename in the game is one line.
+  - New ticket **0709** adds a names table in game data and name tokens in
+    `.dlg` text, with a validator error for a registered name written
+    literally. So a rename in the game is one line. 0702 was already done on
+    main when this PR merged main in, so the requirement went into 0709
+    instead of editing 0702. 0707 is now blocked by 0709.
   - Ticket **0801** now has the lead's name entry, with default **Rowan**.
   - The `story-writing` skill gained a "Names are variables" section.
 - **More gate rounds than planned.** Nick asked to go deeper on the disgrace
@@ -222,5 +224,5 @@ Worked by Opus 5.5 instead of Fable 5.1, at Nick's request.
   those tickets.
 - **Default lead first name:** Rowan (a placeholder, like every name).
 
-**Follow-up tickets:** none new. 0702 and 0801 were edited instead (above).
+**Follow-up tickets:** **0709** Names table and name tokens. 0801 was edited (above).
 Beat sheets for Chapters 2+ belong to those chapters' future tickets.

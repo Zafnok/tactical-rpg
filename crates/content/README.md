@@ -15,6 +15,10 @@ embedded in the binary (ADR-0005). No filesystem I/O, no macroquad.
   → `trpg_core::ClassTable`.
 - `character` — named characters and generic unit templates from
   `assets/data/characters.ron` → `CharacterTable`.
+- `dialogue` — `.dlg` dialogue scripts in `assets/dialogue/` (format in that
+  folder's `README.md`): `parse_dlg`, `check_scene`, `print_scene`, `load` →
+  `DialogueTable` of `Scene`s (steps: `Caption`, `Place`, `Clear`, `Say`,
+  `Narrate`).
 - `enums` (private) — serde mirrors of `trpg-core` enums (`core` has no serde).
 - `lib.rs` — `Content` (everything) and `load_embedded()`.
 
