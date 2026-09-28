@@ -11,6 +11,8 @@ pub struct MenuItem {
     pub label: String,
     /// Disabled items are drawn dim, skipped by the cursor and can't be chosen.
     pub enabled: bool,
+    /// Text drawn after the label in its own colour (e.g. `(broken)`).
+    pub suffix: Option<(String, UiColor)>,
 }
 
 impl MenuItem {
@@ -19,7 +21,15 @@ impl MenuItem {
         Self {
             label: label.into(),
             enabled: true,
+            suffix: None,
         }
+    }
+
+    /// The same item with `text` after its label, drawn in `color`.
+    #[must_use]
+    pub fn with_suffix(mut self, text: impl Into<String>, color: UiColor) -> Self {
+        self.suffix = Some((text.into(), color));
+        self
     }
 
     /// A disabled item.
@@ -27,7 +37,19 @@ impl MenuItem {
         Self {
             label: label.into(),
             enabled: false,
+            suffix: None,
         }
+    }
+}
+
+impl MenuItem {
+    /// Cells the label and suffix take.
+    fn width(&self) -> usize {
+        let suffix = self
+            .suffix
+            .as_ref()
+            .map_or(0, |(t, _)| t.chars().count() + 1);
+        self.label.chars().count() + suffix
     }
 }
 
@@ -117,12 +139,7 @@ impl Menu {
     /// Box size in cells: the widest label plus a space and a border on each
     /// side, by one row per item plus the border.
     pub fn size(&self) -> (i32, i32) {
-        let widest = self
-            .items
-            .iter()
-            .map(|i| i.label.chars().count())
-            .max()
-            .unwrap_or(0);
+        let widest = self.items.iter().map(MenuItem::width).max().unwrap_or(0);
         let w = i32::try_from(widest).unwrap_or(i32::MAX).saturating_add(4);
         let h = i32::try_from(self.items.len())
             .unwrap_or(i32::MAX)
@@ -149,6 +166,16 @@ impl Menu {
             };
             buf.fill_rect(Rect::new(x + 1, row, w - 2, 1), Cell::new(' ', fg, row_bg));
             buf.print(x + 2, row, &item.label, fg, row_bg);
+            if let Some((text, suffix_color)) = &item.suffix {
+                let at = x + 3 + i32::try_from(item.label.chars().count()).unwrap_or(0);
+                // On the focus bar the colour would vanish: keep the bar's.
+                let fg = if i == self.focus && item.enabled {
+                    fg
+                } else {
+                    color(*suffix_color)
+                };
+                buf.print(at, row, text, fg, row_bg);
+            }
         }
     }
 }
@@ -170,6 +197,7 @@ mod tests {
                 .map(|(i, &on)| MenuItem {
                     label: format!("item {i}"),
                     enabled: on,
+                    suffix: None,
                 })
                 .collect(),
         )
@@ -255,7 +283,8 @@ mod tests {
             MenuItem::new("a"),
             MenuItem {
                 label: "a".into(),
-                enabled: true
+                enabled: true,
+                suffix: None,
             }
         );
         assert!(!MenuItem::disabled("b").enabled);
