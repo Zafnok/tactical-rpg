@@ -36,7 +36,8 @@ The dopamine moment Nick asked for ("unit progression (level ups…)"). Shows
 2. **Level-up overlay:** portrait area (placeholder box until 0703 exists; use
    the portrait if it does), `LEVEL UP!` banner, `Lv 4 → 5`, then each stat on
    its own row revealed one per ~0.12 s: `Str  6 → 7  +1` with `+1` in
-   `text_highlight`; stats that didn't grow shown dim without `+`. Hold Confirm
+   `text_highlight`; stats that didn't grow shown dim without `+`. No `MAX`
+   marker here: it is a battle screen (Nick, ticket 0019). Hold Confirm
    = reveal all; Confirm when done closes.
 3. **Class progress** (`progression.md`): after the EXP bar, a one-line
    `Swordsman  CL 3 → 4` notice when a `ClassLeveledUp` happened, and a
