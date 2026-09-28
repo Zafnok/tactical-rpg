@@ -1,0 +1,118 @@
+---
+source: crates/ui/tests/battle.rs
+expression: h.snapshot()
+---
+                                                                      ╔════════════════════════════╗
+                                                                      ║ Fort                       ║
+                                                                      ║ DEF +2  AVO +20            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║                            ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║                            ║
+                    ≈≈≈≈≈≈====······Br..♣♣♣♣....                      ║                            ║
+                    ..≈≈≈≈..··..............Br..                      ║                            ║
+                    ....Ar····........▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ..♣♣··Lo..[]......▓▓░░[]▓▓..                      ║                            ║
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ╚════════════════════════════╝
+                                                                                                    
+ arrows move · f move here · d cancel                                                               
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcddddcccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaeeeeeeffgghhhhiiiijjjjkkkkllaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaeeeeffggmmnnooppooiiiikkkkkkaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaqqffggrrrrssttoouuhhiiiihhhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaammggggmmssmmmmnnhhhhhhhhvvhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaammmmwwssssmmmmmmnnxxxxxxxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaammyysszzmmAAmmmmnnxxBBCCxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaDDyyssmmzzmmmmmmnnxxBBBBxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaiiEEssmmmmmmmmnnhhxxxxFFxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:water bg:sea
+f = fg:water bg:water_bg
+g = fg:water bg:#4a2924
+h = fg:grass bg:grass_bg
+i = fg:forest bg:forest_bg
+j = fg:thicket bg:thicket_bg
+k = fg:mountain bg:mountain_bg
+l = fg:peak bg:peak_bg
+m = fg:grass bg:#273a52
+n = fg:grass bg:#4c271c
+o = fg:road bg:road_bg
+p = fg:enemy bg:road_bg
+q = fg:water bg:#482623
+r = fg:wood bg:#253c5a
+s = fg:road bg:#2a3c53
+t = fg:road bg:#50281d
+u = fg:enemy bg:grass_bg
+v = fg:enemy bg:fort_bg
+w = fg:player bg:#2a3c53
+x = fg:stone bg:stone_bg
+y = fg:forest bg:#253b52
+z = fg:player bg:#273a52
+A = fg:fort bg:#2b3c54
+B = fg:floor bg:floor_bg
+C = fg:fort bg:fort_bg
+D = fg:forest bg:#4a281c
+E = fg:thicket bg:#49261b
+F = fg:wood bg:stone_bg
+G = fg:text_dim bg:black
+--- overlays ---
+over  208,270 16x2  hp_high
+over  224,286 16x2  hp_high
+over  192,254 16x2  hp_high
+over  288,222 16x2  hp_high
+over  352,238 16x2  hp_high
+over  272,206 16x2  hp_high
+under 224,263 10x3  path
+under 231,263 19x3  path
+over  245,259 1x11  path
+over  246,260 1x9  path
+over  247,261 1x7  path
+over  248,262 1x5  path
+over  249,263 1x3  path
+over  250,264 1x1  path

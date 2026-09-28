@@ -112,6 +112,7 @@ ui_colors! {
     HealRange => "heal_range",
     DangerZone => "danger_zone",
     Cursor => "cursor",
+    Path => "path",
     HpHigh => "hp_high",
     HpMid => "hp_mid",
     HpLow => "hp_low",

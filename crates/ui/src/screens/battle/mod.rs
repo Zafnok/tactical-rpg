@@ -1,27 +1,33 @@
 //! The battle screen (ADR-0018, `docs/design/look-and-feel.md`): the map
 //! viewport on the left, the side panel on the right and the help bar at the
-//! bottom. The player browses with the cursor (ticket 0402); selecting and
-//! overlays come with 0403.
+//! bottom. The player browses with the cursor (ticket 0402), selects a unit,
+//! steers its path, moves it and picks an action (0403, [`mode`]).
 
 pub mod camera;
 pub mod cursor;
 pub mod layout;
+pub mod mode;
 pub mod panel;
+pub mod path;
 pub mod units;
 
 use std::sync::Arc;
 
 use trpg_content::{Content, character_unit, check_map_labels};
 use trpg_core::{
-    BattlePack, BattleSetup, BattleState, Faction, ItemId, Objective, Phase, Pos, Stock, Unit,
-    UnitId,
+    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Phase, Pos, Stock,
+    TileSet, Unit, UnitId,
 };
 
 use self::camera::{Camera, tile_to_cell};
-use self::cursor::{Cursor, draw_cursor};
-use self::layout::{HELP_BAR, HELP_ROW, SIDE_PANEL, VIEW_TILES_H, VIEW_TILES_W};
+use self::cursor::{ARROWS, BRACKETS, Cursor, draw_cursor};
+use self::layout::{
+    HELP_BAR, HELP_ROW, MAP_VIEW, SIDE_PANEL, TILE_W_CELLS, VIEW_TILES_H, VIEW_TILES_W,
+};
+use self::mode::{Effect, Mode};
+use self::path::path_overlays;
 use crate::color::{Palette, Rgb, UiColor};
-use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer};
+use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
@@ -114,13 +120,19 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     Ok(state)
 }
 
-/// The battle screen: the player browses the map with the cursor; Cancel
-/// leaves it (until the map menu, 0405).
+/// How far range overlays tint a tile's background toward their colour
+/// (`look-and-feel.md`: about 75%). *Tunable.*
+pub const OVERLAY_BLEND: f32 = 0.75;
+
+/// The battle screen: the player browses the map with the cursor, selects
+/// and moves units ([`Mode`]); Cancel while browsing leaves it (until the
+/// map menu, 0405).
 #[derive(Debug, Clone)]
 pub struct BattleScreen {
     state: BattleState,
     camera: Camera,
     cursor: Cursor,
+    mode: Mode,
 }
 
 impl BattleScreen {
@@ -144,8 +156,14 @@ impl BattleScreen {
         Self {
             camera: Camera::centred_on(start, w, h),
             cursor: Cursor::new(start),
+            mode: Mode::after_command(&state),
             state,
         }
+    }
+
+    /// What the player is doing.
+    pub fn mode(&self) -> &Mode {
+        &self.mode
     }
 
     /// The battle shown.
@@ -171,10 +189,37 @@ impl BattleScreen {
             .follow(target, tiles.width(), tiles.height(), Camera::MARGIN);
     }
 
-    /// The unit under the cursor, if any.
+    /// The unit drawn under the cursor, if any.
     pub fn hovered(&self) -> Option<&Unit> {
         let pos = self.cursor.pos;
-        self.state.units().iter().find(|u| u.pos == pos)
+        self.state.units().iter().find(|u| self.drawn_pos(u) == pos)
+    }
+
+    /// Where `unit` is drawn: its tile, or where it walks or stands before
+    /// its move is sent ([`Mode::drawn_pos`]).
+    fn drawn_pos(&self, unit: &Unit) -> Pos {
+        self.mode.drawn_pos(unit.id).unwrap_or(unit.pos)
+    }
+
+    /// Applies `cmd` (built by [`mode::step`] from legal choices), then
+    /// continues browsing, or with the unit's move after its attack. A
+    /// refused command changes nothing.
+    fn apply(&mut self, cmd: &Command) {
+        // Refused: the battle is unchanged and the player browses again.
+        let _refused = self.state.apply(cmd).err();
+        self.mode = Mode::after_command(&self.state);
+    }
+
+    /// Moves the cursor one tile for a cursor key; the camera and a
+    /// selected unit's path follow.
+    fn move_cursor(&mut self, action: Action) {
+        let tiles = &self.state.map().tiles;
+        let (w, h) = (tiles.width(), tiles.height());
+        if self.cursor.step(action, w, h) {
+            let to = self.cursor.pos;
+            self.follow(to);
+            self.mode.cursor_moved(to, &self.state);
+        }
     }
 
     /// Whether `unit` can still act this phase: its faction's phase and it
@@ -214,20 +259,56 @@ impl BattleScreen {
         }
     }
 
-    /// The help line for what is under the cursor, e.g. `f select · e info
-    /// · s next unit · d back` over a ready unit of the acting side. Key
-    /// names come from the keymap.
+    /// The help line for the mode and what is under the cursor, e.g. `f
+    /// select · e info · s next unit · d back` over a ready unit while
+    /// browsing. Key names come from the keymap.
     pub fn help(&self, ctx: &Ctx) -> String {
         let km = &ctx.keymap;
-        let moves = (cursor_keys_name(km), "move");
-        let select = (key_name(km, Action::Confirm), "select");
+        let keys = cursor_keys_name(km);
+        let confirm = |label| (key_name(km, Action::Confirm), label);
+        let cancel = |label| (key_name(km, Action::Cancel), label);
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
-        let back = (key_name(km, Action::Cancel), "back");
-        match self.hovered() {
-            Some(u) if self.is_ready(u) => help_line(&[select, info, next, back]),
-            Some(_) => help_line(&[moves, info, next, back]),
-            None => help_line(&[moves, next, back]),
+        let moves = (keys.clone(), "move");
+        match &self.mode {
+            Mode::Idle { threat } => {
+                let back = cancel(if threat.is_some() {
+                    "hide range"
+                } else {
+                    "back"
+                });
+                match self.hovered() {
+                    Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
+                        help_line(&[confirm("select"), info, next, back])
+                    }
+                    Some(u) if u.faction != Faction::Player => {
+                        help_line(&[moves, confirm("range"), info, next, back])
+                    }
+                    Some(_) => help_line(&[moves, info, next, back]),
+                    None => help_line(&[moves, next, back]),
+                }
+            }
+            Mode::Selected(sel) => {
+                if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
+                    help_line(&[moves, confirm("move here"), cancel("cancel")])
+                } else {
+                    help_line(&[moves, cancel("cancel")])
+                }
+            }
+            Mode::Moving { .. } => help_line(&[confirm("skip")]),
+            Mode::ActionMenu { .. } => {
+                help_line(&[(keys, "choose"), confirm("confirm"), cancel("back")])
+            }
+            Mode::MoveAfter { unit, tiles } => {
+                let here = self.state.unit(*unit).map(|u| u.pos);
+                if here == Some(self.cursor.pos) {
+                    help_line(&[moves, confirm("stay")])
+                } else if tiles.contains(&self.cursor.pos) {
+                    help_line(&[moves, confirm("move here")])
+                } else {
+                    help_line(&[moves])
+                }
+            }
         }
     }
 
@@ -260,13 +341,92 @@ impl BattleScreen {
         }
     }
 
+    /// Tints the tiles of the mode's ranges: a selected unit's move
+    /// (`move_range`) and attack (`attack_range`) ranges, a shown threat
+    /// area, or where a unit may move after its attack.
+    fn draw_ranges(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let tint = |buf: &mut GlyphBuffer, tiles: Vec<Pos>, color| {
+            let color = ctx.palette.get(color);
+            for pos in tiles {
+                if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
+                    buf.blend_bg(Rect::new(x, y, TILE_W_CELLS, 1), color, OVERLAY_BLEND);
+                }
+            }
+        };
+        let all = |set: &TileSet| set.iter().collect();
+        match &self.mode {
+            Mode::Selected(sel) => {
+                tint(buf, all(&sel.moves), UiColor::MoveRange);
+                tint(buf, all(&sel.attack), UiColor::AttackRange);
+            }
+            Mode::Idle {
+                threat: Some(threat),
+            } => tint(buf, all(&threat.area), UiColor::AttackRange),
+            Mode::MoveAfter { tiles, .. } => tint(buf, tiles.clone(), UiColor::MoveRange),
+            _ => {}
+        }
+    }
+
     fn draw_units(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         for unit in self.state.units() {
-            if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
+            if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
                 units::draw_unit(buf, &ctx.palette, unit, x, y);
             }
         }
     }
+
+    /// Draws the cursor for the mode: brackets while browsing; with a unit
+    /// selected, arrows on the unit, or the path with its arrowhead (and no
+    /// cursor on the arrowhead's tile); none during a walk or in the menu.
+    fn draw_cursor_and_path(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let pos = self.cursor.pos;
+        let marks = match &self.mode {
+            Mode::Moving { .. } | Mode::ActionMenu { .. } => return,
+            Mode::Selected(sel) => {
+                let color = ctx.palette.get(UiColor::Path);
+                for overlay in path_overlays(&sel.path, self.camera, color) {
+                    buf.add_overlay(overlay);
+                }
+                if pos == sel.origin() {
+                    ARROWS
+                } else if pos == sel.dest() {
+                    return;
+                } else {
+                    BRACKETS
+                }
+            }
+            Mode::Idle { .. } | Mode::MoveAfter { .. } => BRACKETS,
+        };
+        if let Some(cell) = tile_to_cell(pos, &self.camera) {
+            draw_cursor(buf, &ctx.palette, &self.cursor, marks, cell);
+        }
+    }
+
+    /// Draws the action menu beside its unit, if open.
+    fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let Mode::ActionMenu { sel, menu, .. } = &self.mode else {
+            return;
+        };
+        if let Some(cell) = tile_to_cell(sel.dest(), &self.camera) {
+            let (x, y) = menu_origin(cell, menu.size());
+            menu.draw(&ctx.palette, buf, x, y);
+        }
+    }
+}
+
+/// Where a menu of `(w, h)` cells goes beside the tile whose left cell is
+/// `(x, y)`: one cell right of the tile (clear of the cursor's marks), or
+/// left of it if it would run past the map view; its first item level with
+/// the tile, moved to fit the view.
+fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
+    let right = x + TILE_W_CELLS + 1;
+    let mx = if right + w <= MAP_VIEW.x + MAP_VIEW.w {
+        right
+    } else {
+        (x - 1 - w).max(MAP_VIEW.x)
+    };
+    let my = (y - 1).min(MAP_VIEW.y + MAP_VIEW.h - h).max(MAP_VIEW.y);
+    (mx, my)
 }
 
 /// The palette colour called `name`, or `fallback` (content validation
@@ -284,20 +444,39 @@ impl Screen for BattleScreen {
 
     fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
         self.cursor.tick(input.dt);
-        let tiles = &self.state.map().tiles;
-        let (w, h) = (tiles.width(), tiles.height());
         for &action in &input.actions {
             match action {
-                Action::Cancel => return Transition::Pop,
-                Action::NextUnit => self.cycle(true),
-                Action::PrevUnit => self.cycle(false),
+                Action::NextUnit | Action::PrevUnit => {
+                    if matches!(self.mode, Mode::Idle { .. }) {
+                        self.cycle(action == Action::NextUnit);
+                    }
+                }
+                Action::CursorLeft
+                | Action::CursorRight
+                | Action::CursorUp
+                | Action::CursorDown
+                    if self.mode.cursor_free() =>
+                {
+                    self.move_cursor(action);
+                }
                 _ => {
-                    if self.cursor.step(action, w, h) {
-                        self.follow(self.cursor.pos);
+                    let mode = std::mem::take(&mut self.mode);
+                    let (mode, effect) = mode::step(mode, action, self.cursor.pos, &self.state);
+                    self.mode = mode;
+                    match effect {
+                        Effect::None => {}
+                        Effect::Apply(cmd) => self.apply(&cmd),
+                        Effect::Cursor(to) => {
+                            self.cursor.jump(to);
+                            self.follow(to);
+                        }
+                        Effect::Leave => return Transition::Pop,
                     }
                 }
             }
         }
+        let mode = std::mem::take(&mut self.mode);
+        self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
         Transition::None
     }
 
@@ -306,40 +485,46 @@ impl Screen for BattleScreen {
         let black = c(UiColor::Black);
         buf.fill_rect(buf.bounds(), Cell::new(' ', c(UiColor::Text), black));
         self.draw_terrain(ctx, buf);
+        self.draw_ranges(ctx, buf);
         self.draw_units(ctx, buf);
-        if let Some((x, y)) = tile_to_cell(self.cursor.pos, &self.camera) {
-            draw_cursor(buf, &ctx.palette, &self.cursor, x, y);
-        }
+        self.draw_cursor_and_path(ctx, buf);
+        self.draw_menu(ctx, buf);
         let panel_bg = c(UiColor::PanelBg);
         buf.fill_rect(SIDE_PANEL, Cell::new(' ', c(UiColor::Text), panel_bg));
-        buf.draw_box(
-            SIDE_PANEL,
-            BoxStyle::Single,
-            c(UiColor::PanelBorder),
-            panel_bg,
-        );
-        panel::draw_hover(buf, &ctx.palette, &self.state, self.cursor.pos);
+        // Double-line while a unit is selected (`look-and-feel.md`).
+        let style = if self.mode.selection().is_some() {
+            BoxStyle::Double
+        } else {
+            BoxStyle::Single
+        };
+        buf.draw_box(SIDE_PANEL, style, c(UiColor::PanelBorder), panel_bg);
+        let (pos, hovered) = (self.cursor.pos, self.hovered());
+        panel::draw_hover(buf, &ctx.palette, &self.state, pos, hovered);
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));
         buf.print(1, HELP_ROW, &self.help(ctx), c(UiColor::TextDim), black);
     }
 }
 
+/// Helpers for this module's tests and its submodules'.
 #[cfg(test)]
-mod tests {
-    use insta::assert_snapshot;
-    use trpg_core::{BattleMap, Command, Grid, Phase, TerrainId, Unit, UnitAction};
+pub(crate) mod testing {
+    use std::sync::Arc;
 
-    use super::*;
-    use crate::console::{CONSOLE_H, CONSOLE_W};
-    use crate::harness::Harness;
-    use crate::screen::tests::ctx;
+    use trpg_core::{
+        BattleMap, BattlePack, BattleSetup, BattleState, Command, Objective, Pos, SkillId, Stock,
+        Unit, UnitAction, UnitId,
+    };
 
-    fn quick() -> BattleScreen {
-        BattleScreen::new(quick_battle(&ctx().content).unwrap())
-    }
+    use crate::screen::Ctx;
 
-    /// A battle on `map` with `units`, using the game's tables.
-    fn battle(c: &Ctx, map: BattleMap, units: Vec<Unit>) -> BattleState {
+    /// A battle on `map` with `units` and `objective`, using the game's
+    /// tables.
+    pub fn battle_with(
+        c: &Ctx,
+        map: BattleMap,
+        units: Vec<Unit>,
+        objective: Objective,
+    ) -> BattleState {
         BattleState::new(BattleSetup {
             map,
             terrain: Arc::new(c.content.terrain.rules.clone()),
@@ -353,11 +538,74 @@ mod tests {
             stock: Stock::default(),
             units,
             reinforcements: vec![],
-            objective: Objective::Rout { turn_limit: None },
+            objective,
             rewind_charges: 0,
             seed: 0,
         })
         .0
+    }
+
+    /// A rout battle on `map` with `units`.
+    pub fn battle(c: &Ctx, map: BattleMap, units: Vec<Unit>) -> BattleState {
+        battle_with(c, map, units, Objective::Rout { turn_limit: None })
+    }
+
+    /// The Quick Battle with the archer (unit 3) at (8, 4), two tiles below
+    /// the first brigand (unit 4), knowing Vault, after a Vault attack on
+    /// it: the archer waits to move after its attack.
+    pub fn vaulted(c: &Ctx) -> BattleState {
+        let quick = super::quick_battle(&c.content).unwrap_or_else(|e| panic!("{e}"));
+        let mut units = quick.units().to_vec();
+        units[2].pos = Pos::new(8, 4);
+        assert!(units[2].learn_skill(&SkillId::new("vault"), &c.content.skills));
+        let rout = Objective::Rout { turn_limit: None };
+        let mut s = battle_with(c, quick.map().clone(), units, rout);
+        let attack = Command::Act {
+            unit: UnitId(3),
+            dest: Pos::new(8, 4),
+            action: UnitAction::Attack {
+                target: UnitId(4),
+                slot: 0,
+                active: Some(SkillId::new("vault")),
+                art: None,
+            },
+        };
+        if let Err(e) = s.apply(&attack) {
+            panic!("{e}");
+        }
+        assert!(s.pending_move().is_some());
+        s
+    }
+
+    /// `unit` of `state` waiting where it stands.
+    pub fn wait(state: &mut BattleState, unit: usize) {
+        let u = &state.units()[unit];
+        let cmd = Command::Act {
+            unit: u.id,
+            dest: u.pos,
+            action: UnitAction::Wait,
+        };
+        if let Err(e) = state.apply(&cmd) {
+            panic!("{e}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::glyph_buffer::Layer;
+    use trpg_core::{BattleMap, Grid, Phase, TerrainId, Unit};
+
+    use super::testing::{battle, vaulted, wait};
+    use super::*;
+    use crate::console::{CONSOLE_H, CONSOLE_W};
+    use crate::harness::Harness;
+    use crate::screen::tests::ctx;
+
+    fn quick() -> BattleScreen {
+        BattleScreen::new(quick_battle(&ctx().content).unwrap())
     }
 
     fn render(screen: &BattleScreen, c: &Ctx) -> GlyphBuffer {
@@ -481,9 +729,17 @@ mod tests {
         assert_eq!(s.name(), "battle");
         assert!(!s.is_overlay());
         assert_eq!(step(&mut s, &mut c, &[]), "None");
+        // Select the lord, then cancel the selection: still here.
         assert_eq!(step(&mut s, &mut c, &[Action::Confirm]), "None");
+        assert_eq!(step(&mut s, &mut c, &[Action::Cancel]), "None");
+        assert_eq!(s.mode(), &Mode::default());
+        // Browsing: Cancel leaves.
         assert_eq!(
-            step(&mut s, &mut c, &[Action::Confirm, Action::Cancel]),
+            step(
+                &mut s,
+                &mut c,
+                &[Action::Confirm, Action::Cancel, Action::Cancel]
+            ),
             "Pop"
         );
     }
@@ -493,13 +749,7 @@ mod tests {
         let mut c = ctx();
         let mut state = quick_battle(&c.content).unwrap();
         // The archer waits where it stands.
-        let archer = &state.units()[2];
-        let wait = Command::Act {
-            unit: archer.id,
-            dest: archer.pos,
-            action: UnitAction::Wait,
-        };
-        state.apply(&wait).unwrap();
+        wait(&mut state, 2);
         let mut s = BattleScreen::new(state);
         // On the lord, ready to act.
         assert_eq!(s.help(&c), "f select · e info · s next unit · d back");
@@ -507,7 +757,17 @@ mod tests {
         s.cursor.jump(Pos::new(2, 4));
         assert_eq!(s.help(&c), "arrows move · e info · s next unit · d back");
         s.cursor.jump(Pos::new(8, 2));
-        assert_eq!(s.help(&c), "arrows move · e info · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "arrows move · f range · e info · s next unit · d back"
+        );
+        // An enemy's range shown: Cancel hides it.
+        step(&mut s, &mut c, &[Action::Confirm]);
+        assert_eq!(
+            s.help(&c),
+            "arrows move · f range · e info · s next unit · d hide range"
+        );
+        step(&mut s, &mut c, &[Action::Cancel]);
         // On an empty tile.
         s.cursor.jump(Pos::new(0, 0));
         assert_eq!(s.help(&c), "arrows move · s next unit · d back");
@@ -867,5 +1127,277 @@ mod tests {
         // The corner unit sits in the viewport's last tile.
         assert_eq!(buf.get(68, 29).unwrap().glyph, 'R');
         assert_snapshot!(buf.to_snapshot(&c.palette));
+    }
+
+    /// One frame of `dt` seconds with `actions`, Confirm held if `held`.
+    fn frame(s: &mut BattleScreen, c: &mut Ctx, actions: &[Action], dt: f32, held: bool) {
+        let held = if held { vec![Action::Confirm] } else { vec![] };
+        s.update(c, &FrameInput::new(actions.to_vec(), dt, held));
+    }
+
+    /// The Quick Battle with the lord selected and walked two tiles right to
+    /// (5, 5), its action menu open.
+    fn lord_menu(c: &mut Ctx) -> BattleScreen {
+        let mut s = quick();
+        step(
+            &mut s,
+            c,
+            &[Action::Confirm, Action::CursorRight, Action::CursorRight],
+        );
+        step(&mut s, c, &[Action::Confirm]);
+        assert!(matches!(s.mode(), Mode::Moving { .. }), "{:?}", s.mode());
+        frame(&mut s, c, &[], 1.0, false);
+        assert!(
+            matches!(s.mode(), Mode::ActionMenu { .. }),
+            "{:?}",
+            s.mode()
+        );
+        s
+    }
+
+    #[test]
+    fn select_move_and_wait_ends_the_units_action() {
+        let mut c = ctx();
+        let mut s = lord_menu(&mut c);
+        step(&mut s, &mut c, &[Action::Confirm]);
+        let lord = &s.state().units()[0];
+        assert_eq!((lord.pos, lord.acted), (Pos::new(5, 5), true));
+        assert_eq!(s.mode(), &Mode::default());
+        assert_eq!(s.cursor().pos, Pos::new(5, 5));
+        // No longer ready: not selectable, and cycling skips it.
+        step(&mut s, &mut c, &[Action::Confirm]);
+        assert_eq!(s.mode(), &Mode::default());
+        assert_eq!(s.ready_units(), [Pos::new(2, 4), Pos::new(4, 6)]);
+    }
+
+    #[test]
+    fn cancelling_from_the_menu_and_the_selection_leaves_the_battle_unchanged() {
+        let mut c = ctx();
+        let before = quick().state().clone();
+        let mut s = lord_menu(&mut c);
+        // The lord is drawn at (5, 5), but the battle hasn't changed.
+        assert_eq!(s.hovered().map(|u| u.id), Some(UnitId(1)));
+        assert_eq!(s.state(), &before);
+        step(&mut s, &mut c, &[Action::Cancel]);
+        let Mode::Selected(sel) = s.mode() else {
+            panic!("{:?}", s.mode());
+        };
+        assert_eq!(sel.path, [Pos::new(3, 5), Pos::new(4, 5), Pos::new(5, 5)]);
+        assert_eq!(s.hovered(), None, "drawn back at its own tile");
+        assert_eq!(s.state(), &before);
+        step(&mut s, &mut c, &[Action::Cancel]);
+        assert_eq!(s.mode(), &Mode::default());
+        assert_eq!(s.cursor().pos, Pos::new(3, 5));
+        assert_eq!(s.state(), &before);
+    }
+
+    #[test]
+    fn a_held_confirm_skips_the_walk() {
+        let mut c = ctx();
+        let mut s = quick();
+        step(&mut s, &mut c, &[Action::Confirm]);
+        step(&mut s, &mut c, &[Action::CursorRight; 2]);
+        // The press starts the walk; still held after 0.2 s, it skips.
+        frame(&mut s, &mut c, &[Action::Confirm], 0.0, true);
+        frame(&mut s, &mut c, &[], mode::HOLD_SKIP_S / 2.0, true);
+        assert!(matches!(s.mode(), Mode::Moving { .. }));
+        frame(&mut s, &mut c, &[], mode::HOLD_SKIP_S / 2.0, true);
+        assert!(matches!(s.mode(), Mode::ActionMenu { .. }));
+    }
+
+    #[test]
+    fn keys_do_only_what_the_mode_allows() {
+        let mut c = ctx();
+        let mut s = quick();
+        step(&mut s, &mut c, &[Action::Confirm, Action::CursorRight]);
+        // Selected: cycling does nothing.
+        step(&mut s, &mut c, &[Action::NextUnit, Action::PrevUnit]);
+        assert_eq!(s.cursor().pos, Pos::new(4, 5));
+        // In the menu, cursor keys move its focus, not the cursor.
+        let mut s = lord_menu(&mut c);
+        step(
+            &mut s,
+            &mut c,
+            &[Action::CursorUp, Action::CursorLeft, Action::NextUnit],
+        );
+        assert_eq!(s.cursor().pos, Pos::new(5, 5));
+        // While walking, too.
+        let mut s = quick();
+        step(&mut s, &mut c, &[Action::Confirm, Action::CursorRight]);
+        step(&mut s, &mut c, &[Action::Confirm, Action::CursorDown]);
+        assert_eq!(s.cursor().pos, Pos::new(4, 5));
+    }
+
+    #[test]
+    fn selecting_draws_ranges_arrows_and_a_double_panel_border() {
+        let mut c = ctx();
+        let mut s = quick();
+        let plain = render(&s, &c);
+        step(&mut s, &mut c, &[Action::Confirm]);
+        let buf = render(&s, &c);
+        let p = &c.palette;
+        // Arrows either side of the lord's tile (cells 26..28, row 16).
+        assert_eq!(buf.get(25, 16).unwrap().glyph, '►');
+        assert_eq!(buf.get(28, 16).unwrap().glyph, '◄');
+        // (6, 5), reachable, is tinted `move_range`.
+        let tinted = |cell: (i32, i32), color| {
+            let was = plain.get(cell.0, cell.1).unwrap().bg;
+            buf.get(cell.0, cell.1).unwrap().bg == was.lerp(p.get(color), OVERLAY_BLEND)
+        };
+        assert!(tinted((32, 16), UiColor::MoveRange));
+        assert!(tinted((33, 16), UiColor::MoveRange));
+        let Mode::Selected(sel) = s.mode() else {
+            panic!()
+        };
+        let attack = sel.attack.iter().next().unwrap();
+        let (ax, ay) = tile_to_cell(attack, &s.camera()).unwrap();
+        assert!(tinted((ax, ay), UiColor::AttackRange));
+        assert_eq!(buf.get(SIDE_PANEL.x, 0).unwrap().glyph, '╔');
+        assert_eq!(plain.get(SIDE_PANEL.x, 0).unwrap().glyph, '┌');
+        // No path yet.
+        let path = p.get(UiColor::Path);
+        assert!(!buf.overlays().iter().any(|o| o.color == path));
+    }
+
+    #[test]
+    fn the_path_ends_in_an_arrowhead_with_no_cursor_frame_there() {
+        let mut c = ctx();
+        let mut s = quick();
+        step(
+            &mut s,
+            &mut c,
+            &[Action::Confirm, Action::CursorRight, Action::CursorRight],
+        );
+        let buf = render(&s, &c);
+        let path = c.palette.get(UiColor::Path);
+        let lines = buf.overlays().iter().filter(|o| o.color == path);
+        assert_eq!(lines.clone().filter(|o| o.layer == Layer::Under).count(), 2);
+        assert_eq!(lines.filter(|o| o.layer == Layer::Over).count(), 6);
+        // (5, 5) is a fort, drawn `[]` from cell 30: no cursor marks
+        // around it, and the lord keeps its letters.
+        let glyphs: String = (25..34).map(|x| buf.get(x, 16).unwrap().glyph).collect();
+        assert_eq!(glyphs, "·Lo..[]..");
+        // On to the map's right edge, past the lord's reach (Mov 5): the
+        // path, through the fort (cost 2), stops at (7, 5), and the cursor
+        // shows brackets.
+        step(&mut s, &mut c, &[Action::CursorRight; 8]);
+        assert_eq!(s.cursor().pos, Pos::new(13, 5));
+        let Mode::Selected(sel) = s.mode() else {
+            panic!("{:?}", s.mode());
+        };
+        assert_eq!(sel.dest(), Pos::new(7, 5));
+        let buf = render(&s, &c);
+        assert_eq!(buf.get(45, 16).unwrap().glyph, '[');
+        assert_eq!(buf.get(48, 16).unwrap().glyph, ']');
+    }
+
+    #[test]
+    fn the_menu_opens_beside_the_unit_drawn_at_its_new_tile() {
+        let mut c = ctx();
+        let s = lord_menu(&mut c);
+        let buf = render(&s, &c);
+        let row = |y: i32, from: i32, n: i32| -> String {
+            (from..from + n)
+                .map(|x| buf.get(x, y).unwrap().glyph)
+                .collect()
+        };
+        // The lord at (5, 5), cells 30..32; its old tile shows its terrain.
+        assert_eq!(row(16, 26, 6), "....Lo");
+        // The menu one cell right of the tile: `Attack` (dim), `Wait`.
+        assert_eq!(row(16, 33, 10), "│ Attack │");
+        assert_eq!(row(17, 33, 10), "│ Wait   │");
+        let p = &c.palette;
+        assert_eq!(buf.get(35, 16).unwrap().fg, p.get(UiColor::TextDim));
+        assert_eq!(
+            buf.get(35, 17).unwrap().bg,
+            p.get(UiColor::PanelBorderFocus)
+        );
+        // No cursor, no ranges, the panel shows the lord.
+        assert_eq!(buf.get(29, 16).unwrap().glyph, '.');
+        assert_eq!(panel_row(&buf, 5), "Test Lord");
+    }
+
+    #[test]
+    fn menus_go_right_of_the_tile_unless_they_would_leave_the_view() {
+        // The first item (under the top border) level with the tile.
+        assert_eq!(menu_origin((10, 4), (10, 4)), (13, 3));
+        // Too far right: left of the tile.
+        assert_eq!(menu_origin((60, 4), (10, 4)), (49, 3));
+        assert_eq!(menu_origin((57, 4), (10, 4)), (60, 3));
+        // Too low or high: moved to fit; never off the left edge.
+        assert_eq!(menu_origin((10, 29), (10, 4)), (13, 26));
+        assert_eq!(menu_origin((2, 0), (70, 4)), (0, 0));
+    }
+
+    #[test]
+    fn help_follows_the_mode() {
+        let mut c = ctx();
+        let mut s = quick();
+        step(&mut s, &mut c, &[Action::Confirm]);
+        // On the unit: its own tile is a legal end.
+        assert_eq!(s.help(&c), "arrows move · f move here · d cancel");
+        step(&mut s, &mut c, &[Action::CursorRight, Action::CursorDown]);
+        // On the knight: can't stop there.
+        assert_eq!(s.help(&c), "arrows move · d cancel");
+        step(&mut s, &mut c, &[Action::CursorUp, Action::CursorRight]);
+        step(&mut s, &mut c, &[Action::Confirm]);
+        assert_eq!(s.help(&c), "f skip");
+        frame(&mut s, &mut c, &[], 1.0, false);
+        assert_eq!(s.help(&c), "arrows choose · f confirm · d back");
+        c.use_layout(crate::input::Layout::LeftHanded);
+        assert_eq!(s.help(&c), "wasd choose · j confirm · k back");
+    }
+
+    #[test]
+    fn an_enemys_threat_area_is_tinted_until_hidden() {
+        let mut c = ctx();
+        let mut s = quick();
+        s.cursor.jump(Pos::new(8, 2));
+        let plain = render(&s, &c);
+        step(&mut s, &mut c, &[Action::Confirm]);
+        let shown = render(&s, &c);
+        // The brigand's tile (cells 36..38, row 13) and one it can reach.
+        let red = c.palette.get(UiColor::AttackRange);
+        for (x, y) in [(36, 13), (37, 13), (36, 18)] {
+            let was = plain.get(x, y).unwrap().bg;
+            assert_eq!(shown.get(x, y).unwrap().bg, was.lerp(red, OVERLAY_BLEND));
+        }
+        step(&mut s, &mut c, &[Action::Confirm]);
+        assert_eq!(
+            render(&s, &c).get(36, 13).unwrap().bg,
+            plain.get(36, 13).unwrap().bg
+        );
+    }
+
+    #[test]
+    fn a_pending_move_after_an_attack_is_chosen_on_the_map() {
+        let mut c = ctx();
+        let state = vaulted(&c);
+        let tiles = state.move_after_tiles();
+        let mut s = BattleScreen::new(state);
+        let Mode::MoveAfter { unit, .. } = s.mode() else {
+            panic!("{:?}", s.mode());
+        };
+        assert_eq!(*unit, UnitId(3));
+        // Its tiles are tinted `move_range`.
+        let buf = render(&s, &c);
+        let (x, y) = tile_to_cell(tiles[0], &s.camera()).unwrap();
+        let was = render(&quick(), &c).get(x, y).unwrap().bg;
+        let blue = c.palette.get(UiColor::MoveRange);
+        assert_eq!(buf.get(x, y).unwrap().bg, was.lerp(blue, OVERLAY_BLEND));
+        s.cursor.jump(Pos::new(8, 4));
+        assert_eq!(s.help(&c), "arrows move · f stay");
+        s.cursor.jump(tiles[0]);
+        assert_eq!(s.help(&c), "arrows move · f move here");
+        s.cursor.jump(Pos::new(0, 0));
+        assert_eq!(s.help(&c), "arrows move");
+        // Cancel doesn't leave; Confirm on a tile moves there.
+        step(&mut s, &mut c, &[Action::Cancel]);
+        assert!(matches!(s.mode(), Mode::MoveAfter { .. }));
+        s.cursor.jump(tiles[0]);
+        step(&mut s, &mut c, &[Action::Confirm]);
+        assert_eq!(s.mode(), &Mode::default());
+        let archer = s.state().unit(UnitId(3)).unwrap();
+        assert_eq!((archer.pos, archer.acted), (tiles[0], true));
     }
 }

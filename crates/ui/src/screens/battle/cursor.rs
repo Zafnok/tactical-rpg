@@ -82,12 +82,25 @@ fn pulse(t: f32, period: f32) -> f32 {
     BLINK_MIN + (1.0 - BLINK_MIN) * (1.0 + wave) / 2.0
 }
 
-/// Draws `cursor`'s brackets either side of the tile whose left cell is
-/// `(x, y)`, over the neighbouring cells' glyphs and keeping their
-/// background. Brackets outside the map viewport are not drawn.
-pub fn draw_cursor(buf: &mut GlyphBuffer, palette: &Palette, cursor: &Cursor, x: i32, y: i32) {
+/// The browsing cursor's marks, either side of the tile.
+pub const BRACKETS: [char; 2] = ['[', ']'];
+
+/// The marks while the cursor is on the selected unit.
+pub const ARROWS: [char; 2] = ['►', '◄'];
+
+/// Draws `cursor`'s `marks` (e.g. [`BRACKETS`]) either side of the tile
+/// whose left cell is `(x, y)`, over the neighbouring cells' glyphs and
+/// keeping their background. Marks outside the map viewport are not drawn.
+pub fn draw_cursor(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    cursor: &Cursor,
+    marks: [char; 2],
+    (x, y): (i32, i32),
+) {
     let fg = palette.get(UiColor::Cursor).scale(cursor.brightness());
-    for (glyph, cx) in [('[', x - 1), (']', x + TILE_W_CELLS)] {
+    let [left, right] = marks;
+    for (glyph, cx) in [(left, x - 1), (right, x + TILE_W_CELLS)] {
         if !MAP_VIEW.contains(cx, y) {
             continue;
         }
@@ -176,23 +189,27 @@ mod tests {
         let bg = Rgb::new(9, 9, 9);
         let mut buf = GlyphBuffer::new(100, 32, Cell::new('.', Rgb::new(1, 1, 1), bg));
         let mut c = Cursor::new(Pos::new(0, 0));
-        draw_cursor(&mut buf, &p, &c, 10, 4);
+        draw_cursor(&mut buf, &p, &c, BRACKETS, (10, 4));
         let cursor = p.get(UiColor::Cursor);
         assert_eq!(*buf.get(9, 4).unwrap(), Cell::new('[', cursor, bg));
         assert_eq!(*buf.get(12, 4).unwrap(), Cell::new(']', cursor, bg));
         assert_eq!(buf.get(10, 4).unwrap().glyph, '.');
         assert_eq!(buf.get(11, 4).unwrap().glyph, '.');
         c.tick(0.5);
-        draw_cursor(&mut buf, &p, &c, 10, 4);
+        draw_cursor(&mut buf, &p, &c, BRACKETS, (10, 4));
         assert_eq!(buf.get(9, 4).unwrap().fg, cursor.scale(0.5));
         // At the viewport's edges: the bracket outside it is left out.
-        draw_cursor(&mut buf, &p, &c, 68, 7);
+        draw_cursor(&mut buf, &p, &c, BRACKETS, (68, 7));
         assert_eq!(buf.get(67, 7).unwrap().glyph, '[');
         assert_eq!(buf.get(70, 7).unwrap().glyph, '.');
-        draw_cursor(&mut buf, &p, &c, 0, 8);
+        draw_cursor(&mut buf, &p, &c, BRACKETS, (0, 8));
         assert_eq!(buf.get(2, 8).unwrap().glyph, ']');
-        draw_cursor(&mut buf, &p, &c, 10, 30);
+        draw_cursor(&mut buf, &p, &c, BRACKETS, (10, 30));
         assert_eq!(buf.get(9, 30).unwrap().glyph, '.');
+        // On a selected unit: arrows instead.
+        draw_cursor(&mut buf, &p, &c, ARROWS, (20, 4));
+        assert_eq!(buf.get(19, 4).unwrap().glyph, '►');
+        assert_eq!(buf.get(22, 4).unwrap().glyph, '◄');
     }
 
     proptest! {
