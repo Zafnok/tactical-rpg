@@ -222,11 +222,12 @@ fn blocks<'a>(lines: &'a [&'a str], first: usize) -> Vec<(usize, &'a [&'a str])>
         .enumerate()
         .map(|(n, &start)| {
             let end = starts.get(n + 1).copied().unwrap_or(lines.len());
-            let mut rows = &lines[start + 1..end];
-            while rows.last().is_some_and(|r| r.is_empty()) {
-                rows = &rows[..rows.len() - 1];
-            }
-            (start, rows)
+            let rows = &lines[start + 1..end];
+            let kept = rows
+                .iter()
+                .rposition(|r| !r.is_empty())
+                .map_or(0, |i| i + 1);
+            (start, &rows[..kept])
         })
         .collect()
 }

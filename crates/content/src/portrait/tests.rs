@@ -211,6 +211,21 @@ fn wrong_row_count() {
 }
 
 #[test]
+fn blank_lines_only_are_no_rows() {
+    let src = format!(
+        "{}=== smug
+
+
+",
+        valid()
+    );
+    assert_eq!(
+        errors(&src),
+        ["t.portrait:171:1: expression has 0 rows; expected 32"]
+    );
+}
+
+#[test]
 fn duplicate_and_unnamed_expressions() {
     let src = format!("{}{}", valid(), block("happy"));
     assert_eq!(

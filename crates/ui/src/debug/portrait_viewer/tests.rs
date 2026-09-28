@@ -29,17 +29,27 @@ fn wrap_steps_within_range() {
     assert_eq!(wrap(0, -1, 0), 0);
 }
 
+/// The test context plus a third portrait, `test_zed` (a copy of
+/// `test_lord`), so up and down lead to different characters.
+fn ctx3() -> Ctx {
+    let mut ctx = ctx();
+    let mut zed = ctx.content.portraits["test_lord"].clone();
+    zed.character = "test_zed".to_owned();
+    ctx.content.portraits.insert("test_zed".to_owned(), zed);
+    ctx
+}
+
 #[test]
 fn keys_switch_expression_and_character() {
     use Action::{Confirm, CursorDown, CursorLeft, CursorRight, CursorUp};
-    let mut ctx = ctx();
+    let mut ctx = ctx3();
     let mut v = PortraitViewerScreen::new();
     assert_eq!(v.name(), "portrait_viewer");
     let mut step = |v: &mut PortraitViewerScreen, a: &[Action]| {
         assert!(matches!(v.update(&mut ctx, &frame(a)), Transition::None));
     };
     let showing = |v: &PortraitViewerScreen| {
-        let ctx = crate::screen::tests::ctx();
+        let ctx = ctx3();
         v.showing(&ctx).map(|(i, e)| format!("{i} {e}"))
     };
     assert_eq!(showing(&v).as_deref(), Some("test_knight neutral"));
@@ -54,11 +64,13 @@ fn keys_switch_expression_and_character() {
     step(&mut v, &[CursorRight, CursorRight, Confirm]);
     assert_eq!(showing(&v).as_deref(), Some("test_lord angry"));
     step(&mut v, &[CursorDown]);
+    assert_eq!(showing(&v).as_deref(), Some("test_zed neutral"));
+    step(&mut v, &[CursorDown]);
     assert_eq!(showing(&v).as_deref(), Some("test_knight neutral"));
+    step(&mut v, &[CursorUp]);
+    assert_eq!(showing(&v).as_deref(), Some("test_zed neutral"));
     step(&mut v, &[CursorUp]);
     assert_eq!(showing(&v).as_deref(), Some("test_lord neutral"));
-    step(&mut v, &[CursorUp]);
-    assert_eq!(showing(&v).as_deref(), Some("test_knight neutral"));
 }
 
 #[test]
