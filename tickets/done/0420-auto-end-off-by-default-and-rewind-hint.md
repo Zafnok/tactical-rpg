@@ -18,9 +18,8 @@ completed: 2026-09-28
 Nick's feedback (2026-09-28): "turn auto-end off by default, make the rewind
 keybind visible in the lower part of the screen (like the other tooltips)".
 
-- Auto-end (`docs/design/turn-structure.md`) is not implemented yet; it lands
-  with 0405 (map menu / end turn) and is saved by 0805 (options). Only the
-  decided default changes here.
+- Auto-end (`docs/design/turn-structure.md`) was built by 0405 (merged while
+  this ticket was open) with the default ON; 0805 will save it.
 - Turn rewind (0307) is opened with the `Rewind` key (`r` right-handed, `u`
   left-handed, `docs/design/controls.md`) but the battle help bar never named
   it.
@@ -33,7 +32,7 @@ None. (The request is Nick's design call.)
 
 **In:**
 - `docs/design/turn-structure.md`: auto-end is OFF by default; record the change.
-- Tickets 0405 and 0805: update the default they implement.
+- `BattleScreen` starts with auto-end OFF; ticket 0805 updated to match.
 - `BattleScreen::help`: while browsing in the player phase (whenever Rewind
   would open the rewind screen), add `<Rewind key> rewind` before the back hint.
 
@@ -51,7 +50,8 @@ None. (The request is Nick's design call.)
 
 ## Acceptance criteria
 
-- [x] `turn-structure.md` says auto-end is OFF by default; 0405/0805 match.
+- [x] `turn-structure.md` says auto-end is OFF by default; the battle starts
+      with it OFF (`auto_end_is_off_by_default_and_toggles_on`); 0805 matches.
 - [x] Browsing a player-phase battle, the help bar reads e.g.
       `f select · e info · s next unit · r rewind · d back` (`u rewind` left-handed).
 - [x] With a unit selected (Rewind does nothing) the hint is not shown
@@ -66,7 +66,8 @@ None. (The request is Nick's design call.)
 
 ## Completion notes
 
-Done as planned. The rewind hint follows the same rule as the key itself
+0405 landed on main while this was open, so the branch merged main and
+also flips the code default; auto-end tests now turn it on first. The rewind hint follows the same rule as the key itself
 (`can_open_rewind`: browsing, player phase, battle not over), so it never
 advertises a key that does nothing. Snapshot diffs touch only the help row.
 No gameplay rules decided.
