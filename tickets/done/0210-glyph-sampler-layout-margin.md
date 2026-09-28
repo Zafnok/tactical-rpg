@@ -5,10 +5,10 @@ type: bug
 milestone: M1 Engine
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0210 — Give the glyph sampler layout margin instead of an exact fit
@@ -62,11 +62,11 @@ None.
 
 ## Acceptance criteria
 
-- [ ] The sampler snapshot still shows both panels with their borders and
+- [x] The sampler snapshot still shows both panels with their borders and
       all three content rows.
-- [ ] A unit test asserts the layout has margin (not just that it currently
+- [x] A unit test asserts the layout has margin (not just that it currently
       fits) for palettes somewhat larger than today's 51 colours.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -74,3 +74,9 @@ None.
 - Snapshot: `sampler_snapshot` updated if the layout changes.
 
 ## Completion notes
+Swatches now use 5 columns of 19 cells (names cut to 14 characters, e.g.
+`panel_border_focus` → `panel_border_f`), so today's 51 colours take 11 rows
+instead of 13 and the demo panels have 2 spare rows; 60 colours still fit.
+New test `demo_panels_keep_margin_for_a_larger_palette` asserts both.
+`sampler_snapshot` re-accepted after reading the diff. No gameplay rules
+decided. No follow-up tickets.
