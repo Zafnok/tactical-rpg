@@ -242,7 +242,6 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
-        talent: None,
     };
     carrying(u, &["sword"])
 }
