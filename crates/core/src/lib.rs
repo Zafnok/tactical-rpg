@@ -1,5 +1,6 @@
 //! Pure, deterministic game rules. See ADR-0004.
 
+pub mod ai;
 pub mod art;
 pub mod battle;
 pub mod class;
@@ -18,6 +19,7 @@ pub mod terrain;
 pub mod unit;
 pub mod weapon;
 
+pub use ai::{AiBehavior, AiWeights, next_command};
 pub use art::{ArtDef, ArtEffect, ArtId, ArtNote, ArtTable, Debuff};
 pub use battle::{
     AttackPreview, BattleSetup, BattleState, Burning, CastTarget, Command, CommandError,

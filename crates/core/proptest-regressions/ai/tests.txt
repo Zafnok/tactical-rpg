@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 21a6036607c3a262cc751ec1de75bbf30739c61c13eac2810b13cd83756cf996 # shrinks to (units, seed) = ([Unit { id: UnitId(1), character: None, name: "u1", class: ClassId("fighter"), level: 1, exp: 0, class_records: {}, stats: Stats { hp: 20, str: 0, mag: 0, dex: 0, spd: 0, def: 0, res: 0, mov: 0 }, hp: 1, faction: Player, pos: Pos { x: 0, y: 0 }, acted: false, is_lord: false, role: Regular, ai: Aggressive, weapon_ranks: {}, map_label: "Un", weapon_exp: {}, loadout: Loadout { weapons: [Some(WeaponInstance { def: ItemId("sword"), durability_left: 20 }), None, None], equipped: None, armour: None, accessory: None }, consumables: [], personal_spells: [], learned: {}, spells: SpellState { uses_left: {} }, learned_skills: {}, effects: [] }], 0)

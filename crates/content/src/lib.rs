@@ -2,6 +2,7 @@
 //! ADR-0005. All content comes from the embedded asset bundle ([`bundle`]);
 //! [`load_embedded`] loads and validates everything, reporting every error.
 
+pub mod ai;
 pub mod art;
 pub mod bundle;
 pub mod character;
@@ -20,7 +21,7 @@ pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
+use trpg_core::{AiWeights, ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
 
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use error::{ContentError, ContentErrors};
@@ -55,6 +56,8 @@ pub struct Content {
     pub arts: ArtTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
+    /// The AI's numbers.
+    pub ai: AiWeights,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -97,6 +100,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             skills,
             arts,
             characters,
+            ai: ai::load(),
         },
     )
 }
@@ -191,6 +195,7 @@ struct Loaded {
     skills: Result<SkillTable, Vec<ContentError>>,
     arts: Result<ArtTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
+    ai: Result<AiWeights, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -225,6 +230,7 @@ fn assemble(
         skills: take(units.skills, &mut errors),
         arts: take(units.arts, &mut errors),
         characters: take(units.characters, &mut errors),
+        ai: take(units.ai, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -269,6 +275,7 @@ mod tests {
             skills: ok_skills(),
             arts: art::load(),
             characters: ok_characters(),
+            ai: ai::load(),
         }
     }
 
@@ -321,6 +328,7 @@ mod tests {
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
+        assert_eq!(content.as_ref().map(|c| &c.ai), ai::load().ok().as_ref());
         assert!(
             content
                 .as_ref()
@@ -333,7 +341,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 11] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u"];
+    const NAMES: [&str; 12] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "w"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -352,6 +360,7 @@ mod tests {
                     skills: Err(e("x")),
                     arts: Err(e("a")),
                     characters: Err(e("u")),
+                    ai: Err(e("w")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -386,6 +395,7 @@ mod tests {
                     } else {
                         ok_characters()
                     },
+                    ai: if i == 11 { Err(e("w")) } else { ai::load() },
                 },
             )
         };

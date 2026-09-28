@@ -6,6 +6,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ai::AiBehavior;
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
 use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
@@ -151,6 +152,9 @@ pub struct Unit {
     /// A boss, a non-combat unit or neither. Set by chapter data (0803).
     #[serde(default)]
     pub role: Role,
+    /// How the AI plays it (Enemy and Other phases). Set by chapter data.
+    #[serde(default)]
+    pub ai: AiBehavior,
     /// Weapon rank per kind (kept for kinds the current class can't use).
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
@@ -317,6 +321,7 @@ impl Unit {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks,
             map_label: default_map_label(&class.name),
             weapon_exp: BTreeMap::new(),
@@ -486,6 +491,7 @@ mod tests {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks: BTreeMap::from([
                 // Kept: already above the class start rank.
                 (WeaponKind::Axe, WeaponRank::C),
@@ -613,6 +619,7 @@ mod tests {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks: BTreeMap::from([
                 (WeaponKind::Axe, WeaponRank::D),
                 (WeaponKind::Sword, WeaponRank::E),
