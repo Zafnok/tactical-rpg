@@ -18,7 +18,7 @@ use super::*;
 use crate::art::ArtTable;
 use crate::battle::{BattleSetup, Event, Objective, Reinforcement};
 use crate::class::{ClassDef, ClassId, ClassTable, UnitTags, WeaponProficiency};
-use crate::combat::DamageType;
+use crate::combat::{CombatMods, DamageType};
 use crate::item::{
     BattlePack, ConsumableDef, ConsumableEffect, ItemDef, ItemId, ItemTable, Loadout, Stock,
     WeaponDef, WeaponInstance,
@@ -180,7 +180,8 @@ fn spells() -> SpellTable {
     }
 }
 
-/// `skirmish`: after attacking with a bow, move 1 tile.
+/// `skirmish`: after attacking with a bow, move 1 tile. `charge`: might +2
+/// after moving 4 tiles or more.
 fn skills() -> SkillTable {
     let skirmish = SkillDef {
         id: SkillId::new("skirmish"),
@@ -192,8 +193,24 @@ fn skills() -> SkillTable {
             when: Condition::WeaponKindEquipped(WeaponKind::Bow),
         }]),
     };
+    let charge = SkillDef {
+        id: SkillId::new("charge"),
+        name: "Charge".into(),
+        family: "charge".into(),
+        rank: 1,
+        kind: SkillKind::Passive(vec![PassiveEffect::CombatMod {
+            mods: CombatMods {
+                might: 2,
+                ..CombatMods::default()
+            },
+            when: Condition::MovedAtLeast(4),
+        }]),
+    };
     SkillTable {
-        skills: BTreeMap::from([(skirmish.id.clone(), skirmish)]),
+        skills: [skirmish, charge]
+            .into_iter()
+            .map(|s| (s.id.clone(), s))
+            .collect(),
     }
 }
 
@@ -318,7 +335,7 @@ fn edit(units: &mut [Unit], id: u32, f: impl FnOnce(&mut Unit)) {
 }
 
 fn next(state: &BattleState) -> Command {
-    next_command(state, &AiWeights::default()).unwrap()
+    next_command(state, &AiWeights::STARTING).unwrap()
 }
 
 fn act(unit: u32, dest: Pos, action: UnitAction) -> Command {
@@ -357,7 +374,7 @@ fn actor(command: &Command) -> Option<UnitId> {
 /// What the game does next: the AI's command, else end the phase (`None`
 /// once the battle is over).
 fn step(state: &BattleState) -> Option<Command> {
-    match next_command(state, &AiWeights::default()) {
+    match next_command(state, &AiWeights::STARTING) {
         Some(command) => Some(command),
         None => state.outcome().is_none().then_some(Command::EndPhase),
     }
@@ -440,6 +457,42 @@ fn equal_weapons_go_to_the_lowest_id_then_slot() {
         u[1] = carrying(u[1].clone(), &["sword", "blade", "blade"]);
     });
     assert_eq!(next(&state), attack(2, p(1, 0), 1, 1));
+}
+
+#[test]
+fn scores_use_the_battles_own_forecast() {
+    // Charge (might +2 from 4 tiles moved): walking 3 tiles gets no bonus,
+    // walking 4 does. The AI's score matches the battle's own preview.
+    for (rows, bonus) in [(["P...E"], false), (["P....E"], true)] {
+        let state = enemy_phase(&rows, |u| {
+            u[1].learned_skills = BTreeSet::from([SkillId::new("charge")]);
+        });
+        let Command::Act { dest, action, .. } = next(&state) else {
+            panic!("expected an Act");
+        };
+        let preview = state.preview_attack(UnitId(2), dest, &action).unwrap();
+        assert_eq!(preview.forecast.attacker.damage, if bonus { 7 } else { 5 });
+        let weights = AiWeights::STARTING;
+        let planner = Planner::new(&state, &weights);
+        let unit = state.unit(UnitId(2)).unwrap();
+        let reach = reachable(
+            state.map(),
+            state.terrain(),
+            state.classes(),
+            state.units(),
+            UnitId(2),
+        )
+        .unwrap();
+        let dests: Vec<Pos> = reach.stoppable().iter().collect();
+        let (score, _) = planner.best_attack(unit, &reach, &dests).unwrap();
+        let hp = |u: &Unit| CombatHp {
+            current: u.hp,
+            max: u.stats.hp,
+        };
+        let target = state.unit(UnitId(1)).unwrap();
+        let odds = Odds::of(&preview.forecast, hp(unit), hp(target));
+        assert!(close(score, planner.score(&odds, false, 0.0)), "{score}");
+    }
 }
 
 #[test]
@@ -552,6 +605,12 @@ fn stationary_units_never_move() {
     assert_eq!(next(&far), wait(2, p(2, 0)));
     let near = enemy_phase(&["PE"], |u| u[1].ai = AiBehavior::Stationary);
     assert_eq!(next(&near), attack(2, p(1, 0), 1, 0));
+    // A javelin (range 1–2) still strikes a target next to it.
+    let javelin = enemy_phase(&["PE"], |u| {
+        u[1].ai = AiBehavior::Stationary;
+        u[1] = carrying(u[1].clone(), &["javelin"]);
+    });
+    assert_eq!(next(&javelin), attack(2, p(1, 0), 1, 0));
     // A bow reaches 2 tiles from its own tile.
     let archer = enemy_phase(&["P.E"], |u| {
         u[1].ai = AiBehavior::Stationary;
@@ -610,7 +669,7 @@ fn healers_heal_the_most_injured_ally() {
                 x.learned = BTreeSet::from([SpellId::new("heal")]);
             });
         });
-        let weights = AiWeights::default();
+        let weights = AiWeights::STARTING;
         let planner = Planner::new(&state, &weights);
         planner
             .decide(state.unit(UnitId(3)).unwrap())
@@ -642,7 +701,7 @@ fn healers_heal_from_outside_the_danger_zone() {
                 x.learned = BTreeSet::from([SpellId::new("heal")]);
             });
         });
-        let weights = AiWeights::default();
+        let weights = AiWeights::STARTING;
         let planner = Planner::new(&state, &weights);
         match planner
             .decide(state.unit(UnitId(3)).unwrap())
@@ -673,7 +732,7 @@ fn healers_with_nobody_to_heal_attack_or_keep_back() {
     });
     // Its ally (2) moves first (nearer the player); the healer's own plan:
     assert_eq!(actor(&next(&state)), Some(UnitId(2)));
-    let weights = AiWeights::default();
+    let weights = AiWeights::STARTING;
     let healer_plan = Planner::new(&state, &weights)
         .decide(state.unit(UnitId(3)).unwrap())
         .unwrap()
@@ -762,7 +821,7 @@ fn decisions_order() {
 fn ends_the_phase_when_everyone_has_acted() {
     let mut state = scene_units(&["P........E"]);
     state.apply(&next(&state)).unwrap();
-    assert_eq!(next_command(&state, &AiWeights::default()), None);
+    assert_eq!(next_command(&state, &AiWeights::STARTING), None);
 }
 
 #[test]
@@ -780,7 +839,7 @@ fn reinforcements_that_just_arrived_dont_act() {
     assert!(events.contains(&Event::UnitsArrived {
         units: vec![UnitId(9)]
     }));
-    assert_eq!(next_command(&state, &AiWeights::default()), None);
+    assert_eq!(next_command(&state, &AiWeights::STARTING), None);
 }
 
 #[test]
@@ -788,14 +847,14 @@ fn nothing_to_do_once_the_battle_is_over() {
     let mut state = enemy_phase(&["P.E"], |u| edit(u, 1, |x| x.hp = 5));
     state.apply(&next(&state)).unwrap();
     assert!(state.outcome().is_some());
-    assert_eq!(next_command(&state, &AiWeights::default()), None);
+    assert_eq!(next_command(&state, &AiWeights::STARTING), None);
 }
 
 #[test]
 fn units_the_battle_cant_move_are_skipped() {
     // An unknown class: the unit can't act, so the phase just ends.
     let state = enemy_phase(&["P.E"], |u| u[1].class = ClassId("nobody".into()));
-    assert_eq!(next_command(&state, &AiWeights::default()), None);
+    assert_eq!(next_command(&state, &AiWeights::STARTING), None);
 }
 
 // --- Move after an attack --------------------------------------------------
@@ -1195,7 +1254,7 @@ fn enemy_phase_planning_time() {
     let mut commands = 0;
     loop {
         let t = Instant::now();
-        let command = next_command(&state, &AiWeights::default());
+        let command = next_command(&state, &AiWeights::STARTING);
         planning += t.elapsed();
         let Some(command) = command else {
             break;

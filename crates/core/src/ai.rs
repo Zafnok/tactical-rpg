@@ -114,8 +114,10 @@ pub enum AiBehavior {
 }
 
 /// The AI's tunable numbers (`assets/data/ai.ron`). See the module docs for
-/// how each is used.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// how each is used. The default is all zeros (every attack scores 0), a
+/// placeholder for when the file fails to load; the game's values are
+/// [`AiWeights::STARTING`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AiWeights {
     /// Score per expected HP of damage dealt.
@@ -130,18 +132,15 @@ pub struct AiWeights {
     pub terrain: u32,
 }
 
-impl Default for AiWeights {
-    /// The starting values (*tunable*; `assets/data/ai.ron` holds the ones
-    /// the game uses).
-    fn default() -> Self {
-        AiWeights {
-            damage: 10,
-            kill: 300,
-            lord: 50,
-            risk: 5,
-            terrain: 5,
-        }
-    }
+impl AiWeights {
+    /// The starting values (*tunable*), as in `assets/data/ai.ron`.
+    pub const STARTING: AiWeights = AiWeights {
+        damage: 10,
+        kill: 300,
+        lord: 50,
+        risk: 5,
+        terrain: 5,
+    };
 }
 
 /// The command the unit acting next issues, planned against `state` (see
@@ -415,7 +414,7 @@ impl<'a> Planner<'a> {
         let key = |&(dest, spell): &(Pos, &SpellId)| {
             (
                 danger.contains(dest),
-                Reverse(Bonus(terrain_bonus(state, dest))),
+                Reverse(terrain_tenths(state, dest)),
                 dest.y,
                 dest.x,
                 spell.clone(),
@@ -500,24 +499,6 @@ impl<'a> Planner<'a> {
     }
 }
 
-/// A terrain bonus, ordered (never NaN: made from integers).
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct Bonus(f64);
-
-impl Eq for Bonus {}
-
-impl PartialOrd for Bonus {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Bonus {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.total_cmp(&other.0)
-    }
-}
-
 /// What `unit` can attack with: every weapon it can wield, then every
 /// attack spell with uses left, ordered by `(id, slot)`.
 fn arms(state: &BattleState, unit: &Unit) -> Vec<Arm> {
@@ -550,12 +531,17 @@ fn arms(state: &BattleState, unit: &Unit) -> Vec<Arm> {
 
 /// The terrain bonus of standing on `pos`: its Def + Avoid / 10.
 fn terrain_bonus(state: &BattleState, pos: Pos) -> f64 {
+    f64::from(terrain_tenths(state, pos)) / 10.0
+}
+
+/// The terrain bonus of standing on `pos`, in tenths: Def × 10 + Avoid.
+fn terrain_tenths(state: &BattleState, pos: Pos) -> i32 {
     state
         .map()
         .tiles
         .get(pos)
         .and_then(|&t| state.terrain().get(t))
-        .map_or(0.0, |r| f64::from(r.defense) + f64::from(r.avoid) / 10.0)
+        .map_or(0, |r| i32::from(r.defense) * 10 + i32::from(r.avoid))
 }
 
 /// The tile of `dests` an attack-less `Aggressive` unit moves to, if any
@@ -590,17 +576,17 @@ fn flow_field(state: &BattleState, faction: Faction, movement_type: MovementType
         .iter()
         .filter(|t| faction.is_hostile_to(t.faction))
     {
-        if let Some(slot) = dist.get_mut(t.pos) {
-            *slot = Some(0);
-            targets.insert(t.pos);
-            queue.push(Reverse((0, t.pos.y, t.pos.x)));
-        }
+        targets.insert(t.pos);
+        queue.push(Reverse((0, t.pos.y, t.pos.x)));
     }
+    // Each tile's distance is settled the first time it comes off the
+    // queue: the cheapest, as costs never go down.
     while let Some(Reverse((cost, y, x))) = queue.pop() {
         let pos = Pos::new(x, y);
-        if dist.get(pos).copied().flatten() != Some(cost) {
-            continue; // A stale entry: `pos` was reached more cheaply.
-        }
+        let Some(slot) = dist.get_mut(pos).filter(|d| d.is_none()) else {
+            continue; // Off the map, or already settled.
+        };
+        *slot = Some(cost);
         // Walking from a neighbour onto `pos` costs entering it; the last
         // step, onto a target's tile, is free (only tiles next to it count).
         let step = if targets.contains(pos) {
@@ -609,15 +595,8 @@ fn flow_field(state: &BattleState, faction: Faction, movement_type: MovementType
             enter(pos).unwrap_or(0)
         };
         for next in tiles.neighbors4(pos) {
-            if enter(next).is_none() {
-                continue;
-            }
-            let next_cost = cost + step;
-            if let Some(slot) = dist.get_mut(next)
-                && slot.is_none_or(|old| next_cost < old)
-            {
-                *slot = Some(next_cost);
-                queue.push(Reverse((next_cost, next.y, next.x)));
+            if enter(next).is_some() && dist.get(next) == Some(&None) {
+                queue.push(Reverse((cost + step, next.y, next.x)));
             }
         }
     }
@@ -680,16 +659,13 @@ impl Walk<'_> {
         };
         let mut struck = struck;
         struck[me] += 1;
+        // Both branches, even one with no chance: it adds nothing.
         let hit = f64::from(numbers.hit) / 100.0;
-        if hit > 0.0 {
-            let mut after = hp;
-            let target = 1 - me;
-            after[target] = struck_hp(&numbers, struck[me], hp[target], self.max[target]);
-            self.strike(i + 1, after, struck, chance * hit, odds);
-        }
-        if hit < 1.0 {
-            self.strike(i + 1, hp, struck, chance * (1.0 - hit), odds);
-        }
+        let mut after = hp;
+        let target = 1 - me;
+        after[target] = struck_hp(&numbers, struck[me], hp[target], self.max[target]);
+        self.strike(i + 1, after, struck, chance * hit, odds);
+        self.strike(i + 1, hp, struck, chance * (1.0 - hit), odds);
     }
 }
 

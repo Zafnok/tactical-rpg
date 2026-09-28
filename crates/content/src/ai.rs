@@ -62,6 +62,6 @@ mod tests {
 
     #[test]
     fn embedded_file_holds_the_starting_values() {
-        assert_eq!(load(), Ok(AiWeights::default()));
+        assert_eq!(load(), Ok(AiWeights::STARTING));
     }
 }
