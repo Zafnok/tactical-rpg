@@ -38,8 +38,10 @@ fast-forward, input lockout, returning control at player phase.
    `next_command` → if `None`, apply `EndPhase` → else animate: camera pans
    (smooth, ~0.25 s) to the unit, 0.2 s highlight, walk along `UnitMoved.path`,
    then combat playback for `CombatResolved`, then next.
-2. Player input during AI phase: only Confirm is handled (hold = ×4 speed,
-   including combat playback); every other action is ignored.
+2. Player input during AI phase: only Confirm and Cancel are handled
+   (hold Confirm = ×4 speed, including combat playback; Cancel skips a
+   fight's playback, as the player's own fights do since 0418); every other
+   action is ignored.
 3. Pacing constants in one struct (tunable).
 4. When the player phase starts, cursor returns to where it was at end of the last player phase.
 
