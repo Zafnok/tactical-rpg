@@ -223,11 +223,13 @@ pub enum Action {
     Debug,
     /// Toggle auto-end of the player phase (`docs/design/turn-structure.md`).
     ToggleAutoEnd,
+    /// Open the turn rewind (`docs/design/death-and-difficulty.md`).
+    Rewind,
 }
 
 impl Action {
     /// Every action, in declaration order.
-    pub const ALL: [Action; 14] = [
+    pub const ALL: [Action; 15] = [
         Self::CursorLeft,
         Self::CursorDown,
         Self::CursorUp,
@@ -242,11 +244,12 @@ impl Action {
         Self::Menu,
         Self::Debug,
         Self::ToggleAutoEnd,
+        Self::Rewind,
     ];
 
     /// The name used in keymap files (the variant name).
     pub fn name(self) -> &'static str {
-        const NAMES: [&str; 14] = [
+        const NAMES: [&str; 15] = [
             "CursorLeft",
             "CursorDown",
             "CursorUp",
@@ -261,6 +264,7 @@ impl Action {
             "Menu",
             "Debug",
             "ToggleAutoEnd",
+            "Rewind",
         ];
         NAMES[self as usize]
     }
@@ -923,6 +927,7 @@ mod tests {
         assert_eq!(get("Space"), Some(Action::EndTurn));
         assert_eq!(get("Shift+Space"), Some(Action::ToggleAutoEnd));
         assert_eq!(get("F12"), Some(Action::Debug));
+        assert_eq!(get("r"), Some(Action::Rewind));
     }
 
     #[test]
@@ -943,14 +948,15 @@ mod tests {
         assert_eq!(get("Space"), Some(Action::EndTurn));
         assert_eq!(get("Shift+Space"), Some(Action::ToggleAutoEnd));
         assert_eq!(get("F12"), Some(Action::Debug));
+        assert_eq!(get("u"), Some(Action::Rewind));
     }
 
     #[test]
     fn embedded_keymap_has_exactly_the_design_bindings() {
-        // 14 chords per layout: nothing bound beyond the design table.
+        // 15 chords per layout: nothing bound beyond the design table.
         let k = KeymapDef::load().unwrap_or_default();
         for layout in Layout::ALL {
-            assert_eq!(k.bindings(layout).map(BTreeMap::len), Some(14), "{layout}");
+            assert_eq!(k.bindings(layout).map(BTreeMap::len), Some(15), "{layout}");
         }
         assert_eq!(k.layouts.len(), 2);
         assert_eq!(

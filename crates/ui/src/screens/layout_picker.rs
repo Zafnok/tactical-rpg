@@ -128,6 +128,7 @@ impl LayoutPickerScreen {
             (key_name(km, Action::DangerZone), "danger zone"),
             (key_name(km, Action::EndTurn), "end turn"),
             (key_name(km, Action::ToggleAutoEnd), "auto-end"),
+            (key_name(km, Action::Rewind), "rewind"),
         ];
         rows.into_iter()
             .filter_map(|(keys, what)| keys.map(|k| (k, what)))
@@ -346,6 +347,7 @@ mod tests {
                 "w danger zone",
                 "Space end turn",
                 "Shift+Space auto-end",
+                "r rewind",
             ]
         );
         assert_eq!(
@@ -360,6 +362,7 @@ mod tests {
                 "o danger zone",
                 "Space end turn",
                 "Shift+Space auto-end",
+                "u rewind",
             ]
         );
         assert!(

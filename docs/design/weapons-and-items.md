@@ -43,6 +43,10 @@ Follow-ups:
 > some battles are many units but a small bag. Maybe some battles are many
 > units with a large bag. Maybe some battles are a handful of units with a
 > small bag. Etc"
+>
+> **Do enemies carry potions?** (2026-09-28, ticket 0501) "I think I would
+> stick to no potions and only dedicated healers for the enemies in a
+> battle."
 
 Reference (researched for Nick, 2026-09-25): *Fire Emblem: Fortune's Weave*
 has no weapon triangle. Swords deal 1.2x damage on follow-up strikes, spears
@@ -290,8 +294,9 @@ Any unit can wear any accessory.
   straight into the pack, even past the cap (the cap only limits what you
   bring in) (*Claude's starting rule*).
 - After the battle, unused pack items return to the stock.
-- Enemy units don't use the player's pack; an enemy may carry its own
-  consumable in its map data (AI use: 0501).
+- **Enemies carry no consumables** (Nick, 0501): they never use potions.
+  Enemy healing comes only from dedicated healer units (heal spells,
+  `magic.md`).
 
 ### Chapter 1 consumables (*tunable*)
 

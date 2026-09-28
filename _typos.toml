@@ -14,6 +14,10 @@ beginnning = "beginnning"
 # Two-letter runs of colour keys in snapshot colour grids (ADR-0007),
 # e.g. `Iy` in the portrait snapshots.
 iy = "iy"
+# Invented story names and words (docs/story/names.md, ticket 0701).
+aske = "aske"
+othe = "othe"
+mor = "mor"
 
 [files]
 # Vendored third-party font data (hex bitmaps, codepoint names) and the atlas

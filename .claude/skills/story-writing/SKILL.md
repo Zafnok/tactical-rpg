@@ -16,6 +16,15 @@ the process; do not skip steps.
 3. `docs/story/bible.md`, `characters/*.md`, `outline.md`.
 4. `docs/story/ledger.md` — what has happened so far.
 
+## Names are variables
+
+Nick may rename anything (`docs/story/names.md`). Every proper noun has a
+stable id there; add new names there first. In `.dlg` scripts, speakers are
+role ids and names in text are name tokens (format: ticket 0709); never write a
+registered display name literally. The story docs use display names; a
+rename is a find-and-replace across `docs/story/` in the same commit as the
+registry change.
+
 ## Craft rules
 
 - **Every named character** has: want (external goal), need (what they must

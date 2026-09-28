@@ -6,6 +6,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ai::AiBehavior;
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
 use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
@@ -151,6 +152,9 @@ pub struct Unit {
     /// A boss, a non-combat unit or neither. Set by chapter data (0803).
     #[serde(default)]
     pub role: Role,
+    /// How the AI plays it (Enemy and Other phases). Set by chapter data.
+    #[serde(default)]
+    pub ai: AiBehavior,
     /// Weapon rank per kind (kept for kinds the current class can't use).
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
     /// The two letters drawn for the unit on the map (ADR-0018).
@@ -172,6 +176,10 @@ pub struct Unit {
     pub learned_skills: BTreeSet<SkillId>,
     /// Timed effects on the unit; see [`crate::skill`].
     pub effects: Vec<TimedEffect>,
+    /// The personal +20% growth stat of a named character (never Mov);
+    /// generic units have none. See [`crate::progression`].
+    #[serde(default)]
+    pub talent: Option<StatKind>,
 }
 
 /// Letters in a map label.
@@ -256,6 +264,7 @@ impl Unit {
             level: def.level,
             is_lord: def.is_lord,
             personal_spells: def.personal_spells.clone(),
+            talent: Some(def.talent),
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
         };
         unit.refresh_spells(classes);
@@ -317,6 +326,7 @@ impl Unit {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks,
             map_label: default_map_label(&class.name),
             weapon_exp: BTreeMap::new(),
@@ -327,6 +337,7 @@ impl Unit {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: None,
         }
     }
 }
@@ -486,6 +497,7 @@ mod tests {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks: BTreeMap::from([
                 // Kept: already above the class start rank.
                 (WeaponKind::Axe, WeaponRank::C),
@@ -503,6 +515,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: Some(StatKind::Spd),
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -613,6 +626,7 @@ mod tests {
             acted: false,
             is_lord: false,
             role: Role::Regular,
+            ai: AiBehavior::Aggressive,
             weapon_ranks: BTreeMap::from([
                 (WeaponKind::Axe, WeaponRank::D),
                 (WeaponKind::Sword, WeaponRank::E),
@@ -626,6 +640,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: None,
         };
         assert_eq!(unit, Ok(expected));
     }

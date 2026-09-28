@@ -74,9 +74,8 @@ Options he was shown:
 - Between chapters the game flow (0801) offers what the design already calls
   for: camp (`supports.md`) and, from Chapter 2, Preparations with its shop
   (`chapter-1.md`, `weapons-and-items.md`).
-- Whether Chapter 3 is linear or the first world-map chapter is decided with
-  the story outline (0701 gate 2). Default: **the world map unlocks after
-  Chapter 2**.
+- **Chapter 3 is linear too** (0701 gate 2, Nick: "sure"), so **the world map
+  unlocks after Chapter 3** (`docs/story/outline.md`).
 
 ### World map (the rest of each act)
 
@@ -190,8 +189,9 @@ still follows `weapons-and-items.md` / 0408.
 
 ## Open sub-questions (deferred)
 
-- Is Chapter 3 linear or the first world-map chapter? Decided at 0701 gate 2.
-- How many continents and acts, and in what order: 0701 outline.
+- ~~Is Chapter 3 linear?~~ Yes (0701 gate 2).
+- Continents and acts (0701 outline): Act 1 the home continent, Act 2 the
+  Jade Reach, Act 3 home again on a new, wartime map.
 - The random-skirmish numbers above (spawn count, level cap, size, rewards)
   are starting values. Tune them after the first world-map playtest. When
   they're known, retune the support thresholds (`supports.md`: "Retune B and

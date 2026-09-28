@@ -55,7 +55,7 @@ const WATER: TerrainId = TerrainId(5);
 const SEA: TerrainId = TerrainId(6);
 const ICE: TerrainId = TerrainId(7);
 
-fn p(x: i32, y: i32) -> Pos {
+pub(crate) fn p(x: i32, y: i32) -> Pos {
     Pos::new(x, y)
 }
 
@@ -596,6 +596,18 @@ fn classes() -> ClassTable {
     }
 }
 
+/// `table` with levels on: level cap 99, class level cap 10, 2 minimum
+/// gains and 10 CP per class level at every tier (0601).
+fn leveling(table: ClassTable) -> ClassTable {
+    ClassTable {
+        level_cap: 99,
+        class_level_cap: 10,
+        min_gains: vec![2],
+        cp_per_class_level: vec![10],
+        ..table
+    }
+}
+
 /// The starter spells of `magic.md` (`fire`: forest → burning, then burnt;
 /// `frost`: water or sea → ice; `force`, `heal`, `mend`), plus `bolt`: a
 /// hit-100, might-3 attack spell, range 1–2, 2 uses, for exact combats.
@@ -878,6 +890,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         acted: false,
         is_lord: false,
         role: Role::Regular,
+        ai: crate::ai::AiBehavior::Aggressive,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
@@ -888,6 +901,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        talent: None,
     };
     carrying(u, &[weapon(1, 1, 3)])
 }
@@ -906,7 +920,7 @@ fn armed(u: Unit, might: StatValue) -> Unit {
 
 /// Lord 1 at (0,0) and unit 2 at (0,2); enemies 3 at (7,0) and 4 at (7,2):
 /// out of each other's reach.
-fn cast() -> Vec<Unit> {
+pub(crate) fn cast() -> Vec<Unit> {
     vec![
         lord(1, p(0, 0)),
         unit(2, Faction::Player, p(0, 2)),
@@ -915,7 +929,7 @@ fn cast() -> Vec<Unit> {
     ]
 }
 
-fn setup(units: Vec<Unit>) -> BattleSetup {
+pub(crate) fn setup(units: Vec<Unit>) -> BattleSetup {
     BattleSetup {
         map: map(&OPEN),
         terrain: Arc::new(terrain()),
@@ -960,7 +974,7 @@ fn act(s: &mut BattleState, id: u32, dest: Pos, action: UnitAction) -> Vec<Event
     .unwrap()
 }
 
-fn attack(target: u32) -> UnitAction {
+pub(crate) fn attack(target: u32) -> UnitAction {
     UnitAction::Attack {
         target: UnitId(target),
         slot: 0,
@@ -2559,7 +2573,7 @@ fn commands_and_events_round_trip_through_ron() {
 /// each cast ([`legal_casts`]), each item use, a seize, shop visits
 /// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
 /// packs are all known; weapons and spells are all known.
-fn legal_commands(s: &BattleState) -> Vec<Command> {
+pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
     if let Some(moves) = legal_moves_after(s) {
         return moves;
     }
@@ -3080,7 +3094,7 @@ prop_compose! {
 }
 
 prop_compose! {
-    fn arb_setup()(
+    pub(crate) fn arb_setup()(
         players in 1usize..=3,
         enemies in 1usize..=3,
         others in 0usize..=2,
@@ -3182,6 +3196,13 @@ proptest! {
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
+            // An `Act` always ends the unit's action: it is done (or fell),
+            // or it waits to move after its attack.
+            if let Command::Act { unit, .. } = cmd {
+                let done = s.unit(*unit).is_none_or(|u| u.acted);
+                let waits = s.pending_move().is_some_and(|m| m.unit == *unit);
+                prop_assert!(done || waits, "{:?} left unit {:?} ready", cmd, unit);
+            }
             // Spell uses never exceed a spell's uses, and each one is spent
             // only with its event, one at a time.
             let uses_after = spell_uses(&s);
@@ -3333,6 +3354,7 @@ proptest! {
 }
 
 mod art;
+mod progression;
 mod shop;
 mod skill;
 mod spell;
