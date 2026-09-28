@@ -32,8 +32,8 @@ expression: buf.to_snapshot(&c.palette)
 ··≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^│                            │
 ≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^..│                            │
 ≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^Ra└────────────────────────────┘
-                                                                                                    
- arrows move · f range · e info · s next unit · d back                                              
+                                                      w danger zone: OFF · Shift+Space auto-end: ON 
+ arrows move · f range · e info · s next unit · d menu · Space end turn                             
 --- colours ---
 aabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccffffffffffffffffffffffffffffff
 aabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccfghhhhhggggggggggggggggggggggf
@@ -65,8 +65,8 @@ ddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaafggggggggg
 ddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaafggggggggggggggggggggggggggggf
 eeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbfggggggggggggggggggggggggggggf
 eeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaammffffffffffffffffffffffffffffff
-nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
-nooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnooooooooooooooooooooooooooooooooooooooooooooon
+noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnn
 --- legend ---
 a = fg:mountain bg:mountain_bg
 b = fg:grass bg:grass_bg

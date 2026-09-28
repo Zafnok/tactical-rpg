@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0404"]
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0405 — Info screen, danger zone, map menu, phases
@@ -65,14 +65,55 @@ None.
 
 ## Acceptance criteria
 
-- [ ] All five features reachable with default keys; help bar updated.
-- [ ] Danger zone equals `danger_zone()` output (test).
-- [ ] Harness: play a full player turn with Wait on all units → confirm end turn → banner → next player phase `Turn 2`.
-- [ ] Snapshots for info screen, map menu, banner, danger zone.
+- [x] All five features reachable with default keys; help bar updated.
+- [x] Danger zone equals `danger_zone()` output (test).
+- [x] Harness: play a full player turn with Wait on all units → confirm end turn → banner → next player phase `Turn 2`.
+- [x] Snapshots for info screen, map menu, banner, danger zone.
 
 ## Tests required
 
 - Harness + snapshot as above; unit tests for menu enable/disable logic.
 
 ## Completion notes
+
+Done. Everything lives in the battle screen (`crates/ui/src/screens/battle/`):
+new modes in `mode.rs` (map menu, unit list, objective, end-turn prompt, info),
+`map_menu.rs`, `info.rs`, `banner.rs`; tests in `turn_tests.rs` and
+`crates/ui/tests/battle.rs`.
+
+- **Keys** (from the keymap, right-handed): `e` info, `w` danger zone, `Space`
+  end turn (again to confirm), `Shift+Space` auto-end, `d` with nothing to
+  cancel or `f` on an empty tile opens the map menu. The ticket's `s`/`a`
+  letters were older placeholders; `controls.md` wins.
+- **Help bar:** the key line now ends `d menu · Space end turn`; the toggles'
+  state (`w danger zone: OFF · Shift+Space auto-end: ON`) is right-aligned on
+  the message row, where the `Auto-end: ON/OFF` message also appears.
+- **Enemy phase stub** (until 0502): when the ENEMY / OTHER PHASE banner
+  closes, that phase ends at once.
+- **Leaving the Quick Battle:** Cancel no longer returns to the title (it
+  opens the map menu, per `controls.md`); the battle now ends only on
+  VICTORY / DEFEAT. Suspend stays a disabled placeholder until 0802.
+- No PLAYER PHASE banner at the very start of a battle: the screen is built
+  from a state, not its start events; the real battle flow (0801) can show it.
+
+*Claude's starting rules* (the design docs were silent; Nick may veto):
+
+1. Info screen cycles the unit's faction in reading order (top to bottom,
+   left to right); closing it leaves the cursor on the last unit shown. It
+   also lists learned spells with uses left, and shows base stats (without
+   gear bonuses) with the class cap dimmed.
+2. Objective wording: `Rout the enemy`, `Defeat <name>`, `Seize the <terrain>`,
+   `Survive N turns`; Survive maps show `Turn 3/8` like a turn limit.
+3. The ENEMY PHASE banner still shows (1 s) even though enemies don't act yet.
+4. `Auto-end: ON/OFF` message stays 1.5 s.
+5. Turning auto-end back on after every unit has acted does not end the
+   turn; the next time the last unit acts (or `Space`) does.
+6. `f` on an empty tile opens the map menu even while an enemy's range is
+   shown (the range is hidden).
+7. The danger zone can be toggled while browsing, with a unit selected, or
+   while choosing where to move after an attack.
+8. Banner colours: phases in their faction colour (Other = ally green),
+   VICTORY in the highlight colour, DEFEAT in the low-HP red.
+9. The map menu opens beside the cursor, like the action menu; the unit list,
+   objective and end-turn question are centred on the map.
 
