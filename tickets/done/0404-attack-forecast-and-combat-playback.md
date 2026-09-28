@@ -176,4 +176,5 @@ gameplay rule):
   including those after a kill (dimmed).
 - *Claude's starting rule:* the playback timings above.
 
-No follow-up tickets.
+Follow-up tickets: 0417 (acted units keep their uppercase label, dimmed
+only; Nick's feedback after playing this build).
