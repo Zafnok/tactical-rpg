@@ -1,6 +1,8 @@
 //! Debug screens (F12 in debug builds): a menu of tools. The glyph sampler
 //! shows every font glyph and palette colour, for judging the look (ticket
-//! 0011); the portrait viewer shows every portrait (ticket 0703).
+//! 0011); the portrait viewer shows every portrait (ticket 0703); the test
+//! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
+//! menu was opened from (ticket 0704).
 
 mod portrait_viewer;
 
@@ -11,7 +13,7 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::screens::{centre_x, print_centred};
+use crate::screens::{DialogueScreen, centre_x, print_centred};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 use trpg_content::palette::REQUIRED_COLORS;
@@ -25,7 +27,14 @@ pub const SCREENS: [&str; 3] = [
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 2] = ["Glyph sampler", "Portraits"];
+const TOOLS: [&str; 4] = [
+    "Glyph sampler",
+    "Portraits",
+    "Play test scene",
+    "Play test scene (overlay)",
+];
+/// The scene the "Play test scene" tools play.
+pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
 const MENU_TITLE_ROW: i32 = 9;
 
@@ -65,8 +74,20 @@ impl Screen for DebugMenuScreen {
                 Some(MenuEvent::Chosen(0)) => {
                     return Transition::Push(Box::new(GlyphSamplerScreen::new(ctx)));
                 }
-                Some(MenuEvent::Chosen(_)) => {
+                Some(MenuEvent::Chosen(1)) => {
                     return Transition::Push(Box::new(PortraitViewerScreen::new()));
+                }
+                Some(MenuEvent::Chosen(tool)) => {
+                    let Some(scene) = ctx.content.dialogue.get(TEST_SCENE).cloned() else {
+                        continue;
+                    };
+                    // The overlay replaces this menu so it plays over the
+                    // screen the menu was opened from (e.g. the battle map).
+                    return if tool == 2 {
+                        Transition::Push(Box::new(DialogueScreen::new(scene)))
+                    } else {
+                        Transition::Replace(Box::new(DialogueScreen::overlay(scene)))
+                    };
                 }
                 None => {}
             }
@@ -395,7 +416,18 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(portrait_viewer)"
         );
+        assert_eq!(outcome(&mut menu, &[CursorDown, Confirm]), "Push(dialogue)");
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Replace(dialogue)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
+        // Without the test scene, its tools do nothing.
+        ctx.content.dialogue.scenes.clear();
+        let mut menu = DebugMenuScreen::new();
+        let a = [CursorUp, Confirm];
+        let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
+        assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
         assert_eq!(SCREENS, ["debug_menu", "glyph_sampler", "portrait_viewer"]);
     }
 
