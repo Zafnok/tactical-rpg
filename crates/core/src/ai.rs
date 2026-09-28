@@ -33,13 +33,7 @@
 //! From the tiles it can stop on (only its own tile when
 //! [`Stationary`](AiBehavior::Stationary)):
 //!
-//! 1. **Self-heal** (any behaviour). Below
-//!    [`self_heal_below`](AiWeights::self_heal_below)% of its max HP, with
-//!    a consumable (its own; a player unit's come from the battle pack) and
-//!    no attack whose kill chance reaches
-//!    [`likely_kill`](AiWeights::likely_kill)%, it uses its first
-//!    consumable on itself without moving.
-//! 2. [`Healer`](AiBehavior::Healer): casts a heal spell with uses left on
+//! 1. [`Healer`](AiBehavior::Healer): casts a heal spell with uses left on
 //!    the most injured ally it can reach (most HP missing, then lowest id),
 //!    from the tile outside the danger zone if it can, then with the best
 //!    terrain, then the lowest `(y, x)`, then the lowest spell id. Else it
@@ -48,14 +42,17 @@
 //!    reach, then the lowest `(y, x)`, and waits. The danger zone is every
 //!    tile a hostile unit could attack this turn
 //!    ([`danger_zone`]).
-//! 3. [`Aggressive`](AiBehavior::Aggressive): attacks if it can. Else it
+//! 2. [`Aggressive`](AiBehavior::Aggressive): attacks if it can. Else it
 //!    moves to the tile with the lowest flow distance (then cheapest to
 //!    reach, so it stays put rather than move for nothing, then lowest
 //!    `(y, x)`) and waits; with no target it can walk to, it waits where
 //!    it is.
-//! 4. [`Guard`](AiBehavior::Guard): attacks if it can (a target in its
+//! 3. [`Guard`](AiBehavior::Guard): attacks if it can (a target in its
 //!    threat area this turn), else waits where it is.
 //!    [`Stationary`](AiBehavior::Stationary): the same, from its own tile.
+//!
+//! It never uses consumables: enemies carry none, and only healers heal
+//! (Nick, `weapons-and-items.md`).
 //!
 //! ## Attack choice
 //!
@@ -131,10 +128,6 @@ pub struct AiWeights {
     pub risk: u32,
     /// Score per point of the attacking tile's Def + Avoid / 10.
     pub terrain: u32,
-    /// A unit below this % of its max HP uses a consumable on itself...
-    pub self_heal_below: u8,
-    /// ...unless one of its attacks kills with at least this % chance.
-    pub likely_kill: u8,
 }
 
 impl Default for AiWeights {
@@ -147,8 +140,6 @@ impl Default for AiWeights {
             lord: 50,
             risk: 5,
             terrain: 5,
-            self_heal_below: 40,
-            likely_kill: 50,
         }
     }
 }
@@ -269,13 +260,6 @@ impl Arm {
     }
 }
 
-/// The best attack found, and the best kill chance of any attack.
-#[derive(Default)]
-struct Search {
-    best: Option<(f64, Command)>,
-    max_kill: f64,
-}
-
 /// Flow distances by tile (see the module docs).
 type Flow = Grid<Option<u32>>;
 
@@ -328,15 +312,13 @@ impl<'a> Planner<'a> {
             dest,
             action: UnitAction::Wait,
         };
-        let search = self.attacks(unit, &reach, &dests);
-        if let Some(command) = self.self_heal(unit, &search) {
-            return Some(other(command));
-        }
-        let attack = search.best.map(|(score, command)| Decision {
-            unit: unit.id,
-            rank: Rank::Attack(score),
-            command,
-        });
+        let attack = self
+            .best_attack(unit, &reach, &dests)
+            .map(|(score, command)| Decision {
+                unit: unit.id,
+                rank: Rank::Attack(score),
+                command,
+            });
         Some(match unit.ai {
             AiBehavior::Healer => match self.heal(unit, &dests) {
                 Some(command) => other(command),
@@ -353,14 +335,12 @@ impl<'a> Planner<'a> {
         })
     }
 
-    /// Every attack `unit` can make from `dests`, scored.
-    fn attacks(&self, unit: &Unit, reach: &Reach, dests: &[Pos]) -> Search {
+    /// The best attack `unit` can make from `dests`, with its score.
+    fn best_attack(&self, unit: &Unit, reach: &Reach, dests: &[Pos]) -> Option<(f64, Command)> {
         let state = self.state;
         let arms = arms(state, unit);
-        let mut search = Search::default();
-        let Some(longest) = arms.iter().map(|a| a.max).max() else {
-            return search;
-        };
+        let longest = arms.iter().map(|a| a.max).max()?;
+        let mut best: Option<(f64, Command)> = None;
         let mut targets: Vec<&Unit> = hostiles_of(state, unit).collect();
         targets.sort_by_key(|t| t.id);
         let own = CombatHp {
@@ -386,20 +366,19 @@ impl<'a> Planner<'a> {
                         continue;
                     };
                     let odds = Odds::of(&forecast, own, theirs);
-                    search.max_kill = search.max_kill.max(odds.kill);
                     let score = self.score(&odds, target.is_lord, terrain_bonus(state, dest));
-                    if search.best.as_ref().is_none_or(|(best, _)| score > *best) {
+                    if best.as_ref().is_none_or(|(top, _)| score > *top) {
                         let command = Command::Act {
                             unit: unit.id,
                             dest,
                             action: arm.action(target.id),
                         };
-                        search.best = Some((score, command));
+                        best = Some((score, command));
                     }
                 }
             }
         }
-        search
+        best
     }
 
     /// An attack's score (see the module docs).
@@ -409,34 +388,6 @@ impl<'a> Planner<'a> {
         f64::from(w.damage) * odds.dealt + f64::from(w.kill) * odds.kill + lord
             - f64::from(w.risk) * odds.taken
             + f64::from(w.terrain) * terrain
-    }
-
-    /// `unit` using its first consumable on itself, if it should.
-    fn self_heal(&self, unit: &Unit, search: &Search) -> Option<Command> {
-        let w = self.weights;
-        let low =
-            i64::from(unit.hp) * 100 < i64::from(unit.stats.hp) * i64::from(w.self_heal_below);
-        let kills = search.max_kill * 100.0 >= f64::from(w.likely_kill);
-        if !low || kills {
-            return None;
-        }
-        let state = self.state;
-        let items = if unit.faction == Faction::Player {
-            &state.pack().items
-        } else {
-            &unit.consumables
-        };
-        let index = items
-            .iter()
-            .position(|id| state.items().consumable(id).is_some())?;
-        Some(Command::Act {
-            unit: unit.id,
-            dest: unit.pos,
-            action: UnitAction::UseItem {
-                pack_index: index,
-                target: unit.id,
-            },
-        })
     }
 
     /// A healer's heal of the most injured ally it can reach, if any.

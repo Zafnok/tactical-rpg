@@ -60,7 +60,7 @@ fn free_tile(
 
 /// Seed `seed`'s battle: the three test characters and 0–2 generics on the
 /// player's side, 2–6 enemies, maybe an ally and a villager, at random free
-/// tiles with random behaviours, some carrying potions.
+/// tiles with random behaviours.
 fn battle(content: &Content, seed: u64) -> BattleState {
     let mut rng = SimRng::new(seed);
     let map = content.maps["test_small"].map.clone();
@@ -91,7 +91,7 @@ fn battle(content: &Content, seed: u64) -> BattleState {
                 weapons: weapons.iter().map(|w| ItemId::new(w)).collect(),
                 ..LoadoutDef::default()
             };
-            let mut unit = Unit::generic(
+            let unit = Unit::generic(
                 UnitId(next_id),
                 &ClassId(class.into()),
                 classes,
@@ -101,9 +101,6 @@ fn battle(content: &Content, seed: u64) -> BattleState {
             )
             .and_then(|u| Ok(u.with_loadout(&loadout, classes, items)?))
             .unwrap_or_else(|e| panic!("{class}: {e}"));
-            if pick(&mut rng, 2) == 0 {
-                unit.consumables = vec![ItemId::new("potion")];
-            }
             units.push(unit);
         }
     }

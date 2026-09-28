@@ -90,14 +90,14 @@ As in acceptance criteria. Deterministic: same state → same command (test).
   branch of the forecast's strikes, stopping when someone falls, as
   `resolve` does.
 - **`assets/data/ai.ron`**, loaded by `trpg_content::ai` into
-  `Content::ai`. Percentages over 100 are refused, with the line number.
+  `Content::ai`.
 - **`next_command` returns `None` when the AI has nothing left to do**
   (battle over, or no unit left to act), and the caller applies
   `EndPhase`. That is what 0502's step 1 already expects. A unit waiting
   to move after its attack gets its `MoveAfter` first.
-- Tests (ADR-0007): 45 unit/scenario tests in `crates/core/src/ai/tests.rs`
+- Tests (ADR-0007): 43 unit/scenario tests in `crates/core/src/ai/tests.rs`
   (ASCII maps), a proptest (random 9×7 battles, every faction and
-  behaviour, spells, bows with Skirmish, potions; every command is accepted
+  behaviour, spells, bows with Skirmish; every command is accepted
   and repeats for the same state), the soak test
   `crates/content/tests/ai_soak.rs`, and `ai.ron` loader tests.
 
@@ -127,24 +127,30 @@ panicked, and every command was accepted.
 2. The AI reads **hit chances as displayed** (not the true two-dice odds)
    and **ignores crits** when weighing an attack.
 3. **A unit that can attack always does**, even at a bad trade.
-4. **Self-heal:** below 40% HP, a unit carrying a consumable drinks its
-   first one on the spot, unless one of its attacks would kill with at
-   least a 50% chance.
-5. **Healers** heal the ally missing the most HP, standing outside the
+4. **Healers** heal the ally missing the most HP, standing outside the
    player's danger zone if they can. With nobody to heal they attack if
    they can reach someone; otherwise they move to the tile out of danger
    nearest an ally. Only `Healer` units heal; other units that know Heal
    don't.
-6. **Guard** attacks anything it could reach this turn, otherwise it holds
+5. **Guard** attacks anything it could reach this turn, otherwise it holds
    its tile. **Stationary** only attacks what it can hit without moving.
-7. An **Aggressive** unit with no target it can walk to (e.g. across water)
+6. An **Aggressive** unit with no target it can walk to (e.g. across water)
    waits where it is.
-8. **Moving after an attack** (Vault, Swoop, Skirmish): the AI steps to the
+7. **Moving after an attack** (Vault, Swoop, Skirmish): the AI steps to the
    tile farthest from the nearest hostile unit. It stays if no tile is
    farther.
-9. **Order in a phase:** attackers first, best attack first; then everyone
+8. **Order in a phase:** attackers first, best attack first; then everyone
    else, nearest to a target first.
 
-**Follow-ups:** none. 0803 sets each enemy's behaviour in chapter data
+**Nick's decision during review: no potions for enemies.** The ticket's
+step 1 had any unit carrying a consumable drink it below 40% HP. Nick
+decided enemies carry no potions and only dedicated healers heal
+("I think I would stick to no potions and only dedicated healers for the
+enemies in a battle"). That is now recorded in `weapons-and-items.md` →
+*Battle pack*. The AI never uses consumables, and `ai.ron` has no
+self-heal numbers.
+
+**Follow-ups:** 0315 removes units' own consumables (`Unit::consumables`
+and the non-player `UseItem` path), which nothing uses now. 0803 sets each enemy's behaviour in chapter data
 (it already plans the Aggressive/Guard/Stationary mix). 0502 drives
 `next_command` from the battle screen.

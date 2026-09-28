@@ -682,82 +682,16 @@ fn healers_with_nobody_to_heal_attack_or_keep_back() {
 }
 
 #[test]
-fn wounded_units_with_a_consumable_heal_themselves() {
-    let low = |hp| {
-        enemy_phase(&["P.E"], move |u| {
-            edit(u, 2, |x| {
-                x.hp = hp;
-                x.consumables = vec![ItemId::new("sword"), ItemId::new("potion")];
-            });
-        })
-    };
-    let use_potion = act(
-        2,
-        p(2, 0),
-        UnitAction::UseItem {
-            pack_index: 1,
-            target: UnitId(2),
-        },
-    );
-    // Below 40% of 20 HP (8): heals. At 8: attacks.
-    assert_eq!(next(&low(7)), use_potion);
-    assert_eq!(next(&low(8)), attack(2, p(1, 0), 1, 0));
-    // Without a consumable: attacks.
-    let none = enemy_phase(&["P.E"], |u| edit(u, 2, |x| x.hp = 3));
-    assert_eq!(next(&none), attack(2, p(1, 0), 1, 0));
-}
-
-#[test]
-fn a_likely_kill_beats_healing() {
-    // The player has 5 HP: a sure kill. At 50% (`flaky`) the kill chance
-    // still reaches `likely_kill`; at 49 it wouldn't.
+fn wounded_units_never_drink_potions() {
+    // Enemies carry no consumables (Nick), and even one given a potion
+    // fights on at 1 HP.
     let state = enemy_phase(&["P.E"], |u| {
-        edit(u, 1, |x| x.hp = 5);
         edit(u, 2, |x| {
-            x.hp = 3;
+            x.hp = 1;
             x.consumables = vec![ItemId::new("potion")];
         });
     });
     assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
-    let flaky = enemy_phase(&["P.E"], |u| {
-        edit(u, 1, |x| x.hp = 5);
-        edit(u, 2, |x| {
-            x.hp = 3;
-            x.consumables = vec![ItemId::new("potion")];
-        });
-        u[1] = carrying(u[1].clone(), &["flaky"]);
-    });
-    assert_eq!(next(&flaky), attack(2, p(1, 0), 1, 0));
-    let weights = AiWeights {
-        likely_kill: 51,
-        ..AiWeights::default()
-    };
-    let heal = act(
-        2,
-        p(2, 0),
-        UnitAction::UseItem {
-            pack_index: 0,
-            target: UnitId(2),
-        },
-    );
-    assert_eq!(next_command(&flaky, &weights), Some(heal));
-}
-
-#[test]
-fn player_units_use_the_battle_pack() {
-    // The AI driving the player side (soak tests): the pack's potion.
-    let (map, mut units) = scene(&["P.E"]);
-    units[0].hp = 2;
-    let (state, _) = BattleState::new(setup(map, units));
-    let expected = act(
-        1,
-        p(0, 0),
-        UnitAction::UseItem {
-            pack_index: 0,
-            target: UnitId(1),
-        },
-    );
-    assert_eq!(next(&state), expected);
 }
 
 // --- Order within the phase ------------------------------------------------
@@ -1056,7 +990,6 @@ fn scores_add_up_the_weights() {
         lord: 7,
         risk: 3,
         terrain: 5,
-        ..AiWeights::default()
     };
     let planner = Planner::new(&state, &weights);
     let odds = Odds {
@@ -1167,7 +1100,6 @@ prop_compose! {
         hp in 1..=20,
         mov in 0..6,
         gear in 0..6usize,
-        potion in any::<bool>(),
     ) -> Unit {
         let weapons: &[&str] = [&["sword"][..], &["bow"], &["javelin", "blade"], &["flaky"], &[], &["lance", "bow"]][gear];
         let mut u = carrying(unit(id, faction, p(x, y)), weapons);
@@ -1179,9 +1111,6 @@ prop_compose! {
         }
         if gear == 1 {
             u.learned_skills = BTreeSet::from([SkillId::new("skirmish")]);
-        }
-        if potion {
-            u.consumables = vec![ItemId::new("potion")];
         }
         u
     }
