@@ -156,7 +156,7 @@ const GLYPHS_PER_ROW: usize = 48;
 /// Width of one palette swatch column (`██ name`).
 const SWATCH_W: i32 = 19;
 /// Longest colour name shown in a swatch column; longer names are cut.
-const SWATCH_NAME_W: usize = SWATCH_W as usize - 4;
+const SWATCH_NAME_W: usize = SWATCH_W as usize - 5;
 /// Swatch columns across the console.
 const SWATCH_COLUMNS: i32 = 5;
 /// Palette size the layout must still fit, so adding colours doesn't clip the

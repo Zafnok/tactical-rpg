@@ -22,7 +22,7 @@ expression: snap
  ██ fort            ██ fort_bg         ██ grass           ██ grass_bg        ██ heal_range          
  ██ hp_high         ██ hp_low          ██ hp_mid          ██ ice             ██ ice_bg              
  ██ mountain        ██ mountain_bg     ██ move_range      ██ neutral         ██ panel_bg            
- ██ panel_border    ██ panel_border_fo ██ path            ██ peak            ██ peak_bg             
+ ██ panel_border    ██ panel_border_f  ██ path            ██ peak            ██ peak_bg             
  ██ player          ██ road            ██ road_bg         ██ sea             ██ stone               
  ██ stone_bg        ██ text            ██ text_dim        ██ text_highlight  ██ thicket             
  ██ thicket_bg      ██ water           ██ water_bg        ██ white           ██ wood                
@@ -55,7 +55,7 @@ annadddddddaaaaaaaaaooadddddaaaaaaaaaaappaddddddddaaaaaaaaqqaddddddaaaaaaaaaarra
 assaddddaaaaaaaaaaaattadddddddaaaaaaaaauuadddddaaaaaaaaaaavvaddddddddaaaaaaaawwaddddddddddaaaaaaaaaa
 axxadddddddaaaaaaaaayyaddddddaaaaaaaaaazzaddddddaaaaaaaaaaAAadddaaaaaaaaaaaaaBBaddddddaaaaaaaaaaaaaa
 aCCaddddddddaaaaaaaaDDadddddddddddaaaaaEEaddddddddddaaaaaaFFadddddddaaaaaaaaaGGaddddddddaaaaaaaaaaaa
-aHHaddddddddddddaaaaIIadddddddddddddddaJJaddddaaaaaaaaaaaaKKaddddaaaaaaaaaaaaLLadddddddaaaaaaaaaaaaa
+aHHaddddddddddddaaaaIIaddddddddddddddaaJJaddddaaaaaaaaaaaaKKaddddaaaaaaaaaaaaLLadddddddaaaaaaaaaaaaa
 aMMaddddddaaaaaaaaaaNNaddddaaaaaaaaaaaaOOadddddddaaaaaaaaaPPadddaaaaaaaaaaaaaQQadddddaaaaaaaaaaaaaaa
 aRRaddddddddaaaaaaaaaaaddddaaaaaaaaaaaaddaddddddddaaaaaaaabbaddddddddddddddaaSSadddddddaaaaaaaaaaaaa
 aTTaddddddddddaaaaaaUUadddddaaaaaaaaaaaVVaddddddddaaaaaaaaWWadddddaaaaaaaaaaaXXaddddaaaaaaaaaaaaaaaa

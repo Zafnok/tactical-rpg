@@ -74,8 +74,8 @@ None.
 - Snapshot: `sampler_snapshot` updated if the layout changes.
 
 ## Completion notes
-Swatches now use 5 columns of 19 cells (names cut to 15 characters, e.g.
-`panel_border_focus` → `panel_border_fo`), so today's 51 colours take 11 rows
+Swatches now use 5 columns of 19 cells (names cut to 14 characters, e.g.
+`panel_border_focus` → `panel_border_f`), so today's 51 colours take 11 rows
 instead of 13 and the demo panels have 2 spare rows; 60 colours still fit.
 New test `demo_panels_keep_margin_for_a_larger_palette` asserts both.
 `sampler_snapshot` re-accepted after reading the diff. No gameplay rules
