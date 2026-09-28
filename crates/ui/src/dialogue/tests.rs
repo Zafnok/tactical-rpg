@@ -9,6 +9,9 @@ fn id(s: &str) -> CharacterId {
     CharacterId(s.into())
 }
 
+/// More text boxes than any scene in these tests has.
+const MAX_BOXES: usize = 100;
+
 /// The embedded `test` scene (`assets/dialogue/test.dlg`).
 fn test_scene() -> Scene {
     let content = trpg_content::load_embedded().unwrap_or_else(|e| panic!("{e}"));
@@ -52,10 +55,15 @@ fn walks_the_test_scene() {
     let mut player = DialoguePlayer::new(test_scene());
     assert_eq!(player.scene_id(), "test");
     let mut views = Vec::new();
-    while !player.is_finished() {
+    // Bounded, so a player that never finishes fails instead of hanging.
+    for _ in 0..MAX_BOXES {
+        if player.is_finished() {
+            break;
+        }
         views.push(shown(player.current()));
         player.advance();
     }
+    assert!(player.is_finished());
     views.push(shown(player.current()));
     let lord = |e| Some(portrait("test_lord", e));
     let say = |left, right, speaker, text: &str| Shown {
@@ -236,12 +244,16 @@ proptest! {
             .collect();
         let mut player = DialoguePlayer::new(Scene { id: "s".into(), steps });
         let mut seen = Vec::new();
-        while !player.is_finished() {
+        for _ in 0..MAX_BOXES {
+            if player.is_finished() {
+                break;
+            }
             let v = player.current();
             prop_assert!(v.text.is_some());
             seen.push((v.text.unwrap_or_default().to_owned(), v.narration));
             player.advance();
         }
+        prop_assert!(player.is_finished());
         prop_assert_eq!(player.current().text, None);
         prop_assert_eq!(seen, expected);
     }

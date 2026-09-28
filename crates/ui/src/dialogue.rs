@@ -53,7 +53,7 @@ pub struct View<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DialoguePlayer {
     scene: Scene,
-    /// Index of the next step to apply.
+    /// Index of the first step after the text box on screen.
     next: usize,
     /// Index of the text step on screen, `None` when finished.
     current: Option<usize>,
@@ -101,12 +101,11 @@ impl DialoguePlayer {
 
     /// Moves to the next text box, applying every portrait and caption step
     /// before it. After the last one the scene is finished; advancing a
-    /// finished scene does nothing.
+    /// finished scene does nothing (the steps after the last text box are
+    /// applied again, which changes nothing).
     pub fn advance(&mut self) {
         self.current = None;
-        while let Some(step) = self.scene.steps.get(self.next) {
-            let index = self.next;
-            self.next += 1;
+        for (index, step) in self.scene.steps.iter().enumerate().skip(self.next) {
             match step {
                 Step::Caption { text } => self.caption = Some(text.clone()),
                 Step::Place {
@@ -137,13 +136,13 @@ impl DialoguePlayer {
                             }
                         }
                     }
-                    self.current = Some(index);
-                    return;
                 }
-                Step::Narrate { .. } => {
-                    self.current = Some(index);
-                    return;
-                }
+                Step::Narrate { .. } => {}
+            }
+            if step.text().is_some() {
+                self.current = Some(index);
+                self.next = index + 1;
+                return;
             }
         }
     }
