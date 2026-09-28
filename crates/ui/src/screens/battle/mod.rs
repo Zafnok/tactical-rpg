@@ -181,7 +181,8 @@ pub struct BattleScreen {
     mode: Mode,
     /// The danger zone, while shown (recomputed after every command).
     danger: Option<TileSet>,
-    /// Auto-end: end the player phase when its last unit has acted. Kept
+    /// Auto-end: end the player phase when its last unit has acted. Off by
+    /// default (`docs/design/turn-structure.md`, ticket 0420). Kept
     /// here until the Options menu (0805) saves it.
     auto_end: bool,
     /// A command was applied: auto-end is checked once the screen is back
@@ -222,7 +223,7 @@ impl BattleScreen {
             rewind: None,
             state,
             danger: None,
-            auto_end: true,
+            auto_end: false,
             end_armed: false,
             toast: None,
             banners: VecDeque::new(),
@@ -494,7 +495,7 @@ impl BattleScreen {
     }
 
     /// The help line for the mode and what is under the cursor, e.g. `f
-    /// select · e info · s next unit · d back` over a ready unit while
+    /// select · e info · s next unit · r rewind · d back` over a ready unit while
     /// browsing. Key names come from the keymap.
     pub fn help(&self, ctx: &Ctx) -> String {
         let km = &ctx.keymap;
@@ -530,15 +531,19 @@ impl BattleScreen {
                 } else {
                     "menu"
                 });
+                let rewind = (
+                    key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
+                    "rewind",
+                );
                 match self.hovered() {
                     Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                        help_line(&[confirm("select"), info, next, back, end])
+                        help_line(&[confirm("select"), info, next, rewind, back, end])
                     }
                     Some(u) if u.faction != Faction::Player => {
-                        help_line(&[moves, confirm("range"), info, next, back, end])
+                        help_line(&[moves, confirm("range"), info, next, rewind, back, end])
                     }
-                    Some(_) => help_line(&[moves, info, next, back, end]),
-                    None => help_line(&[moves, confirm("menu"), next, back, end]),
+                    Some(_) => help_line(&[moves, info, next, rewind, back, end]),
+                    None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
                 }
             }
             Mode::Objective => help_line(&[cancel("back")]),
@@ -1236,41 +1241,41 @@ mod tests {
         // On the lord, ready to act.
         assert_eq!(
             s.help(&c),
-            "f select · e info · s next unit · d menu · Space end turn"
+            "f select · e info · s next unit · r rewind · d menu · Space end turn"
         );
         // On the archer, who has acted, and on an enemy.
         s.cursor.jump(Pos::new(2, 4));
         assert_eq!(
             s.help(&c),
-            "arrows move · e info · s next unit · d menu · Space end turn"
+            "arrows move · e info · s next unit · r rewind · d menu · Space end turn"
         );
         s.cursor.jump(Pos::new(8, 2));
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d menu · Space end turn"
+            "arrows move · f range · e info · s next unit · r rewind · d menu · Space end turn"
         );
         // An enemy's range shown: Cancel hides it.
         step(&mut s, &mut c, &[Action::Confirm]);
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d hide range · Space end turn"
+            "arrows move · f range · e info · s next unit · r rewind · d hide range · Space end turn"
         );
         step(&mut s, &mut c, &[Action::Cancel]);
         // On an empty tile.
         s.cursor.jump(Pos::new(0, 0));
         assert_eq!(
             s.help(&c),
-            "arrows move · f menu · s next unit · d menu · Space end turn"
+            "arrows move · f menu · s next unit · r rewind · d menu · Space end turn"
         );
         c.use_layout(crate::input::Layout::LeftHanded);
         assert_eq!(
             s.help(&c),
-            "wasd move · j menu · l next unit · k menu · Space end turn"
+            "wasd move · j menu · l next unit · u rewind · k menu · Space end turn"
         );
         s.cursor.jump(Pos::new(3, 5));
         assert_eq!(
             s.help(&c),
-            "j select · i info · l next unit · k menu · Space end turn"
+            "j select · i info · l next unit · u rewind · k menu · Space end turn"
         );
     }
 

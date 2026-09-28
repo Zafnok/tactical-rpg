@@ -31,7 +31,7 @@ fn back_opens_the_map_menu() {
     h.keys("f Up d");
     assert_eq!(
         help(&h),
-        "f select · e info · s next unit · d menu · Space end turn"
+        "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
     // Browsing: the map menu; back closes it.
     h.keys("d");
@@ -40,7 +40,7 @@ fn back_opens_the_map_menu() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(
         help(&h),
-        "f select · e info · s next unit · d menu · Space end turn"
+        "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
 }
 
@@ -76,9 +76,12 @@ fn wait_all(h: &mut Harness, units: usize) {
 #[test]
 fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     let mut h = quick_battle();
+    // Auto-end on (off by default): a message says so.
+    h.keys("Shift+Space");
+    assert!(row(&h, 30).starts_with("Auto-end: ON"), "{}", row(&h, 30));
     wait_all(&mut h, 3);
-    // Auto-end (on by default): the enemy phase's banner, which (with no
-    // enemy AI yet) passes straight to the player's turn 2.
+    // The enemy phase's banner, which (with no enemy AI yet) passes
+    // straight to the player's turn 2.
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
     assert!(shows(&h, "Turn 1"));
     h.wait(1.1);
@@ -90,16 +93,14 @@ fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     assert_eq!(tile(&h, 26, 16), "Lo");
     assert_eq!(
         help(&h),
-        "f select · e info · s next unit · d menu · Space end turn"
+        "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
 }
 
 #[test]
 fn a_full_turn_of_waits_then_space_ends_the_turn() {
     let mut h = quick_battle();
-    // Auto-end off: a message says so.
-    h.keys("Shift+Space");
-    assert!(row(&h, 30).starts_with("Auto-end: OFF"), "{}", row(&h, 30));
+    // Auto-end is off by default (ticket 0420).
     assert!(row(&h, 30).ends_with("Shift+Space auto-end: OFF"));
     wait_all(&mut h, 3);
     assert!(!shows(&h, "PHASE"));
@@ -146,9 +147,9 @@ fn info_and_danger_zone_keys() {
     assert!(shows(&h, "Test Knight"));
     h.keys("d");
     assert!(!shows(&h, "Weapon ranks"));
-    assert!(row(&h, 30).ends_with("w danger zone: OFF · Shift+Space auto-end: ON"));
+    assert!(row(&h, 30).ends_with("w danger zone: OFF · Shift+Space auto-end: OFF"));
     h.keys("w");
-    assert!(row(&h, 30).ends_with("w danger zone: ON · Shift+Space auto-end: ON"));
+    assert!(row(&h, 30).ends_with("w danger zone: ON · Shift+Space auto-end: OFF"));
 }
 
 /// The info screen, the map menu, the end-turn prompt and a banner only
@@ -299,13 +300,13 @@ fn select_move_and_wait_dims_the_unit_and_lowercases_its_label() {
     // Browsing again, on a unit that can't act.
     assert_eq!(
         help(&h),
-        "arrows move · e info · s next unit · d menu · Space end turn"
+        "arrows move · e info · s next unit · r rewind · d menu · Space end turn"
     );
     // It is no longer selectable.
     h.keys("f");
     assert_eq!(
         help(&h),
-        "arrows move · e info · s next unit · d menu · Space end turn"
+        "arrows move · e info · s next unit · r rewind · d menu · Space end turn"
     );
 }
 
@@ -326,7 +327,7 @@ fn cancelling_the_menu_then_the_selection_restores_the_unit() {
     assert_eq!(cursor_x(&h, 16), Some(26));
     assert_eq!(
         help(&h),
-        "f select · e info · s next unit · d menu · Space end turn"
+        "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
     assert_eq!(h.snapshot(), before);
 }
@@ -370,7 +371,7 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     // The lord has acted, lowercase at (6, 4) (cells 32..34, row 15).
     assert_eq!(tile(&h, 32, 15), "lo");
     assert!(
-        help(&h).ends_with("s next unit · d menu · Space end turn"),
+        help(&h).ends_with("s next unit · r rewind · d menu · Space end turn"),
         "{}",
         help(&h)
     );

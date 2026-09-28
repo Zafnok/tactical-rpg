@@ -459,7 +459,6 @@ fn end_turn_asks_while_units_are_ready_and_space_again_ends_it() {
 fn with_no_unit_ready_end_turn_ends_at_once() {
     let mut c = ctx();
     let mut s = quick();
-    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     for i in 0..3 {
         wait_unit(&mut s, i);
     }
@@ -469,7 +468,6 @@ fn with_no_unit_ready_end_turn_ends_at_once() {
     assert_eq!(s.state().phase(), Phase::Enemy);
     // From the map menu, too.
     let mut s = quick();
-    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     for i in 0..3 {
         wait_unit(&mut s, i);
     }
@@ -482,11 +480,36 @@ fn with_no_unit_ready_end_turn_ends_at_once() {
 }
 
 #[test]
-fn auto_end_ends_the_phase_when_the_last_unit_acts_and_toggles() {
+fn auto_end_is_off_by_default_and_toggles_on() {
     let mut c = ctx();
+    // Off by default (ticket 0420): the last unit's action doesn't end the
+    // phase.
     let mut s = quick();
+    assert!(!s.auto_end());
+    assert!(s.status(&c).ends_with("Shift+Space auto-end: OFF"));
+    for i in 0..3 {
+        wait_unit(&mut s, i);
+    }
+    press(&mut s, &mut c, &[]);
+    assert_eq!(s.state().phase(), Phase::Player);
+    // Turned on with everyone done: nothing until the turn is ended.
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
+    assert_eq!(s.toast(), Some("Auto-end: ON"));
+    frame(&mut s, &mut c, &[], 1.0);
+    assert_eq!(s.state().phase(), Phase::Player);
+    // On: a message for a moment, and the last unit's action ends the
+    // phase.
+    let mut s = quick();
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     assert!(s.auto_end());
-    assert!(s.status(&c).ends_with("Shift+Space auto-end: ON"));
+    assert_eq!(s.toast(), Some("Auto-end: ON"));
+    let buf = render(&s, &c);
+    assert!(row(&buf, HELP_BAR.y).starts_with("Auto-end: ON"));
+    assert!(s.status(&c).ends_with("auto-end: ON"));
+    frame(&mut s, &mut c, &[], TOAST_S / 2.0);
+    assert!(s.toast().is_some());
+    frame(&mut s, &mut c, &[], TOAST_S / 2.0);
+    assert_eq!(s.toast(), None);
     wait_unit(&mut s, 0);
     wait_unit(&mut s, 1);
     press(&mut s, &mut c, &[]);
@@ -494,29 +517,9 @@ fn auto_end_ends_the_phase_when_the_last_unit_acts_and_toggles() {
     wait_unit(&mut s, 2);
     press(&mut s, &mut c, &[]);
     assert_eq!(s.state().phase(), Phase::Enemy);
-    // Off: a message for a moment, and the last unit's action doesn't end
-    // the phase.
-    let mut s = quick();
+    // And back off.
     press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     assert!(!s.auto_end());
-    assert_eq!(s.toast(), Some("Auto-end: OFF"));
-    let buf = render(&s, &c);
-    assert!(row(&buf, HELP_BAR.y).starts_with("Auto-end: OFF"));
-    assert!(s.status(&c).ends_with("auto-end: OFF"));
-    frame(&mut s, &mut c, &[], TOAST_S / 2.0);
-    assert!(s.toast().is_some());
-    frame(&mut s, &mut c, &[], TOAST_S / 2.0);
-    assert_eq!(s.toast(), None);
-    for i in 0..3 {
-        wait_unit(&mut s, i);
-    }
-    press(&mut s, &mut c, &[]);
-    assert_eq!(s.state().phase(), Phase::Player);
-    // Turned back on with everyone done: nothing until the turn is ended.
-    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
-    assert_eq!(s.toast(), Some("Auto-end: ON"));
-    frame(&mut s, &mut c, &[], 1.0);
-    assert_eq!(s.state().phase(), Phase::Player);
 }
 
 #[test]
@@ -527,6 +530,7 @@ fn auto_end_waits_for_the_combat_to_play() {
     wait(&mut state, 1);
     wait(&mut state, 2);
     let mut s = BattleScreen::new(state);
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     s.apply(&Command::Act {
         unit: UnitId(1),
         dest: Pos::new(7, 2),

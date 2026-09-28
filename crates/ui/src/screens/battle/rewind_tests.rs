@@ -159,9 +159,12 @@ fn with_no_charges_the_screen_says_so_and_cant_confirm() {
 fn rewind_opens_only_while_browsing() {
     let mut c = ctx();
     let mut s = BattleScreen::new(skirmish_charged(&c, 20, 3));
-    // A unit selected: Rewind does nothing.
+    // Browsing: the help bar shows the Rewind key.
+    assert!(s.help(&c).contains("r rewind"), "{}", s.help(&c));
+    // A unit selected: Rewind does nothing, and the help bar leaves it out.
     press(&mut s, &mut c, &[Confirm, Rewind], 0.0);
     assert!(s.rewind().is_none());
+    assert!(!s.help(&c).contains("rewind"), "{}", s.help(&c));
     press(&mut s, &mut c, &[Cancel, Rewind], 0.0);
     let r = s.rewind().expect("open while browsing");
     assert!(r.entries().is_empty());
