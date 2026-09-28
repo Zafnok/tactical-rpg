@@ -318,7 +318,7 @@ fn cancelling_the_menu_then_the_selection_restores_the_unit() {
     // Back to the steered path: the lord back on its tile.
     h.keys("d");
     assert_eq!(tile(&h, 26, 16), "Lo");
-    assert_eq!(tile(&h, 30, 16), "[]");
+    assert_eq!(tile(&h, 30, 16), "╦╦");
     assert_eq!(help(&h), "arrows move · f move here · d cancel");
     // Back to browsing, the cursor on the lord (its pulse restarted, as
     // when the battle opened): the screen exactly as it was.

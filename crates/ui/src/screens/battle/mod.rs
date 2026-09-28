@@ -1771,11 +1771,11 @@ mod tests {
         let lines = buf.overlays().iter().filter(|o| o.color == path);
         assert_eq!(lines.clone().filter(|o| o.layer == Layer::Under).count(), 2);
         assert_eq!(lines.filter(|o| o.layer == Layer::Over).count(), 6);
-        // (5, 5) is a fort, drawn `[]` from cell 30: no cursor marks
+        // (5, 5) is a fort, drawn `╦╦` from cell 30: no cursor marks
         // around it, and the lord keeps its letters.
         assert_eq!(cursor_marks(&buf, &c), 0);
         let glyphs: String = (25..34).map(|x| buf.get(x, 16).unwrap().glyph).collect();
-        assert_eq!(glyphs, "·Lo..[]..");
+        assert_eq!(glyphs, "·Lo..╦╦..");
         // On to the map's right edge, past the lord's reach (Mov 5): the
         // path, through the fort (cost 2), stops at (7, 5), and the cursor
         // shows its corner marks.
