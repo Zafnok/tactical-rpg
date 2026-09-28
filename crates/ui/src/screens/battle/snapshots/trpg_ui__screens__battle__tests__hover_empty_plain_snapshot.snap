@@ -18,7 +18,7 @@ expression: buf.to_snapshot(&c.palette)
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      │                            │
                     ..≈≈≈≈..··..............Br..                      │                            │
                     ....Ar····........▓▓▓▓▓▓▓▓..                      │                            │
-                    ..♣♣··Lo..[[..]...▓▓░░[]▓▓..                      │                            │
+                    ..♣♣··Lo..[]......▓▓░░[]▓▓..                      │                            │
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
                                                                       │                            │
@@ -51,9 +51,9 @@ aaaaaaaaaaaaaaaaaaaaeeeeffffggggllmmllhhhhjjjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaeeffffnnnnlllllloogghhhhggggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaggffffggllggggggggggggggppggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaggggqqllllggggggggrrrrrrrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaagghhllssggtuggvgggrrwwttrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaahhhhllggssggggggggrrwwwwrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaahhiillggggggggggggrrrrxxrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaagghhllssggttggggggrruuttrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhllggssggggggggrruuuurrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhiillggggggggggggrrrrvvrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -66,7 +66,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-ayyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+awwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -88,11 +88,9 @@ q = fg:player bg:road_bg
 r = fg:stone bg:stone_bg
 s = fg:player bg:grass_bg
 t = fg:fort bg:fort_bg
-u = fg:cursor bg:fort_bg
-v = fg:cursor bg:grass_bg
-w = fg:floor bg:floor_bg
-x = fg:wood bg:stone_bg
-y = fg:text_dim bg:black
+u = fg:floor bg:floor_bg
+v = fg:wood bg:stone_bg
+w = fg:text_dim bg:black
 --- overlays ---
 over  208,270 16x2  hp_high
 over  224,286 16x2  hp_high
@@ -100,3 +98,11 @@ over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
 over  352,238 16x2  hp_high
 over  272,206 16x2  hp_high
+over  255,256 3x1  cursor
+over  255,256 1x3  cursor
+over  269,256 3x1  cursor
+over  271,256 1x3  cursor
+over  255,269 3x1  cursor
+over  255,267 1x3  cursor
+over  269,269 3x1  cursor
+over  271,267 1x3  cursor

@@ -308,7 +308,7 @@ impl Screen for BattleScreen {
         self.draw_terrain(ctx, buf);
         self.draw_units(ctx, buf);
         if let Some((x, y)) = tile_to_cell(self.cursor.pos, &self.camera) {
-            draw_cursor(buf, &ctx.palette, &self.cursor, x, y);
+            draw_cursor(buf, &ctx.palette, &self.cursor, ctx.cursor_style, x, y);
         }
         let panel_bg = c(UiColor::PanelBg);
         buf.fill_rect(SIDE_PANEL, Cell::new(' ', c(UiColor::Text), panel_bg));
@@ -330,7 +330,7 @@ mod tests {
     use trpg_core::{BattleMap, Command, Grid, Phase, TerrainId, Unit, UnitAction};
 
     use super::*;
-    use crate::console::{CONSOLE_H, CONSOLE_W};
+    use crate::console::{CELL_H_PX, CELL_W_PX, CONSOLE_H, CONSOLE_W};
     use crate::harness::Harness;
     use crate::screen::tests::ctx;
 
@@ -580,10 +580,15 @@ mod tests {
         let bright = render(&quick(), &c);
         let cursor = c.palette.get(UiColor::Cursor);
         // The lord's tile at (3, 5) starts at cell (26, 16).
-        assert_eq!(bright.get(25, 16).unwrap().fg, cursor);
-        assert_eq!(dim.get(25, 16).unwrap().fg, cursor.scale(0.5));
-        assert_eq!(bright.get(25, 16).unwrap().glyph, '[');
-        assert_eq!(bright.get(28, 16).unwrap().glyph, ']');
+        let colours = |b: &GlyphBuffer| {
+            b.overlays()
+                .iter()
+                .filter(|o| o.color == cursor || o.color == cursor.scale(0.5))
+                .map(|o| o.color)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(colours(&bright), [cursor; 8]);
+        assert_eq!(colours(&dim), [cursor.scale(0.5); 8]);
     }
 
     #[test]
@@ -649,35 +654,31 @@ mod tests {
     }
 
     /// The console cell of the left glyph of the tile under the cursor,
-    /// found from its brackets.
-    fn cursor_cell(buf: &GlyphBuffer, c: &Ctx) -> (i32, i32) {
-        let fort = c.palette.lookup("fort");
-        for y in 0..layout::MAP_VIEW.h {
-            for x in 0..layout::MAP_VIEW.w {
-                let cell = buf.get(x, y).unwrap();
-                if Some(cell.fg) == fort {
-                    continue;
-                }
-                match cell.glyph {
-                    '[' => return (x + 1, y),
-                    ']' => return (x - 2, y),
-                    _ => {}
-                }
-            }
-        }
-        panic!("no cursor on screen");
+    /// found from its top-right corner mark: the only 1 × 3 px overlays are
+    /// the corner marks' vertical arms, and the right ones are in the tile's
+    /// last pixel column.
+    fn cursor_cell(buf: &GlyphBuffer) -> (i32, i32) {
+        let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
+        let arms = buf
+            .overlays()
+            .iter()
+            .map(|o| o.rect)
+            .filter(|r| (r.w, r.h) == (1, 3));
+        let r = arms
+            .max_by_key(|r| (r.x, -r.y))
+            .expect("no cursor on screen");
+        ((r.x + 1) / cw - layout::TILE_W_CELLS, r.y / ch)
     }
 
     #[test]
     fn harness_keys_move_the_cursor() {
-        let c = ctx();
         let mut h = big_battle_harness();
         // The lord at (3, 5), camera at the top-left.
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (6, 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (6, 5));
         h.keys("Right Right Right");
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (12, 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (12, 5));
         h.keys("Down Left");
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (10, 6));
+        assert_eq!(cursor_cell(h.game().buffer()), (10, 6));
     }
 
     #[test]
@@ -690,18 +691,18 @@ mod tests {
         h.hold("Right", 1.0);
         // 1 press + repeats at 170 ms, then every 55 ms: 17 tiles, to x = 20.
         assert_eq!(moves(1000), 17);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (2 * (3 + 17), 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (2 * (3 + 17), 5));
         h.hold("Right", 1.0);
         // x = 37: the camera keeps it 3 tiles from the right edge.
         let x = 3 + 2 * moves(1000);
         let origin = x - (layout::VIEW_TILES_W - 1 - Camera::MARGIN);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (2 * (x - origin), 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (2 * (x - origin), 5));
         // Far right, then back: the cursor stops at the edge and the
         // camera shows the map's last columns, then scrolls back.
         h.hold("Right", 3.0).hold("Down", 3.0);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (68, 29));
+        assert_eq!(cursor_cell(h.game().buffer()), (68, 29));
         h.hold("Left", 4.0).hold("Up", 3.0);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (0, 0));
+        assert_eq!(cursor_cell(h.game().buffer()), (0, 0));
     }
 
     /// The text of row `y` of the side panel, inside its border, trimmed.
