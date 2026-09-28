@@ -596,6 +596,18 @@ fn classes() -> ClassTable {
     }
 }
 
+/// `table` with levels on: level cap 99, class level cap 10, 2 minimum
+/// gains and 10 CP per class level at every tier (0601).
+fn leveling(table: ClassTable) -> ClassTable {
+    ClassTable {
+        level_cap: 99,
+        class_level_cap: 10,
+        min_gains: vec![2],
+        cp_per_class_level: vec![10],
+        ..table
+    }
+}
+
 /// The starter spells of `magic.md` (`fire`: forest → burning, then burnt;
 /// `frost`: water or sea → ice; `force`, `heal`, `mend`), plus `bolt`: a
 /// hit-100, might-3 attack spell, range 1–2, 2 uses, for exact combats.
@@ -888,6 +900,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        talent: None,
     };
     carrying(u, &[weapon(1, 1, 3)])
 }
@@ -3333,6 +3346,7 @@ proptest! {
 }
 
 mod art;
+mod progression;
 mod shop;
 mod skill;
 mod spell;

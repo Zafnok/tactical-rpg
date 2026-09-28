@@ -199,6 +199,33 @@
 //!   unit, then the attacker). [`BattleState::preview_attack`] gives the UI
 //!   the forecast, the durability change and the art's
 //!   [notes](crate::art::ArtNote) before committing.
+//! - **Unit EXP and class points** ([`crate::progression`] has the rules;
+//!   `docs/design/progression.md`), for **player units** only, each an
+//!   award of EXP ([`Event::ExpGained`], then [`Event::LeveledUp`] and any
+//!   [`Event::SpellLearned`]) then class points ([`Event::ClassPointsGained`],
+//!   then [`Event::ClassLeveledUp`], [`Event::SpellLearned`],
+//!   [`Event::ClassMastered`] and [`Event::SkillLearned`] as they come):
+//!   - after an attack, once the fallen are gone: for each combat (a Line
+//!     Pierce strike is its own), each side that struck and still stands,
+//!     attacker first, gets the combat award (kill, damage or no damage,
+//!     against the other unit's character level; a boss kill +40). A
+//!     defender that couldn't counter took no part and gets nothing;
+//!   - after a heal spell, a tile cast or a non-combat active, the user gets
+//!     its award.
+//!
+//!   **Ally**-faction units' EXP goes into the battle's
+//!   [EXP pool](BattleState::exp_pool) instead. On a **victory**, just before
+//!   [`Event::BattleEnded`], the pool is shared: each player unit on the map
+//!   below the level cap (fallen units and reinforcements still to come
+//!   don't count) gets `pool / their number` EXP, in unit order; the
+//!   remainder is lost. On a defeat the pool is lost. Enemies and neutrals
+//!   never gain.
+//!
+//!   **RNG order:** level ups roll on the battle's [`SimRng`] right where
+//!   their [`Event::LeveledUp`] is, after the combat's strikes (and Line
+//!   Pierce's): 7 [`roll_percent`](crate::rng::RandomSource::roll_percent)
+//!   calls each, then a [`roll_below`](crate::rng::RandomSource::roll_below)
+//!   per safety-net pick.
 //! - **Equipping** ([`Command::Equip`]) is free: any weapon of the loadout
 //!   the unit can wield, or any learned attack spell (even one with no uses
 //!   left: it just can't counter), by a ready unit of the current phase. It
@@ -229,7 +256,8 @@
 //! Every [`Event`] sequence of an `Act` ends with [`Event::UnitActed`] (unless
 //! the unit fell, or is offered a move after its attack:
 //! [`Event::MoveAfterOffered`], then `UnitActed` comes with the
-//! [`Command::MoveAfter`]), optionally followed by [`Event::BattleEnded`].
+//! [`Command::MoveAfter`]), optionally followed by [`Event::BattleEnded`]
+//! (after the EXP pool's shares, on a victory).
 //! Combat Arts pay their costs with [`pay_cost`](crate::skill::pay_cost),
 //! as actives do.
 //!
@@ -237,7 +265,8 @@
 //!
 //! `BattleState` is serde-serialisable (RON via `content`/`app`, ADR-0019):
 //! the map (with its current terrain), burning tiles, units (with their
-//! learned skills, timed effects and role), fallen units,
+//! learned skills, timed effects, role, EXP and class records), fallen units,
+//! the EXP pool,
 //! pending reinforcements, objective, turn,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
@@ -254,7 +283,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::art::{ArtId, ArtTable};
-use crate::class::{ClassDef, ClassId, ClassTable};
+use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::combat::{CombatHp, CombatOutcome, CombatantInput, Forecast, Side, forecast, resolve};
 use crate::geom::Pos;
 use crate::item::{
@@ -262,13 +291,14 @@ use crate::item::{
 };
 use crate::map::BattleMap;
 use crate::movement::{MoveError, reachable};
+use crate::progression::{self, CombatResult, StatGains};
 use crate::rng::SimRng;
 use crate::shop::{self, Gold, Loot, Shop, ShopError};
 use crate::skill::{CostError, EffectSource, SkillId, SkillTable, heal_bonus};
 use crate::spell::{EffectDuration, SpellDef, SpellId, SpellKind, SpellTable, TerrainEffect};
 use crate::stats::StatValue;
 use crate::terrain::{TerrainId, TerrainTable};
-use crate::unit::{Faction, Unit, UnitId};
+use crate::unit::{Faction, Level, Role, Unit, UnitId};
 use crate::weapon::{WeaponKind, WeaponRank};
 
 /// A turn number, from 1.
@@ -671,6 +701,65 @@ pub enum Event {
         kind: WeaponKind,
         /// The new rank.
         rank: WeaponRank,
+    },
+    /// A player unit gained unit EXP (cut to what the level cap allows).
+    ExpGained {
+        /// The unit.
+        unit: UnitId,
+        /// EXP gained.
+        amount: u32,
+    },
+    /// A unit's character level rose (right after its
+    /// [`Event::ExpGained`]; several in a row for a big award).
+    LeveledUp {
+        /// The unit.
+        unit: UnitId,
+        /// The new character level.
+        level: Level,
+        /// What each stat gained (current HP rose with max HP).
+        gains: StatGains,
+    },
+    /// A player unit's current class gained class points.
+    ClassPointsGained {
+        /// The unit.
+        unit: UnitId,
+        /// The class.
+        class: ClassId,
+        /// CP gained (cut at mastery's total).
+        amount: ClassPoints,
+    },
+    /// A unit's class level rose in its current class.
+    ClassLeveledUp {
+        /// The unit.
+        unit: UnitId,
+        /// The class.
+        class: ClassId,
+        /// The new class level.
+        class_level: ClassLevel,
+    },
+    /// A unit reached the class level cap: its active is now permanent
+    /// (followed by an [`Event::SkillLearned`] per passive).
+    ClassMastered {
+        /// The unit.
+        unit: UnitId,
+        /// The class.
+        class: ClassId,
+    },
+    /// A unit learned a skill (a passive, on mastery).
+    SkillLearned {
+        /// The unit.
+        unit: UnitId,
+        /// The skill.
+        skill: SkillId,
+    },
+    /// A unit learned a spell (a class spell at a class level, or a
+    /// personal spell at a character level). It has no uses until the
+    /// next battle.
+    SpellLearned {
+        /// The unit.
+        unit: UnitId,
+        /// The spell.
+        spell: SpellId,
     },
     /// A unit used an active skill (before its payment and its effects).
     SkillUsed {
@@ -1192,6 +1281,9 @@ pub struct BattleState {
     rng: SimRng,
     outcome: Option<Outcome>,
     pending_move: Option<PendingMove>,
+    /// EXP earned by Ally-faction units, shared out on a win.
+    #[serde(default)]
+    exp_pool: u32,
 }
 
 /// A validated action, ready to carry out.
@@ -1445,6 +1537,7 @@ impl BattleState {
             rng: SimRng::new(setup.seed),
             outcome: None,
             pending_move: None,
+            exp_pool: 0,
         };
         let mut events = Vec::new();
         if let Some(outcome) = state.judge() {
@@ -1585,6 +1678,12 @@ impl BattleState {
     /// The unit waiting to move after its attack, if any.
     pub fn pending_move(&self) -> Option<PendingMove> {
         self.pending_move
+    }
+
+    /// EXP earned by Ally-faction units so far, shared out among the player
+    /// units on a win.
+    pub fn exp_pool(&self) -> u32 {
+        self.exp_pool
     }
 
     /// Whether unit `id` may choose [`UnitAction::Seize`] after moving to
@@ -2087,7 +2186,11 @@ impl BattleState {
         match step {
             Step::Wait => {}
             Step::Attack(attack) => move_after = self.attack(id, &attack, events),
-            Step::Skill { active, effect } => self.use_skill(id, &active, effect, events),
+            Step::Skill { active, effect } => {
+                self.use_skill(id, &active, effect, events);
+                let exp = progression::exp_for_active_skill();
+                self.award(id, exp, progression::ACTION_CP, events);
+            }
             Step::Heal {
                 spell,
                 target,
@@ -2103,13 +2206,23 @@ impl BattleState {
                     events.push(Event::Healed { target, amount });
                 }
                 self.spend_spell(id, &spell, events);
+                self.award(
+                    id,
+                    progression::exp_for_heal(),
+                    progression::ACTION_CP,
+                    events,
+                );
             }
             Step::Terrain {
                 spell,
                 pos,
                 from,
                 effect,
-            } => self.cast_on_tile(id, &spell, pos, from, &effect, events),
+            } => {
+                self.cast_on_tile(id, &spell, pos, from, &effect, events);
+                let exp = progression::exp_for_tile_cast();
+                self.award(id, exp, progression::ACTION_CP, events);
+            }
             Step::UseItem {
                 index,
                 item,
@@ -2177,7 +2290,7 @@ impl BattleState {
                 target: CastTarget::Unit(target),
             });
         }
-        let dealt = self.fight(id, attack, events);
+        let (dealt, clashes) = self.fight(id, attack, events);
         if let Some(active) = &attack.active {
             self.after_strike(id, active, dealt, events);
         }
@@ -2185,6 +2298,9 @@ impl BattleState {
         let victim = attack.pierce.map(|(victim, _)| victim);
         let order: Vec<UnitId> = std::iter::once(target).chain(victim).chain([id]).collect();
         self.remove_fallen(&order, events);
+        for clash in &clashes {
+            self.award_combat(clash, events);
+        }
         attack.move_after
     }
 
@@ -2345,16 +2461,18 @@ impl BattleState {
     /// Plays out `attacker`'s validated combat: the combat, spell uses, an
     /// art's debuff, Line Pierce's strike, then weapon EXP. Returns the HP
     /// each side's strikes removed: `[attacker, defender]` (the pierce's
-    /// damage included). Whoever fell is still on the map (see
-    /// [`Self::remove_fallen`]).
+    /// damage included), and each combat's tally (the pierce's second).
+    /// Whoever fell is still on the map (see [`Self::remove_fallen`]).
     fn fight(
         &mut self,
         attacker: UnitId,
         step: &AttackStep,
         events: &mut Vec<Event>,
-    ) -> [StatValue; 2] {
+    ) -> ([StatValue; 2], Vec<Tally>) {
         let defender = step.target;
-        let mut tally = self.clash(attacker, defender, step.forecast, events);
+        let first = self.clash(attacker, defender, step.forecast, events);
+        let mut clashes = vec![first];
+        let mut tally = first;
         for ((id, spell), struck) in [attacker, defender]
             .into_iter()
             .zip(&step.arms.spells)
@@ -2375,6 +2493,7 @@ impl BattleState {
                 let t = self.clash(attacker, victim, pierce, events);
                 tally.hits[0] += t.hits[0];
                 tally.dealt[0] += t.dealt[0];
+                clashes.push(t);
             }
         }
         let used_art = [step.art.is_some(), false];
@@ -2395,7 +2514,7 @@ impl BattleState {
                 self.gain_weapon_exp(id, kind, amount, events);
             }
         }
-        tally.dealt
+        (tally.dealt, clashes)
     }
 
     /// Resolves one combat of `attacker` against `defender` with `forecast`
@@ -2431,7 +2550,7 @@ impl BattleState {
                 u.hp = left;
             }
         }
-        let tally = Tally::of(&outcome, a.current, d.current);
+        let tally = Tally::of(&outcome, [attacker, defender], [a.current, d.current]);
         events.push(Event::CombatResolved {
             attacker,
             defender,
@@ -2585,30 +2704,109 @@ impl BattleState {
     }
 
     fn finish(&mut self, outcome: Outcome, events: &mut Vec<Event>) {
+        if outcome == Outcome::Victory {
+            self.share_exp_pool(events);
+        }
         self.outcome = Some(outcome);
         events.push(Event::BattleEnded { outcome });
+    }
+
+    /// Gives the living unit `id` `exp` EXP and `cp` class points if it is
+    /// a player unit, or puts `exp` in the EXP pool if it is an ally.
+    fn award(&mut self, id: UnitId, exp: u32, cp: ClassPoints, events: &mut Vec<Event>) {
+        let Some(unit) = self.units.iter_mut().find(|u| u.id == id && u.hp > 0) else {
+            return;
+        };
+        match unit.faction {
+            Faction::Player => {
+                let classes = &self.tables.classes;
+                events.extend(progression::grant_exp(unit, exp, classes, &mut self.rng));
+                let skills = &self.tables.skills;
+                events.extend(progression::grant_class_points(unit, cp, classes, skills));
+            }
+            Faction::Ally => self.exp_pool = self.exp_pool.saturating_add(exp),
+            Faction::Enemy | Faction::Neutral => {}
+        }
+    }
+
+    /// Unit EXP and class points for both sides of one combat: each side
+    /// still standing that struck, attacker first.
+    fn award_combat(&mut self, tally: &Tally, events: &mut Vec<Event>) {
+        for me in 0..2 {
+            let (id, other) = (tally.units[me], tally.units[1 - me]);
+            let (Some(unit), Some(target)) = (self.unit(id), self.any_unit(other)) else {
+                continue;
+            };
+            if tally.struck[me] == 0 {
+                continue;
+            }
+            let result = if tally.killed[me] {
+                CombatResult::Killed
+            } else if tally.dealt[me] > 0 {
+                CombatResult::Damaged
+            } else {
+                CombatResult::NoDamage
+            };
+            let boss = target.role == Role::Boss;
+            let exp = progression::exp_for_combat(unit.level, target.level, result, boss);
+            let cp = progression::cp_for_combat(result == CombatResult::Killed);
+            self.award(id, exp, cp, events);
+        }
+    }
+
+    /// The unit `id`, on the map or fallen.
+    fn any_unit(&self, id: UnitId) -> Option<&Unit> {
+        self.unit(id)
+            .or_else(|| self.fallen.iter().find(|u| u.id == id))
+    }
+
+    /// Shares the EXP pool out among the player units on the map below the
+    /// level cap: `pool / count` each (remainder lost), in unit order.
+    fn share_exp_pool(&mut self, events: &mut Vec<Event>) {
+        let pool = std::mem::take(&mut self.exp_pool);
+        let cap = self.tables.classes.level_cap;
+        let eligible = |u: &Unit| u.faction == Faction::Player && u.level < cap;
+        let count = self.units.iter().filter(|u| eligible(u)).count();
+        let Some(share) = u32::try_from(count)
+            .ok()
+            .and_then(|n| pool.checked_div(n))
+            .filter(|&s| s > 0)
+        else {
+            return;
+        };
+        let classes = &self.tables.classes;
+        for unit in self.units.iter_mut().filter(|u| eligible(u)) {
+            events.extend(progression::grant_exp(unit, share, classes, &mut self.rng));
+        }
     }
 }
 
 /// What each side's strikes did in a combat: `[attacker, defender]`.
+#[derive(Clone, Copy)]
 struct Tally {
+    /// The two units.
+    units: [UnitId; 2],
     /// Strikes made.
     struck: [usize; 2],
     /// Strikes that hit.
     hits: [usize; 2],
     /// HP removed (Absorb healing doesn't count).
     dealt: [StatValue; 2],
+    /// Whether each side's strike took the other to 0 HP.
+    killed: [bool; 2],
 }
 
 impl Tally {
-    /// The tally of `outcome`, given the two sides' HP going in.
-    fn of(outcome: &CombatOutcome, attacker_hp: StatValue, defender_hp: StatValue) -> Tally {
+    /// The tally of `outcome` between `units`, given their HP going in.
+    fn of(outcome: &CombatOutcome, units: [UnitId; 2], hp_before: [StatValue; 2]) -> Tally {
         // HP before each strike: [attacker, defender].
-        let mut hp = [attacker_hp, defender_hp];
+        let mut hp = hp_before;
         let mut t = Tally {
+            units,
             struck: [0; 2],
             hits: [0; 2],
             dealt: [0; 2],
+            killed: [false; 2],
         };
         for s in &outcome.strikes {
             let (me, target) = match s.by {
@@ -2621,6 +2819,9 @@ impl Tally {
                 t.dealt[me] += (hp[target] - s.target_hp_after).max(0);
             }
             hp[target] = s.target_hp_after;
+            if hp[target] <= 0 {
+                t.killed[me] = true;
+            }
         }
         t
     }

@@ -101,6 +101,7 @@ fn unit(id: u32, class: &str, faction: Faction, pos: Pos, mov: StatValue) -> Uni
         spells: crate::spell::SpellState::default(),
         learned_skills: std::collections::BTreeSet::new(),
         effects: Vec::new(),
+        talent: None,
     }
 }
 

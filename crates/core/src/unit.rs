@@ -172,6 +172,10 @@ pub struct Unit {
     pub learned_skills: BTreeSet<SkillId>,
     /// Timed effects on the unit; see [`crate::skill`].
     pub effects: Vec<TimedEffect>,
+    /// The personal +20% growth stat of a named character (never Mov);
+    /// generic units have none. See [`crate::progression`].
+    #[serde(default)]
+    pub talent: Option<StatKind>,
 }
 
 /// Letters in a map label.
@@ -256,6 +260,7 @@ impl Unit {
             level: def.level,
             is_lord: def.is_lord,
             personal_spells: def.personal_spells.clone(),
+            talent: Some(def.talent),
             ..Self::fresh(id, class, stats, faction, pos, weapon_ranks)
         };
         unit.refresh_spells(classes);
@@ -327,6 +332,7 @@ impl Unit {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: None,
         }
     }
 }
@@ -503,6 +509,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: Some(StatKind::Spd),
         };
         assert_eq!(unit, Ok(expected));
     }
@@ -626,6 +633,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            talent: None,
         };
         assert_eq!(unit, Ok(expected));
     }

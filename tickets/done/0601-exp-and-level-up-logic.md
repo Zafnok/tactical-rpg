@@ -5,10 +5,10 @@ type: feature
 milestone: M5 Progression
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0005", "0305", "0306"]
 nick_input: answer-first
-completed:
+completed: 2026-09-28
 ---
 
 # 0601 — EXP and level-up rules
@@ -65,11 +65,11 @@ player-faction units.
 
 ## Acceptance criteria
 
-- [ ] EXP formula matches the design doc's example table (all 8 rows).
-- [ ] Growth procedure matches the design; seeded tests with `ScriptedRng` prove each branch (gain, no gain, capped, 0% growth, talent +20, growth > 100 giving +1 and +2, a +2 clamped by the cap, safety net with 0 and 1 natural gains at tier 1 and tier 3, net limited by the number of eligible stats), including the worked example in `progression.md`.
-- [ ] Level cap respected; class level cap and mastery respected; CP go to the current class only.
-- [ ] Ally EXP pool: split evenly with the remainder dropped; capped, dead and undeployed units excluded (tests).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] EXP formula matches the design doc's example table (all 8 rows).
+- [x] Growth procedure matches the design; seeded tests with `ScriptedRng` prove each branch (gain, no gain, capped, 0% growth, talent +20, growth > 100 giving +1 and +2, a +2 clamped by the cap, safety net with 0 and 1 natural gains at tier 1 and tier 3, net limited by the number of eligible stats), including the worked example in `progression.md`.
+- [x] Level cap respected; class level cap and mastery respected; CP go to the current class only.
+- [x] Ally EXP pool: split evenly with the remainder dropped; capped, dead and undeployed units excluded (tests).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -79,3 +79,40 @@ player-faction units.
 
 ## Completion notes
 
+- New `core::progression`: the EXP formulas, `growth`, `level_up` (the exact
+  6-step procedure: always 7 `roll()`s, then a `roll_below` per net pick),
+  `apply_gains`, `grant_exp` and `grant_class_points`, with the events
+  `ExpGained`, `LeveledUp`, `ClassPointsGained`, `ClassLeveledUp`,
+  `ClassMastered`, `SkillLearned` and `SpellLearned`.
+- `RandomSource::roll_below(n)` added (unbiased rejection sampling in
+  `SimRng`; a separate scripted list in `ScriptedRng`).
+- `Unit` gained `talent: Option<StatKind>` (from the character data; generic
+  units have none).
+- `BattleState::apply` awards EXP and CP to player units after every combat
+  (a Line Pierce strike is its own combat), heal, tile cast and non-combat
+  active. Ally units' EXP goes into `exp_pool`, shared on a win just before
+  `BattleEnded`. RNG order is documented in the `battle` module docs.
+- The replay test now has levels on (HP/Res growths), so EXP, level ups and
+  class levels are part of what must replay and survive a save.
+
+**Deviations:** `exp_for_combat` returns `u32` (like `Unit::exp`), not `u8`.
+Level ups and class level ups only *add* spells instead of calling
+`refresh_spells` (which would also drop spells given by chapter data);
+`refresh_spells` stays for promotion/reclass (0603). `level_up` takes the
+minimum gains as a number; a tier missing from a tier table uses the highest
+tier listed (content validation already requires every tier in use).
+
+**Claude's starting rules** (the design docs were silent; Nick may veto):
+- A defender that **can't counter** (out of range or unarmed) took no part in
+  the combat and gets no EXP or CP (reading "attacked or countered"
+  literally).
+- A unit that **falls** in a combat gets nothing from it.
+- Only the actions in the EXP table give EXP: **items, shops, chests,
+  seizing and waiting give none**.
+- **Sanctuary** (an active that heals) gives the active-skill award (20),
+  not the heal-spell award (24). A **Shove** that kills by collision gives
+  only the active-skill award, not a kill award.
+- An award that reaches the **level cap** is cut to what reaching it takes;
+  the rest is lost and EXP shows `--`.
+
+No follow-up tickets.

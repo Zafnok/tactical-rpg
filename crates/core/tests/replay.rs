@@ -2,7 +2,9 @@
 //! and commands give identical events, and a battle saved mid-way, loaded and
 //! continued gives the same events as one played straight through. The
 //! script includes terrain magic, so the changed tiles and the burning
-//! forest are part of what must replay and survive a save.
+//! forest are part of what must replay and survive a save, and levels are
+//! on, so unit EXP, level ups (which roll the battle's RNG) and class points
+//! are too.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -53,8 +55,9 @@ fn classes() -> Arc<ClassTable> {
         movement_type: MovementTypeId(0),
         move_points: 3,
         base: Stats::default(),
-        caps: Stats::default(),
-        growths: Growths::default(),
+        // Only HP and Res grow: sturdier units, same weapon damage.
+        caps: Stats::from_growable([60, 0, 0, 0, 0, 0, 20], 3),
+        growths: Growths([80, 0, 0, 0, 0, 0, 30]),
         weapons: vec![WeaponProficiency {
             kind: WeaponKind::Sword,
             start: WeaponRank::E,
@@ -73,6 +76,10 @@ fn classes() -> Arc<ClassTable> {
     };
     Arc::new(ClassTable {
         classes: BTreeMap::from([(fighter.id.clone(), fighter)]),
+        level_cap: 99,
+        class_level_cap: 10,
+        min_gains: vec![1],
+        cp_per_class_level: vec![10],
         ..ClassTable::default()
     })
 }
@@ -149,6 +156,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        talent: None,
     }
     .with_loadout(&loadout, &classes(), &items())
     .unwrap_or_else(|e| panic!("{e}"))
@@ -446,6 +454,12 @@ fn same_seed_and_commands_give_identical_events() {
         })
         .collect();
     assert_eq!(terrain, [(FOREST, BURNING), (BURNING, BURNT), (WATER, ICE)]);
+    // Player units gained EXP, levels and class levels on the way.
+    let count = |f: fn(&Event) -> bool| a.iter().filter(|e| f(e)).count();
+    assert!(count(|e| matches!(e, Event::ExpGained { .. })) > 0);
+    assert!(count(|e| matches!(e, Event::LeveledUp { .. })) > 0);
+    assert!(count(|e| matches!(e, Event::ClassLeveledUp { .. })) > 0);
+    assert!(state_a.units().iter().any(|u| u.level > 1));
     // …so another seed plays out differently.
     assert_ne!(play(43).1, a);
 }
