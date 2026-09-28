@@ -54,17 +54,27 @@ Offer: fixed Speed gaps (current: +4 / +14 / +24), gaps as a percentage of the
 enemy's Speed (e.g. 2x at 125%, 3x at 175%, 4x at 250%; scale-free), or a
 ratio table. Show how often each would occur with the Chapter 1 roster.
 
+### Q3 (follows from Q1). The stat ceilings: how high, and fixed or rising?
+
+Ticket 0019 removed per-class stat caps (Nick: the max is "only determined by
+true caps, including the level cap, as well as the growth rates"), and
+deferred the ceiling numbers here (Nick: "3C"). Ask for the hard ceiling per
+stat at the chosen scale, and whether it is **fixed** all game (like Final
+Fantasy Tactics' 999 HP / 99 attack) or **rises with class tier** (each tier
+lifts it). Also ask for the level cap if it is still undecided, since with
+no class caps the level cap and the ceilings are the only brakes on growth.
+
 ## What to record
 
 Update `docs/design/stats-and-combat.md`: Nick's words; the scale; stat
-ranges/ceilings; the exact strike rule and thresholds; how large numbers are
+ranges/ceilings (fixed or per tier, Q3); the exact strike rule and thresholds; how large numbers are
 displayed if C/D. Update `docs/design/README.md`. Write follow-up tickets for
 rebalancing data (`classes.ron`, weapons, terrain) and, if needed, widening
 `StatValue` (0302 made it a single alias) and number display in the UI.
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1 and Q2 after playing.
+- [ ] Nick answered Q1, Q2 and Q3 after playing.
 - [ ] `stats-and-combat.md` updated with scale, ranges and strike rule.
 - [ ] Follow-up rebalance / display tickets created.
 - [ ] Ticket archived.
