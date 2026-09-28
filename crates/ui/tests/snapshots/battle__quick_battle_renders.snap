@@ -17,7 +17,7 @@ expression: h.snapshot()
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      │                            │
                     ..≈≈≈≈..··..............Br..                      │                            │
-                    ....ar····........▓▓▓▓▓▓▓▓..                      │                            │
+                    ....Ar····........▓▓▓▓▓▓▓▓..                      │                            │
                     ..♣♣·[Lo].[]......▓▓░░[]▓▓..                      │                            │
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
@@ -87,7 +87,7 @@ p = fg:enemy bg:road_bg
 q = fg:wood bg:water_bg
 r = fg:enemy bg:grass_bg
 s = fg:enemy bg:fort_bg
-t = fg:#54657a bg:road_bg
+t = fg:player bg:road_bg
 u = fg:stone bg:stone_bg
 v = fg:cursor bg:road_bg
 w = fg:player bg:grass_bg
@@ -98,10 +98,8 @@ A = fg:wood bg:stone_bg
 B = fg:text_dim bg:black
 --- overlays ---
 over  208,270 16x2  hp_high
-over  224,286 7x2  hp_mid
-over  231,286 9x2  black
+over  224,286 16x2  hp_high
 over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
-over  352,238 4x2  hp_low
-over  356,238 12x2  black
+over  352,238 16x2  hp_high
 over  272,206 16x2  hp_high
