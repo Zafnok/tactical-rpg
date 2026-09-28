@@ -1,14 +1,17 @@
 //! Pure, deterministic game rules. See ADR-0004.
 
+pub mod ai;
 pub mod art;
 pub mod battle;
 pub mod class;
 pub mod combat;
 pub mod geom;
+pub mod history;
 pub mod item;
 pub mod magic;
 pub mod map;
 pub mod movement;
+pub mod progression;
 pub mod rng;
 pub mod shop;
 pub mod skill;
@@ -18,6 +21,7 @@ pub mod terrain;
 pub mod unit;
 pub mod weapon;
 
+pub use ai::{AiBehavior, AiWeights, next_command};
 pub use art::{ArtDef, ArtEffect, ArtId, ArtNote, ArtTable, Debuff};
 pub use battle::{
     AttackPreview, BattleSetup, BattleState, Burning, CastTarget, Command, CommandError,
@@ -34,6 +38,7 @@ pub use combat::{
     if_all_hit, resolve, roll_hit, strike_order,
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
+pub use history::{BattleHistory, Replayed, RewindError};
 pub use item::{
     AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, Equipped, ItemDef,
     ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef,
@@ -44,6 +49,10 @@ pub use map::{BattleMap, TileFeature};
 pub use movement::{
     AttackRange, MoveError, PathError, Reach, TileSet, attack_tiles, danger_zone, path_cost,
     reachable, threat_area,
+};
+pub use progression::{
+    CombatResult, StatGains, apply_gains, exp_for_combat, grant_class_points, grant_exp, growth,
+    level_up,
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};

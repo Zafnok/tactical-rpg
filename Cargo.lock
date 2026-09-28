@@ -762,6 +762,7 @@ version = "0.1.0"
 dependencies = [
  "insta",
  "proptest",
+ "ron",
  "thiserror",
  "trpg-content",
  "trpg-core",

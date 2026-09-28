@@ -16,6 +16,15 @@ the process; do not skip steps.
 3. `docs/story/bible.md`, `characters/*.md`, `outline.md`.
 4. `docs/story/ledger.md` — what has happened so far.
 
+## Names are variables
+
+Nick may rename anything (`docs/story/names.md`). Every proper noun has a
+stable id there; add new names there first. In `.dlg` scripts, speakers are
+role ids and names in text are name tokens (format: ticket 0709); never write a
+registered display name literally. The story docs use display names; a
+rename is a find-and-replace across `docs/story/` in the same commit as the
+registry change.
+
 ## Craft rules
 
 - **Every named character** has: want (external goal), need (what they must
@@ -37,7 +46,9 @@ the process; do not skip steps.
 
 ## Format constraints
 
-- Dialogue goes in `assets/dialogue/*.dlg` (format in ticket 0702 / its docs).
+- Dialogue goes in `assets/dialogue/*.dlg`. The format and every rule the
+  validator enforces are in `assets/dialogue/README.md`; read it before
+  writing a script. Run `cargo test -p trpg-content` to validate.
 - Two portraits on screen max: `left` and `right`. Only use expressions listed
   in the character's sheet.
 - Text box is 3 lines × ~70 characters. Keep each line ≤ 2 boxes (~200 chars).

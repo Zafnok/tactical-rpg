@@ -174,6 +174,35 @@ fn the_danger_zone_follows_the_battle_and_stays_on_across_turns() {
     assert_eq!(s.danger(), Some(&danger_tiles(s.state())));
 }
 
+#[test]
+fn a_rewind_brings_the_danger_zone_back_with_the_battle() {
+    let mut c = ctx();
+    let mut s = BattleScreen::new(super::testing::skirmish_charged(&c, 1, 3));
+    press(&mut s, &mut c, &[Action::DangerZone]);
+    let before = s.danger().cloned().unwrap();
+    s.apply(&Command::Act {
+        unit: UnitId(1),
+        dest: Pos::new(7, 2),
+        action: UnitAction::Attack {
+            target: UnitId(4),
+            slot: 0,
+            active: None,
+            art: None,
+        },
+    });
+    frame(&mut s, &mut c, &[], 30.0);
+    assert_ne!(s.danger(), Some(&before));
+    // Rewind to before the attack: the brigand, and its threat, are back.
+    press(
+        &mut s,
+        &mut c,
+        &[Action::Rewind, Action::Confirm, Action::Confirm],
+    );
+    assert!(s.rewind().is_none());
+    assert!(s.state().unit(UnitId(4)).is_some());
+    assert_eq!(s.danger(), Some(&before));
+}
+
 /// The danger zone of the Quick Battle's three enemies.
 #[test]
 fn danger_zone_snapshot() {

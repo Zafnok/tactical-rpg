@@ -1,0 +1,22 @@
+// The enemy AI's numbers (ticket 0501). Loaded by trpg_content::ai; the rules
+// that use them are in trpg_core::ai. Every number is *tunable*: difficulty
+// feel is judged in playtest (0804).
+//
+// An attack's score (the AI makes the highest-scoring attack it can):
+//   damage  × expected HP dealt
+// + kill    × chance the target falls (0 to 1)
+// + lord    if the target is a lord
+// − risk    × expected HP taken from the counter
+// + terrain × (Def + Avoid / 10) of the tile it attacks from
+// Expected values use the forecast's displayed hit chances, follow-ups
+// included, crits ignored.
+//
+// Enemies carry no consumables and never drink potions (Nick,
+// docs/design/weapons-and-items.md); only healer units heal.
+(
+    damage: 10,
+    kill: 300,
+    lord: 50,
+    risk: 5,
+    terrain: 5,
+)

@@ -73,11 +73,11 @@ hard beats.
 
 | Aspect | Decision | Fixed by |
 | ------ | -------- | -------- |
-| Background | **Disgraced or exiled noble.** What happened, and whether it was deserved, is **not yet decided**: 0701 proposes options to Nick at gate 1 | Nick |
+| Background | **Disgraced or exiled noble.** Decided at 0701 gate 1: the lead confessed to a killing their best friend Dace committed, and was exiled for it (Nick: the Kiryu/Yakuza hook, reworked so the lead comes to regret it). See `docs/story/bible.md` and `docs/story/characters/lead.md` | Nick |
 | Age | **18–25** | Nick |
 | Gender | **Player chooses** (male/female) at New Game | Nick |
 | Personality | **Persona-style lead.** Defined background, look and situation; few spoken lines; the player shapes the personality through reply choices | Nick |
-| Name | Player can rename? **Open**, asked at 0701 gate 1 | — |
+| Name | **Player can rename** the lead, with a default first name (**Rowan**, placeholder); the family name **Veyne** is fixed (Nick, 0701 gate 1: "A") | Nick |
 
 ### Rules for writing the lead
 
@@ -126,13 +126,12 @@ not canon):
 
 ## Open sub-questions (deferred)
 
-- **The lead's disgrace and the inciting incident.** 0701 gate 1 proposes 2–3
-  options (Nick: "we can expand more on what exact inciting incident happened").
-- **The midpoint twist.** Nick said "Same as 1": it depends on the lead, so
-  0701 proposes options at gate 2 (outline).
-- **Characters Nick imagines.** Nick asked for "more leading questions": 0701
-  gate 1 asks him leading questions about the cast (e.g. the mentor figure,
-  rival, antagonist's motive) before the sheets are finalised.
-- **Can the player rename the lead?** Asked at 0701 gate 1.
+- **Decided at 0701** (see `docs/story/bible.md`, `outline.md` and the
+  character sheets, with Nick's words quoted there): the lead's disgrace and
+  the inciting incident (gate 1), the cast from Nick's answers to leading
+  questions (gate 1), renaming (gate 1: yes, with a default), and the midpoint
+  twist (gate 2: the prince came back Unfinished, with Wren as the bearer as a
+  later twist).
 - **Other continents:** how travel happens is decided (0008: a new act and a
-  new world map per continent); how many and when is for the outline (0701).
+  new world map per continent). 0701's outline: Act 1 home, Act 2 the Jade
+  Reach (east), Act 3 home at war.

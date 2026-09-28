@@ -244,9 +244,10 @@ impl Unit {
 
     /// Sets [`learned`](Unit::learned) to the [known spells](Unit::known_spells)
     /// and says what changed. A lost spell also loses its uses, and is
-    /// unequipped if it was equipped. Call after a level up, a class level
-    /// up, a promotion or a reclass (0601, 0603). New spells have no uses
-    /// until the next battle starts.
+    /// unequipped if it was equipped. Call after a promotion or a reclass
+    /// (0603); level ups and class level ups only add spells
+    /// ([`crate::progression`]). New spells have no uses until the next
+    /// battle starts.
     pub fn refresh_spells(&mut self, classes: &ClassTable) -> SpellChanges {
         let known = self.known_spells(classes);
         let changes = SpellChanges {

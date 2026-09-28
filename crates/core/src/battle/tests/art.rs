@@ -348,6 +348,30 @@ fn line_pierce_strikes_the_unit_behind_the_target() {
 }
 
 #[test]
+fn a_pierce_is_a_second_combat_for_unit_exp_and_class_points() {
+    let units = vec![
+        stats(artist(1, p(0, 0), "pike"), [10, 2, 0, 0, 0, 0, 0]),
+        unit(3, Faction::Enemy, p(2, 0)),
+        unit(4, Faction::Enemy, p(3, 0)),
+    ];
+    let mut s = start(BattleSetup {
+        classes: Arc::new(leveling(art_classes())),
+        ..art_setup(units)
+    });
+    let events = act(&mut s, 1, p(1, 0), art_attack(3, "line_pierce"));
+    let awards: Vec<(u32, bool)> = events
+        .iter()
+        .filter_map(|e| match e {
+            Event::ExpGained { amount, .. } => Some((*amount, true)),
+            Event::ClassPointsGained { amount, .. } => Some((*amount, false)),
+            _ => None,
+        })
+        .collect();
+    // Both units took damage and stand: a damage award for each combat.
+    assert_eq!(awards, [(20, true), (2, false), (20, true), (2, false)]);
+}
+
+#[test]
 fn a_pierce_that_hits_counts_as_a_hit_for_weapon_exp() {
     // The target dodges everything (avoid 120) and strikes 4 times; the
     // attacker survives and the pierce hits.

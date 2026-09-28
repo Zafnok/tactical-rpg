@@ -219,6 +219,14 @@ with the rest in ticket 0013.
   enemy's phase earns EXP.
 - A combat that uses an active skill gives the normal combat award. The
   skill-use line doesn't also apply.
+- A non-combat active that heals (Sanctuary) gives **the higher** of the
+  active's award and the heal's (Nick, reviewing ticket 0601: "sanctuary can
+  give the higher of the two awards").
+- A non-combat active that fells an enemy (a Shove collision) gives **the
+  kill award** if it is higher than the active's, and the kill's class
+  points (Nick, same review: "shove can give kill award if it kills").
+- Awards carry over from level to level; only at the **level cap** is the
+  EXP past it lost (Nick, same review).
 
 Examples:
 
