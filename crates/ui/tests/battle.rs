@@ -160,10 +160,16 @@ fn select_move_and_wait_dims_the_unit_and_lowercases_its_label() {
     assert_eq!(tile(&h, 26, 16), "..");
     assert_eq!(panel(&h)[4], "Test Lord");
     // Browsing again, on a unit that can't act.
-    assert_eq!(help(&h), "arrows move · e info · s next unit · d back");
+    assert_eq!(
+        help(&h),
+        "arrows move · e info · s next unit · r rewind · d back"
+    );
     // It is no longer selectable.
     h.keys("f");
-    assert_eq!(help(&h), "arrows move · e info · s next unit · d back");
+    assert_eq!(
+        help(&h),
+        "arrows move · e info · s next unit · r rewind · d back"
+    );
 }
 
 #[test]
@@ -181,7 +187,10 @@ fn cancelling_the_menu_then_the_selection_restores_the_unit() {
     // when the battle opened): the screen exactly as it was.
     h.keys("d");
     assert_eq!(cursor_x(&h, 16), Some(26));
-    assert_eq!(help(&h), "f select · e info · s next unit · d back");
+    assert_eq!(
+        help(&h),
+        "f select · e info · s next unit · r rewind · d back"
+    );
     assert_eq!(h.snapshot(), before);
 }
 
@@ -219,5 +228,9 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     h.keys("d");
     // The lord has acted, lowercase at (6, 4) (cells 32..34, row 15).
     assert_eq!(tile(&h, 32, 15), "lo");
-    assert!(help(&h).ends_with("s next unit · d back"), "{}", help(&h));
+    assert!(
+        help(&h).ends_with("s next unit · r rewind · d back"),
+        "{}",
+        help(&h)
+    );
 }

@@ -30,6 +30,9 @@ built-in Canto (post-action movement exists only as specific skills),
 reinforcements that never act on the turn they arrive, auto-end on by default
 with a toggle shortcut, and optional per-map turn limits.
 
+> **Changed 2026-09-28 (ticket 0420):** Nick: "turn auto-end off by default".
+> Auto-end is now **OFF** by default; the toggle shortcut stays.
+
 Everything marked *tunable* / *Claude's starting rule* is a default Claude
 chose where Nick's answer didn't say; Nick may veto it and balance tickets may
 change it without asking. Unmarked rules are Nick's choices.
@@ -112,7 +115,7 @@ which the unit is done.
   (`End turn with N units ready?`); units still ready simply don't act.
 - **Auto-end:** when **auto-end is ON** and the last ready player unit becomes
   done, the player phase ends immediately (no confirmation).
-- **Auto-end is ON by default.** It's a player setting, saved with the other
+- **Auto-end is OFF by default** (Nick changed this in ticket 0420). It's a player setting, saved with the other
   options, and has a **shortcut key to toggle it** during battle (default key
   `Shift+Space`, decided in `controls.md`; rebindable), which shows a brief `Auto-end: ON/OFF`
   message. The current state is also shown in the help bar.

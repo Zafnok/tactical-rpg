@@ -356,7 +356,7 @@ impl BattleScreen {
     }
 
     /// The help line for the mode and what is under the cursor, e.g. `f
-    /// select · e info · s next unit · d back` over a ready unit while
+    /// select · e info · s next unit · r rewind · d back` over a ready unit while
     /// browsing. Key names come from the keymap.
     pub fn help(&self, ctx: &Ctx) -> String {
         let km = &ctx.keymap;
@@ -384,15 +384,19 @@ impl BattleScreen {
                 } else {
                     "back"
                 });
+                let rewind = (
+                    key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
+                    "rewind",
+                );
                 match self.hovered() {
                     Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                        help_line(&[confirm("select"), info, next, back])
+                        help_line(&[confirm("select"), info, next, rewind, back])
                     }
                     Some(u) if u.faction != Faction::Player => {
-                        help_line(&[moves, confirm("range"), info, next, back])
+                        help_line(&[moves, confirm("range"), info, next, rewind, back])
                     }
-                    Some(_) => help_line(&[moves, info, next, back]),
-                    None => help_line(&[moves, next, back]),
+                    Some(_) => help_line(&[moves, info, next, rewind, back]),
+                    None => help_line(&[moves, next, rewind, back]),
                 }
             }
             Mode::Selected(sel) => {
@@ -961,29 +965,38 @@ mod tests {
         wait(&mut state, 2);
         let mut s = BattleScreen::new(state);
         // On the lord, ready to act.
-        assert_eq!(s.help(&c), "f select · e info · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "f select · e info · s next unit · r rewind · d back"
+        );
         // On the archer, who has acted, and on an enemy.
         s.cursor.jump(Pos::new(2, 4));
-        assert_eq!(s.help(&c), "arrows move · e info · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "arrows move · e info · s next unit · r rewind · d back"
+        );
         s.cursor.jump(Pos::new(8, 2));
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d back"
+            "arrows move · f range · e info · s next unit · r rewind · d back"
         );
         // An enemy's range shown: Cancel hides it.
         step(&mut s, &mut c, &[Action::Confirm]);
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d hide range"
+            "arrows move · f range · e info · s next unit · r rewind · d hide range"
         );
         step(&mut s, &mut c, &[Action::Cancel]);
         // On an empty tile.
         s.cursor.jump(Pos::new(0, 0));
-        assert_eq!(s.help(&c), "arrows move · s next unit · d back");
+        assert_eq!(s.help(&c), "arrows move · s next unit · r rewind · d back");
         c.use_layout(crate::input::Layout::LeftHanded);
-        assert_eq!(s.help(&c), "wasd move · l next unit · k back");
+        assert_eq!(s.help(&c), "wasd move · l next unit · u rewind · k back");
         s.cursor.jump(Pos::new(3, 5));
-        assert_eq!(s.help(&c), "j select · i info · l next unit · k back");
+        assert_eq!(
+            s.help(&c),
+            "j select · i info · l next unit · u rewind · k back"
+        );
     }
 
     #[test]

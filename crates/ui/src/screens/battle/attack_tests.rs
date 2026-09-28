@@ -242,7 +242,7 @@ fn after_the_playback_the_defenders_hp_is_the_battles() {
     // Browsing again, the cursor on the brigand.
     assert_eq!(
         help(&h),
-        "arrows move · f range · e info · s next unit · d back"
+        "arrows move · f range · e info · s next unit · r rewind · d back"
     );
     let hp = format!("HP {}/{}", brigand.hp, brigand.stats.hp);
     assert!(panel(&h, 7).starts_with(&hp), "{}", panel(&h, 7));
@@ -280,7 +280,7 @@ fn a_kill_fades_the_unit_out_with_a_message_and_removes_it() {
     assert_eq!(text(&h, BRIGAND_CELL.0, BRIGAND_CELL.1, 2), "..");
     assert_eq!(panel(&h, 5), "");
     assert_eq!(message(&h), "");
-    assert_eq!(help(&h), "arrows move · s next unit · d back");
+    assert_eq!(help(&h), "arrows move · s next unit · r rewind · d back");
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn cancel_skips_the_playback_and_the_next_keys_work() {
     // Browsing already: the keys after the skip move the cursor.
     assert_eq!(
         help(&h),
-        "arrows move · f range · e info · s next unit · d back"
+        "arrows move · f range · e info · s next unit · r rewind · d back"
     );
     h.keys("Left");
     assert_eq!(panel(&h, 5), "Test Lord");
@@ -314,7 +314,7 @@ fn holding_confirm_plays_four_times_as_fast() {
     fast.keys("f").hold("f", quarter);
     assert_eq!(
         help(&fast),
-        "arrows move · f range · e info · s next unit · d back"
+        "arrows move · f range · e info · s next unit · r rewind · d back"
     );
     // The same battle either way: the brigand's HP matches.
     slow.wait(total);

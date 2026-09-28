@@ -49,7 +49,7 @@ None.
    key (`Space`; per `docs/design/controls.md` a second `Space` on the prompt
    confirms, so double-tap `Space` ends the turn) → if units still ready, confirm dialog
    `End turn with N units ready? f yes / d no` → `Command::EndPhase`; no
-   confirmation when no units are ready. **Auto-end:** when ON (default) and
+   confirmation when no units are ready. **Auto-end:** when ON (default OFF, ticket 0420) and
    the last ready player unit acts, issue `EndPhase` immediately. The
    `ToggleAutoEnd` key (0204, default `Shift+Space`) flips it, shows a brief
    `Auto-end: ON/OFF` toast, and the help bar shows its state. Keep the flag
