@@ -13,6 +13,7 @@ pub mod item;
 pub mod keymap;
 pub mod map;
 pub mod palette;
+pub mod portrait;
 pub mod ron_loader;
 pub mod skill;
 pub mod spell;
@@ -28,6 +29,7 @@ pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
 pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
+pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
 
 /// All validated game content.
@@ -55,6 +57,8 @@ pub struct Content {
     pub arts: ArtTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
+    /// Character portraits by character id (file stem).
+    pub portraits: BTreeMap<String, Portrait>,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -84,6 +88,10 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     );
     let skills = check_skill_references(skill::load(), classes.as_ref().ok());
     let arts = check_art_references(art::load(), items.as_ref().ok());
+    let portraits = match &palette {
+        Ok(p) => portrait::load_all(p),
+        Err(_) => Ok(BTreeMap::new()),
+    };
     assemble(
         palette,
         KeymapDef::load(),
@@ -97,6 +105,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             skills,
             arts,
             characters,
+            portraits,
         },
     )
 }
@@ -191,6 +200,7 @@ struct Loaded {
     skills: Result<SkillTable, Vec<ContentError>>,
     arts: Result<ArtTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
+    portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -225,6 +235,7 @@ fn assemble(
         skills: take(units.skills, &mut errors),
         arts: take(units.arts, &mut errors),
         characters: take(units.characters, &mut errors),
+        portraits: take(units.portraits, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -261,6 +272,10 @@ mod tests {
         skill::load()
     }
 
+    fn ok_portraits() -> Result<BTreeMap<String, Portrait>, Vec<ContentError>> {
+        portrait::load_all(&PaletteDef::load().unwrap_or_default())
+    }
+
     fn ok_units() -> Loaded {
         Loaded {
             classes: ok_classes(),
@@ -269,6 +284,7 @@ mod tests {
             skills: ok_skills(),
             arts: art::load(),
             characters: ok_characters(),
+            portraits: ok_portraits(),
         }
     }
 
@@ -321,6 +337,10 @@ mod tests {
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.portraits),
+            ok_portraits().ok().as_ref()
+        );
         assert!(
             content
                 .as_ref()
@@ -333,7 +353,7 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 11] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u"];
+    const NAMES: [&str; 12] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o"];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -352,6 +372,7 @@ mod tests {
                     skills: Err(e("x")),
                     arts: Err(e("a")),
                     characters: Err(e("u")),
+                    portraits: Err(e("o")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -386,6 +407,7 @@ mod tests {
                     } else {
                         ok_characters()
                     },
+                    portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
                 },
             )
         };
@@ -518,5 +540,9 @@ mod tests {
             ok_skills().ok().as_ref()
         );
         assert_eq!(content.as_ref().map(|c| &c.arts), art::load().ok().as_ref());
+        assert_eq!(
+            content.as_ref().map(|c| &c.portraits),
+            ok_portraits().ok().as_ref()
+        );
     }
 }

@@ -13,7 +13,8 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `game` | `Game`: owns the stack, input state, `Ctx` and buffer; `frame(events, dt)` |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
 | `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
-| `debug` | Glyph sampler and its screen (F12 in debug builds) |
+| `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
+| `debug` | Debug menu (F12 in debug builds): glyph sampler, portrait viewer |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
 ## How a frame runs
@@ -38,7 +39,7 @@ Until a layout is picked, `Keymap::layout_picker` is active (`Up`/`w`,
 `Down`/`s`, and `f`/`j`/`Enter`/`Space` to pick), so either hand works.
 
 In debug builds `Game` handles the `Debug` action (F12) itself and pushes the
-glyph sampler.
+debug menu (unless a debug screen is already on top).
 
 ## Adding a screen
 

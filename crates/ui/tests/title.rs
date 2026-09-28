@@ -74,11 +74,15 @@ fn holding_down_repeats_and_wraps() {
 }
 
 #[test]
-fn f12_opens_the_glyph_sampler() {
+fn f12_opens_the_debug_menu() {
     let mut h = title();
     h.keys("F12");
+    assert_eq!(h.top_screen(), "debug_menu");
+    h.keys("f");
     assert_eq!(h.top_screen(), "glyph_sampler");
-    h.keys("d");
+    h.keys("d Down f");
+    assert_eq!(h.top_screen(), "portrait_viewer");
+    h.keys("d d");
     assert_eq!(h.top_screen(), "title");
 }
 

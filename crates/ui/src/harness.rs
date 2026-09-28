@@ -324,7 +324,7 @@ mod tests {
         let game = Game::start(ctx).with_debug_screens(false);
         let mut h = Harness::from_game(game);
         h.keys("F12");
-        assert_eq!(h.top_screen(), "glyph_sampler");
+        assert_eq!(h.top_screen(), "debug_menu");
     }
 
     #[test]

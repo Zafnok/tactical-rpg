@@ -57,9 +57,11 @@ parser easy to extend with block steps).
    `Say { speaker, expression: Option, text }`, `Narrate { text }`.
 3. **Validator** (all errors, with file:line): unknown character id (against
    `characters.ron`); speaker not on screen; same character on both sides;
-   unknown expression (checked against the character's portrait expressions when
-   the portrait exists — 0703 adds that cross-check; until then accept the five
-   standard names); text > 200 chars; duplicate scene ids; missing `@end`;
+   unknown expression (when the character has a portrait in
+   `Content::portraits`, the expression must exist in it, via
+   `Portrait::expression`; otherwise accept the five standard names in
+   `trpg_content::portrait::REQUIRED_EXPRESSIONS`. 0703 shipped portraits
+   before dialogue, so this cross-check is done here); text > 200 chars; duplicate scene ids; missing `@end`;
    non-ASCII punctuation (smart quotes) → error suggesting the ASCII form.
 4. **`DialoguePlayer`** (in `ui`, pure): `new(scene)`, `current() -> View { left: Option<(CharId, Expr)>, right, speaker: Option<Side>, text: Option<&str>, caption: Option<&str>, narration: bool }`,
    `advance()` processes non-text steps until the next text step (so each

@@ -11,6 +11,9 @@ pn = "pn"
 # Verbatim quote of Nick's spoken words in docs/design/magic.md; preserved
 # as said, not a real typo to fix.
 beginnning = "beginnning"
+# Two-letter runs of colour keys in snapshot colour grids (ADR-0007),
+# e.g. `Iy` in the portrait snapshots.
+iy = "iy"
 
 [files]
 # Vendored third-party font data (hex bitmaps, codepoint names) and the atlas
