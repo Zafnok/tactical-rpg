@@ -289,6 +289,21 @@ mod tests {
                 action: attack(UnitId(6), 1),
             }
         );
+        // Three targets around (7, 3): the raider left, brigand 4 right,
+        // brigand 5 below. Back from the first is the last.
+        let mut units = s.units().to_vec();
+        units[3].pos = p(8, 3);
+        units[5].pos = p(6, 3);
+        let rout = Objective::Rout { turn_limit: None };
+        let s3 = battle_with(&c, s.map().clone(), units, rout);
+        let sel3 = at(&s3, p(7, 3));
+        let three = &weapon_choices(&s3, &sel3)[0];
+        assert_eq!(three.targets, [UnitId(6), UnitId(4), UnitId(5)]);
+        let mut t3 = Targeting::new(&s3, sel3, three, None).unwrap();
+        t3.cycle(false, &s3);
+        assert_eq!(t3.target(), UnitId(5));
+        t3.cycle(false, &s3);
+        assert_eq!(t3.target(), UnitId(4));
         // No target: no targeting.
         let none = WeaponChoice {
             slot: 0,

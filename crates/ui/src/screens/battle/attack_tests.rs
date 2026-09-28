@@ -271,6 +271,10 @@ fn a_kill_fades_the_unit_out_with_a_message_and_removes_it() {
     // During it: the message.
     h.wait(0.3);
     assert_eq!(message(&h), "Brigand has fallen.");
+    // Faded, while the box stays up: nobody on its tile in the panel.
+    h.wait(fall.len);
+    assert_eq!(help(&h), "f skip · hold f fast");
+    assert_eq!(panel(&h, 5), "");
     // Afterwards: the terrain where it stood, nobody in the panel.
     h.wait(pb.total());
     assert_eq!(text(&h, BRIGAND_CELL.0, BRIGAND_CELL.1, 2), "..");

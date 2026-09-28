@@ -239,14 +239,19 @@ mod tests {
     fn a_falling_unit_fades_into_its_tile_then_the_terrain_comes_back() {
         let p = game_palette();
         let (terrain, bg) = (Rgb::new(1, 1, 1), Rgb::new(0, 0, 100));
+        let tile = |b: &mut GlyphBuffer| b.set(2, 1, Cell::new(',', terrain, bg));
         let fading = |fade| {
             let mut b = GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg));
+            tile(&mut b);
             draw_fading_unit(&mut b, &p, &unit("Br", 15, 30, false), 1, 1, fade);
             b
         };
         let enemy = p.get(UiColor::Enemy);
         // Not faded: as drawn normally.
-        assert_eq!(fading(0.0), drawn(&unit("Br", 15, 30, false)));
+        let mut normal = GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg));
+        tile(&mut normal);
+        draw_unit(&mut normal, &p, &unit("Br", 15, 30, false), 1, 1);
+        assert_eq!(fading(0.0), normal);
         assert_eq!(fading(f32::NAN), fading(0.0));
         // A quarter: the letters and the bar halfway to the background.
         let b = fading(0.25);
@@ -261,12 +266,14 @@ mod tests {
         );
         assert_eq!(
             b.get(2, 1),
-            Some(&Cell::new('.', bg.lerp(terrain, 0.5), bg))
+            Some(&Cell::new(',', bg.lerp(terrain, 0.5), bg))
         );
         assert!(b.overlays().is_empty());
         // Gone: the tile as it was.
         let b = fading(1.0);
-        assert_eq!(b, GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg)));
+        let mut plain = GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg));
+        tile(&mut plain);
+        assert_eq!(b, plain);
         assert_eq!(fading(7.0), b);
     }
 

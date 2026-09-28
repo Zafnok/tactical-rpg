@@ -324,11 +324,10 @@ impl Playback {
                 let Some(step) = self.step(Beat::Result { bout: b, strike: i }) else {
                     continue;
                 };
-                if self.t < step.start {
-                    return shown;
-                }
+                // Before its result shows, a strike has drained nothing
+                // (and neither have the later ones).
                 let delta = strike.target_hp_after - before;
-                let drained = (self.t - step.start) * self.timings.drain_hp_per_s;
+                let drained = (self.t - step.start).max(0.0) * self.timings.drain_hp_per_s;
                 // HP values are small: exact in f32.
                 #[allow(clippy::cast_precision_loss)]
                 let whole = delta.abs() as f32;
@@ -659,6 +658,9 @@ mod tests {
 
     #[test]
     fn positions_on_the_timeline_for_given_frame_times() {
+        // The intro ends exactly where the first flash starts.
+        let pb = played(&[T.intro]);
+        assert_eq!(pb.now(), Some((pb.steps()[1], 0.0)));
         // The intro.
         let pb = played(&[0.1, 0.1]);
         assert!((pb.time() - 0.2).abs() < 1e-6);

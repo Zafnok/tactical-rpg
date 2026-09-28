@@ -1119,6 +1119,18 @@ mod tests {
     }
 
     #[test]
+    fn attack_with_no_weapon_in_reach_stays_in_the_menu() {
+        let s = skirmish(&ctx(), 20);
+        let sel = Selection::new(&s, UnitId(1)).unwrap();
+        let (mode, effect) = choose_attack(sel, vec![], &s);
+        assert_eq!(effect, Effect::None);
+        let Mode::ActionMenu { menu, entries, .. } = &mode else {
+            panic!("{mode:?}");
+        };
+        assert_eq!(entries[menu.focus()], MenuEntry::Wait, "Attack is disabled");
+    }
+
+    #[test]
     fn one_weapon_goes_straight_to_targeting_and_back_to_the_menu() {
         let s = skirmish(&ctx(), 20);
         // The archer at (8, 4) attacks from where it stands.
