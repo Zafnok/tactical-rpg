@@ -1,8 +1,10 @@
-//! `cargo xtask web [--release]`: builds `trpg-app` for
+//! `cargo xtask web [--release] [--debug-tools]`: builds `trpg-app` for
 //! `wasm32-unknown-unknown` and packages the resulting binary with the web
 //! shell (`web/index.html`) and the vendored JS loaders (`web/mq_js_bundle.js`,
 //! and `web/sapp_jsutils.js` + `web/quad-storage.js` for `localStorage`,
-//! ticket 0207) into `dist/web/` (ticket 0206).
+//! ticket 0207) into `dist/web/` (ticket 0206). `--debug-tools` turns on the
+//! app's `debug-tools` feature (Quick Battle, glyph sampler) for the Pages
+//! build (ADR-0023); shipped builds never pass it.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -24,15 +26,50 @@ const SHELL_FILES: &[&str] = &[
 pub struct Options {
     /// Whether to build with `--release` (and run `wasm-opt` afterwards).
     pub release: bool,
+    /// Whether to turn on the `debug-tools` feature (ADR-0023).
+    pub debug_tools: bool,
 }
 
-/// Parses the arguments after `web`. Only `--release` (or nothing) is valid.
+/// Parses the arguments after `web`: `--release` and `--debug-tools`, each
+/// at most once, in any order.
 pub fn parse_args(args: &[String]) -> Result<Options, String> {
-    match args {
-        [] => Ok(Options { release: false }),
-        [flag] if flag == "--release" => Ok(Options { release: true }),
-        _ => Err("usage: cargo xtask web [--release]".to_string()),
+    let mut options = Options {
+        release: false,
+        debug_tools: false,
+    };
+    for arg in args {
+        let flag = match arg.as_str() {
+            "--release" => &mut options.release,
+            "--debug-tools" => &mut options.debug_tools,
+            _ => return Err(USAGE.to_string()),
+        };
+        if *flag {
+            return Err(USAGE.to_string());
+        }
+        *flag = true;
     }
+    Ok(options)
+}
+
+/// Usage line for bad arguments.
+const USAGE: &str = "usage: cargo xtask web [--release] [--debug-tools]";
+
+/// The `cargo` arguments that build the wasm binary for `options`.
+fn cargo_args(options: Options) -> Vec<&'static str> {
+    let mut args = vec![
+        "build",
+        "-p",
+        "trpg-app",
+        "--target",
+        "wasm32-unknown-unknown",
+    ];
+    if options.release {
+        args.push("--release");
+    }
+    if options.debug_tools {
+        args.extend(["--features", "debug-tools"]);
+    }
+    args
 }
 
 /// Cargo's build profile directory name for a given release flag.
@@ -56,14 +93,7 @@ fn dist_dir(repo_root: &Path) -> PathBuf {
 /// Builds and packages the web build, returning a one-line summary on success.
 pub fn run(repo_root: &Path, options: Options) -> Result<String, String> {
     let status = Command::new("cargo")
-        .args([
-            "build",
-            "-p",
-            "trpg-app",
-            "--target",
-            "wasm32-unknown-unknown",
-        ])
-        .args(options.release.then_some("--release"))
+        .args(cargo_args(options))
         .current_dir(repo_root)
         .status()
         .map_err(|e| format!("spawn cargo build: {e}"))?;
@@ -189,19 +219,79 @@ mod tests {
 
     #[test]
     fn parse_args_with_no_args_is_debug() {
-        assert_eq!(parse_args(&[]), Ok(Options { release: false }));
+        assert_eq!(
+            parse_args(&[]),
+            Ok(Options {
+                release: false,
+                debug_tools: false
+            })
+        );
     }
 
     #[test]
     fn parse_args_with_release_flag() {
         let args = vec!["--release".to_string()];
-        assert_eq!(parse_args(&args), Ok(Options { release: true }));
+        assert_eq!(
+            parse_args(&args),
+            Ok(Options {
+                release: true,
+                debug_tools: false
+            })
+        );
     }
 
     #[test]
     fn parse_args_rejects_unknown_flags() {
         let args = vec!["--bogus".to_string()];
         assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn parse_args_takes_debug_tools_in_any_order_once() {
+        let args = |a: &[&str]| parse_args(&a.iter().map(ToString::to_string).collect::<Vec<_>>());
+        let both = Options {
+            release: true,
+            debug_tools: true,
+        };
+        assert_eq!(args(&["--release", "--debug-tools"]), Ok(both));
+        assert_eq!(args(&["--debug-tools", "--release"]), Ok(both));
+        assert_eq!(
+            args(&["--debug-tools"]),
+            Ok(Options {
+                release: false,
+                debug_tools: true
+            })
+        );
+        assert_eq!(args(&["--release", "--release"]), Err(USAGE.to_string()));
+        assert_eq!(
+            args(&["--debug-tools", "--debug-tools"]),
+            Err(USAGE.to_string())
+        );
+    }
+
+    #[test]
+    fn cargo_args_add_release_and_the_debug_tools_feature() {
+        let base = [
+            "build",
+            "-p",
+            "trpg-app",
+            "--target",
+            "wasm32-unknown-unknown",
+        ];
+        let opts = |release, debug_tools| Options {
+            release,
+            debug_tools,
+        };
+        assert_eq!(cargo_args(opts(false, false)), base);
+        assert_eq!(cargo_args(opts(true, false))[5..], ["--release"]);
+        assert_eq!(
+            cargo_args(opts(false, true))[5..],
+            ["--features", "debug-tools"]
+        );
+        assert_eq!(
+            cargo_args(opts(true, true))[5..],
+            ["--release", "--features", "debug-tools"]
+        );
     }
 
     #[test]
@@ -213,7 +303,13 @@ mod tests {
     #[test]
     fn wasm_artifact_path_uses_debug_profile_by_default() {
         let root = Path::new("/repo");
-        let path = wasm_artifact_path(root, Options { release: false });
+        let path = wasm_artifact_path(
+            root,
+            Options {
+                release: false,
+                debug_tools: false,
+            },
+        );
         assert_eq!(
             path,
             Path::new("/repo/target/wasm32-unknown-unknown/debug/tactical-rpg.wasm")
@@ -223,7 +319,13 @@ mod tests {
     #[test]
     fn wasm_artifact_path_uses_release_profile() {
         let root = Path::new("/repo");
-        let path = wasm_artifact_path(root, Options { release: true });
+        let path = wasm_artifact_path(
+            root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+        );
         assert_eq!(
             path,
             Path::new("/repo/target/wasm32-unknown-unknown/release/tactical-rpg.wasm")
@@ -239,11 +341,26 @@ mod tests {
     #[test]
     fn package_copies_wasm_and_shell_files() {
         let root = fixture("package-basic");
-        write_wasm(&root, Options { release: false }, b"wasm-bytes");
+        write_wasm(
+            &root,
+            Options {
+                release: false,
+                debug_tools: false,
+            },
+            b"wasm-bytes",
+        );
         let opt = FakeWasmOpt(|_: &Path, _: &Path| -> Result<bool, String> {
             panic!("wasm-opt should not run for a debug build")
         });
-        let summary = package(&opt, &root, Options { release: false }).unwrap();
+        let summary = package(
+            &opt,
+            &root,
+            Options {
+                release: false,
+                debug_tools: false,
+            },
+        )
+        .unwrap();
         assert!(summary.contains("10 bytes"), "{summary}");
         assert_eq!(
             fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
@@ -271,12 +388,27 @@ mod tests {
     #[test]
     fn package_runs_wasm_opt_on_release_and_uses_its_output() {
         let root = fixture("package-release-ok");
-        write_wasm(&root, Options { release: true }, b"unoptimized-bytes");
+        write_wasm(
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+            b"unoptimized-bytes",
+        );
         let opt = FakeWasmOpt(|_input: &Path, output: &Path| {
             fs::write(output, b"opt").unwrap();
             Ok(true)
         });
-        let summary = package(&opt, &root, Options { release: true }).unwrap();
+        let summary = package(
+            &opt,
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+        )
+        .unwrap();
         assert!(summary.contains("3 bytes"), "{summary}");
         assert_eq!(
             fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
@@ -288,9 +420,24 @@ mod tests {
     #[test]
     fn package_keeps_original_when_wasm_opt_is_not_installed() {
         let root = fixture("package-release-missing");
-        write_wasm(&root, Options { release: true }, b"unoptimized");
+        write_wasm(
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+            b"unoptimized",
+        );
         let opt = FakeWasmOpt(|_: &Path, _: &Path| Err("not found".to_string()));
-        let summary = package(&opt, &root, Options { release: true }).unwrap();
+        let summary = package(
+            &opt,
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+        )
+        .unwrap();
         assert!(summary.contains("11 bytes"), "{summary}");
         assert_eq!(
             fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
@@ -302,9 +449,24 @@ mod tests {
     #[test]
     fn package_keeps_original_when_wasm_opt_fails() {
         let root = fixture("package-release-fails");
-        write_wasm(&root, Options { release: true }, b"unoptimized");
+        write_wasm(
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+            b"unoptimized",
+        );
         let opt = FakeWasmOpt(|_: &Path, _: &Path| Ok(false));
-        let summary = package(&opt, &root, Options { release: true }).unwrap();
+        let summary = package(
+            &opt,
+            &root,
+            Options {
+                release: true,
+                debug_tools: false,
+            },
+        )
+        .unwrap();
         assert!(summary.contains("11 bytes"), "{summary}");
         assert_eq!(
             fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
@@ -317,7 +479,15 @@ mod tests {
     fn package_reports_a_missing_wasm_artifact() {
         let root = fixture("package-missing-wasm");
         let opt = FakeWasmOpt(|_: &Path, _: &Path| panic!("not reached"));
-        let err = package(&opt, &root, Options { release: false }).unwrap_err();
+        let err = package(
+            &opt,
+            &root,
+            Options {
+                release: false,
+                debug_tools: false,
+            },
+        )
+        .unwrap_err();
         assert!(err.contains("copy"), "{err}");
         fs::remove_dir_all(&root).unwrap();
     }
@@ -328,7 +498,14 @@ mod tests {
         // (no compilation), without needing a real broken build to test the
         // failure path.
         let root = fixture("run-no-manifest");
-        let err = run(&root, Options { release: false }).unwrap_err();
+        let err = run(
+            &root,
+            Options {
+                release: false,
+                debug_tools: false,
+            },
+        )
+        .unwrap_err();
         assert!(err.contains("cargo build"), "{err}");
         fs::remove_dir_all(&root).unwrap();
     }

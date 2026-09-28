@@ -31,5 +31,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0020](0020-battle-state-serialisation.md) | Battle state saves its own data, not the content tables | Accepted |
 | [0021](0021-skill-effects-as-data.md) | Skill effects are data, gathered into combat modifiers | Accepted |
 | [0022](0022-combat-arts-and-attack-preview.md) | Combat Arts as weapon-input changes, and the attack preview | Accepted |
+| [0023](0023-debug-tools-feature-for-pages-build.md) | A `debug-tools` cargo feature for the Pages build | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

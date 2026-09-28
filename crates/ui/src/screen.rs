@@ -20,6 +20,10 @@ use crate::storage::{MemoryStorage, Storage, StorageError};
 /// e.g. `LeftHanded`, which is also valid RON for the enum).
 pub const LAYOUT_KEY: &str = "layout";
 
+/// Whether this build offers debug tools: debug builds, and release builds
+/// with the `debug-tools` feature (ADR-0023).
+pub const DEBUG_TOOLS: bool = cfg!(any(debug_assertions, feature = "debug-tools"));
+
 /// One screen of the game: title, battle map, a menu overlay, …
 pub trait Screen {
     /// A stable, unique `snake_case` name, for tests and debugging.
@@ -109,8 +113,9 @@ pub struct Ctx {
     /// the platform implementation with [`Ctx::with_storage`].
     pub storage: Box<dyn Storage>,
     /// Whether debug tools are offered: the glyph sampler key and the title
-    /// screen's Quick Battle. On in debug builds; the test harness turns it
-    /// on everywhere so tests don't depend on the build profile.
+    /// screen's Quick Battle. On in debug builds and with the `debug-tools`
+    /// feature (the Pages build, ADR-0023); the test harness turns it on
+    /// everywhere so tests don't depend on the build profile.
     pub debug_tools: bool,
 }
 
@@ -127,7 +132,7 @@ impl Ctx {
             keymap,
             layout: None,
             storage: Box::new(MemoryStorage::new()),
-            debug_tools: cfg!(debug_assertions),
+            debug_tools: DEBUG_TOOLS,
         })
     }
 

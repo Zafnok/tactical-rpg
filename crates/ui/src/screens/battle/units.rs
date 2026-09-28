@@ -44,14 +44,21 @@ pub fn shown_label(unit: &Unit) -> String {
 }
 
 /// The filled length of the HP bar (`round(16 × hp / max)`, in `0..=16`)
-/// and its colour: `hp_high` above 2/3, `hp_mid` above 1/3, else `hp_low`.
-/// HP is clamped to `0..=max`; a non-positive `max` gives an empty bar.
+/// and its colour: see [`hp_fill`].
 pub fn hp_bar(hp: StatValue, max: StatValue) -> (i32, UiColor) {
+    hp_fill(hp, max, HP_BAR_W)
+}
+
+/// How much of a `full`-long HP bar is filled (`round(full × hp / max)`, in
+/// `0..=full`) and its colour: `hp_high` above 2/3, `hp_mid` above 1/3, else
+/// `hp_low`. HP is clamped to `0..=max`; a non-positive `max` gives an empty
+/// bar. Shared by the map's pixel bar and the side panel's cell bar.
+pub fn hp_fill(hp: StatValue, max: StatValue, full: i32) -> (i32, UiColor) {
     if max <= 0 {
         return (0, UiColor::HpLow);
     }
     let (hp, max) = (i64::from(hp.clamp(0, max)), i64::from(max));
-    let full = i64::from(HP_BAR_W);
+    let full = i64::from(full.max(0));
     // Round half up, in integers.
     let width = (2 * full * hp + max) / (2 * max);
     let color = if 3 * hp > 2 * max {

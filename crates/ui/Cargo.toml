@@ -18,6 +18,9 @@ thiserror.workspace = true
 [features]
 # The headless test `Harness` (src/harness.rs), for integration tests.
 harness = []
+# Debug tools (Quick Battle, glyph sampler) in a release build: the Pages
+# build only (ADR-0023). Never on in shipped builds.
+debug-tools = []
 
 [dev-dependencies]
 # Turns on `harness` for this crate's own integration tests in tests/.

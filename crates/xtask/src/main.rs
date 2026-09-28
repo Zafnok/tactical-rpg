@@ -15,7 +15,7 @@ const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
 font-atlas <font.bdf> <out-dir>    build the font atlas from a BDF font\n  \
-web [--release]                    build and package the web (WASM) shell into dist/web/";
+web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
     ExitCode::from(dispatch(env::args().skip(1)))
