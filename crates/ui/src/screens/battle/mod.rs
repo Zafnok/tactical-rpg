@@ -7,7 +7,8 @@
 //! [`info`] screen, the danger zone, the [`map_menu`], ending the turn (and
 //! auto-end), and the phase and outcome [`banner`]s. Every command sent is
 //! kept in a [`BattleHistory`], and Rewind opens the [`rewind`] screen
-//! (0307).
+//! (0307). One-time [`tips`] pop up over it the first time something new
+//! happens (0406).
 
 pub mod attack;
 pub mod banner;
@@ -22,16 +23,17 @@ pub mod panel;
 pub mod path;
 pub mod playback;
 pub mod rewind;
+pub mod tips;
 pub mod units;
 
 use std::sync::Arc;
 
 use std::collections::VecDeque;
-use trpg_content::{Content, character_unit, check_map_labels};
+use trpg_content::{Content, TipTrigger, character_unit, check_map_labels};
 
 use trpg_core::{
-    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective,
-    Phase, Pos, Stock, TileSet, Unit, UnitId, danger_zone,
+    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Event, Faction, ItemId,
+    Objective, Phase, Pos, Stock, TileSet, Unit, UnitId, danger_zone,
 };
 
 use self::banner::{Banner, BannerKind};
@@ -45,10 +47,12 @@ use self::mode::{Effect, Mode};
 use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
 use self::rewind::{RewindEffect, RewindScreen};
+use self::tips::TipState;
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
+use crate::tips::{draw_tip, fill_placeholders};
 use crate::widgets::help::{SEPARATOR, cursor_keys_name, help_line, key_name};
 
 /// Map id of the debug Quick Battle.
@@ -194,6 +198,8 @@ pub struct BattleScreen {
     /// playback).
     banners: VecDeque<Banner>,
     rewind: Option<RewindScreen>,
+    /// One-time tips waiting to show (0406).
+    tips: TipState,
 }
 
 impl BattleScreen {
@@ -227,6 +233,7 @@ impl BattleScreen {
             end_armed: false,
             toast: None,
             banners: VecDeque::new(),
+            tips: TipState::default(),
         }
     }
 
@@ -267,6 +274,67 @@ impl BattleScreen {
         self.auto_end = !self.auto_end;
         let text = format!("Auto-end: {}", on_off(self.auto_end));
         self.toast = Some((text, TOAST_S));
+    }
+
+    /// A player unit's level-up in `events` fires [`TipTrigger::FirstLevelUp`].
+    fn note_level_ups(&mut self, events: &[Event]) {
+        let player_level_up = events.iter().any(|e| {
+            matches!(e, Event::LeveledUp { unit, .. }
+                if self.state.unit(*unit).is_some_and(|u| u.faction == Faction::Player))
+        });
+        if player_level_up {
+            self.tips.fire(TipTrigger::FirstLevelUp);
+        }
+    }
+
+    /// Fires the tip triggers that show in the battle's current state (the
+    /// ones that come from a command's events are fired as it applies).
+    fn detect_tips(&mut self) {
+        let state = &self.state;
+        if state.turn() == 1 && state.phase() == Phase::Player {
+            self.tips.fire(TipTrigger::FirstBattleStart);
+        }
+        if state.phase() == Phase::Enemy {
+            self.tips.fire(TipTrigger::FirstEnemyPhase);
+        }
+        let low = |u: &Unit| u.faction == Faction::Player && u.hp > 0 && u.hp * 4 <= u.stats.hp;
+        if state.units().iter().any(low) {
+            self.tips.fire(TipTrigger::FirstLowHp);
+        }
+        match &self.mode {
+            Mode::Selected(sel) => {
+                self.tips.fire(TipTrigger::FirstUnitSelected);
+                let reachable = |u: &&Unit| {
+                    u.faction != Faction::Player
+                        && (sel.moves.contains(u.pos) || sel.attack.contains(u.pos))
+                };
+                if state.units().iter().any(|u| reachable(&u)) {
+                    self.tips.fire(TipTrigger::FirstEnemyInRange);
+                }
+            }
+            Mode::Targeting(_) => self.tips.fire(TipTrigger::FirstForecast),
+            Mode::Idle { .. } => {
+                let on_enemy = self.hovered().is_some_and(|u| u.faction == Faction::Enemy);
+                if on_enemy && self.danger.is_none() {
+                    self.tips.fire(TipTrigger::DangerZoneAvailable);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// The tip on screen, if any: the first queued whose moment has come.
+    /// Tips wait out a combat's playback and the rewind screen; the
+    /// enemy-phase tip shows as that phase begins (over its banner), the
+    /// others once a player phase is browsing without a banner.
+    pub fn shown_tip(&self) -> Option<TipTrigger> {
+        if self.rewind.is_some() || matches!(self.mode, Mode::Combat(_)) {
+            return None;
+        }
+        self.tips.queued().find(|&t| {
+            t == TipTrigger::FirstEnemyPhase
+                || (self.state.phase() == Phase::Player && self.banner().is_none())
+        })
     }
 
     /// Closes the banner on screen. An outcome's leaves the battle; an AI
@@ -365,6 +433,7 @@ impl BattleScreen {
         let events = self.state.apply(cmd).ok();
         if let Some(events) = &events {
             self.history.push(cmd.clone());
+            self.note_level_ups(events);
             self.banners
                 .extend(events.iter().filter_map(Banner::for_event));
             if self.danger.is_some() {
@@ -516,6 +585,9 @@ impl BattleScreen {
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
         let moves = (keys.clone(), "move");
+        if self.shown_tip().is_some() {
+            return help_line(&[confirm("close")]);
+        }
         if let Some(banner) = self.banner() {
             let label = match banner.kind {
                 BannerKind::Outcome(_) => "continue",
@@ -842,7 +914,7 @@ impl Screen for BattleScreen {
         Self::NAME
     }
 
-    fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
+    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         self.cursor.tick(input.dt);
         let dt = if input.dt.is_finite() {
             input.dt.max(0.0)
@@ -855,7 +927,16 @@ impl Screen for BattleScreen {
                 self.toast = None;
             }
         }
+        self.detect_tips();
+        self.tips.absorb(ctx);
         for &action in &input.actions {
+            // A tip takes the keys until it is dismissed.
+            if let Some(tip) = self.shown_tip() {
+                if matches!(action, Action::Confirm | Action::Cancel) {
+                    self.tips.dismiss(tip);
+                }
+                continue;
+            }
             if action == Action::ToggleAutoEnd {
                 self.toggle_auto_end();
                 continue;
@@ -904,8 +985,10 @@ impl Screen for BattleScreen {
         }
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        let tip_up = self.shown_tip().is_some();
         if let Some(banner) = self.banners.front_mut()
             && !matches!(self.mode, Mode::Combat(_))
+            && !tip_up
         {
             banner.t += dt;
             if banner.expired() {
@@ -935,6 +1018,14 @@ impl Screen for BattleScreen {
         }
         self.draw_panel(ctx, buf);
         self.draw_dialogs(ctx, buf);
+        if let Some(tip) = self
+            .shown_tip()
+            .and_then(|t| ctx.content.tips.for_trigger(t))
+        {
+            let text = fill_placeholders(&tip.text, &ctx.keymap);
+            let close = help_line(&[(key_name(&ctx.keymap, Action::Confirm), "close")]);
+            draw_tip(buf, &ctx.palette, &tip.title, &text, &close);
+        }
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));
         let status = self.status(ctx);
         let w = i32::try_from(status.chars().count()).unwrap_or(0);
@@ -1078,6 +1169,9 @@ mod attack_tests;
 
 #[cfg(test)]
 mod rewind_tests;
+
+#[cfg(test)]
+mod tip_tests;
 
 #[cfg(test)]
 mod turn_tests;

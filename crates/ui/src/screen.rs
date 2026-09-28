@@ -122,6 +122,10 @@ pub struct Ctx {
     /// an accessibility style). Lives here until the Options menu (0805)
     /// moves it into the saved settings.
     pub cursor_style: CursorStyle,
+    /// Whether battles show their one-time tips (0406). Off here, so
+    /// screen tests aren't interrupted by them; `app` turns it on, and the
+    /// Options menu (0805) will let the player switch it.
+    pub tips_enabled: bool,
 }
 
 impl Ctx {
@@ -139,6 +143,7 @@ impl Ctx {
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
+            tips_enabled: false,
         })
     }
 

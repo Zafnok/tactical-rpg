@@ -28,7 +28,10 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let ctx = match Ctx::embedded() {
-        Ok(ctx) => ctx.with_storage(storage::platform()),
+        Ok(mut ctx) => {
+            ctx.tips_enabled = true;
+            ctx.with_storage(storage::platform())
+        }
         Err(e) => return show_content_errors(&e.to_string()).await,
     };
     #[cfg(debug_assertions)]

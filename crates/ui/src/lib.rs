@@ -15,6 +15,7 @@ pub mod screen;
 pub mod screens;
 pub mod snapshot;
 pub mod storage;
+pub mod tips;
 pub mod widgets;
 
 pub use color::{Palette, Rgb, UiColor};

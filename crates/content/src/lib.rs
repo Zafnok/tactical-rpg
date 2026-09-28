@@ -20,6 +20,7 @@ pub mod ron_loader;
 pub mod skill;
 pub mod spell;
 pub mod terrain;
+pub mod tip;
 
 use std::collections::BTreeMap;
 
@@ -34,6 +35,7 @@ pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
+pub use tip::{Tip, TipTable, TipTrigger};
 
 /// All validated game content.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +68,8 @@ pub struct Content {
     pub dialogue: DialogueTable,
     /// The AI's numbers.
     pub ai: AiWeights,
+    /// One-time contextual tips.
+    pub tips: TipTable,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -116,6 +120,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             portraits,
             dialogue,
             ai: ai::load(),
+            tips: tip::load(),
         },
     )
 }
@@ -213,6 +218,7 @@ struct Loaded {
     portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
     ai: Result<AiWeights, Vec<ContentError>>,
+    tips: Result<TipTable, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -250,6 +256,7 @@ fn assemble(
         portraits: take(units.portraits, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
         ai: take(units.ai, &mut errors),
+        tips: take(units.tips, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -305,6 +312,7 @@ mod tests {
             portraits: ok_portraits(),
             dialogue: ok_dialogue(),
             ai: ai::load(),
+            tips: tip::load(),
         }
     }
 
@@ -378,8 +386,8 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 14] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w",
+    const NAMES: [&str; 15] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "y",
     ];
 
     #[test]
@@ -402,6 +410,7 @@ mod tests {
                     portraits: Err(e("o")),
                     dialogue: Err(e("d")),
                     ai: Err(e("w")),
+                    tips: Err(e("y")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -439,6 +448,7 @@ mod tests {
                     portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
                     dialogue: if i == 12 { Err(e("d")) } else { ok_dialogue() },
                     ai: if i == 13 { Err(e("w")) } else { ai::load() },
+                    tips: if i == 14 { Err(e("y")) } else { tip::load() },
                 },
             )
         };

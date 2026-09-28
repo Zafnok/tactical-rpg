@@ -160,6 +160,12 @@ impl Harness {
         &self.game
     }
 
+    /// Turns the one-time tips on (they are off in tests by default).
+    pub fn with_tips(&mut self) -> &mut Self {
+        self.game.ctx_mut().tips_enabled = true;
+        self
+    }
+
     /// Ends the run, handing back its storage, to start the next launch
     /// with [`with_storage`](Self::with_storage).
     pub fn into_storage(self) -> Box<dyn Storage> {
