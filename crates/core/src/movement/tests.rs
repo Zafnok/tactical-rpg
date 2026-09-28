@@ -91,6 +91,7 @@ fn unit(id: u32, class: &str, faction: Faction, pos: Pos, mov: StatValue) -> Uni
         acted: false,
         is_lord: false,
         role: crate::unit::Role::Regular,
+        ai: crate::ai::AiBehavior::Aggressive,
         weapon_ranks: BTreeMap::new(),
         map_label: format!("u{id}"),
         weapon_exp: BTreeMap::new(),

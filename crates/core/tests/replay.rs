@@ -135,6 +135,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         acted: false,
         is_lord: id == 1,
         role: trpg_core::Role::Regular,
+        ai: trpg_core::AiBehavior::Aggressive,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),

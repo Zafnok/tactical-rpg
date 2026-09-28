@@ -1831,6 +1831,33 @@ impl BattleState {
         })))
     }
 
+    /// The forecast of `unit` having moved `moved` tiles to `dest` and
+    /// attacking `target` with `with`, with no art or active: the numbers an
+    /// `Act` would fight with. Unlike [`Self::preview_attack`] it doesn't
+    /// check the move, the phase or that `with` is usable, so the AI
+    /// ([`crate::ai`]) can search many attacks cheaply; it checks those
+    /// itself. `None` if `target` is out of range, `with` can't strike or a
+    /// table entry is missing.
+    pub(crate) fn plain_forecast(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        moved: u32,
+        target: &Unit,
+        with: &Equipped,
+    ) -> Option<Forecast> {
+        let fight = Fight {
+            dest,
+            moved,
+            with,
+            active: None,
+            art: None,
+        };
+        let (a, d, _) = self.fighters(unit, target, &fight).ok()?;
+        let distance = Pos::manhattan(dest, target.pos);
+        forecast(&self.tables.items.combat_rules(), &a, &d, distance)
+    }
+
     /// The spell `spell` if `unit` has learned it and has a use left.
     fn castable(&self, unit: &Unit, spell: &SpellId) -> Result<&SpellDef, CommandError> {
         let def = self.known_spell(unit, spell)?;

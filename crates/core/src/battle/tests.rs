@@ -878,6 +878,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         acted: false,
         is_lord: false,
         role: Role::Regular,
+        ai: crate::ai::AiBehavior::Aggressive,
         weapon_ranks: BTreeMap::new(),
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),

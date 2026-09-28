@@ -2,6 +2,7 @@
 //! ADR-0005. All content comes from the embedded asset bundle ([`bundle`]);
 //! [`load_embedded`] loads and validates everything, reporting every error.
 
+pub mod ai;
 pub mod art;
 pub mod bundle;
 pub mod character;
@@ -21,7 +22,7 @@ pub mod terrain;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
+use trpg_core::{AiWeights, ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
 
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use dialogue::{DialogueTable, Scene, Side, Step};
@@ -59,6 +60,8 @@ pub struct Content {
     pub characters: CharacterTable,
     /// Dialogue scenes by id.
     pub dialogue: DialogueTable,
+    /// The AI's numbers.
+    pub ai: AiWeights,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -103,6 +106,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             arts,
             characters,
             dialogue,
+            ai: ai::load(),
         },
     )
 }
@@ -198,6 +202,7 @@ struct Loaded {
     arts: Result<ArtTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
+    ai: Result<AiWeights, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -233,6 +238,7 @@ fn assemble(
         arts: take(units.arts, &mut errors),
         characters: take(units.characters, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
+        ai: take(units.ai, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -282,6 +288,7 @@ mod tests {
             arts: art::load(),
             characters: ok_characters(),
             dialogue: ok_dialogue(),
+            ai: ai::load(),
         }
     }
 
@@ -338,6 +345,7 @@ mod tests {
             content.as_ref().map(|c| &c.dialogue),
             ok_dialogue().ok().as_ref()
         );
+        assert_eq!(content.as_ref().map(|c| &c.ai), ai::load().ok().as_ref());
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -350,7 +358,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 12] = ["p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "d"];
+    const NAMES: [&str; 13] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "d", "w",
+    ];
 
     #[test]
     fn assemble_reports_loader_errors() {
@@ -370,6 +380,7 @@ mod tests {
                     arts: Err(e("a")),
                     characters: Err(e("u")),
                     dialogue: Err(e("d")),
+                    ai: Err(e("w")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -405,6 +416,7 @@ mod tests {
                         ok_characters()
                     },
                     dialogue: if i == 11 { Err(e("d")) } else { ok_dialogue() },
+                    ai: if i == 12 { Err(e("w")) } else { ai::load() },
                 },
             )
         };
