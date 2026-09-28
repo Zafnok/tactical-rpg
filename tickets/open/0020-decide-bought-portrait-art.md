@@ -23,6 +23,20 @@ Portrait Pack"** bundle (<https://itch.io/s/121612/95-off-ultimate-portrait-pack
 His words: "I like the style better than your style", and "it's fantasy not
 modern day which fits the game".
 
+**Nick's answers so far (2026-09-28):**
+
+- **Paid assets:** "buying is OK as long as it's not super expensive."
+- **When to buy:** "I'll buy it later when we finish more stuff." He was
+  told the $13.99 price is a sale ending around 2026-10-03. The page lists
+  the regular total as $381.55, with single packs about $5–$15 each (the
+  knight pack is $8.99). Buying only the 6–8 packs Chapter 1 would use at
+  full price would cost roughly $50–$90. Before buying, check the current
+  prices and recheck the licence text.
+- **Coverage:** he was told plainly that the bundle covers most of Chapter
+  1, but not all of it (Tamsin and Crane are gaps; see the mapping in 0706),
+  and that later chapters' characters are unknown. He accepted that; no
+  promise was made that no other art would be needed.
+
 Facts about the bundle, checked on its pages on 2026-09-28:
 
 - Art is **64×64 pixels**, not the 32×32 in ADR-0018 and
@@ -54,17 +68,20 @@ the cast.
 **Decision** (via the `ask-nick` skill). His style choice above is already
 made. Ask only what's still open:
 
-1. Is **AI-assisted art** acceptable? The seller says it was. Some players
+1. Is **AI-assisted art** acceptable? (He chose the bundle knowing this, but
+   didn't answer it directly.) The seller says it was. Some players
    and reviewers object. Steam asks developers to disclose AI-generated
    content on the store page. Options: accept and disclose it; buy only
    hand-made art (which rules this bundle out); describe your own.
-2. **Paid assets in general:** only this bundle, or any paid asset whose
-   licence allows commercial use in a sold game (e.g. music and sound
-   later)?
-3. **Characters the bundle doesn't cover** (Chapter 1's cast may not all
-   match a pack): options are to pick the closest bought face, commission
-   an artist to match the style, or have Claude edit a bought face (e.g.
-   recolour the hair or change the armour).
+2. **Paid assets in general:** answered above ("OK as long as it's not super
+   expensive"). Ask only for a rough price ceiling per purchase, so "super
+   expensive" can be checked without asking him each time.
+3. **Characters the bundle doesn't cover** (Tamsin and Crane in Chapter 1;
+   see 0706): options are commissioning the same artist (CaptainSkolot takes
+   commissions, which keeps the style consistent), changing the character's
+   portrait brief to fit a bought face (a story change), or having Claude
+   make small pixel edits to a bought face (recolours, a scar, a changed
+   expression; not new hair or clothes).
 
 Nick buys the bundle himself (Claude doesn't make purchases) and puts the
 downloaded zips where 0110 says.
