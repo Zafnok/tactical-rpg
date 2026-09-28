@@ -352,7 +352,7 @@ impl BattleScreen {
             }
             Mode::Combat(_) => {
                 let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
-                help_line(&[confirm("skip"), (hold, "fast")])
+                help_line(&[cancel("skip"), (hold, "fast")])
             }
             Mode::MoveAfter { unit, tiles } => {
                 let here = self.state.unit(*unit).map(|u| u.pos);

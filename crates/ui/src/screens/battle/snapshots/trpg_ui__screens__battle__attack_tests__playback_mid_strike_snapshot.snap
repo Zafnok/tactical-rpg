@@ -33,7 +33,7 @@ expression: h.snapshot()
                                                                       │                            │
                                                                       └────────────────────────────┘
                                                                                                     
- f skip · hold f fast                                                                               
+ d skip · hold f fast                                                                               
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaabdeeeeeddddddddddddddddddddddb
