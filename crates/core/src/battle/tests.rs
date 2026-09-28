@@ -3195,6 +3195,13 @@ proptest! {
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
+            // An `Act` always ends the unit's action: it is done (or fell),
+            // or it waits to move after its attack.
+            if let Command::Act { unit, .. } = cmd {
+                let done = s.unit(*unit).is_none_or(|u| u.acted);
+                let waits = s.pending_move().is_some_and(|m| m.unit == *unit);
+                prop_assert!(done || waits, "{:?} left unit {:?} ready", cmd, unit);
+            }
             // Spell uses never exceed a spell's uses, and each one is spent
             // only with its event, one at a time.
             let uses_after = spell_uses(&s);

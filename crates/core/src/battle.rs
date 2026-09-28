@@ -2713,10 +2713,11 @@ impl BattleState {
         events.push(Event::BattleEnded { outcome });
     }
 
-    /// Gives the living unit `id` `exp` EXP and `cp` class points if it is
-    /// a player unit, or puts `exp` in the EXP pool if it is an ally.
+    /// Gives unit `id`, if on the map (the fallen are gone by now), `exp`
+    /// EXP and `cp` class points if it is a player unit, or puts `exp` in
+    /// the EXP pool if it is an ally.
     fn award(&mut self, id: UnitId, exp: u32, cp: ClassPoints, events: &mut Vec<Event>) {
-        let Some(unit) = self.units.iter_mut().find(|u| u.id == id && u.hp > 0) else {
+        let Some(unit) = self.units.iter_mut().find(|u| u.id == id) else {
             return;
         };
         match unit.faction {
@@ -2768,7 +2769,7 @@ impl BattleState {
         if award.healed {
             exp = exp.max(progression::exp_for_heal());
         }
-        let mut cp = progression::ACTION_CP;
+        let mut felled = false;
         for &victim in &award.pushed {
             let Some(v) = self.fallen.iter().find(|u| u.id == victim) else {
                 continue;
@@ -2779,9 +2780,10 @@ impl BattleState {
             let boss = v.role == Role::Boss;
             let kill = progression::exp_for_combat(user.level, v.level, CombatResult::Killed, boss);
             exp = exp.max(kill);
-            cp = progression::ACTION_CP + progression::KILL_CP;
+            felled = true;
         }
-        self.award(id, exp, cp, events);
+        let kill_cp = if felled { progression::KILL_CP } else { 0 };
+        self.award(id, exp, progression::ACTION_CP + kill_cp, events);
     }
 
     /// The unit `id`, on the map or fallen.
@@ -2797,11 +2799,8 @@ impl BattleState {
         let cap = self.tables.classes.level_cap;
         let eligible = |u: &Unit| u.faction == Faction::Player && u.level < cap;
         let count = self.units.iter().filter(|u| eligible(u)).count();
-        let Some(share) = u32::try_from(count)
-            .ok()
-            .and_then(|n| pool.checked_div(n))
-            .filter(|&s| s > 0)
-        else {
+        // No one to share with: the pool is lost. A share of 0 gives nothing.
+        let Some(share) = u32::try_from(count).ok().and_then(|n| pool.checked_div(n)) else {
             return;
         };
         let classes = &self.tables.classes;

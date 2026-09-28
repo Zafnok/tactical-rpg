@@ -97,10 +97,9 @@ impl SimRng {
         if n == 0 {
             return 0;
         }
-        let limit = below_limit(n);
         let mut x = self.next_u32();
         for _ in 0..MAX_REDRAWS {
-            if x < limit {
+            if accepted_below(x, n) {
                 break;
             }
             x = self.next_u32();
@@ -113,6 +112,11 @@ impl SimRng {
 /// below it, taken mod `n`, is uniform.
 fn below_limit(n: u32) -> u32 {
     (u32::MAX / n) * n
+}
+
+/// Whether `x mod n` is unbiased: `x` is below [`below_limit`]`(n)`.
+fn accepted_below(x: u32, n: u32) -> bool {
+    x < below_limit(n)
 }
 
 /// Whether `x mod 100` is unbiased: `x` is below [`PERCENT_LIMIT`].
@@ -312,6 +316,15 @@ mod tests {
         assert_eq!(below_limit(3), u32::MAX);
         assert_eq!(below_limit(280), 4_294_967_040);
         assert_eq!(below_limit(u32::MAX), u32::MAX);
+    }
+
+    #[test]
+    fn biased_below_draws_are_rejected() {
+        // 280 × 15_339_168 = 4_294_967_040: draws from there on are redrawn.
+        assert!(accepted_below(0, 280));
+        assert!(accepted_below(4_294_967_039, 280));
+        assert!(!accepted_below(4_294_967_040, 280));
+        assert!(!accepted_below(u32::MAX, 280));
     }
 
     #[test]

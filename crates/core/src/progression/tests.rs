@@ -493,6 +493,26 @@ fn the_level_cap_stops_exp() {
 }
 
 #[test]
+fn an_award_below_the_cap_is_not_cut() {
+    let mut t = table();
+    t.level_cap = 5;
+    let mut u = fresh();
+    u.level = 3;
+    u.exp = 50;
+    let mut rng = ScriptedRng::new([0; 7]);
+    // 150 EXP of room: all 100 count.
+    let events = grant_exp(&mut u, 100, &t, &mut rng);
+    assert_eq!(
+        events[0],
+        Event::ExpGained {
+            unit: UnitId(1),
+            amount: 100
+        }
+    );
+    assert_eq!((u.level, u.exp), (4, 50));
+}
+
+#[test]
 fn a_huge_award_near_a_huge_cap_does_not_overflow() {
     let mut t = table();
     t.level_cap = Level::MAX;

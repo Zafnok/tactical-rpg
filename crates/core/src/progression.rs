@@ -214,7 +214,8 @@ pub fn level_up(
     }
     let eligible_count = eligible.iter().filter(|&&e| e).count();
     let need = usize::from(min_gains).min(eligible_count);
-    while gains.count() < need {
+    // Each pick adds a gain, so `need − gains` picks at most.
+    for _ in gains.count()..need {
         // Candidates have 0 points so far, so their growth is below 100.
         let candidates: Vec<usize> = (0..7).filter(|&i| eligible[i] && gains.0[i] == 0).collect();
         let total = candidates.iter().map(|&i| growths[i]).sum();
@@ -259,7 +260,8 @@ pub fn grant_exp(
     if unit.level >= cap || amount == 0 {
         return events;
     }
-    let room = u64::from(cap - unit.level) * u64::from(EXP_PER_LEVEL) - u64::from(unit.exp);
+    let room = (u64::from(cap - unit.level) * u64::from(EXP_PER_LEVEL))
+        .saturating_sub(u64::from(unit.exp));
     let amount = u32::try_from(u64::from(amount).min(room)).unwrap_or(amount);
     unit.exp += amount;
     events.push(Event::ExpGained {
@@ -267,8 +269,10 @@ pub fn grant_exp(
         amount,
     });
     let floor = min_gains(classes, class.tier);
-    while unit.exp >= EXP_PER_LEVEL && unit.level < cap {
-        unit.exp -= EXP_PER_LEVEL;
+    // The amount was cut to the cap, so the levels stop exactly there.
+    let levels = unit.exp / EXP_PER_LEVEL;
+    unit.exp %= EXP_PER_LEVEL;
+    for _ in 0..levels {
         let gains = level_up(unit, class, floor, rng);
         apply_gains(unit, &gains);
         unit.level += 1;
@@ -278,9 +282,6 @@ pub fn grant_exp(
             gains,
         });
         learn_spells(unit, classes, &mut events);
-    }
-    if unit.level >= cap {
-        unit.exp = 0;
     }
     events
 }
