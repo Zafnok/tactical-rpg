@@ -67,6 +67,22 @@ fn row(buf: &GlyphBuffer, y: i32) -> String {
         .collect()
 }
 
+/// Line counts of each page of the first box of a [`two_speakers`] scene,
+/// pressing Confirm twice per page until the second box. Gives up after
+/// 20 pages, so a paging bug fails the test instead of hanging it.
+fn page_sizes(s: &mut DialogueScreen, c: &mut Ctx) -> Vec<usize> {
+    let mut pages = vec![];
+    for _ in 0..20 {
+        if s.page_lines() == ["Second."] {
+            return pages;
+        }
+        pages.push(s.page_lines().len());
+        press(s, c, Action::Confirm);
+        press(s, c, Action::Confirm);
+    }
+    panic!("never reached the second box; pages so far: {pages:?}");
+}
+
 #[test]
 fn reveals_at_the_text_speed() {
     let mut c = ctx();
@@ -140,12 +156,7 @@ fn long_text_pages_three_lines_at_a_time() {
     // 10 lines of 90 characters: four pages.
     let line = format!("{} ", "x".repeat(90));
     let mut s = DialogueScreen::new(two_speakers(&line.repeat(10)));
-    let mut pages = vec![];
-    while s.page_lines() != ["Second."] {
-        pages.push(s.page_lines().len());
-        press(&mut s, &mut c, Action::Confirm);
-        press(&mut s, &mut c, Action::Confirm);
-    }
+    let pages = page_sizes(&mut s, &mut c);
     assert_eq!(pages, [3, 3, 3, 1]);
 }
 
@@ -154,12 +165,7 @@ fn text_filling_whole_pages_has_no_empty_page_after() {
     let mut c = ctx();
     let line = format!("{} ", "x".repeat(90));
     let mut s = DialogueScreen::new(two_speakers(&line.repeat(6)));
-    let mut pages = vec![];
-    while s.page_lines() != ["Second."] {
-        pages.push(s.page_lines().len());
-        press(&mut s, &mut c, Action::Confirm);
-        press(&mut s, &mut c, Action::Confirm);
-    }
+    let pages = page_sizes(&mut s, &mut c);
     assert_eq!(pages, [3, 3]);
 }
 
