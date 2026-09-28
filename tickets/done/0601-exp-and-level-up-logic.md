@@ -109,10 +109,11 @@ tier listed (content validation already requires every tier in use).
 - A unit that **falls** in a combat gets nothing from it.
 - Only the actions in the EXP table give EXP: **items, shops, chests,
   seizing and waiting give none**.
-- **Sanctuary** (an active that heals) gives the active-skill award (20),
-  not the heal-spell award (24). A **Shove** that kills by collision gives
-  only the active-skill award, not a kill award.
-- An award that reaches the **level cap** is cut to what reaching it takes;
-  the rest is lost and EXP shows `--`.
+
+**Nick's answers in the PR review** (recorded in `progression.md`):
+Sanctuary gives the higher of the active and heal awards (24); a Shove that
+fells an enemy gives the kill award (and kill CP) when it is higher than the
+active's 20 (a collision that fells a friendly unit gives none); EXP past the
+level cap is lost only at the cap itself.
 
 No follow-up tickets.

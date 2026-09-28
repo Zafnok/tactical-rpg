@@ -392,3 +392,102 @@ fn nothing_is_gained_with_levels_off() {
     let events = act(&mut s, 2, p(2, 2), attack(4));
     assert_eq!(progress(&events), []);
 }
+
+fn skill_action(skill: &str, target: Option<u32>) -> UnitAction {
+    UnitAction::UseSkill {
+        skill: SkillId::new(skill),
+        target: target.map(UnitId),
+    }
+}
+
+#[test]
+fn a_healing_active_gives_the_heal_award() {
+    let class = skill_class("sanctuary");
+    let mut wounded = unit(2, Faction::Player, p(1, 0));
+    wounded.hp = 4;
+    let mut s = start(leveled(vec![
+        Unit {
+            class: class.clone(),
+            ..lord(1, p(1, 1))
+        },
+        wounded,
+        unit(3, Faction::Enemy, p(7, 4)),
+    ]));
+    let events = act(&mut s, 1, p(1, 1), skill_action("sanctuary", None));
+    // The higher of 20 (active) and 24 (heal).
+    assert_eq!(progress(&events), [exp(1, 24), cp(1, &class.0, 2)]);
+}
+
+/// Shover 1 at (1,1) shoves enemy 3 (at (0,1), `hp`) off the map's edge
+/// (5 collision damage); enemy 4 stays far away. Returns the events.
+fn shove_off_the_edge(hp: StatValue, boss: bool) -> Vec<Event> {
+    let mut target = unit(3, Faction::Enemy, p(0, 1));
+    target.hp = hp;
+    target.role = if boss { Role::Boss } else { Role::Regular };
+    let mut s = start(leveled(vec![
+        Unit {
+            class: skill_class("shove"),
+            ..lord(1, p(1, 1))
+        },
+        target,
+        unit(4, Faction::Enemy, p(7, 4)),
+    ]));
+    act(&mut s, 1, p(1, 1), skill_action("shove", Some(3)))
+}
+
+#[test]
+fn a_shove_that_kills_gives_the_kill_award() {
+    let class = skill_class("shove").0;
+    // Survives: the active's 20.
+    let events = shove_off_the_edge(10, false);
+    assert_eq!(progress(&events), [exp(1, 20), cp(1, &class, 2)]);
+    // Falls: a kill at equal levels, 60 EXP and 4 CP, after the fall.
+    let events = shove_off_the_edge(3, false);
+    let fell = events
+        .iter()
+        .position(|e| *e == Event::UnitFell { unit: UnitId(3) });
+    let gained = events.iter().position(|e| *e == exp(1, 60));
+    assert!(fell.is_some() && fell < gained, "{events:?}");
+    assert_eq!(progress(&events), [exp(1, 60), cp(1, &class, 4)]);
+    // A boss at equal levels: 60 + 40.
+    assert_eq!(progress(&shove_off_the_edge(3, true))[0], exp(1, 100));
+}
+
+#[test]
+fn a_shove_kill_below_the_active_award_gives_the_active_award() {
+    // Lord at level 11 against a level-1 enemy: a kill is worth 14.
+    let class = skill_class("shove");
+    let mut shover = Unit {
+        class: class.clone(),
+        ..lord(1, p(1, 1))
+    };
+    shover.level = 11;
+    let mut target = unit(3, Faction::Enemy, p(0, 1));
+    target.hp = 3;
+    let mut s = start(leveled(vec![
+        shover,
+        target,
+        unit(4, Faction::Enemy, p(7, 4)),
+    ]));
+    let events = act(&mut s, 1, p(1, 1), skill_action("shove", Some(3)));
+    assert_eq!(progress(&events), [exp(1, 20), cp(1, &class.0, 4)]);
+}
+
+#[test]
+fn a_shove_that_fells_a_friend_gives_no_kill_award() {
+    // Enemy 3 is pushed into player 2 (2 HP), who falls; enemy 3 stands.
+    let class = skill_class("shove").0;
+    let mut friend = unit(2, Faction::Player, p(3, 1));
+    friend.hp = 2;
+    let mut s = start(leveled(vec![
+        Unit {
+            class: skill_class("shove"),
+            ..lord(1, p(0, 0))
+        },
+        unit(3, Faction::Enemy, p(2, 1)),
+        friend,
+    ]));
+    let events = act(&mut s, 1, p(1, 1), skill_action("shove", Some(3)));
+    assert!(events.contains(&Event::UnitFell { unit: UnitId(2) }));
+    assert_eq!(progress(&events), [exp(1, 20), cp(1, &class, 2)]);
+}

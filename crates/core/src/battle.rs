@@ -211,7 +211,9 @@
 //!     against the other unit's character level; a boss kill +40). A
 //!     defender that couldn't counter took no part and gets nothing;
 //!   - after a heal spell, a tile cast or a non-combat active, the user gets
-//!     its award.
+//!     its award. A non-combat active gives the higher of its own award, a
+//!     heal's if it healed (Sanctuary) and a kill's for each hostile unit
+//!     it felled (Shove), with the kill's extra CP if it felled one (Nick).
 //!
 //!   **Ally**-faction units' EXP goes into the battle's
 //!   [EXP pool](BattleState::exp_pool) instead. On a **victory**, just before
@@ -2187,9 +2189,9 @@ impl BattleState {
             Step::Wait => {}
             Step::Attack(attack) => move_after = self.attack(id, &attack, events),
             Step::Skill { active, effect } => {
+                let award = SkillAward::of(&effect);
                 self.use_skill(id, &active, effect, events);
-                let exp = progression::exp_for_active_skill();
-                self.award(id, exp, progression::ACTION_CP, events);
+                self.award_skill(id, &award, events);
             }
             Step::Heal {
                 spell,
@@ -2754,6 +2756,34 @@ impl BattleState {
         }
     }
 
+    /// Unit EXP and class points for unit `id`'s non-combat active: the
+    /// higher of the active's award, a heal's (if it healed) and a kill's
+    /// for each hostile unit it felled; CP for the action, plus a kill's if
+    /// it felled one (Nick).
+    fn award_skill(&mut self, id: UnitId, award: &SkillAward, events: &mut Vec<Event>) {
+        let Some(user) = self.unit(id) else {
+            return;
+        };
+        let mut exp = progression::exp_for_active_skill();
+        if award.healed {
+            exp = exp.max(progression::exp_for_heal());
+        }
+        let mut cp = progression::ACTION_CP;
+        for &victim in &award.pushed {
+            let Some(v) = self.fallen.iter().find(|u| u.id == victim) else {
+                continue;
+            };
+            if !user.faction.is_hostile_to(v.faction) {
+                continue;
+            }
+            let boss = v.role == Role::Boss;
+            let kill = progression::exp_for_combat(user.level, v.level, CombatResult::Killed, boss);
+            exp = exp.max(kill);
+            cp = progression::ACTION_CP + progression::KILL_CP;
+        }
+        self.award(id, exp, cp, events);
+    }
+
     /// The unit `id`, on the map or fallen.
     fn any_unit(&self, id: UnitId) -> Option<&Unit> {
         self.unit(id)
@@ -2777,6 +2807,34 @@ impl BattleState {
         let classes = &self.tables.classes;
         for unit in self.units.iter_mut().filter(|u| eligible(u)) {
             events.extend(progression::grant_exp(unit, share, classes, &mut self.rng));
+        }
+    }
+}
+
+/// What a non-combat active did that its award depends on.
+struct SkillAward {
+    /// It healed someone (Sanctuary).
+    healed: bool,
+    /// Units a push may have felled (Shove): the pushed unit and the unit
+    /// it hit.
+    pushed: Vec<UnitId>,
+}
+
+impl SkillAward {
+    fn of(effect: &SkillStep) -> SkillAward {
+        match effect {
+            SkillStep::Buff { .. } => SkillAward {
+                healed: false,
+                pushed: vec![],
+            },
+            SkillStep::Heal { heals } => SkillAward {
+                healed: !heals.is_empty(),
+                pushed: vec![],
+            },
+            SkillStep::Push { target, struck, .. } => SkillAward {
+                healed: false,
+                pushed: std::iter::once(*target).chain(*struck).collect(),
+            },
         }
     }
 }
