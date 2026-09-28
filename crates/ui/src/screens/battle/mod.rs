@@ -3,7 +3,8 @@
 //! bottom. The player browses with the cursor (ticket 0402), selects a unit,
 //! steers its path, moves it and picks an action (0403, [`mode`]), and
 //! attacks: picks a weapon and a target, reads the [`forecast`] and watches
-//! the combat's [`playback`] (0404).
+//! the combat's [`playback`] (0404). Every command sent is kept in a
+//! [`BattleHistory`], and Rewind opens the [`rewind`] screen (0307).
 
 pub mod attack;
 pub mod camera;
@@ -14,14 +15,15 @@ pub mod mode;
 pub mod panel;
 pub mod path;
 pub mod playback;
+pub mod rewind;
 pub mod units;
 
 use std::sync::Arc;
 
 use trpg_content::{Content, character_unit, check_map_labels};
 use trpg_core::{
-    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Phase, Pos, Stock,
-    TileSet, Unit, UnitId,
+    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective,
+    Phase, Pos, Stock, TileSet, Unit, UnitId,
 };
 
 use self::camera::{Camera, tile_to_cell};
@@ -32,6 +34,7 @@ use self::layout::{
 use self::mode::{Effect, Mode};
 use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
+use self::rewind::{RewindEffect, RewindScreen};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -134,20 +137,24 @@ pub const OVERLAY_BLEND: f32 = 0.75;
 
 /// The battle screen: the player browses the map with the cursor, selects
 /// and moves units ([`Mode`]); Cancel while browsing leaves it (until the
-/// map menu, 0405).
+/// map menu, 0405). Rewind while browsing in the player phase opens the
+/// [`RewindScreen`].
 #[derive(Debug, Clone)]
 pub struct BattleScreen {
     state: BattleState,
+    history: BattleHistory,
     camera: Camera,
     cursor: Cursor,
     mode: Mode,
+    rewind: Option<RewindScreen>,
 }
 
 impl BattleScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "battle";
 
-    /// A screen showing `state`, with the cursor on the first player lord
+    /// A screen showing `state` (a battle just started: its history, and
+    /// every rewind charge, start here), with the cursor on the first player lord
     /// (else the first player unit, else the map's centre) and the camera
     /// centred on it.
     pub fn new(state: BattleState) -> Self {
@@ -165,8 +172,20 @@ impl BattleScreen {
             camera: Camera::centred_on(start, w, h),
             cursor: Cursor::new(start),
             mode: Mode::after_command(&state),
+            history: BattleHistory::new(state.clone()),
+            rewind: None,
             state,
         }
+    }
+
+    /// The commands sent so far and the rewind charges left.
+    pub fn history(&self) -> &BattleHistory {
+        &self.history
+    }
+
+    /// The rewind screen, if open.
+    pub fn rewind(&self) -> Option<&RewindScreen> {
+        self.rewind.as_ref()
     }
 
     /// What the player is doing.
@@ -209,17 +228,19 @@ impl BattleScreen {
         self.mode.drawn_pos(unit.id).unwrap_or(unit.pos)
     }
 
-    /// Applies `cmd` (built by [`mode::step`] from legal choices), then
-    /// plays its combat if it had one, and continues browsing (or with the
-    /// unit's move after its attack). A refused command changes nothing.
+    /// Applies `cmd` (built by [`mode::step`] from legal choices) and
+    /// records it in the history, then plays its combat if it had one, and
+    /// continues browsing (or with the unit's move after its attack). A
+    /// refused command changes nothing.
     fn apply(&mut self, cmd: &Command) {
         let before = self.state.units().to_vec();
         // Refused: the battle is unchanged and the player browses again.
-        let playback = self
-            .state
-            .apply(cmd)
-            .ok()
-            .and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
+        let events = self.state.apply(cmd).ok();
+        if events.is_some() {
+            self.history.push(cmd.clone());
+        }
+        let playback =
+            events.and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
         self.mode = match playback {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
@@ -256,6 +277,33 @@ impl BattleScreen {
                 (u, fade)
             })
             .collect()
+    }
+
+    /// Whether Rewind opens the rewind screen: browsing in the player phase
+    /// of a battle still running.
+    fn can_open_rewind(&self) -> bool {
+        matches!(self.mode, Mode::Idle { .. })
+            && self.state.phase() == Phase::Player
+            && self.state.outcome().is_none()
+    }
+
+    /// Handles one action on the open rewind screen.
+    fn rewind_step(&mut self, action: Action) {
+        let Some(screen) = self.rewind.as_mut() else {
+            return;
+        };
+        match screen.step(action) {
+            RewindEffect::None => {}
+            RewindEffect::Close => self.rewind = None,
+            RewindEffect::Rewind(point) => {
+                // The screen only confirms a listed point with a charge left.
+                if let Ok(state) = self.history.rewind_to(point) {
+                    self.state = state;
+                    self.mode = Mode::after_command(&self.state);
+                }
+                self.rewind = None;
+            }
+        }
     }
 
     /// Moves the cursor one tile for a cursor key; the camera and a
@@ -315,6 +363,17 @@ impl BattleScreen {
         let keys = cursor_keys_name(km);
         let confirm = |label| (key_name(km, Action::Confirm), label);
         let cancel = |label| (key_name(km, Action::Cancel), label);
+        if let Some(r) = &self.rewind {
+            return if r.is_confirming() {
+                help_line(&[confirm("rewind"), cancel("back")])
+            } else if r.can_rewind() {
+                help_line(&[(keys, "choose"), confirm("rewind here"), cancel("close")])
+            } else if r.entries().is_empty() {
+                help_line(&[cancel("close")])
+            } else {
+                help_line(&[(keys, "choose"), cancel("close")])
+            };
+        }
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
         let moves = (keys.clone(), "move");
@@ -369,19 +428,13 @@ impl BattleScreen {
 
     /// Draws the terrain of every viewport tile; tiles off the map are left
     /// as they are (blank).
-    fn draw_terrain(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+    fn draw_terrain(&self, ctx: &Ctx, buf: &mut GlyphBuffer, state: &BattleState) {
         let display = &ctx.content.terrain.display;
         let o = self.camera.origin;
         for dy in 0..VIEW_TILES_H {
             for dx in 0..VIEW_TILES_W {
                 let pos = Pos::new(o.x + dx, o.y + dy);
-                let Some(t) = self
-                    .state
-                    .map()
-                    .tiles
-                    .get(pos)
-                    .and_then(|&id| display.get(id))
-                else {
+                let Some(t) = state.map().tiles.get(pos).and_then(|&id| display.get(id)) else {
                     continue;
                 };
                 let Some((x, y)) = tile_to_cell(pos, &self.camera) else {
@@ -483,6 +536,23 @@ impl BattleScreen {
 }
 
 impl BattleScreen {
+    /// Draws the rewind screen: the map as it was just before the
+    /// highlighted action (as it is now with nothing listed), the list in
+    /// the side panel and the help line.
+    fn draw_rewind(&self, ctx: &Ctx, buf: &mut GlyphBuffer, r: &RewindScreen) {
+        let shown = r.focused().map_or(&self.state, |e| &e.before);
+        self.draw_terrain(ctx, buf, shown);
+        for unit in shown.units() {
+            if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
+                units::draw_unit(buf, &ctx.palette, unit, x, y);
+            }
+        }
+        r.draw(&ctx.palette, buf);
+        let black = ctx.palette.get(UiColor::Black);
+        let dim = ctx.palette.get(UiColor::TextDim);
+        buf.print(1, HELP_ROW, &self.help(ctx), dim, black);
+    }
+
     /// Draws the side panel: the forecast while targeting, else the
     /// terrain and unit under the cursor (as drawn, during a playback).
     fn draw_panel(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
@@ -543,6 +613,11 @@ impl Screen for BattleScreen {
         self.cursor.tick(input.dt);
         for &action in &input.actions {
             match action {
+                _ if self.rewind.is_some() => self.rewind_step(action),
+                Action::Rewind if self.can_open_rewind() => {
+                    let charges = self.state.rewind_charges();
+                    self.rewind = Some(RewindScreen::new(&self.history, charges));
+                }
                 Action::NextUnit | Action::PrevUnit if matches!(self.mode, Mode::Idle { .. }) => {
                     self.cycle(action == Action::NextUnit);
                 }
@@ -579,7 +654,11 @@ impl Screen for BattleScreen {
         let c = |u| ctx.palette.get(u);
         let black = c(UiColor::Black);
         buf.fill_rect(buf.bounds(), Cell::new(' ', c(UiColor::Text), black));
-        self.draw_terrain(ctx, buf);
+        if let Some(r) = &self.rewind {
+            self.draw_rewind(ctx, buf, r);
+            return;
+        }
+        self.draw_terrain(ctx, buf, &self.state);
         self.draw_ranges(ctx, buf);
         self.draw_units(ctx, buf);
         self.draw_cursor_and_path(ctx, buf);
@@ -611,12 +690,23 @@ pub(crate) mod testing {
     use crate::screen::Ctx;
 
     /// A battle on `map` with `units` and `objective`, using the game's
-    /// tables.
+    /// tables, without rewind charges.
     pub fn battle_with(
         c: &Ctx,
         map: BattleMap,
         units: Vec<Unit>,
         objective: Objective,
+    ) -> BattleState {
+        battle_charged(c, map, units, objective, 0)
+    }
+
+    /// [`battle_with`], with `charges` rewind charges.
+    pub fn battle_charged(
+        c: &Ctx,
+        map: BattleMap,
+        units: Vec<Unit>,
+        objective: Objective,
+        charges: u8,
     ) -> BattleState {
         BattleState::new(BattleSetup {
             map,
@@ -632,7 +722,7 @@ pub(crate) mod testing {
             units,
             reinforcements: vec![],
             objective,
-            rewind_charges: 0,
+            rewind_charges: charges,
             seed: 0,
         })
         .0
@@ -676,13 +766,18 @@ pub(crate) mod testing {
     /// `brigand_hp` HP) to its right; the archer (unit 3) at (8, 4), two
     /// tiles below the brigand, which can't counter at that range.
     pub fn skirmish(c: &Ctx, brigand_hp: StatValue) -> BattleState {
+        skirmish_charged(c, brigand_hp, 0)
+    }
+
+    /// [`skirmish`], with `charges` rewind charges.
+    pub fn skirmish_charged(c: &Ctx, brigand_hp: StatValue, charges: u8) -> BattleState {
         let quick = super::quick_battle(&c.content).unwrap_or_else(|e| panic!("{e}"));
         let mut units = quick.units().to_vec();
         units[0].pos = Pos::new(6, 2);
         units[2].pos = Pos::new(8, 4);
         units[3].hp = brigand_hp;
         let rout = Objective::Rout { turn_limit: None };
-        battle_with(c, quick.map().clone(), units, rout)
+        battle_charged(c, quick.map().clone(), units, rout, charges)
     }
 
     /// `unit` of `state` waiting where it stands.
@@ -701,6 +796,9 @@ pub(crate) mod testing {
 
 #[cfg(test)]
 mod attack_tests;
+
+#[cfg(test)]
+mod rewind_tests;
 
 #[cfg(test)]
 mod tests {

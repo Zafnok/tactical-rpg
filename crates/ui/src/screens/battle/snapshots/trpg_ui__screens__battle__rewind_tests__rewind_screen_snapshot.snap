@@ -1,0 +1,100 @@
+---
+source: crates/ui/src/screens/battle/rewind_tests.rs
+expression: h.snapshot()
+---
+                                                                      ╔════════════════════════════╗
+                                                                      ║ Rewind                     ║
+                                                                      ║ 3 of 3 charges left        ║
+                                                                      ║                            ║
+                                                                      ║ Turn 1 · Test Lord         ║
+                                                                      ║   attacked Brigand (2      ║
+                                                                      ║   hits, 17 dmg)            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║                            ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║                            ║
+                    ≈≈≈≈≈≈====··Lo··Br..♣♣♣♣....                      ║                            ║
+                    ..≈≈≈≈..··..............[]..                      ║                            ║
+                    ....······....BrAr▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ..♣♣··....[]......▓▓░░[]▓▓..                      ║                            ║
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║ Use 1 of 3 charges?        ║
+                                                                      ║                            ║
+                                                                      ╚════════════════════════════╝
+                                                                                                    
+ f rewind · d back                                                                                  
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcddddddcccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabeeeeeeeeeeeeeeeeeeeeeeeeeeeeb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabeeeeeeeeeeeeeeeeeeeeeeeeeeeeb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabeeeeeeeeeeeeeeeeeeeeeeeeeeeeb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaffffffgggghhhhiiiijjjjkkkkllaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaffffgggghhhhmmnnmmiiiikkkkkkaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaffggggoooommppmmqqhhiiiihhhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhgggghhmmhhhhhhhhhhhhhhrrhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhmmmmmmhhhhqqsstttttttthhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhiimmhhhhrrhhhhhhttuurrtthhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaiiiimmhhsshhhhhhhhttuuuutthhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaiijjmmhhhhhhhhhhhhttttvvtthhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdddddddddddddddddddccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+awwwwwwwwwwwwwwwwwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:panel_bg bg:panel_border_focus
+f = fg:water bg:sea
+g = fg:water bg:water_bg
+h = fg:grass bg:grass_bg
+i = fg:forest bg:forest_bg
+j = fg:thicket bg:thicket_bg
+k = fg:mountain bg:mountain_bg
+l = fg:peak bg:peak_bg
+m = fg:road bg:road_bg
+n = fg:enemy bg:road_bg
+o = fg:wood bg:water_bg
+p = fg:player bg:road_bg
+q = fg:enemy bg:grass_bg
+r = fg:fort bg:fort_bg
+s = fg:player bg:grass_bg
+t = fg:stone bg:stone_bg
+u = fg:floor bg:floor_bg
+v = fg:wood bg:stone_bg
+w = fg:text_dim bg:black
+--- overlays ---
+over  256,222 16x2  hp_high
+over  224,286 16x2  hp_high
+over  288,254 16x2  hp_high
+over  288,222 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high

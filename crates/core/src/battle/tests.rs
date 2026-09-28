@@ -55,7 +55,7 @@ const WATER: TerrainId = TerrainId(5);
 const SEA: TerrainId = TerrainId(6);
 const ICE: TerrainId = TerrainId(7);
 
-fn p(x: i32, y: i32) -> Pos {
+pub(crate) fn p(x: i32, y: i32) -> Pos {
     Pos::new(x, y)
 }
 
@@ -920,7 +920,7 @@ fn armed(u: Unit, might: StatValue) -> Unit {
 
 /// Lord 1 at (0,0) and unit 2 at (0,2); enemies 3 at (7,0) and 4 at (7,2):
 /// out of each other's reach.
-fn cast() -> Vec<Unit> {
+pub(crate) fn cast() -> Vec<Unit> {
     vec![
         lord(1, p(0, 0)),
         unit(2, Faction::Player, p(0, 2)),
@@ -929,7 +929,7 @@ fn cast() -> Vec<Unit> {
     ]
 }
 
-fn setup(units: Vec<Unit>) -> BattleSetup {
+pub(crate) fn setup(units: Vec<Unit>) -> BattleSetup {
     BattleSetup {
         map: map(&OPEN),
         terrain: Arc::new(terrain()),
@@ -974,7 +974,7 @@ fn act(s: &mut BattleState, id: u32, dest: Pos, action: UnitAction) -> Vec<Event
     .unwrap()
 }
 
-fn attack(target: u32) -> UnitAction {
+pub(crate) fn attack(target: u32) -> UnitAction {
     UnitAction::Attack {
         target: UnitId(target),
         slot: 0,
@@ -2573,7 +2573,7 @@ fn commands_and_events_round_trip_through_ron() {
 /// each cast ([`legal_casts`]), each item use, a seize, shop visits
 /// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
 /// packs are all known; weapons and spells are all known.
-fn legal_commands(s: &BattleState) -> Vec<Command> {
+pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
     if let Some(moves) = legal_moves_after(s) {
         return moves;
     }
@@ -3094,7 +3094,7 @@ prop_compose! {
 }
 
 prop_compose! {
-    fn arb_setup()(
+    pub(crate) fn arb_setup()(
         players in 1usize..=3,
         enemies in 1usize..=3,
         others in 0usize..=2,

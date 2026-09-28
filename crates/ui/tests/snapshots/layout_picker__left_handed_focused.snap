@@ -16,7 +16,7 @@ expression: h.snapshot()
             │                                                 w           danger zone  │            
             │                                                 Space       end turn     │            
             │                                                 Shift+Space auto-end     │            
-            │                                                                          │            
+            │                                                 r           rewind       │            
             └──────────────────────────────────────────────────────────────────────────┘            
                                                                                                     
             ╔═ ► Left-handed ══════════════════════════════════════════════════════════╗            
@@ -30,7 +30,7 @@ expression: h.snapshot()
             ║                                                 o           danger zone  ║            
             ║                                                 Space       end turn     ║            
             ║                                                 Shift+Space auto-end     ║            
-            ║                                                                          ║            
+            ║                                                 u           rewind       ║            
             ╚══════════════════════════════════════════════════════════════════════════╝            
                                                                                                     
                              w/Up s/Down choose · f/j/Enter/Space pick                              
@@ -42,28 +42,28 @@ aaaaaaaaaaaaccddddddddddddddcccccccccccccccccccccccccccccccccccccccccccccccccccc
 aaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddeeeeeedddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddcaaaaaaaaaaaa
-aaaaaaaaaaaacddggggfggfggggggggggggggggggggggdddddddgegdddddddffffffffdddddddddddddddddcaaaaaaaaaaaa
+aaaaaaaaaaaacddggggfggfggfgggggggggggggggggggdddddddgegdddddddffffffffdddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddgfggfggfggfgggggggggggggggggggdddgeggeggegddddfddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddgggggggfffffgggggggdddddddddddddddddddddfddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfffffddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfffffffffffddddddddddddddcaaaaaaaaaaaa
-aaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaa
+aaaaaaaaaaaacdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddcaaaaaaaaaaaa
 aaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaahhfffffffffffffffhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaa
 aaaaaaaaaaaahddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddeeeedddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddhaaaaaaaaaaaa
-aaaaaaaaaaaahddggggegggggggggggggggggfggfggggdddddddgggdddddddffffffffdddddddddddddddddhaaaaaaaaaaaa
+aaaaaaaaaaaahddggggeggggggggggggggfggfggfggggdddddddgggdddddddffffffffdddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddgeggeggegggggggggggfggfggfggfgdddgggggggggddddfddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddgggggggfffffgggggggdddddddddddddddddddddfddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfffffddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfffffffffffddddddddddddddhaaaaaaaaaaaa
-aaaaaaaaaaaahddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddhaaaaaaaaaaaa
+aaaaaaaaaaaahdddddddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddhaaaaaaaaaaaa
 aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -27,3 +27,5 @@ debug-tools = []
 trpg-ui = { path = ".", features = ["harness"] }
 proptest.workspace = true
 insta.workspace = true
+# Compares battle states serialised (rewind tests).
+ron.workspace = true
