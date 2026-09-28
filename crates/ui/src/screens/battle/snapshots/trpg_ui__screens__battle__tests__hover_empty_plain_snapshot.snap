@@ -17,7 +17,7 @@ expression: buf.to_snapshot(&c.palette)
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      │                            │
                     ..≈≈≈≈..··..............Br..                      │                            │
-                    ....ar····........▓▓▓▓▓▓▓▓..                      │                            │
+                    ....Ar····........▓▓▓▓▓▓▓▓..                      │                            │
                     ..♣♣··Lo..[]......▓▓░░[]▓▓..                      │                            │
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
@@ -84,7 +84,7 @@ m = fg:enemy bg:road_bg
 n = fg:wood bg:water_bg
 o = fg:enemy bg:grass_bg
 p = fg:enemy bg:fort_bg
-q = fg:#54657a bg:road_bg
+q = fg:player bg:road_bg
 r = fg:stone bg:stone_bg
 s = fg:player bg:grass_bg
 t = fg:fort bg:fort_bg
@@ -93,12 +93,10 @@ v = fg:wood bg:stone_bg
 w = fg:text_dim bg:black
 --- overlays ---
 over  208,270 16x2  hp_high
-over  224,286 7x2  hp_mid
-over  231,286 9x2  black
+over  224,286 16x2  hp_high
 over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
-over  352,238 4x2  hp_low
-over  356,238 12x2  black
+over  352,238 16x2  hp_high
 over  272,206 16x2  hp_high
 over  255,256 3x1  cursor
 over  255,256 1x3  cursor

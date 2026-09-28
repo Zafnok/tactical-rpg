@@ -1,5 +1,5 @@
 ---
-id: "0415"
+id: "0416"
 title: Cursor as corner marks that never cover a neighbour's initials
 type: bug
 milestone: M3 Battle UI
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed: 2026-09-27
 ---
 
-# 0415 — Cursor as corner marks that never cover a neighbour's initials
+# 0416 — Cursor as corner marks that never cover a neighbour's initials
 
 ## Context
 

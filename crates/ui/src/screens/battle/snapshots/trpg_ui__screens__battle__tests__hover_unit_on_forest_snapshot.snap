@@ -101,8 +101,7 @@ over  176,270 7x2  hp_mid
 over  183,270 9x2  black
 over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
-over  352,238 4x2  hp_low
-over  356,238 12x2  black
+over  352,238 16x2  hp_high
 over  272,206 16x2  hp_high
 over  175,256 3x1  cursor
 over  175,256 1x3  cursor

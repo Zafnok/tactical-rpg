@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 use trpg_content::{Content, character_unit, check_map_labels};
 use trpg_core::{
-    BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Phase, Pos, Stock,
-    Unit, UnitAction, UnitId,
+    BattlePack, BattleSetup, BattleState, Faction, ItemId, Objective, Phase, Pos, Stock, Unit,
+    UnitId,
 };
 
 use self::camera::{Camera, tile_to_cell};
@@ -39,9 +39,9 @@ pub const QUICK_BATTLE_POTION: &str = "potion";
 pub const QUICK_BATTLE_POTIONS: usize = 3;
 
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
-/// against generic enemies (rout), one of them wounded and one having acted
-/// so both looks show. Fails with a message if the content lacks something
-/// it needs.
+/// against generic enemies (rout), at the start of the battle: everyone at
+/// full HP and every player unit ready. Fails with a message if the content
+/// lacks something it needs.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     let map = content
         .maps
@@ -87,19 +87,11 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
             .map_err(|e| e.to_string())?;
         units.push(unit);
     }
-    // The knight is wounded (mid HP) and the second brigand badly (low HP).
-    units[1].hp = units[1].stats.hp * 9 / 20;
-    units[4].hp = units[4].stats.hp / 4;
     let errors = check_map_labels(QUICK_BATTLE_MAP, &units);
     if let Some(e) = errors.first() {
         return Err(e.to_string());
     }
-    let archer = Command::Act {
-        unit: units[2].id,
-        dest: units[2].pos,
-        action: UnitAction::Wait,
-    };
-    let (mut state, _) = BattleState::new(BattleSetup {
+    let (state, _) = BattleState::new(BattleSetup {
         map,
         terrain: Arc::new(content.terrain.rules.clone()),
         classes: Arc::new(classes.clone()),
@@ -119,8 +111,6 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         rewind_charges: 3,
         seed: QUICK_BATTLE_SEED,
     });
-    // The archer has acted: it waits where it stands.
-    state.apply(&archer).map_err(|e| e.to_string())?;
     Ok(state)
 }
 
@@ -337,7 +327,7 @@ impl Screen for BattleScreen {
 #[cfg(test)]
 mod tests {
     use insta::assert_snapshot;
-    use trpg_core::{BattleMap, Grid, Phase, TerrainId, Unit};
+    use trpg_core::{BattleMap, Command, Grid, Phase, TerrainId, Unit, UnitAction};
 
     use super::*;
     use crate::console::{CELL_H_PX, CELL_W_PX, CONSOLE_H, CONSOLE_W};
@@ -402,13 +392,9 @@ mod tests {
         );
         let ids: Vec<u32> = units.iter().map(|u| u.id.0).collect();
         assert_eq!(ids, [1, 2, 3, 4, 5, 6]);
-        assert!(units[2].acted);
-        assert_eq!(units.iter().filter(|u| u.acted).count(), 1);
-        let hurt: Vec<usize> = (0..6)
-            .filter(|&i| units[i].hp < units[i].stats.hp)
-            .collect();
-        assert_eq!(hurt, [1, 4]);
         for u in units {
+            assert!(!u.acted, "{}", u.name);
+            assert_eq!(u.hp, u.stats.hp, "{}", u.name);
             assert!(state.map().tiles.in_bounds(u.pos));
         }
     }
@@ -505,7 +491,16 @@ mod tests {
     #[test]
     fn help_depends_on_what_is_hovered() {
         let mut c = ctx();
-        let mut s = quick();
+        let mut state = quick_battle(&c.content).unwrap();
+        // The archer waits where it stands.
+        let archer = &state.units()[2];
+        let wait = Command::Act {
+            unit: archer.id,
+            dest: archer.pos,
+            action: UnitAction::Wait,
+        };
+        state.apply(&wait).unwrap();
+        let mut s = BattleScreen::new(state);
         // On the lord, ready to act.
         assert_eq!(s.help(&c), "f select · e info · s next unit · d back");
         // On the archer, who has acted, and on an enemy.
@@ -600,14 +595,20 @@ mod tests {
     fn next_and_prev_unit_cycle_ready_units_in_reading_order() {
         let mut c = ctx();
         let mut s = quick();
-        // Ready: the lord (3, 5) and the knight (4, 6); the archer has acted.
-        assert_eq!(s.ready_units(), [Pos::new(3, 5), Pos::new(4, 6)]);
+        // Ready, in reading order: the archer (2, 4), the lord (3, 5) and
+        // the knight (4, 6).
+        assert_eq!(
+            s.ready_units(),
+            [Pos::new(2, 4), Pos::new(3, 5), Pos::new(4, 6)]
+        );
         let mut visit = |a: Action| {
             step(&mut s, &mut c, &[a]);
             s.cursor().pos
         };
         assert_eq!(visit(Action::NextUnit), Pos::new(4, 6));
+        assert_eq!(visit(Action::NextUnit), Pos::new(2, 4));
         assert_eq!(visit(Action::NextUnit), Pos::new(3, 5));
+        assert_eq!(visit(Action::PrevUnit), Pos::new(2, 4));
         assert_eq!(visit(Action::PrevUnit), Pos::new(4, 6));
         assert_eq!(visit(Action::PrevUnit), Pos::new(3, 5));
         // From a tile between them, in reading order.
@@ -619,7 +620,7 @@ mod tests {
         for _ in 0..5 {
             visit(Action::CursorDown);
         }
-        assert_eq!(visit(Action::NextUnit), Pos::new(3, 5));
+        assert_eq!(visit(Action::NextUnit), Pos::new(2, 4));
     }
 
     #[test]
@@ -714,12 +715,14 @@ mod tests {
             .to_owned()
     }
 
-    /// The Quick Battle with the knight moved into the forest at (1, 5).
+    /// The Quick Battle with the knight wounded (9/20 HP) and moved into
+    /// the forest at (1, 5).
     fn knight_in_forest() -> BattleScreen {
         let c = ctx();
         let state = quick_battle(&c.content).unwrap();
         let mut units = state.units().to_vec();
         units[1].pos = Pos::new(1, 5);
+        units[1].hp = units[1].stats.hp * 9 / 20;
         let mut s = BattleScreen::new(battle(&c, state.map().clone(), units));
         s.cursor.jump(Pos::new(1, 5));
         s

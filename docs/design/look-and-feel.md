@@ -9,7 +9,7 @@ game's own font atlas at in-game size. The final ones are in
 
 | Screenshot | Shows |
 | ---------- | ----- |
-| `0011-battle-browse.png` | Battle screen, palette D, browsing: initials, HP bars (its bracket cursor was replaced by corner marks in 0415) |
+| `0011-battle-browse.png` | Battle screen, palette D, browsing: initials, HP bars (its bracket cursor was replaced by corner marks in 0416) |
 | `0011-battle-selected.png` | A unit selected: move/attack ranges, path line with arrowhead |
 | `0011-conversation.png` | Conversation screen with 32×32 shaded portraits |
 | `0011-portrait-expressions.png` | Portrait style sample: confident, happy, angry, sad |
@@ -38,7 +38,7 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > in general looks good and then maybe on selection it changes to E [arrows] to
 > make it clear when you're in selected mode"
 >
-> [2026-09-27, ticket 0415, after playtesting the Quick Battle:] "the cursor
+> [2026-09-27, ticket 0416, after playtesting the Quick Battle:] "the cursor
 > overlaps units' names when adjacent. Like if Ar is on tile 1x1 and cursor
 > [ ] is on tile 1x2 then it just says A [ ] the r in Ar is cut off. […] Make
 > the cursor skinnier or something. I think z-indexing won't help here it
@@ -116,7 +116,7 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 - **Browsing:** thin **corner marks** around the tile, in `cursor` colour,
   **pulsing between bright and about half brightness** (period about 1 s,
   *tunable*). Never fully off. Each corner is two 1-pixel arms, **3 px** along
-  and 3 px down (decided 2026-09-27, ticket 0415; the bracket cursor in the
+  and 3 px down (decided 2026-09-27, ticket 0416; the bracket cursor in the
   0011 screenshots is replaced). The marks sit in the gaps the font leaves
   around letters, so **they never cover a unit's initials, including a
   neighbour's**.
@@ -200,6 +200,6 @@ black.
 ## Open sub-questions
 
 - Selection arrows `►Al◄` next to another unit: whole-glyph arrows would hide
-  one of its letters (the 0415 bracket problem). Ask Nick before 0403 draws them.
+  one of its letters (the 0416 bracket problem). Ask Nick before 0403 draws them.
 - Custom class icons vs initials (ticket 1006, after Chapter 1).
 - Combat screen full-body art: style, size, animation (ticket 0413).

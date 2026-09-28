@@ -13,10 +13,10 @@ fn quick_battle() -> Harness {
     h
 }
 
-/// The Quick Battle screen: `test_small.map` centred in the viewport, three
-/// player units (the archer has acted: lowercase and dimmed; the knight is
-/// wounded) and three enemies (one badly wounded), the cursor on the lord,
-/// the side panel showing the lord and its tile, and the help line.
+/// The Quick Battle screen at the start of the battle: `test_small.map`
+/// centred in the viewport, three ready player units and three enemies, all
+/// at full HP, the cursor on the lord, the side panel showing the lord and
+/// its tile, and the help line.
 #[test]
 fn quick_battle_renders() {
     let h = quick_battle();
@@ -94,10 +94,13 @@ fn arrows_move_the_cursor_and_the_panel_follows() {
 #[test]
 fn next_unit_jumps_between_ready_units() {
     let mut h = quick_battle();
+    // Reading order: archer (2, 4), lord (3, 5), knight (4, 6).
     h.keys("s");
     assert_eq!(panel(&h)[4], "Test Knight");
+    h.keys("s");
+    assert_eq!(panel(&h)[4], "Test Archer");
     h.keys("s");
     assert_eq!(panel(&h)[4], "Test Lord");
     h.keys("a");
-    assert_eq!(panel(&h)[4], "Test Knight");
+    assert_eq!(panel(&h)[4], "Test Archer");
 }

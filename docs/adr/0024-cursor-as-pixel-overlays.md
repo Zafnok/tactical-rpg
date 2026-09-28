@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-27
-- **Related tickets:** 0415, 0402, 0403, 0805
+- **Related tickets:** 0416, 0402, 0403, 0805
 - **Supersedes:** the "Cursor and path" browsing rule of ADR-0018 (the rest of
   ADR-0018 stands)
 
@@ -11,7 +11,7 @@
 ADR-0018 drew the browsing cursor as `[` and `]` glyphs in the cells either
 side of the tile. Those cells belong to the neighbouring tiles, and a unit's
 two-letter label fills both cells of its tile, so a cursor next to a unit hid
-one of its letters (Nick's playtest, ticket 0415). The Terminus 8×16 font
+one of its letters (Nick's playtest, ticket 0416). The Terminus 8×16 font
 leaves fixed gaps: letters are inked only in pixel columns 0–6 of a cell
 (column 0 only for `M T W Y m w`; column 7 never) and rows 2–11 (descenders of
 `g j p q y Q` reach rows 12–14). The HP bar takes rows 14–15 of the tile.
