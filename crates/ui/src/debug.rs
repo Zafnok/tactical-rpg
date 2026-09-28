@@ -1,4 +1,4 @@
-//! Debug screens (F12 in debug builds): a menu of tools. The glyph sampler
+//! Debug screens (F2 in debug builds): a menu of tools. The glyph sampler
 //! shows every font glyph and palette colour, for judging the look (ticket
 //! 0011); the portrait viewer shows every portrait (ticket 0703).
 

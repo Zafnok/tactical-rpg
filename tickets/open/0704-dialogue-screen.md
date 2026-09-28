@@ -51,7 +51,7 @@ typewriter reveal, advance/fast-forward/skip, caption and narration styles.
    A small `▼` blinks in the box corner when waiting.
 5. Overlay variant (`is_overlay() == true`) for in-battle lines: map stays visible
    behind, portraits and box drawn over it.
-6. Debug: F12 menu entry "Play test scene".
+6. Debug: F2 menu entry "Play test scene".
 
 ## Acceptance criteria
 

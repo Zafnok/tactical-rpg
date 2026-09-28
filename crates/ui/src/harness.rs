@@ -67,7 +67,7 @@ impl Harness {
         Self::from_game(Game::new(ctx, root))
     }
 
-    /// Wraps `game`. Debug screens are always on, so F12 behaves the same
+    /// Wraps `game`. Debug screens are always on, so F2 behaves the same
     /// in debug and release test runs.
     pub fn from_game(game: Game) -> Self {
         Self {
@@ -323,7 +323,7 @@ mod tests {
         let ctx = embedded_ctx().with_layout(Layout::RightHanded);
         let game = Game::start(ctx).with_debug_screens(false);
         let mut h = Harness::from_game(game);
-        h.keys("F12");
+        h.keys("F2");
         assert_eq!(h.top_screen(), "debug_menu");
     }
 

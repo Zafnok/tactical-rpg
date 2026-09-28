@@ -30,7 +30,7 @@
             "ToggleAutoEnd": ["Shift+Space"],
             // Opened by Cancel with nothing to cancel, or Confirm on an empty tile.
             "Menu": [],
-            "Debug": ["F12"],
+            "Debug": ["F2"],
             // Opens the turn rewind during the player phase.
             "Rewind": ["r"],
         },
@@ -51,7 +51,7 @@
             "EndTurn": ["Space"],
             "ToggleAutoEnd": ["Shift+Space"],
             "Menu": [],
-            "Debug": ["F12"],
+            "Debug": ["F2"],
             "Rewind": ["u"],
         },
     },

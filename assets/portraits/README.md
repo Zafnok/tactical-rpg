@@ -46,7 +46,7 @@ are square (8×8 screen px). Where the top pixel is transparent the cell is `▄
 over the background; where both are, a blank cell. Dimming (the listener in
 a conversation) lerps toward the background. Mirroring reverses each row.
 
-To look at a portrait, run a debug build, press **F12** and pick
+To look at a portrait, run a debug build, press **F2** and pick
 **Portraits**: left/right switch expression, up/down switch character.
 
 ## Rules checked by the loader
