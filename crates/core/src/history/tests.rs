@@ -42,6 +42,7 @@ fn a_new_history_has_the_battles_charges_and_no_commands() {
 fn rewinding_restores_exactly_the_state_before_the_attack() {
     let (mut h, before_attack, now) = fought();
     assert_eq!(h.len(), 2);
+    assert!(!h.is_empty());
     assert_eq!(ron(&h.state_at(2)), ron(&now));
     let back = h.rewind_to(0).unwrap();
     assert_eq!(ron(&back), ron(&before_attack));

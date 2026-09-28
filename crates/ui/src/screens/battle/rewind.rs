@@ -24,8 +24,8 @@ pub const TITLE_ROW: i32 = SIDE_PANEL.y + 1;
 /// Row of the charges line.
 pub const CHARGES_ROW: i32 = TITLE_ROW + 1;
 
-/// First row of the list.
-pub const LIST_ROW: i32 = CHARGES_ROW + 2;
+/// First row of the list, after a blank row.
+pub const LIST_ROW: i32 = TITLE_ROW + 3;
 
 /// Row of the confirm prompt (the list stops above it).
 pub const PROMPT_ROW: i32 = SIDE_PANEL.y + SIDE_PANEL.h - 3;
@@ -212,22 +212,18 @@ fn wrap(line: &str) -> Vec<String> {
 }
 
 /// The first block to show so that blocks `first..=focus` fit in `rows`.
+/// (`focus` itself if even it alone doesn't fit).
 fn first_shown(blocks: &[Vec<String>], focus: usize, rows: i32) -> usize {
     let height = |b: &Vec<String>| i32::try_from(b.len()).unwrap_or(i32::MAX);
-    let mut first = 0;
-    while first < focus && blocks[first..=focus].iter().map(height).sum::<i32>() > rows {
-        first += 1;
-    }
-    first
+    (0..focus)
+        .find(|&first| blocks[first..=focus].iter().map(height).sum::<i32>() <= rows)
+        .unwrap_or(focus)
 }
 
-/// A unit's name in `state`, or `?` (never shown: commands name units in
-/// the battle).
+/// A unit's name in `state`, or `?` (never shown: a command only names
+/// units on the map just before it).
 fn name(state: &BattleState, id: UnitId) -> &str {
-    state
-        .unit(id)
-        .or_else(|| state.fallen().iter().find(|u| u.id == id))
-        .map_or("?", |u| u.name.as_str())
+    state.unit(id).map_or("?", |u| u.name.as_str())
 }
 
 /// How a combat went for the attacker: `hit, 7 dmg`, `2 hits, 14 dmg` or
@@ -325,7 +321,12 @@ const fn phase_name(phase: Phase) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use trpg_core::Pos;
+
     use super::*;
+    use crate::console::{CONSOLE_H, CONSOLE_W};
+    use crate::screen::tests::ctx;
+    use crate::screens::battle::testing::skirmish;
 
     #[test]
     fn wrap_keeps_lines_within_the_panel_and_indents_the_rest() {
@@ -340,6 +341,12 @@ mod tests {
         );
         assert!(lines.iter().all(|l| l.chars().count() <= TEXT_W));
         assert_eq!(wrap("short"), ["short"]);
+        // Exactly the panel's width fits on one line.
+        let full = format!("{} {}", "a".repeat(12), "b".repeat(TEXT_W - 13));
+        assert_eq!(wrap(&full), std::slice::from_ref(&full));
+        // A word longer than the panel isn't preceded by an empty line.
+        let long = "c".repeat(TEXT_W + 4);
+        assert_eq!(wrap(&long), std::slice::from_ref(&long));
     }
 
     #[test]
@@ -352,6 +359,100 @@ mod tests {
         assert_eq!(first_shown(&blocks, 2, 5), 1);
         assert_eq!(first_shown(&blocks, 3, 6), 1);
         assert_eq!(first_shown(&blocks, 3, 4), 2);
+        // A block taller than the rows: shown from itself.
+        assert_eq!(first_shown(&[b(5)], 0, 4), 0);
+        assert_eq!(first_shown(&blocks, 2, 2), 2);
+    }
+
+    #[test]
+    fn panel_rows() {
+        assert_eq!(
+            (TITLE_ROW, CHARGES_ROW, LIST_ROW, PROMPT_ROW),
+            (1, 2, 4, 27)
+        );
+    }
+
+    fn screen(lines: usize, focus: usize) -> RewindScreen {
+        let before = skirmish(&ctx(), 20);
+        let entries = (0..lines)
+            .map(|i| Entry {
+                line: format!("e{i}"),
+                point: lines - 1 - i,
+                before: before.clone(),
+            })
+            .collect();
+        RewindScreen {
+            entries,
+            focus,
+            confirming: false,
+            charges_left: 3,
+            charges: 3,
+        }
+    }
+
+    /// Row `y` of the panel drawn for `r`, inside its border, trimmed.
+    fn drawn(r: &RewindScreen) -> impl Fn(i32) -> String + use<> {
+        let c = ctx();
+        let black = c.palette.get(UiColor::Black);
+        let mut buf = GlyphBuffer::new(CONSOLE_W, CONSOLE_H, Cell::new(' ', black, black));
+        r.draw(&c.palette, &mut buf);
+        move |y| {
+            (TEXT_X..SIDE_PANEL.x + SIDE_PANEL.w - 1)
+                .map(|x| buf.get(x, y).map_or(' ', |c| c.glyph))
+                .collect::<String>()
+                .trim()
+                .to_owned()
+        }
+    }
+
+    #[test]
+    fn a_long_list_fills_the_rows_above_the_prompt_and_scrolls_to_the_focus() {
+        // 22 rows from LIST_ROW to the blank row above the prompt.
+        let row = drawn(&screen(30, 0));
+        assert_eq!(row(LIST_ROW), "e0");
+        assert_eq!(row(PROMPT_ROW - 2), "e21");
+        assert_eq!(row(PROMPT_ROW - 1), "");
+        assert_eq!(row(PROMPT_ROW), "");
+        let row = drawn(&screen(30, 29));
+        assert_eq!(row(LIST_ROW), "e8");
+        assert_eq!(row(PROMPT_ROW - 2), "e29");
+        assert_eq!(row(PROMPT_ROW - 1), "");
+    }
+
+    #[test]
+    fn the_prompt_freezes_the_choice() {
+        let mut r = screen(3, 0);
+        assert_eq!(r.step(Action::CursorDown), RewindEffect::None);
+        assert_eq!(r.step(Action::Confirm), RewindEffect::None);
+        assert!(r.is_confirming());
+        // Up and down do nothing while it's up.
+        r.step(Action::CursorDown);
+        assert_eq!(r.focused().map(|e| e.point), Some(1));
+        r.step(Action::CursorUp);
+        assert_eq!(r.focused().map(|e| e.point), Some(1));
+        assert_eq!(r.step(Action::Confirm), RewindEffect::Rewind(1));
+    }
+
+    #[test]
+    fn using_an_item_names_the_target_unless_it_is_the_user() {
+        let before = skirmish(&ctx(), 20);
+        let used = |target| Replayed {
+            before: before.clone(),
+            command: Command::Act {
+                unit: UnitId(1),
+                dest: Pos::new(6, 2),
+                action: UnitAction::UseItem {
+                    pack_index: 0,
+                    target: UnitId(target),
+                },
+            },
+            events: vec![],
+        };
+        assert_eq!(describe(&used(1)), "Turn 1 · Test Lord used an item");
+        assert_eq!(
+            describe(&used(2)),
+            "Turn 1 · Test Lord used an item on Test Knight"
+        );
     }
 
     #[test]
