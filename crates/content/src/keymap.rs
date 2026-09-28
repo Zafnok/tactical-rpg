@@ -302,7 +302,7 @@ pub struct RepeatDef {
 impl Default for RepeatDef {
     fn default() -> Self {
         Self {
-            delay_ms: 170,
+            delay_ms: 300,
             interval_ms: 55,
         }
     }
@@ -644,7 +644,7 @@ mod tests {
     /// A keymap source holding `blocks` as its layouts.
     fn source_of(blocks: &[String]) -> String {
         format!(
-            "(\n    layouts: {{\n{}    }},\n    repeat: (delay_ms: 170, interval_ms: 55),\n)",
+            "(\n    layouts: {{\n{}    }},\n    repeat: (delay_ms: 300, interval_ms: 55),\n)",
             blocks.concat()
         )
     }
@@ -962,7 +962,7 @@ mod tests {
         assert_eq!(
             k.repeat,
             RepeatDef {
-                delay_ms: 170,
+                delay_ms: 300,
                 interval_ms: 55
             }
         );

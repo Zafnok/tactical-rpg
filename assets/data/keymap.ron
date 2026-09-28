@@ -57,5 +57,5 @@
     },
     // Held cursor keys, in every layout: first repeat after delay_ms, then
     // every interval_ms.
-    repeat: (delay_ms: 170, interval_ms: 55),
+    repeat: (delay_ms: 300, interval_ms: 55),
 )

@@ -254,14 +254,14 @@ mod tests {
     fn hold_repeats_then_releases() {
         let (mut h, seen) = recorder();
         h.hold("Down", 0.5);
-        // Press, then repeats at 170 ms and every 55 ms up to 500 ms.
+        // Press, then repeats at 300 ms and every 55 ms up to 500 ms.
         let downs = seen
             .borrow()
             .iter()
             .flat_map(|(a, _)| a.clone())
             .filter(|&a| a == Action::CursorDown)
             .count();
-        assert_eq!(downs, 1 + 1 + (500 - 170) / 55);
+        assert_eq!(downs, 1 + 1 + (500 - 300) / 55);
         assert!((total_time(&seen) - (0.5 + FRAME_DT)).abs() < 1e-4);
         // Released: waiting emits nothing more.
         seen.borrow_mut().clear();
