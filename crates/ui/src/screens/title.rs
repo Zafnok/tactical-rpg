@@ -1,7 +1,7 @@
 //! The placeholder title screen (the real game flow comes with ticket 0801).
 
 use super::battle::{BattleScreen, quick_battle};
-use super::{centre_x, print_centred};
+use super::{centre_x, draw_debug_hint, print_centred};
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
@@ -121,6 +121,7 @@ impl Screen for TitleScreen {
         self.menu.draw(&ctx.palette, buf, x, MENU_ROW);
         let bottom = i32::from(buf.height()) - 1;
         print_centred(buf, bottom, &Self::help(ctx), c(UiColor::TextDim), black);
+        draw_debug_hint(ctx, buf, bottom);
     }
 }
 

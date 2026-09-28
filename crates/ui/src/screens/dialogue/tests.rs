@@ -130,6 +130,31 @@ fn long_text_pages_three_lines_at_a_time() {
 }
 
 #[test]
+fn text_filling_whole_pages_has_no_empty_page_after() {
+    let mut c = ctx();
+    let line = format!("{} ", "x".repeat(90));
+    let mut s = DialogueScreen::new(two_speakers(&line.repeat(6)));
+    let mut pages = vec![];
+    while s.page_lines() != ["Second."] {
+        pages.push(s.page_lines().len());
+        press(&mut s, &mut c, Action::Confirm);
+        press(&mut s, &mut c, Action::Confirm);
+    }
+    assert_eq!(pages, [3, 3]);
+}
+
+#[test]
+fn two_lines_of_narration_start_at_the_top() {
+    let c = ctx();
+    let text = format!("{} {}", "a".repeat(60), "b".repeat(60));
+    let mut s = DialogueScreen::new(scene(vec![Step::Narrate { text }]));
+    s.shown = 120.0;
+    let buf = draw(&s, &c);
+    assert!(row(&buf, TEXT_Y).contains(&"a".repeat(60)));
+    assert!(row(&buf, TEXT_Y + 1).contains(&"b".repeat(60)));
+}
+
+#[test]
 fn cancel_asks_before_skipping() {
     let mut c = ctx();
     let mut s = DialogueScreen::new(two_speakers("First."));
@@ -283,7 +308,10 @@ fn the_arrow_blinks_once_revealed() {
     assert!(!row(&draw(&s, &c), arrow_row).contains('▼'));
     press(&mut s, &mut c, Action::Confirm);
     assert!(row(&draw(&s, &c), arrow_row).ends_with("f ▼  │"));
-    s.update(&mut c, &frame(&[], 0.6, false));
+    // Hidden from exactly half a second.
+    s.update(&mut c, &frame(&[], 0.5, false));
+    assert!(!row(&draw(&s, &c), arrow_row).contains('▼'));
+    s.update(&mut c, &frame(&[], 0.1, false));
     assert!(!row(&draw(&s, &c), arrow_row).contains('▼'));
     assert!(row(&draw(&s, &c), arrow_row).contains(" f "));
     s.update(&mut c, &frame(&[], 0.5, false));

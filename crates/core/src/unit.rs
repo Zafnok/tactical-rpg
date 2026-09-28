@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::ai::AiBehavior;
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
-use crate::item::{ItemId, Loadout, LoadoutDef, LoadoutError};
+use crate::item::{Loadout, LoadoutDef, LoadoutError};
 use crate::skill::{SkillId, TimedEffect};
 use crate::spell::{SpellId, SpellState};
 use crate::stats::{StatKind, StatValue, Stats};
@@ -164,8 +164,6 @@ pub struct Unit {
     /// Weapons, armour and accessory. The equipped weapon attacks and
     /// counters; with none the unit can't.
     pub loadout: Loadout,
-    /// The unit's own consumables. Player units use the battle pack instead.
-    pub consumables: Vec<ItemId>,
     /// The character's personal spells, learned at a character level.
     pub personal_spells: Vec<(Level, SpellId)>,
     /// Every spell the unit knows now; see [`crate::spell`].
@@ -331,7 +329,6 @@ impl Unit {
             map_label: default_map_label(&class.name),
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
-            consumables: Vec::new(),
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),
@@ -509,7 +506,6 @@ mod tests {
             map_label: "He".into(),
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
-            consumables: Vec::new(),
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),
@@ -634,7 +630,6 @@ mod tests {
             map_label: "Br".into(),
             weapon_exp: BTreeMap::new(),
             loadout: Loadout::default(),
-            consumables: Vec::new(),
             personal_spells: Vec::new(),
             learned: BTreeSet::new(),
             spells: SpellState::default(),

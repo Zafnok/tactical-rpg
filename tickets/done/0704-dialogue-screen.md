@@ -51,7 +51,7 @@ typewriter reveal, advance/fast-forward/skip, caption and narration styles.
    A small `▼` blinks in the box corner when waiting.
 5. Overlay variant (`is_overlay() == true`) for in-battle lines: map stays visible
    behind, portraits and box drawn over it.
-6. Debug: F12 menu entry "Play test scene".
+6. Debug: F2 menu entry "Play test scene".
 
 ## Acceptance criteria
 
@@ -77,7 +77,7 @@ typewriter reveal, advance/fast-forward/skip, caption and narration styles.
   to move into the saved settings. Holding Confirm reveals 6× faster.
 - **Debug menu:** two entries, not one: "Play test scene" (full-screen) and
   "Play test scene (overlay)". The overlay entry replaces the debug menu, so
-  pressing F12 during a battle plays the scene over that battle's map.
+  pressing F2 (the debug key since main moved it from F12) during a battle plays the scene over that battle's map.
 - **Screenshots:** `docs/screenshots/0704-dialogue.png`,
   `0704-narration.png`, `0704-dialogue-overlay.png`.
 

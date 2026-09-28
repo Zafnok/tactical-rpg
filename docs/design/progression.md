@@ -2,7 +2,8 @@
 
 Decided: 2026-09-25
 Source: ticket 0005 (fliers moved to tier 3+ by ticket 0017, 2026-09-25;
-the lord's line added by ticket 0016, 2026-09-25)
+the lord's line added by ticket 0016, 2026-09-25; per-class stat caps
+removed by ticket 0019, 2026-09-28)
 
 ## Nick's words
 
@@ -136,6 +137,24 @@ unique starting class/tree"):
 > warlord should probably be reserved for one of the broader class lines cuz
 > it doesn't sound like a unique class tier 3. rest sound ok tho"
 
+Stat caps (ticket 0019, 2026-09-28; Nick questioned the `19/42` on the
+unit info screen: "We have 1) a level cap 2) random growth per level so how
+can a MAX be constrained by class...?"):
+
+> **Should stats have a per-class maximum?** "1C - the max is only
+> determined by true caps, including the level cap, as well as the growth
+> rates, which are determined by classes. So like... an axe class would love
+> more HP and ATK and probably gets less DEF or SPD (whatever they're
+> called). So they get more level ups in the stats they prefer with a lower
+> chance in the other stats... There is no penalty for staying in a class a
+> long time other than losing access to better skills, growth rates, etc."
+>
+> **Where a maxed stat shows:** "2A - but not in battle. In battle MAX means
+> something else."
+>
+> **Fixed or rising ceiling:** "3C" (the ceiling numbers, and whether they
+> rise with tier, are decided with the number scale in ticket 0013).
+
 So:
 
 - **Level ups:** each stat rolls against its growth %. The **class** sets the
@@ -195,7 +214,7 @@ with the rest in ticket 0013.
   `pool / number of those units`, rounded down, and the remainder is lost.
   This can give more than one level up at once. Each level up is rolled
   separately.
-- **Level-up stats** use the unit's **current class** (its growths, caps and
+- **Level-up stats** use the unit's **current class** (its growths and
   tier) at the moment of the level up.
 
 ### EXP formulas (*tunable*: FE GBA's shape, doubled for Nick's faster pace)
@@ -279,12 +298,13 @@ in `stats-and-combat.md`. `roll_below(n)` gives a uniform integer in
 `0..n` (n ≥ 1).
 
 1. Stat order is always `HP, Str, Mag, Dex, Spd, Def, Res`.
-2. A stat is **eligible** if its value is below its current class cap and its
-   `growth > 0`.
+2. A stat is **eligible** if its value is below its **hard ceiling**
+   (`stats-and-combat.md`) and its `growth > 0`. Classes have no caps
+   (Nick, ticket 0019).
 3. **Rolls:** for each stat in order, call `r = roll()`. This happens for
    **every** stat, eligible or not, so RNG use is always 7 calls. If the
    stat is eligible it gains `growth / 100 + (r < growth % 100 ? 1 : 0)`
-   points, clamped so it doesn't pass its cap. A stat that gains ≥ 1 point
+   points, clamped so it doesn't pass its hard ceiling. A stat that gains ≥ 1 point
    counts as **one gain** for the safety net.
 4. **Safety net:** `need = min(min_gains[class.tier], number of eligible
    stats)`. While `gains < need`:
@@ -310,17 +330,31 @@ nothing.
 
 ### Stat caps
 
-> **Under review (ticket 0019):** per-class caps are Claude's starting rule,
-> not Nick's decision; Nick questioned them on 2026-09-28. They stay in force
-> until 0019 is answered.
+Nick (ticket 0019): **classes don't cap stats.** A stat's maximum comes only
+from the game's **true caps**: the per-stat **hard ceiling**
+(`stats-and-combat.md`) and the **level cap** (no more level ups past it).
+The class decides how *likely* each stat is to grow, through its growth
+rates: an axe class gains HP and Str often and Def or Spd rarely.
 
-- Each class has a cap per stat (table below). A stat at its cap can't gain.
-  Caps are always ≤ the hard ceilings in `stats-and-combat.md`.
-- **After a class change into a class with lower caps** (a reclass), stats
-  above the new caps are **kept**. They just can't grow while in that class
-  (Nick: stat growth from many classes accumulates).
-- Gear may go above caps, but never above the hard ceilings
+- A stat at its hard ceiling can't gain. Nothing else stops it.
+- **Staying in one class for a long time is never penalised** (Nick). A unit
+  keeps growing at that class's rates up to the hard ceilings. The only cost
+  is missing the skills and better growth rates of other classes.
+- A class change never lowers stats and never blocks growth.
+- Gear and skill bonuses may raise a stat, but never above the hard ceiling
   (`weapons-and-items.md`).
+- **The ceiling numbers** (and whether they stay fixed or rise with class
+  tier) are decided with the number scale in ticket 0013 (Nick: "3C"). Until
+  then the FE-sized placeholders in `stats-and-combat.md` apply.
+
+#### Showing a maxed stat (Nick: "2A - but not in battle")
+
+- On **out-of-battle** screens that list a unit's stats (the promotion /
+  class-change choice screen, and later between-battle unit screens), a stat
+  at its hard ceiling is marked `MAX`.
+- **In battle** (unit info screen, level-up overlay, forecast) no such marker
+  is shown: there "max" means max HP (Nick: "In battle MAX means something
+  else").
 
 ## Class levels, class points and mastery
 
@@ -376,7 +410,7 @@ nothing.
 - **The character level doesn't reset** (Nick). EXP stays the same.
 - **Promotion bonus** (Nick: FE GBA-style big boost): for each stat,
   `bonus = max(0, new_class.base[stat] − old_class.base[stat])`. The bonus is
-  added, then clamped to the hard ceiling (not to the class cap). Current HP
+  added, then clamped to the hard ceiling. Current HP
   rises by the HP bonus. Mov becomes the new class's Mov.
 - The new class is unlocked: its record starts at class level 1, so its
   active is gained at once, plus any class-level-1 spells.
@@ -414,9 +448,7 @@ round.
 - **Stats accumulate** (Nick: "stat growth from completing many classes can
   accumulate"):
   - A reclass never lowers stats and gives no promotion bonus.
-  - Stats above the new class's caps are kept, but can't grow while in that
-    class.
-  - From then on, level ups use the new class's growths, caps and tier.
+  - From then on, level ups use the new class's growths and tier.
 - Passives are kept. Actives and class spells of a class that wasn't
   mastered stay behind (Nick; `magic.md`), and come back on returning to it.
 - Weapon ranks and slots follow the promotion rules above.
@@ -490,7 +522,7 @@ behind when you leave an unmastered class.
 - **Confirmed in the same review:** Charge counts squares walked this
   action (not move cost) and never counts on counters; Deadly Blow doubles
   crit **after** the other crit bonuses (then caps at 100); skill stat
-  bonuses count in combat only and may pass class caps.
+  bonuses count in combat only (never above the hard ceilings).
 - **Skill might and damage bonuses** (Nick, reviewing ticket 0311's PR,
   2026-09-27: "I think the might + N / damage + N should be multiplied /
   halved"): a skill's "might +N" or "damage +N" is added to the weapon's
@@ -816,70 +848,70 @@ higher tiers are added when tiers above 3 are designed.
 | Storm Lancer | 5 | 8 | flying | Flying | Sp, Sw | L | 3 | — |
 | Sky Tyrant | 5 | 7 | flying | Flying | Sp, Ax | L M | 3 | — |
 
-Weapon ranks, base stats, caps and growths for these come with the tier-4+
+Weapon ranks, base stats and growths for these come with the tier-4+
 design. Until then they aren't in the game's class data, and the Flier's
 `promotes_to` in the data stays empty (nobody can promote past it yet).
 
-### Base stats, caps and growths
+### Base stats and growths
 
 `base` is used for **generic units** (see below) and for the **promotion
 bonus**. It isn't a named character's stats: those come from the character's
 data (0701 / 0803). Order: `HP Str Mag Dex Spd Def Res`.
 
-| Class | Base | Caps | Growths % |
-| ----- | ---- | ---- | --------- |
-| Swordsman | 18 5 0 7 8 3 1 | 40 20 10 24 25 18 15 | 70 40 10 55 60 25 20 |
-| Brawler | 18 5 0 6 9 3 1 | 40 20 10 22 26 16 14 | 70 40 5 50 65 20 20 |
-| Raider | 22 7 0 3 4 4 0 | 45 24 8 18 18 20 12 | 85 55 5 35 30 30 10 |
-| Archer | 17 5 0 7 5 3 1 | 40 20 10 24 20 18 15 | 65 45 10 60 45 25 20 |
-| Guard | 20 7 0 4 2 9 0 | 45 22 8 18 14 26 10 | 80 45 5 35 20 55 10 |
-| Rider | 20 6 0 5 5 5 1 | 42 21 10 20 20 20 14 | 75 45 5 45 45 35 15 |
-| Mage | 16 1 6 5 5 1 5 | 36 12 24 20 20 12 22 | 55 15 60 45 45 15 45 |
-| Cleric | 16 1 5 4 5 1 7 | 36 12 22 18 20 12 24 | 55 15 50 40 45 15 55 |
-| Brigand | 20 6 0 2 4 3 0 | 45 24 8 16 18 18 10 | 80 50 0 30 30 25 5 |
-| Fire Elemental | 30 0 8 4 5 8 4 | 60 10 30 24 20 30 30 | 80 0 50 35 30 40 40 |
-| Frost Elemental | 30 0 8 4 5 8 4 | 60 10 30 24 20 30 30 | 80 0 50 35 30 40 40 |
-| Duelist | 24 8 0 11 13 5 3 | 50 26 12 32 34 22 20 | 70 45 10 60 65 25 25 |
-| Shadowblade | 22 7 0 12 12 4 3 | 48 24 12 34 32 20 20 | 65 40 10 65 60 20 25 |
-| Striker | 24 8 0 9 14 5 3 | 50 26 12 30 36 20 18 | 70 45 5 55 70 20 20 |
-| Grappler | 28 10 0 7 10 8 2 | 55 30 10 26 28 28 16 | 85 55 5 40 45 40 15 |
-| Berserker | 30 12 0 6 8 6 1 | 60 32 8 24 26 24 14 | 90 65 5 40 40 30 10 |
-| Vanguard | 28 10 0 7 7 8 2 | 55 29 10 26 24 28 16 | 85 55 5 45 35 40 15 |
-| Marksman | 22 8 0 12 9 5 3 | 48 26 12 34 28 22 20 | 65 50 10 65 50 25 25 |
-| Outrider | 23 7 0 10 10 6 3 | 48 25 12 30 30 22 20 | 70 45 10 55 55 30 20 |
-| Bulwark | 28 11 0 6 4 14 2 | 58 30 10 24 20 36 14 | 85 50 5 40 25 60 10 |
-| Iron Rider | 27 10 0 6 6 11 2 | 56 30 10 24 22 32 14 | 85 50 5 40 35 50 10 |
-| Lancer | 25 9 0 8 9 8 3 | 52 28 12 28 28 26 18 | 80 50 5 50 50 35 20 |
-| Sorcerer | 20 2 10 7 7 2 8 | 42 14 32 26 26 14 28 | 55 15 70 50 50 15 50 |
-| Mystic | 21 2 9 7 7 2 9 | 44 14 30 26 26 14 30 | 60 15 60 45 50 15 55 |
-| Priest | 20 2 8 6 7 2 11 | 42 14 28 24 26 14 32 | 60 15 55 45 45 15 65 |
-| Blade Dancer | 30 11 0 15 17 7 5 | 58 32 14 40 40 26 24 | 70 45 10 60 65 25 25 |
-| Nightblade | 28 10 0 16 16 6 5 | 56 30 14 40 38 24 24 | 65 40 10 65 60 20 25 |
-| Tempest Fist | 30 11 0 12 18 7 5 | 58 32 14 36 40 24 22 | 70 45 5 55 70 20 20 |
-| Colossus | 36 14 0 9 12 11 3 | 66 38 12 30 32 34 18 | 85 55 5 40 45 40 15 |
-| Ravager | 38 16 0 8 11 8 2 | 70 40 10 30 32 28 16 | 90 65 5 40 40 30 10 |
-| Warchief | 36 13 0 9 9 11 3 | 66 36 12 32 28 34 18 | 85 55 5 45 35 40 15 |
-| Deadeye | 28 11 0 16 12 7 5 | 56 32 14 40 34 26 24 | 65 50 10 65 50 25 25 |
-| Windrunner | 29 10 0 13 14 8 5 | 56 30 14 36 36 26 24 | 70 45 10 55 55 30 20 |
-| Bastion | 36 14 0 8 5 19 3 | 70 36 12 30 24 45 18 | 85 50 5 40 25 60 10 |
-| Juggernaut | 34 13 0 8 8 15 3 | 66 36 12 30 28 40 18 | 85 50 5 40 35 50 10 |
-| High Lancer | 32 12 0 10 12 10 4 | 60 34 14 34 34 32 22 | 80 50 5 50 50 35 20 |
-| Flier | 27 9 3 12 15 7 11 | 54 30 22 36 40 24 38 | 65 40 20 55 60 20 50 |
-| Archmage | 25 3 14 9 9 3 11 | 50 16 40 32 32 16 34 | 55 15 70 50 50 15 50 |
-| Arcanist | 26 3 13 9 9 3 12 | 52 16 38 32 32 16 36 | 60 15 60 45 50 15 55 |
-| Oracle | 25 3 12 8 9 3 14 | 50 16 36 30 32 16 40 | 60 15 55 45 45 15 65 |
-| Exile *(lord)* | 19 6 1 7 7 4 3 | 42 22 12 24 24 20 18 | 75 45 15 50 55 30 30 |
-| Blade Heir *(lord)* | 25 9 1 11 12 6 5 | 50 27 14 32 33 24 24 | 75 45 15 55 60 25 30 |
-| Commander *(lord)* | 28 10 1 9 9 9 5 | 54 29 14 28 28 30 24 | 85 50 15 45 45 40 30 |
-| Sovereign *(lord)* | 31 12 2 15 16 8 7 | 58 33 16 40 40 28 28 | 75 45 15 55 60 25 30 |
-| Grand Marshal *(lord)* | 35 14 2 11 11 12 7 | 64 36 16 34 32 38 28 | 85 50 15 45 45 40 30 |
+| Class | Base | Growths % |
+| ----- | ---- | --------- |
+| Swordsman | 18 5 0 7 8 3 1 | 70 40 10 55 60 25 20 |
+| Brawler | 18 5 0 6 9 3 1 | 70 40 5 50 65 20 20 |
+| Raider | 22 7 0 3 4 4 0 | 85 55 5 35 30 30 10 |
+| Archer | 17 5 0 7 5 3 1 | 65 45 10 60 45 25 20 |
+| Guard | 20 7 0 4 2 9 0 | 80 45 5 35 20 55 10 |
+| Rider | 20 6 0 5 5 5 1 | 75 45 5 45 45 35 15 |
+| Mage | 16 1 6 5 5 1 5 | 55 15 60 45 45 15 45 |
+| Cleric | 16 1 5 4 5 1 7 | 55 15 50 40 45 15 55 |
+| Brigand | 20 6 0 2 4 3 0 | 80 50 0 30 30 25 5 |
+| Fire Elemental | 30 0 8 4 5 8 4 | 80 0 50 35 30 40 40 |
+| Frost Elemental | 30 0 8 4 5 8 4 | 80 0 50 35 30 40 40 |
+| Duelist | 24 8 0 11 13 5 3 | 70 45 10 60 65 25 25 |
+| Shadowblade | 22 7 0 12 12 4 3 | 65 40 10 65 60 20 25 |
+| Striker | 24 8 0 9 14 5 3 | 70 45 5 55 70 20 20 |
+| Grappler | 28 10 0 7 10 8 2 | 85 55 5 40 45 40 15 |
+| Berserker | 30 12 0 6 8 6 1 | 90 65 5 40 40 30 10 |
+| Vanguard | 28 10 0 7 7 8 2 | 85 55 5 45 35 40 15 |
+| Marksman | 22 8 0 12 9 5 3 | 65 50 10 65 50 25 25 |
+| Outrider | 23 7 0 10 10 6 3 | 70 45 10 55 55 30 20 |
+| Bulwark | 28 11 0 6 4 14 2 | 85 50 5 40 25 60 10 |
+| Iron Rider | 27 10 0 6 6 11 2 | 85 50 5 40 35 50 10 |
+| Lancer | 25 9 0 8 9 8 3 | 80 50 5 50 50 35 20 |
+| Sorcerer | 20 2 10 7 7 2 8 | 55 15 70 50 50 15 50 |
+| Mystic | 21 2 9 7 7 2 9 | 60 15 60 45 50 15 55 |
+| Priest | 20 2 8 6 7 2 11 | 60 15 55 45 45 15 65 |
+| Blade Dancer | 30 11 0 15 17 7 5 | 70 45 10 60 65 25 25 |
+| Nightblade | 28 10 0 16 16 6 5 | 65 40 10 65 60 20 25 |
+| Tempest Fist | 30 11 0 12 18 7 5 | 70 45 5 55 70 20 20 |
+| Colossus | 36 14 0 9 12 11 3 | 85 55 5 40 45 40 15 |
+| Ravager | 38 16 0 8 11 8 2 | 90 65 5 40 40 30 10 |
+| Warchief | 36 13 0 9 9 11 3 | 85 55 5 45 35 40 15 |
+| Deadeye | 28 11 0 16 12 7 5 | 65 50 10 65 50 25 25 |
+| Windrunner | 29 10 0 13 14 8 5 | 70 45 10 55 55 30 20 |
+| Bastion | 36 14 0 8 5 19 3 | 85 50 5 40 25 60 10 |
+| Juggernaut | 34 13 0 8 8 15 3 | 85 50 5 40 35 50 10 |
+| High Lancer | 32 12 0 10 12 10 4 | 80 50 5 50 50 35 20 |
+| Flier | 27 9 3 12 15 7 11 | 65 40 20 55 60 20 50 |
+| Archmage | 25 3 14 9 9 3 11 | 55 15 70 50 50 15 50 |
+| Arcanist | 26 3 13 9 9 3 12 | 60 15 60 45 50 15 55 |
+| Oracle | 25 3 12 8 9 3 14 | 60 15 55 45 45 15 65 |
+| Exile *(lord)* | 19 6 1 7 7 4 3 | 75 45 15 50 55 30 30 |
+| Blade Heir *(lord)* | 25 9 1 11 12 6 5 | 75 45 15 55 60 25 30 |
+| Commander *(lord)* | 28 10 1 9 9 9 5 | 85 50 15 45 45 40 30 |
+| Sovereign *(lord)* | 31 12 2 15 16 8 7 | 75 45 15 55 60 25 30 |
+| Grand Marshal *(lord)* | 35 14 2 11 11 12 7 | 85 50 15 45 45 40 30 |
 
 Design intent behind the numbers:
 - **Armoured classes** (Guard, Bulwark, Iron Rider, Bastion, Juggernaut) have
   the highest Def and the lowest Res. Nick: "encouraged to use magic users on
   those enemies".
-- **Brawler → Striker → Tempest Fist** has the highest Spd caps (up to 40,
-  the specialist guideline in `stats-and-combat.md`). With the lightest
+- **Brawler → Striker → Tempest Fist** has the highest Spd growths (65–70%)
+  and the highest Spd bases. With the lightest
   weapons and Light Feet, this is the line most likely to strike 3x/4x
   (Nick's "punching class").
 - **Fliers** have high Res, low Def and high Spd. Bows (×3) are their
@@ -891,7 +923,7 @@ Design intent behind the numbers:
 ### Generic units (enemies and generic allies)
 
 A generic unit of class `C` at character level `L` has
-`stat = min(cap, base + (growth × (L − 1)) / 100)` for each stat, with no
+`stat = min(hard ceiling, base + (growth × (L − 1)) / 100)` for each stat, with no
 talent and no randomness (Nick: fixed average stats, so a map plays the
 same way every time and you can plan exactly). Its weapon ranks are the class's start ranks
 unless the chapter data says otherwise. Its class level is 1, with the
@@ -903,7 +935,7 @@ generic enemy extra skills or spells.
 ### Named characters
 
 Each named character's data (0701 / 0803) has: starting class, character
-level, base stats (≤ that class's caps), **talent** stat, starting weapon
+level, base stats (≤ the hard ceilings), **talent** stat, starting weapon
 ranks, class records (usually just the starting class at class level 1), and
 0–2 personal spells (`magic.md`).
 
@@ -920,7 +952,7 @@ ranks, class records (usually just the starting class at class level 1), and
 - **Flavour names** for every class, skill and seal: closer to shipping
   (Nick). They must not copy Fire Emblem names. The name **Warlord** is kept
   for one of the shared (non-lord) lines (Nick, ticket 0016).
-- **Number scale:** all stats, caps and EXP numbers rescale with ticket 0013.
+- **Number scale:** all stats, hard ceilings and EXP numbers rescale with ticket 0013.
 - **How Combat Arts relate to actives:** decided in `combat-arts.md` (0014).
 - **Where the tier seals and Reclass Seals come from** (shops, chests, story):
   chapter and shop data (0009 and later).

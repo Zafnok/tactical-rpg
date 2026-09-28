@@ -101,7 +101,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
    `ToBeContinuedScreen` → title. Defeat → `GameOverScreen` (`Retry chapter` / `Title`). Add
    `Restart battle` (with confirm) to the map menu. Both restarts rebuild the
    battle from its setup, which refunds all rewind charges.
-5. Title menu: `New Game`, `Quit` (+ debug-only `Quick Battle`, F12 tools).
+5. Title menu: `New Game`, `Quit` (+ debug-only `Quick Battle`, F2 tools).
    Remove `PlaceholderScreen`. Today's wiring (0401):
    `TitleScreen::with_quick_battle()` is chosen by `Game::start` when
    `Ctx::debug_tools` is on, and it pushes a `BattleScreen` built by

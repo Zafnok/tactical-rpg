@@ -41,7 +41,7 @@ pub struct Game {
 }
 
 impl Game {
-    /// A game showing `root`. Debug screens (F12) are on in debug builds.
+    /// A game showing `root`. Debug screens (F2) are on in debug builds.
     pub fn new(ctx: Ctx, root: Box<dyn Screen>) -> Self {
         Self::with_stack(ctx, ScreenStack::new(root))
     }
@@ -298,20 +298,20 @@ mod tests {
     #[test]
     fn debug_key_opens_the_debug_menu_once() {
         let mut game = Game::start(ctx()).with_debug_screens(true);
-        tap(&mut game, Key::F12);
+        tap(&mut game, Key::F2);
         assert_eq!(game.screens(), ["title", "debug_menu"]);
-        tap(&mut game, Key::F12);
+        tap(&mut game, Key::F2);
         assert_eq!(game.screens(), ["title", "debug_menu"]);
         // Not over a debug tool either.
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title", "debug_menu", "glyph_sampler"]);
-        tap(&mut game, Key::F12);
+        tap(&mut game, Key::F2);
         assert_eq!(game.screens(), ["title", "debug_menu", "glyph_sampler"]);
         tap(&mut game, Key::D);
         tap(&mut game, Key::Down);
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title", "debug_menu", "portrait_viewer"]);
-        tap(&mut game, Key::F12);
+        tap(&mut game, Key::F2);
         assert_eq!(game.screens(), ["title", "debug_menu", "portrait_viewer"]);
         tap(&mut game, Key::D);
         tap(&mut game, Key::D);
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn debug_key_does_nothing_without_debug_screens() {
         let mut game = Game::start(ctx()).with_debug_screens(false);
-        tap(&mut game, Key::F12);
+        tap(&mut game, Key::F2);
         assert_eq!(game.screens(), ["title"]);
     }
 

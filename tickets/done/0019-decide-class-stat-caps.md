@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-28
 ---
 
 # 0019 — Decide: class stat caps
@@ -52,8 +52,30 @@ Create implementation tickets for any change to `core` level-up rules and
 
 ## Acceptance criteria
 
-- [ ] Nick answered 1–3.
-- [ ] Design docs updated; implementation tickets created.
-- [ ] Ticket archived.
+- [x] Nick answered 1–3.
+- [x] Design docs updated; implementation tickets created.
+- [x] Ticket archived.
 
 ## Completion notes
+
+Nick's answers (2026-09-28): **1C** (no per-class caps; the max comes only
+from the true caps, meaning the hard ceilings and the level cap, and classes
+shape growth only through growth rates; staying in a class long is never
+penalised), **2A but not in battle** (mark a stat at its ceiling `MAX` on
+out-of-battle screens only; in battle "MAX" means max HP), **3C** (the
+ceiling numbers, fixed or rising with tier, are decided in 0013).
+
+- `progression.md`: Nick's words; *Stat caps* rewritten; level-up
+  eligibility and clamping use the hard ceilings; the Caps column removed
+  from the class stat table; reclass, generic-unit and named-character rules
+  updated. `stats-and-combat.md`, `weapons-and-items.md` and the design
+  README updated to match.
+- Tickets changed: 0013 gains Q3 (ceiling numbers, fixed or per tier, and
+  the level cap); 0603's choice screen shows `MAX` and no longer keeps
+  "stats above the new caps"; 0602's level-up overlay shows no `MAX`.
+- Follow-up created: **0604** (remove `caps` from `classes.ron`, content and
+  `core`; clamp to the hard ceilings).
+- *Claude's starting rule:* the promotion/class-change choice screen shows
+  `MAX` even if it opens during a battle (a seal used from the battle menu),
+  because it is a class-choice screen, not a battle screen. Nick may veto.
+- Until 0604 lands, the game still applies the old class caps.

@@ -147,7 +147,6 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
         loadout: trpg_core::Loadout::default(),
-        consumables: vec![ItemId::new("potion")],
         personal_spells: vec![],
         learned: BTreeSet::from([
             SpellId::new("bolt"),
@@ -340,10 +339,7 @@ fn script() -> Vec<Command> {
         Command::Act {
             unit: UnitId(3),
             dest: Pos::new(3, 0),
-            action: UnitAction::UseItem {
-                pack_index: 0,
-                target: UnitId(3),
-            },
+            action: UnitAction::Wait,
         },
         cast(4, 3, 2, 2),
         Command::EndPhase,

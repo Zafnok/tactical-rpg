@@ -1,4 +1,4 @@
-//! Debug screens (F12 in debug builds): a menu of tools. The glyph sampler
+//! Debug screens (F2 in debug builds): a menu of tools. The glyph sampler
 //! shows every font glyph and palette colour, for judging the look (ticket
 //! 0011); the portrait viewer shows every portrait (ticket 0703); the test
 //! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
@@ -175,9 +175,15 @@ impl Screen for GlyphSamplerScreen {
 /// Glyphs per sampler row; each glyph is followed by a blank cell.
 const GLYPHS_PER_ROW: usize = 48;
 /// Width of one palette swatch column (`██ name`).
-const SWATCH_W: i32 = 24;
+const SWATCH_W: i32 = 19;
+/// Longest colour name shown in a swatch column; longer names are cut.
+const SWATCH_NAME_W: usize = SWATCH_W as usize - 5;
 /// Swatch columns across the console.
-const SWATCH_COLUMNS: i32 = 4;
+const SWATCH_COLUMNS: i32 = 5;
+/// Palette size the layout must still fit, so adding colours doesn't clip the
+/// demo panels again (tickets 0209, 0210).
+#[cfg(test)]
+const PALETTE_HEADROOM: usize = 60;
 
 /// Row of the "Palette" heading: right after the glyph grid's own title and
 /// rows, no blank row between. Computed from `glyphs` (rather than a fixed
@@ -197,9 +203,12 @@ fn palette_top(glyphs: &[char]) -> i32 {
 /// with no blank rows between (every row here is scarce once the palette is
 /// large).
 fn panels_top(palette: &Palette, glyphs: &[char]) -> i32 {
-    let swatch_rows: i32 = palette
-        .iter()
-        .count()
+    panels_top_for(palette.iter().count(), glyphs)
+}
+
+/// [`panels_top`] for a palette of `colours` colours.
+fn panels_top_for(colours: usize, glyphs: &[char]) -> i32 {
+    let swatch_rows: i32 = colours
         .div_ceil(SWATCH_COLUMNS as usize)
         .try_into()
         .unwrap_or(i32::MAX);
@@ -232,7 +241,8 @@ pub fn glyph_sampler(palette: &Palette, glyphs: &[char]) -> GlyphBuffer {
             bottom + 1 + i / SWATCH_COLUMNS,
         );
         b.print(x, y, "██", rgb, black);
-        b.print(x + 3, y, name, dim, black);
+        let name: String = name.chars().take(SWATCH_NAME_W).collect();
+        b.print(x + 3, y, &name, dim, black);
     }
 
     let panels_top = panels_top(palette, glyphs);
@@ -373,6 +383,16 @@ mod tests {
         let p = sampler_colours();
         let glyphs = atlas_glyphs();
         assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 4);
+    }
+
+    #[test]
+    fn demo_panels_keep_margin_for_a_larger_palette() {
+        let p = sampler_colours();
+        let glyphs = atlas_glyphs();
+        assert!(p.iter().count() <= PALETTE_HEADROOM);
+        assert!(panels_top_for(PALETTE_HEADROOM, &glyphs) <= i32::from(CONSOLE_H) - 4);
+        // At least two spare rows for today's palette.
+        assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 6);
     }
 
     #[test]

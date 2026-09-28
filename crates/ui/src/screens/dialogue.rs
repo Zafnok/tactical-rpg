@@ -190,9 +190,10 @@ impl Screen for DialogueScreen {
         if self.overlay {
             // Below the text box is the battle's key help, whose keys do
             // nothing while the scene plays.
+            // (Clipped to the buffer.)
             let below = TEXT_BOX.y + TEXT_BOX.h;
-            let rows = i32::from(buf.height()) - below;
-            buf.fill_rect(Rect::new(0, below, i32::from(buf.width()), rows), blank);
+            let rest = Rect::new(0, below, i32::from(buf.width()), i32::from(buf.height()));
+            buf.fill_rect(rest, blank);
         } else {
             buf.fill_rect(buf.bounds(), blank);
         }
@@ -310,12 +311,9 @@ impl DialogueScreen {
         } else {
             (c(UiColor::Text), false)
         };
-        // Narration is centred vertically too.
-        let top = if centred {
-            TEXT_Y + i32::try_from((TEXT_LINES - lines.len()) / 2).unwrap_or(0)
-        } else {
-            TEXT_Y
-        };
+        // Narration is centred vertically too: one line goes in the middle
+        // of the three rows (two or three fill them from the top).
+        let top = TEXT_Y + i32::from(centred && lines.len() == 1);
         #[expect(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
