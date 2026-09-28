@@ -1,14 +1,19 @@
 //! The battle screen (ADR-0018, `docs/design/look-and-feel.md`): the map
 //! viewport on the left, the side panel on the right and the help bar at the
 //! bottom. The player browses with the cursor (ticket 0402), selects a unit,
-//! steers its path, moves it and picks an action (0403, [`mode`]).
+//! steers its path, moves it and picks an action (0403, [`mode`]), and
+//! attacks: picks a weapon and a target, reads the [`forecast`] and watches
+//! the combat's [`playback`] (0404).
 
+pub mod attack;
 pub mod camera;
 pub mod cursor;
+pub mod forecast;
 pub mod layout;
 pub mod mode;
 pub mod panel;
 pub mod path;
+pub mod playback;
 pub mod units;
 
 use std::sync::Arc;
@@ -26,6 +31,7 @@ use self::layout::{
 };
 use self::mode::{Effect, Mode};
 use self::path::path_overlays;
+use self::playback::{Playback, TIMINGS};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -46,7 +52,8 @@ pub const QUICK_BATTLE_POTIONS: usize = 3;
 
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
 /// against generic enemies (rout), at the start of the battle: everyone at
-/// full HP and every player unit ready. Fails with a message if the content
+/// full HP and every player unit ready, one brigand close enough to fight
+/// on turn 1. Fails with a message if the content
 /// lacks something it needs.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     let map = content
@@ -80,7 +87,8 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     }
     let generics = [
         ("test_brigand", Pos::new(8, 2)),
-        ("test_brigand", Pos::new(12, 3)),
+        // In reach of every player unit on turn 1, for a first fight.
+        ("test_brigand", Pos::new(7, 4)),
         ("test_raider", Pos::new(7, 1)),
     ];
     for (name, pos) in generics {
@@ -202,12 +210,52 @@ impl BattleScreen {
     }
 
     /// Applies `cmd` (built by [`mode::step`] from legal choices), then
-    /// continues browsing, or with the unit's move after its attack. A
-    /// refused command changes nothing.
+    /// plays its combat if it had one, and continues browsing (or with the
+    /// unit's move after its attack). A refused command changes nothing.
     fn apply(&mut self, cmd: &Command) {
+        let before = self.state.units().to_vec();
         // Refused: the battle is unchanged and the player browses again.
-        let _refused = self.state.apply(cmd).err();
-        self.mode = Mode::after_command(&self.state);
+        let playback = self
+            .state
+            .apply(cmd)
+            .ok()
+            .and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
+        self.mode = match playback {
+            Some(p) => Mode::Combat(Box::new(p)),
+            None => Mode::after_command(&self.state),
+        };
+    }
+
+    /// The units as drawn, each with how far it has faded out: the
+    /// battle's units, except during a combat's playback, where its
+    /// fighters show the HP it has reached (the attacker not dimmed yet)
+    /// and the units that fell stay until they have faded.
+    pub fn shown_units(&self) -> Vec<(Unit, f32)> {
+        let Mode::Combat(pb) = &self.mode else {
+            return self
+                .state
+                .units()
+                .iter()
+                .map(|u| (u.clone(), 0.0))
+                .collect();
+        };
+        let attacker = pb.bouts().first().map(|b| b.attacker.unit);
+        self.state
+            .units()
+            .iter()
+            .chain(pb.falls())
+            .map(|u| {
+                let mut u = u.clone();
+                if let Some(hp) = pb.hp(u.id) {
+                    u.hp = hp;
+                }
+                if Some(u.id) == attacker {
+                    u.acted = false;
+                }
+                let fade = pb.fade(u.id).unwrap_or(0.0);
+                (u, fade)
+            })
+            .collect()
     }
 
     /// Moves the cursor one tile for a cursor key; the camera and a
@@ -296,8 +344,15 @@ impl BattleScreen {
                 }
             }
             Mode::Moving { .. } => help_line(&[confirm("skip")]),
-            Mode::ActionMenu { .. } => {
+            Mode::ActionMenu { .. } | Mode::WeaponMenu { .. } => {
                 help_line(&[(keys, "choose"), confirm("confirm"), cancel("back")])
+            }
+            Mode::Targeting(_) => {
+                help_line(&[(keys, "next target"), confirm("attack"), cancel("back")])
+            }
+            Mode::Combat(_) => {
+                let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
+                help_line(&[confirm("skip"), (hold, "fast")])
             }
             Mode::MoveAfter { unit, tiles } => {
                 let here = self.state.unit(*unit).map(|u| u.pos);
@@ -363,14 +418,26 @@ impl BattleScreen {
                 threat: Some(threat),
             } => tint(buf, all(&threat.area), UiColor::AttackRange),
             Mode::MoveAfter { tiles, .. } => tint(buf, tiles.clone(), UiColor::MoveRange),
+            Mode::Targeting(t) => {
+                let at = t.targets.iter().filter_map(|&id| self.state.unit(id));
+                tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
+            }
             _ => {}
         }
     }
 
     fn draw_units(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        for unit in self.state.units() {
-            if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
-                units::draw_unit(buf, &ctx.palette, unit, x, y);
+        if !matches!(self.mode, Mode::Combat(_)) {
+            for unit in self.state.units() {
+                if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
+                    units::draw_unit(buf, &ctx.palette, unit, x, y);
+                }
+            }
+            return;
+        }
+        for (unit, fade) in self.shown_units() {
+            if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
+                units::draw_fading_unit(buf, &ctx.palette, &unit, x, y, fade);
             }
         }
     }
@@ -382,7 +449,10 @@ impl BattleScreen {
     fn draw_cursor_and_path(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let pos = self.cursor.pos;
         match &self.mode {
-            Mode::Moving { .. } | Mode::ActionMenu { .. } => return,
+            Mode::Moving { .. }
+            | Mode::ActionMenu { .. }
+            | Mode::WeaponMenu { .. }
+            | Mode::Combat(_) => return,
             Mode::Selected(sel) => {
                 let color = ctx.palette.get(UiColor::Path);
                 for overlay in path_overlays(&sel.path, self.camera, color) {
@@ -392,21 +462,51 @@ impl BattleScreen {
                     return;
                 }
             }
-            Mode::Idle { .. } | Mode::MoveAfter { .. } => {}
+            Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Targeting(_) => {}
         }
         if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
             draw_cursor(buf, &ctx.palette, &self.cursor, ctx.cursor_style, x, y);
         }
     }
 
-    /// Draws the action menu beside its unit, if open.
+    /// Draws the action menu or the weapon list beside its unit, if open.
     fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        let Mode::ActionMenu { sel, menu, .. } = &self.mode else {
+        let (Mode::ActionMenu { sel, menu, .. } | Mode::WeaponMenu { sel, menu, .. }) = &self.mode
+        else {
             return;
         };
         if let Some(cell) = tile_to_cell(sel.dest(), &self.camera) {
             let (x, y) = menu_origin(cell, menu.size());
             menu.draw(&ctx.palette, buf, x, y);
+        }
+    }
+}
+
+impl BattleScreen {
+    /// Draws the side panel: the forecast while targeting, else the
+    /// terrain and unit under the cursor (as drawn, during a playback).
+    fn draw_panel(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let c = |u| ctx.palette.get(u);
+        if let Mode::Targeting(t) = &self.mode {
+            forecast::draw_forecast(buf, &ctx.palette, &self.state, t);
+            return;
+        }
+        let panel_bg = c(UiColor::PanelBg);
+        buf.fill_rect(SIDE_PANEL, Cell::new(' ', c(UiColor::Text), panel_bg));
+        // Double-line while a unit is selected (`look-and-feel.md`).
+        let style = if self.mode.selection().is_some() {
+            BoxStyle::Double
+        } else {
+            BoxStyle::Single
+        };
+        buf.draw_box(SIDE_PANEL, style, c(UiColor::PanelBorder), panel_bg);
+        let pos = self.cursor.pos;
+        if matches!(self.mode, Mode::Combat(_)) {
+            let shown = self.shown_units();
+            let hovered = shown.iter().find(|(u, f)| u.pos == pos && *f < 1.0);
+            panel::draw_hover(buf, &ctx.palette, &self.state, pos, hovered.map(|(u, _)| u));
+        } else {
+            panel::draw_hover(buf, &ctx.palette, &self.state, pos, self.hovered());
         }
     }
 }
@@ -443,10 +543,8 @@ impl Screen for BattleScreen {
         self.cursor.tick(input.dt);
         for &action in &input.actions {
             match action {
-                Action::NextUnit | Action::PrevUnit => {
-                    if matches!(self.mode, Mode::Idle { .. }) {
-                        self.cycle(action == Action::NextUnit);
-                    }
+                Action::NextUnit | Action::PrevUnit if matches!(self.mode, Mode::Idle { .. }) => {
+                    self.cycle(action == Action::NextUnit);
                 }
                 Action::CursorLeft
                 | Action::CursorRight
@@ -486,18 +584,16 @@ impl Screen for BattleScreen {
         self.draw_units(ctx, buf);
         self.draw_cursor_and_path(ctx, buf);
         self.draw_menu(ctx, buf);
-        let panel_bg = c(UiColor::PanelBg);
-        buf.fill_rect(SIDE_PANEL, Cell::new(' ', c(UiColor::Text), panel_bg));
-        // Double-line while a unit is selected (`look-and-feel.md`).
-        let style = if self.mode.selection().is_some() {
-            BoxStyle::Double
-        } else {
-            BoxStyle::Single
-        };
-        buf.draw_box(SIDE_PANEL, style, c(UiColor::PanelBorder), panel_bg);
-        let (pos, hovered) = (self.cursor.pos, self.hovered());
-        panel::draw_hover(buf, &ctx.palette, &self.state, pos, hovered);
+        if let Mode::Combat(pb) = &self.mode {
+            playback::draw_box(buf, &ctx.palette, pb);
+        }
+        self.draw_panel(ctx, buf);
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));
+        if let Mode::Combat(pb) = &self.mode
+            && let Some(message) = pb.message()
+        {
+            buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
+        }
         buf.print(1, HELP_ROW, &self.help(ctx), c(UiColor::TextDim), black);
     }
 }
@@ -508,8 +604,8 @@ pub(crate) mod testing {
     use std::sync::Arc;
 
     use trpg_core::{
-        BattleMap, BattlePack, BattleSetup, BattleState, Command, Objective, Pos, SkillId, Stock,
-        Unit, UnitAction, UnitId,
+        BattleMap, BattlePack, BattleSetup, BattleState, Command, Objective, Pos, SkillId,
+        StatValue, Stock, Unit, UnitAction, UnitId,
     };
 
     use crate::screen::Ctx;
@@ -574,6 +670,21 @@ pub(crate) mod testing {
         s
     }
 
+    /// The Quick Battle set for a fight: the lord (unit 1) at (6, 2), one
+    /// step left of (7, 2), from where it can hit the raider (unit 6, at
+    /// (7, 1)) above and the first brigand (unit 4, at (8, 2), with
+    /// `brigand_hp` HP) to its right; the archer (unit 3) at (8, 4), two
+    /// tiles below the brigand, which can't counter at that range.
+    pub fn skirmish(c: &Ctx, brigand_hp: StatValue) -> BattleState {
+        let quick = super::quick_battle(&c.content).unwrap_or_else(|e| panic!("{e}"));
+        let mut units = quick.units().to_vec();
+        units[0].pos = Pos::new(6, 2);
+        units[2].pos = Pos::new(8, 4);
+        units[3].hp = brigand_hp;
+        let rout = Objective::Rout { turn_limit: None };
+        battle_with(c, quick.map().clone(), units, rout)
+    }
+
     /// `unit` of `state` waiting where it stands.
     pub fn wait(state: &mut BattleState, unit: usize) {
         let u = &state.units()[unit];
@@ -587,6 +698,9 @@ pub(crate) mod testing {
         }
     }
 }
+
+#[cfg(test)]
+mod attack_tests;
 
 #[cfg(test)]
 mod tests {

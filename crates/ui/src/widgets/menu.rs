@@ -57,6 +57,15 @@ impl Menu {
         Self { items, focus }
     }
 
+    /// The same menu focused on item `index`, if it exists and is enabled.
+    #[must_use]
+    pub fn focused(mut self, index: usize) -> Self {
+        if self.items.get(index).is_some_and(|i| i.enabled) {
+            self.focus = index;
+        }
+        self
+    }
+
     /// The items, in order.
     pub fn items(&self) -> &[MenuItem] {
         &self.items
@@ -192,6 +201,14 @@ mod tests {
         assert_eq!(focus_after(&mut m, &[CursorDown]), 1);
         assert_eq!(focus_after(&mut m, &[CursorUp]), 3);
         assert_eq!(focus_after(&mut m, &[CursorUp]), 1);
+    }
+
+    #[test]
+    fn focused_moves_to_an_enabled_item_only() {
+        let m = menu(&[true, false, true]);
+        assert_eq!(m.clone().focused(2).focus(), 2);
+        assert_eq!(m.clone().focused(1).focus(), 0, "disabled");
+        assert_eq!(m.focused(9).focus(), 0, "no such item");
     }
 
     #[test]

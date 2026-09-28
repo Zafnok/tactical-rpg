@@ -29,8 +29,9 @@ pub use class::{
     WeaponProficiency,
 };
 pub use combat::{
-    CombatHp, CombatMods, CombatOutcome, CombatRules, CombatantInput, DamageType, Forecast, Side,
-    SideForecast, Strike, WeaponStats, WeaponTrait, forecast, resolve, roll_hit,
+    CombatHp, CombatMods, CombatOutcome, CombatRules, CombatantInput, DamageType, Forecast,
+    PlannedStrike, Side, SideForecast, Strike, StrikePlan, WeaponStats, WeaponTrait, forecast,
+    if_all_hit, resolve, roll_hit, strike_order,
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
 pub use item::{

@@ -547,16 +547,10 @@ pub fn roll_hit(rng: &mut impl RandomSource, hit: u8) -> bool {
     r1 + r2 < 2 * u32::from(hit)
 }
 
-/// Plays out `forecast` with `rng`: strikes in order (attacker, defender,
-/// then the strikes 2..N, alternating attacker first if both sides have
-/// some), stopping when a unit reaches 0 HP.
-pub fn resolve(
-    rules: &CombatRules,
-    forecast: &Forecast,
-    attacker: CombatHp,
-    defender: CombatHp,
-    rng: &mut impl RandomSource,
-) -> CombatOutcome {
+/// The order of `forecast`'s strikes if nobody falls: attacker, defender
+/// (if it counters), then the strikes 2..N, alternating attacker first if
+/// both sides have some.
+pub fn strike_order(forecast: &Forecast) -> Vec<Side> {
     let mut order = vec![Side::Attacker];
     if forecast.defender.is_some() {
         order.push(Side::Defender);
@@ -571,7 +565,48 @@ pub fn resolve(
             order.push(Side::Defender);
         }
     }
+    order
+}
 
+/// Who strikes whom: `(striker, target)` indices into `[attacker,
+/// defender]`, and the striker's numbers (`None`: a defender that doesn't
+/// counter).
+fn striker(forecast: &Forecast, by: Side) -> Option<(usize, usize, SideForecast)> {
+    match by {
+        Side::Attacker => Some((0, 1, forecast.attacker)),
+        Side::Defender => forecast.defender.map(|d| (1, 0, d)),
+    }
+}
+
+/// A strike's damage before a crit: the first strike's, or the follow-up
+/// damage from a side's second strike on.
+fn base_damage(numbers: &SideForecast, nth: u8) -> StatValue {
+    if nth > 1 {
+        numbers.followup_damage
+    } else {
+        numbers.damage
+    }
+}
+
+/// `target` after taking (or, for Absorb, being healed by) `damage`.
+fn take(target: &mut CombatHp, damage: StatValue, healed: bool) {
+    target.current = if healed {
+        (target.current + damage).min(target.max)
+    } else {
+        (target.current - damage).max(0)
+    };
+}
+
+/// Plays out `forecast` with `rng`: strikes in [`strike_order`], stopping
+/// when a unit reaches 0 HP.
+pub fn resolve(
+    rules: &CombatRules,
+    forecast: &Forecast,
+    attacker: CombatHp,
+    defender: CombatHp,
+    rng: &mut impl RandomSource,
+) -> CombatOutcome {
+    let order = strike_order(forecast);
     let mut hp = [attacker, defender];
     let mut struck = [0u8; 2];
     let mut strikes = Vec::with_capacity(order.len());
@@ -579,19 +614,11 @@ pub fn resolve(
         if hp[0].current <= 0 || hp[1].current <= 0 {
             break;
         }
-        let (me, target, numbers) = match by {
-            Side::Attacker => (0, 1, forecast.attacker),
-            Side::Defender => match forecast.defender {
-                Some(d) => (1, 0, d),
-                None => break,
-            },
+        let Some((me, target, numbers)) = striker(forecast, by) else {
+            break;
         };
         struck[me] += 1;
-        let base = if struck[me] > 1 {
-            numbers.followup_damage
-        } else {
-            numbers.damage
-        };
+        let base = base_damage(&numbers, struck[me]);
         let healed = numbers.affinity == Some(Affinity::Absorb);
         let hit = roll_hit(rng, numbers.hit);
         let crit = hit && rng.roll_percent() < numbers.crit;
@@ -601,11 +628,7 @@ pub fn resolve(
             (true, true) => base * rules.crit_multiplier,
         };
         let t = &mut hp[target];
-        t.current = if healed {
-            (t.current + damage).min(t.max)
-        } else {
-            (t.current - damage).max(0)
-        };
+        take(t, damage, healed);
         strikes.push(Strike {
             by,
             hit,
@@ -616,6 +639,74 @@ pub fn resolve(
         });
     }
     CombatOutcome {
+        strikes,
+        attacker_hp: hp[0].current,
+        defender_hp: hp[1].current,
+    }
+}
+
+/// One strike of a [`StrikePlan`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PlannedStrike {
+    /// Who strikes.
+    pub by: Side,
+    /// Its damage if it hits without a crit (for Absorb: the healing).
+    pub damage: StatValue,
+    /// Whether it heals the target (Absorb) instead of hurting it.
+    pub healed: bool,
+    /// The target's HP after it, if every strike so far hit.
+    pub target_hp_after: StatValue,
+    /// Whether a unit has already fallen by then, so the strike only
+    /// happens if an earlier one misses. It changes no HP in the plan.
+    pub after_a_fall: bool,
+}
+
+impl PlannedStrike {
+    /// Whether this strike makes its target fall, if every strike hits.
+    pub fn kills(&self) -> bool {
+        !self.after_a_fall && !self.healed && self.target_hp_after <= 0
+    }
+}
+
+/// What a combat does if every strike hits and none crits (the forecast's
+/// kill mark, `docs/design/look-and-feel.md`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct StrikePlan {
+    /// Every strike of the forecast, in [`strike_order`], including those
+    /// after a fall.
+    pub strikes: Vec<PlannedStrike>,
+    /// The attacker's HP when the combat would end.
+    pub attacker_hp: StatValue,
+    /// The defender's HP when the combat would end.
+    pub defender_hp: StatValue,
+}
+
+/// `forecast` played out as if every strike hit and none crit: the same
+/// order, damage and HP rules as [`resolve`].
+pub fn if_all_hit(forecast: &Forecast, attacker: CombatHp, defender: CombatHp) -> StrikePlan {
+    let mut hp = [attacker, defender];
+    let mut struck = [0u8; 2];
+    let mut strikes = Vec::new();
+    for by in strike_order(forecast) {
+        let Some((me, target, numbers)) = striker(forecast, by) else {
+            continue;
+        };
+        struck[me] = struck[me].saturating_add(1);
+        let damage = base_damage(&numbers, struck[me]);
+        let healed = numbers.affinity == Some(Affinity::Absorb);
+        let after_a_fall = hp[0].current <= 0 || hp[1].current <= 0;
+        if !after_a_fall {
+            take(&mut hp[target], damage, healed);
+        }
+        strikes.push(PlannedStrike {
+            by,
+            damage,
+            healed,
+            target_hp_after: hp[target].current,
+            after_a_fall,
+        });
+    }
+    StrikePlan {
         strikes,
         attacker_hp: hp[0].current,
         defender_hp: hp[1].current,

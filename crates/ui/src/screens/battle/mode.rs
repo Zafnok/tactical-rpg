@@ -1,7 +1,10 @@
 //! What the player is doing on the battle screen (ticket 0403), the Fire
 //! Emblem move loop: browse ([`Mode::Idle`]), select a unit and steer its
 //! path ([`Mode::Selected`]), watch it walk ([`Mode::Moving`]), pick an
-//! action ([`Mode::ActionMenu`]). The move is only sent, as one
+//! action ([`Mode::ActionMenu`]); to attack (0404), maybe pick a weapon
+//! ([`Mode::WeaponMenu`]), pick a target with the forecast
+//! ([`Mode::Targeting`]) and watch the combat ([`Mode::Combat`]). The move
+//! is only sent, as one
 //! [`Command::Act`], when an action is chosen, so cancelling is free: until
 //! then the unit's new tile is a drawing override ([`Mode::drawn_pos`]) and
 //! the [`BattleState`] is untouched.
@@ -14,7 +17,9 @@ use trpg_core::{
     path_cost, reachable, threat_area,
 };
 
+use super::attack::{Targeting, WeaponChoice, weapon_choices, weapon_menu};
 use super::path::steer;
+use super::playback::Playback;
 use crate::input::Action;
 use crate::widgets::menu::{Menu, MenuEvent, MenuItem};
 
@@ -103,7 +108,7 @@ impl Selection {
 /// One entry of the action menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuEntry {
-    /// Attack (targeting comes with ticket 0404; shown disabled until then).
+    /// Attack: enabled when a weapon can attack someone from there.
     Attack,
     /// Seize the objective tile, when legal there.
     Seize,
@@ -121,17 +126,17 @@ impl MenuEntry {
         }
     }
 
-    /// The menu item: `Attack` is disabled until ticket 0404.
-    fn item(self) -> MenuItem {
+    /// The menu item: `Attack` is enabled only if `can_attack`.
+    fn item(self, can_attack: bool) -> MenuItem {
         match self {
-            MenuEntry::Attack => MenuItem::disabled(self.label()),
+            MenuEntry::Attack if !can_attack => MenuItem::disabled(self.label()),
             _ => MenuItem::new(self.label()),
         }
     }
 }
 
-/// The action menu for `sel`'s unit at its path's end: `Attack` (disabled),
-/// `Seize` if legal there, `Wait`.
+/// The action menu for `sel`'s unit at its path's end: `Attack` (enabled if
+/// some weapon can attack someone there), `Seize` if legal there, `Wait`.
 pub fn menu_entries(sel: &Selection, state: &BattleState) -> Vec<MenuEntry> {
     let mut entries = vec![MenuEntry::Attack];
     if state.can_seize(sel.unit, sel.dest()) {
@@ -177,7 +182,23 @@ pub enum Mode {
         menu: Menu,
         /// What each menu item does.
         entries: Vec<MenuEntry>,
+        /// The weapons that can attack from there (`Attack` is enabled if
+        /// there are any).
+        weapons: Vec<WeaponChoice>,
     },
+    /// Several weapons can attack: the player picks one.
+    WeaponMenu {
+        /// The selection.
+        sel: Selection,
+        /// The weapon list.
+        menu: Menu,
+        /// What each item is.
+        weapons: Vec<WeaponChoice>,
+    },
+    /// The player picks a target and reads the forecast.
+    Targeting(Box<Targeting>),
+    /// An attack's combat plays out.
+    Combat(Box<Playback>),
     /// A unit waits to move after its attack ([`BattleState::pending_move`]):
     /// Confirm on one of `tiles` moves it there, Confirm on the unit stays.
     MoveAfter {
@@ -240,19 +261,25 @@ impl Mode {
     /// The selected unit, while one is selected, walking or choosing.
     pub fn selection(&self) -> Option<&Selection> {
         match self {
-            Mode::Selected(sel) | Mode::Moving { sel, .. } | Mode::ActionMenu { sel, .. } => {
-                Some(sel)
-            }
-            Mode::Idle { .. } | Mode::MoveAfter { .. } => None,
+            Mode::Selected(sel)
+            | Mode::Moving { sel, .. }
+            | Mode::ActionMenu { sel, .. }
+            | Mode::WeaponMenu { sel, .. } => Some(sel),
+            Mode::Targeting(t) => Some(&t.sel),
+            Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Combat(_) => None,
         }
     }
 
     /// Where unit `id` is drawn, if not on its own tile: along its path
-    /// while it walks, at the path's end while the action menu is open.
+    /// while it walks, at the path's end while it chooses an action, a
+    /// weapon or a target.
     pub fn drawn_pos(&self, id: UnitId) -> Option<Pos> {
         match self {
             Mode::Moving { sel, t, .. } if sel.unit == id => Some(walk_pos(sel, *t)),
-            Mode::ActionMenu { sel, .. } if sel.unit == id => Some(sel.dest()),
+            Mode::ActionMenu { sel, .. } | Mode::WeaponMenu { sel, .. } if sel.unit == id => {
+                Some(sel.dest())
+            }
+            Mode::Targeting(t) if t.sel.unit == id => Some(t.sel.dest()),
             _ => None,
         }
     }
@@ -263,6 +290,14 @@ impl Mode {
     /// Other modes are unchanged.
     #[must_use]
     pub fn tick(self, dt: f32, confirm_held: bool, state: &BattleState) -> Mode {
+        if let Mode::Combat(mut playback) = self {
+            playback.tick(dt, confirm_held);
+            return if playback.done() {
+                Mode::after_command(state)
+            } else {
+                Mode::Combat(playback)
+            };
+        }
         let Mode::Moving { sel, t, held } = self else {
             return self;
         };
@@ -302,8 +337,55 @@ fn walk_pos(sel: &Selection, t: f32) -> Pos {
 /// The action menu for `sel`.
 fn open_menu(sel: Selection, state: &BattleState) -> Mode {
     let entries = menu_entries(&sel, state);
-    let menu = Menu::new(entries.iter().map(|e| e.item()).collect());
-    Mode::ActionMenu { sel, menu, entries }
+    let weapons = weapon_choices(state, &sel);
+    let can_attack = !weapons.is_empty();
+    let menu = Menu::new(entries.iter().map(|e| e.item(can_attack)).collect());
+    Mode::ActionMenu {
+        sel,
+        menu,
+        entries,
+        weapons,
+    }
+}
+
+/// The action menu for `sel`, focused on `Attack` (back from choosing an
+/// attack).
+fn back_to_menu(sel: Selection, state: &BattleState) -> Mode {
+    let mode = open_menu(sel, state);
+    let Mode::ActionMenu {
+        sel,
+        menu,
+        entries,
+        weapons,
+    } = mode
+    else {
+        return mode;
+    };
+    let attack = entries.iter().position(|&e| e == MenuEntry::Attack);
+    Mode::ActionMenu {
+        sel,
+        menu: attack.map_or(menu.clone(), |i| menu.focused(i)),
+        entries,
+        weapons,
+    }
+}
+
+/// Targeting with `choice` (from the weapon list `weapons`, if any), the
+/// cursor on its first target; the action menu if no forecast can be made
+/// (only if the battle changed under the menu, which it doesn't).
+fn target_with(
+    state: &BattleState,
+    sel: Selection,
+    choice: &WeaponChoice,
+    weapons: Option<(Menu, Vec<WeaponChoice>)>,
+) -> (Mode, Effect) {
+    match Targeting::new(state, sel.clone(), choice, weapons) {
+        Some(t) => {
+            let at = state.unit(t.target()).map_or(sel.dest(), |u| u.pos);
+            (Mode::Targeting(Box::new(t)), Effect::Cursor(at))
+        }
+        None => (back_to_menu(sel, state), Effect::None),
+    }
 }
 
 /// Whether `unit` belongs to the player and can still act this phase.
@@ -361,12 +443,22 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             sel,
             mut menu,
             entries,
+            weapons,
         } => match menu.handle(action) {
             Some(MenuEvent::Chosen(i)) => {
                 let action = match entries.get(i) {
                     Some(MenuEntry::Wait) => UnitAction::Wait,
                     Some(MenuEntry::Seize) => UnitAction::Seize,
-                    _ => return (Mode::ActionMenu { sel, menu, entries }, Effect::None),
+                    Some(MenuEntry::Attack) => return choose_attack(sel, weapons, state),
+                    None => {
+                        let menu = Mode::ActionMenu {
+                            sel,
+                            menu,
+                            entries,
+                            weapons,
+                        };
+                        return (menu, Effect::None);
+                    }
                 };
                 let cmd = Command::Act {
                     unit: sel.unit,
@@ -376,8 +468,26 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
                 (Mode::default(), Effect::Apply(cmd))
             }
             Some(MenuEvent::Cancelled) => (Mode::Selected(sel), Effect::None),
-            None => (Mode::ActionMenu { sel, menu, entries }, Effect::None),
+            None => {
+                let menu = Mode::ActionMenu {
+                    sel,
+                    menu,
+                    entries,
+                    weapons,
+                };
+                (menu, Effect::None)
+            }
         },
+        Mode::WeaponMenu { sel, menu, weapons } => {
+            step_weapon_menu(sel, menu, weapons, action, state)
+        }
+        Mode::Targeting(t) => step_targeting(*t, action, state),
+        Mode::Combat(mut playback) => {
+            if action == Action::Confirm {
+                playback.press();
+            }
+            (Mode::Combat(playback), Effect::None)
+        }
         Mode::MoveAfter { unit, tiles } => {
             let here = state.unit(unit).map(|u| u.pos);
             let to = if Some(cursor) == here {
@@ -396,6 +506,75 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             }
         }
     }
+}
+
+/// Attack chosen in the action menu: the weapon list if several weapons
+/// can attack, else straight to targeting.
+fn choose_attack(
+    sel: Selection,
+    weapons: Vec<WeaponChoice>,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match weapons.as_slice() {
+        [] => (back_to_menu(sel, state), Effect::None),
+        [only] => {
+            let only = only.clone();
+            target_with(state, sel, &only, None)
+        }
+        _ => {
+            let menu = weapon_menu(state, &sel, &weapons);
+            (Mode::WeaponMenu { sel, menu, weapons }, Effect::None)
+        }
+    }
+}
+
+/// [`step`] in the weapon list: Confirm targets with the chosen weapon,
+/// Cancel goes back to the action menu.
+fn step_weapon_menu(
+    sel: Selection,
+    mut menu: Menu,
+    weapons: Vec<WeaponChoice>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => match weapons.get(i).cloned() {
+            Some(choice) => target_with(state, sel, &choice, Some((menu, weapons))),
+            None => (Mode::WeaponMenu { sel, menu, weapons }, Effect::None),
+        },
+        Some(MenuEvent::Cancelled) => (back_to_menu(sel, state), Effect::None),
+        None => (Mode::WeaponMenu { sel, menu, weapons }, Effect::None),
+    }
+}
+
+/// [`step`] while targeting: the cursor keys and `NextUnit`/`PrevUnit`
+/// cycle the targets (right, down and next go forward; left, up and
+/// previous go back), Confirm attacks, Cancel goes back to the weapon list
+/// or the action menu with the cursor on the unit.
+fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mode, Effect) {
+    let forward = match action {
+        Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
+        Action::CursorLeft | Action::CursorUp | Action::PrevUnit => false,
+        Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
+        Action::Cancel => {
+            let dest = t.sel.dest();
+            let back = match t.weapons {
+                Some((menu, weapons)) => Mode::WeaponMenu {
+                    sel: t.sel,
+                    menu,
+                    weapons,
+                },
+                None => back_to_menu(t.sel, state),
+            };
+            return (back, Effect::Cursor(dest));
+        }
+        _ => return (Mode::Targeting(Box::new(t)), Effect::None),
+    };
+    t.cycle(forward, state);
+    let effect = state
+        .unit(t.target())
+        .map_or(Effect::None, |u| Effect::Cursor(u.pos));
+    (Mode::Targeting(Box::new(t)), effect)
 }
 
 /// [`step`] while browsing: Confirm selects a ready player unit or toggles
@@ -440,15 +619,16 @@ mod tests {
 
     use super::*;
     use crate::screen::tests::ctx;
+    use crate::screens::battle::playback::TIMINGS;
     use crate::screens::battle::quick_battle;
-    use crate::screens::battle::testing::{battle_with, vaulted, wait};
+    use crate::screens::battle::testing::{battle_with, skirmish, vaulted, wait};
 
     fn p(x: i32, y: i32) -> Pos {
         Pos::new(x, y)
     }
 
     /// The Quick Battle: lord 1 at (3, 5), knight 2 at (4, 6), archer 3 at
-    /// (2, 4); brigands 4 at (8, 2) and 5 at (12, 3), raider 6 at (7, 1).
+    /// (2, 4); brigands 4 at (8, 2) and 5 at (7, 4), raider 6 at (7, 1).
     fn quick() -> BattleState {
         quick_battle(&ctx().content).unwrap()
     }
@@ -838,5 +1018,179 @@ mod tests {
         );
         // Without a pending move: browsing.
         assert_eq!(Mode::after_command(&quick()), Mode::default());
+    }
+
+    /// The skirmish's lord walked to (7, 2), its menu open.
+    fn skirmish_menu(s: &BattleState) -> Mode {
+        let (Mode::Selected(mut sel), _) = step(Mode::default(), Action::Confirm, p(6, 2), s)
+        else {
+            panic!("the lord isn't selected");
+        };
+        sel.steer(p(7, 2), s);
+        let (walk, _) = step(Mode::Selected(sel), Action::Confirm, p(7, 2), s);
+        walk.tick(1.0, false, s)
+    }
+
+    #[test]
+    fn attack_is_enabled_when_a_weapon_reaches_and_lists_the_weapons() {
+        let s = skirmish(&ctx(), 20);
+        let mode = skirmish_menu(&s);
+        let Mode::ActionMenu { menu, weapons, .. } = &mode else {
+            panic!("{mode:?}");
+        };
+        assert!(menu.items()[0].enabled);
+        assert_eq!(menu.focus(), 0, "focus on Attack");
+        assert_eq!(weapons.len(), 2);
+        // Attack: the weapon list (two swords reach).
+        let (mode, effect) = step(mode, Action::Confirm, p(7, 2), &s);
+        assert_eq!(effect, Effect::None);
+        let Mode::WeaponMenu { weapons, .. } = &mode else {
+            panic!("{mode:?}");
+        };
+        assert_eq!(weapons.len(), 2);
+        assert_eq!(mode.drawn_pos(UnitId(1)), Some(p(7, 2)));
+        assert!(!mode.cursor_free());
+        // Cancel: back to the menu, on Attack.
+        let (back, _) = step(mode.clone(), Action::CursorDown, p(7, 2), &s);
+        let (back, _) = step(back, Action::Cancel, p(7, 2), &s);
+        let Mode::ActionMenu { menu, .. } = &back else {
+            panic!("{back:?}");
+        };
+        assert_eq!(menu.focus(), 0);
+        // The steel sword: targeting the first target, the cursor on it.
+        let (list, _) = step(mode, Action::CursorDown, p(7, 2), &s);
+        let (mode, effect) = step(list.clone(), Action::Confirm, p(7, 2), &s);
+        assert_eq!(effect, Effect::Cursor(p(7, 1)));
+        let Mode::Targeting(t) = &mode else {
+            panic!("{mode:?}");
+        };
+        assert_eq!((t.slot, t.target()), (1, UnitId(6)));
+        assert_eq!(mode.selection().map(|s| s.unit), Some(UnitId(1)));
+        assert_eq!(mode.drawn_pos(UnitId(1)), Some(p(7, 2)));
+        // Cancel: back to the list as it was, the cursor on the lord.
+        let (back, effect) = step(mode, Action::Cancel, p(7, 1), &s);
+        assert_eq!(effect, Effect::Cursor(p(7, 2)));
+        assert_eq!(back, list);
+    }
+
+    #[test]
+    fn targeting_cycles_with_every_direction_and_confirm_attacks() {
+        let s = skirmish(&ctx(), 20);
+        let (list, _) = step(skirmish_menu(&s), Action::Confirm, p(7, 2), &s);
+        let (mut mode, _) = step(list, Action::Confirm, p(7, 2), &s);
+        let target = |m: &Mode| match m {
+            Mode::Targeting(t) => t.target(),
+            _ => panic!("{m:?}"),
+        };
+        for (a, id, at) in [
+            (Action::CursorRight, 4, p(8, 2)),
+            (Action::CursorDown, 6, p(7, 1)),
+            (Action::NextUnit, 4, p(8, 2)),
+            (Action::CursorLeft, 6, p(7, 1)),
+            (Action::CursorUp, 4, p(8, 2)),
+            (Action::PrevUnit, 6, p(7, 1)),
+        ] {
+            let (m, effect) = step(mode, a, p(0, 0), &s);
+            assert_eq!(
+                (target(&m), effect),
+                (UnitId(id), Effect::Cursor(at)),
+                "{a:?}"
+            );
+            mode = m;
+        }
+        // Other keys do nothing.
+        let (same, effect) = step(mode.clone(), Action::Info, p(7, 1), &s);
+        assert_eq!((&same, effect), (&mode, Effect::None));
+        let (after, effect) = step(mode, Action::Confirm, p(7, 1), &s);
+        assert_eq!(after, Mode::default());
+        assert_eq!(
+            effect,
+            Effect::Apply(Command::Act {
+                unit: UnitId(1),
+                dest: p(7, 2),
+                action: UnitAction::Attack {
+                    target: UnitId(6),
+                    slot: 0,
+                    active: None,
+                    art: None,
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn attack_with_no_weapon_in_reach_stays_in_the_menu() {
+        let s = skirmish(&ctx(), 20);
+        let sel = Selection::new(&s, UnitId(1)).unwrap();
+        let (mode, effect) = choose_attack(sel, vec![], &s);
+        assert_eq!(effect, Effect::None);
+        let Mode::ActionMenu { menu, entries, .. } = &mode else {
+            panic!("{mode:?}");
+        };
+        assert_eq!(entries[menu.focus()], MenuEntry::Wait, "Attack is disabled");
+    }
+
+    #[test]
+    fn one_weapon_goes_straight_to_targeting_and_back_to_the_menu() {
+        let s = skirmish(&ctx(), 20);
+        // The archer at (8, 4) attacks from where it stands.
+        let (Mode::Selected(sel), _) = step(Mode::default(), Action::Confirm, p(8, 4), &s) else {
+            panic!("the archer isn't selected");
+        };
+        let (menu, _) = step(Mode::Selected(sel), Action::Confirm, p(8, 4), &s);
+        let (mode, effect) = step(menu, Action::Confirm, p(8, 4), &s);
+        assert_eq!(effect, Effect::Cursor(p(8, 2)));
+        let Mode::Targeting(t) = &mode else {
+            panic!("{mode:?}");
+        };
+        assert_eq!(
+            (t.targets.clone(), t.weapons.is_none()),
+            (vec![UnitId(4)], true)
+        );
+        let (back, effect) = step(mode, Action::Cancel, p(8, 2), &s);
+        assert_eq!(effect, Effect::Cursor(p(8, 4)));
+        let Mode::ActionMenu { menu, entries, .. } = &back else {
+            panic!("{back:?}");
+        };
+        assert_eq!(entries[menu.focus()], MenuEntry::Attack);
+    }
+
+    #[test]
+    fn during_a_combat_only_confirm_counts_and_the_end_goes_back_to_browsing() {
+        let c = ctx();
+        let before = skirmish(&c, 20);
+        let mut after = before.clone();
+        let cmd = Command::Act {
+            unit: UnitId(1),
+            dest: p(7, 2),
+            action: UnitAction::Attack {
+                target: UnitId(4),
+                slot: 0,
+                active: None,
+                art: None,
+            },
+        };
+        let events = after.apply(&cmd).unwrap();
+        let playback = Playback::new(&events, before.units(), after.fallen(), TIMINGS).unwrap();
+        let total = playback.total();
+        let combat = Mode::Combat(Box::new(playback));
+        assert!(!combat.cursor_free());
+        assert_eq!(
+            (combat.selection(), combat.drawn_pos(UnitId(1))),
+            (None, None)
+        );
+        for a in [Action::Cancel, Action::CursorLeft, Action::NextUnit] {
+            let (m, effect) = step(combat.clone(), a, p(8, 2), &after);
+            assert_eq!((&m, effect), (&combat, Effect::None));
+        }
+        // Halfway, still playing; at the end, browsing.
+        let half = combat.clone().tick(total / 2.0, false, &after);
+        assert!(matches!(half, Mode::Combat(_)));
+        assert_eq!(half.tick(total, false, &after), Mode::default());
+        // A tap (press, then release) ends it at once.
+        let (pressed, _) = step(combat, Action::Confirm, p(8, 2), &after);
+        let held = pressed.tick(1.0 / 60.0, true, &after);
+        assert!(matches!(held, Mode::Combat(_)));
+        assert_eq!(held.tick(1.0 / 60.0, false, &after), Mode::default());
     }
 }

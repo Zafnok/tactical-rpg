@@ -59,7 +59,10 @@ pick an art, and can you tell what it will do and what it costs?
 2. The forecast panel adds a first line `‹Art name› (20 → 16)` when an art or
    active is chosen, and shows `core`'s notes as text: `no counter`,
    `pierces`, `pins: Mov −3`, `slows: Spd −3`, `stance: avoid +20`.
-   Follow the mockup in `combat-arts.md`.
+   Follow the mockup in `combat-arts.md`, but the numbers part is now the
+   forecast Nick chose in 0404 (`look-and-feel.md` → *Attack forecast*: HP
+   bars, strikes in order, skull kill mark), which is too wide to sit beside
+   the arts list in the side panel; lay the two out together.
 3. Weapon lines everywhere (forecast, weapon choice list, info screen) show
    durability `20/20`, and `broken` in the warning colour at 0.
 4. Map/info markers for debuffs, with when they expire.

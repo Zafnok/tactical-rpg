@@ -14,6 +14,7 @@ game's own font atlas at in-game size. The final ones are in
 | `0011-conversation.png` | Conversation screen with 32×32 shaded portraits |
 | `0011-portrait-expressions.png` | Portrait style sample: confident, happy, angry, sad |
 | `0011-theme-c/d/e/g.png` | The four palettes offered as colour themes |
+| `0404-forecast.png` | The attack forecast (decided 2026-09-27, ticket 0404) |
 
 Names, stats, weapons and the sample face in the screenshots are placeholders.
 
@@ -133,6 +134,43 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
   the destination tile, and **ends in a single arrowhead** on that tile. It's
   drawn under glyphs, in `path` colour. The arrowhead marks the destination;
   there's no separate cursor frame there.
+
+### Attack forecast
+
+Decided 2026-09-27, ticket 0404, over three rounds of renders (the ticket's
+two-column `DMG 7+8 ×2` panel, a stacked panel, a wide box over the map,
+then three strike-list layouts). Screenshot: `0404-forecast.png`.
+
+> "from what you shown me, none are perfect but here's what I like from each
+> / I like the bar representing HP in the forecast. / I like not having all
+> upper case for the statistics / as for multi strike, I am leaning towards
+> having them on multiple lines somehow... idk how in practice but like
+> Strike 1 Strike 2 etc? maybe showing a total? and number of strikes? / we
+> should also forecast with a glyph showing it will kill on which strike
+> (assuming all hit)" … "strikes should be in order they happen like E / the
+> death glyph shouldn't be a cross it should be a skull or an X or something"
+> … "ok skull is fine.. seems good"
+
+- While a target is chosen, the forecast **replaces the side panel** (double
+  border, title `Forecast`): the attacker in the left column, the target in
+  the right, names in faction colour, weapon names dimmed under them.
+- **Mixed-case labels:** `HP`, `Hit`, `Crit`. A side that can't counter shows
+  `--` for Hit and Crit.
+- **HP bars:** `HP 19` and a short bar. The part of the bar the unit would
+  lose **if every strike hit** (no crits) is shaded in `hp_low`.
+- **Strikes in the order they happen**, one per row, numbered down the
+  middle: the attacker's on the left (`8 dmg →`), the target's counters on
+  the right (`← 9 dmg`). `no counter` in the right column when it can't.
+  After a separator, a **total** per side: `17 ×2` (damage of its strikes and
+  how many).
+- **Kill mark:** a small **skull**, pixel-drawn in `hp_low`, on the strike
+  that makes a unit fall if every strike before it hit. Strikes after it are
+  dimmed: they happen only if something misses.
+- Effective weapons put `!` after `dmg` in the highlight colour; a broken
+  weapon shows `(broken)` in `hp_low` under its name *(Claude's starting
+  rule, not rendered for Nick)*.
+- The Combat Arts list and art line (0414) go above this forecast; that
+  ticket works out the combined box.
 
 ### Portraits
 

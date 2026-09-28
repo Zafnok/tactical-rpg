@@ -12,7 +12,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx` and buffer; `frame(events, dt)` |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
-| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen` |
+| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `debug` | Glyph sampler and its screen (F12 in debug builds) |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 

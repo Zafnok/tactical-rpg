@@ -16,8 +16,8 @@ expression: h.snapshot()
                     ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║                            ║
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║                            ║
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      ║                            ║
-                    ..≈≈≈≈..··..............Br..                      ║                            ║
-                    ....Ar····........▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ..≈≈≈≈..··..............[]..                      ║                            ║
+                    ....Ar····....Br..▓▓▓▓▓▓▓▓..                      ║                            ║
                     ..♣♣··Lo..[]......▓▓░░[]▓▓..                      ║                            ║
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
@@ -50,10 +50,10 @@ aaaaaaaaaaaaaaaaaaaaeeeeeeffgghhhhiiiijjjjkkkkllaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaeeeeffggmmnnooppooiiiikkkkkkaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaqqffggrrrrssttoouuhhiiiihhhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaammggggmmssmmmmnnhhhhhhhhvvhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaammmmwwssssmmmmmmnnxxxxxxxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaammyysszzmmAAmmmmnnxxBBCCxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaDDyyssmmzzmmmmmmnnxxBBBBxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaiiEEssmmmmmmmmnnhhxxxxFFxxhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaammmmwwssssmmmmxxhhyyyyyyyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaammzzssAAmmBBmmmmnnyyCCvvyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaDDzzssmmAAmmmmmmnnyyCCCCyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaiiEEssmmmmmmmmnnhhyyyyFFyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -89,14 +89,14 @@ r = fg:wood bg:#253c5a
 s = fg:road bg:#2a3c53
 t = fg:road bg:#50281d
 u = fg:enemy bg:grass_bg
-v = fg:enemy bg:fort_bg
+v = fg:fort bg:fort_bg
 w = fg:player bg:#2a3c53
-x = fg:stone bg:stone_bg
-y = fg:forest bg:#253b52
-z = fg:player bg:#273a52
-A = fg:fort bg:#2b3c54
-B = fg:floor bg:floor_bg
-C = fg:fort bg:fort_bg
+x = fg:enemy bg:#4c271c
+y = fg:stone bg:stone_bg
+z = fg:forest bg:#253b52
+A = fg:player bg:#273a52
+B = fg:fort bg:#2b3c54
+C = fg:floor bg:floor_bg
 D = fg:forest bg:#4a281c
 E = fg:thicket bg:#49261b
 F = fg:wood bg:stone_bg
@@ -106,7 +106,7 @@ over  208,270 16x2  hp_high
 over  224,286 16x2  hp_high
 over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
-over  352,238 16x2  hp_high
+over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
 under 224,263 10x3  path
 under 231,263 19x3  path

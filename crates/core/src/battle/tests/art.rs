@@ -9,7 +9,7 @@
 
 use super::*;
 use crate::art::{ArtNote, Debuff};
-use crate::combat::SideForecast;
+use crate::combat::{CombatHp, SideForecast, if_all_hit};
 use crate::skill::{CostError, TimedEffect};
 
 fn aid(id: &str) -> ArtId {
@@ -1122,6 +1122,20 @@ fn the_preview_is_validated_like_the_command() {
         combats(&events)[0].1,
         preview(&s, 1, p(0, 0), &art_attack(3, "guard_break")).forecast
     );
+    // Its strike plan starts from both units' HP.
+    let full = |id| {
+        let u = s.unit(UnitId(id)).unwrap();
+        CombatHp {
+            current: u.hp,
+            max: u.stats.hp,
+        }
+    };
+    assert_eq!(plain.plan, if_all_hit(&plain.forecast, full(1), full(3)));
+    let mut hurt = s.clone();
+    hurt.units[1].hp = 1;
+    let kill = preview(&hurt, 1, p(0, 0), &attack(3)).plan;
+    assert!(kill.strikes[0].kills());
+    assert_eq!(kill.defender_hp, 0);
 }
 
 #[test]
