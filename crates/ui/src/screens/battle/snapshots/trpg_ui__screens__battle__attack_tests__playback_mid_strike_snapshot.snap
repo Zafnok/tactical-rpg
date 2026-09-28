@@ -33,7 +33,7 @@ expression: h.snapshot()
                                                                       │                            │
                                                                       └────────────────────────────┘
                                                       w danger zone: OFF · Shift+Space auto-end: ON 
- f skip · hold f fast                                                                               
+ d skip · hold f fast                                                                               
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaabdeeeeeddddddddddddddddddddddb

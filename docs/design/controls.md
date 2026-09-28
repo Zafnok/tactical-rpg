@@ -56,7 +56,7 @@ needed). Key choices are Nick's; the defaults below are his.
 | ------ | ------------ | ----------- | ----- |
 | Move cursor | arrow keys | `W A S D` | Held keys repeat |
 | Confirm / select | `F` | `J` | Hold to fast-forward text and animations |
-| Cancel / back | `D` | `K` | |
+| Cancel / back | `D` | `K` | Skips a fight's playback (0418) |
 | Previous ready unit | `A` | `;` | Finger mirror of `A` (*see note*) |
 | Next ready unit | `S` | `L` | Finger mirror of `S` |
 | Unit info (stat screen) | `E` | `I` | |
@@ -73,6 +73,18 @@ needed). Key choices are Nick's; the defaults below are his.
 - "Mirror" is taken literally, finger for finger, so in the left-handed
   layout *previous* unit is the right-most key (`;`) and *next* is `L`. If
   that feels backwards, swap them.
+
+### Fight playback: Cancel skips, hold Confirm speeds up
+
+Decided 2026-09-28, ticket 0418, after playing the 0404 build (where a
+Confirm tap skipped and holding it sped up):
+
+> "I don't think skipping and fast playback of a fight should be bound to
+> same hotkey, probably use the cancel hotkey (i.e. D) to skip and the
+> confirm hold key (F) to playback faster"
+
+- **Cancel** (`D` / `K`, or `Esc`) skips the rest of a fight's playback.
+- **Holding Confirm** plays it ×4 *(tunable)*. A Confirm tap does nothing.
 
 ### End turn: double-tap Space
 
