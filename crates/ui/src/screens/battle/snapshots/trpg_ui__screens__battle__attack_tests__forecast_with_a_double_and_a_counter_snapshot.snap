@@ -1,0 +1,113 @@
+---
+source: crates/ui/src/screens/battle/attack_tests.rs
+expression: lord_on_brigand(20).snapshot()
+---
+                                                                      ╔═════════ Forecast ═════════╗
+                                                                      ║                            ║
+                                                                      ║ Test Lord     Brigand      ║
+                                                                      ║ Iron Sword    Iron Axe     ║
+                                                                      ║                            ║
+                                                                      ║ HP 19 ███▒▒   HP 20 █▒▒▒▒  ║
+                                                                      ║ Hit  96       Hit  65      ║
+                                                                      ║ Crit 3        Crit 0       ║
+                                                                      ║                            ║
+                                                                      ║ ────────────────────────── ║
+                                                                      ║  8 dmg   →  1              ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║             2 ←  9 dmg     ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║  9 dmg   →  3              ║
+                    ≈≈≈≈≈≈====····LoBr..♣♣♣♣....                      ║ ────────────────────────── ║
+                    ..≈≈≈≈..··..............[]..                      ║ 17 ×2     Total  9 ×1      ║
+                    ....······....BrAr▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ..♣♣··....[]......▓▓░░[]▓▓..                      ║                            ║
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ╚════════════════════════════╝
+                                                                                                    
+ arrows next target · f attack · d back                                                             
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbccccccccccbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdeeeeeeeeedddddfffffffddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggggggggddddggggggggdddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggddddhhhiidddggddddiiiiiddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdgggdddddddddddgggddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggddddddddddggggdddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjjjkkkkllllmmmmnnnnooooppaaaaaaaaaaaaaaaaaaaaaabdddddddddddddgdgddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjkkkkllllqqrrqqmmmmooooooaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjkkkkssssqqqqttuullmmmmllllaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaallkkkkllqqllllllllllllllvvllaaaaaaaaaaaaaaaaaaaaaabdddddddddddgggggddddddddddddb
+aaaaaaaaaaaaaaaaaaaallllqqqqqqllllwwxxyyyyyyyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaallmmqqllllvvllllllyyzzvvyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammmmqqllxxllllllllyyzzzzyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammnnqqllllllllllllyyyyAAyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:enemy bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:hp_mid bg:panel_bg
+i = fg:hp_low bg:panel_bg
+j = fg:water bg:sea
+k = fg:water bg:water_bg
+l = fg:grass bg:grass_bg
+m = fg:forest bg:forest_bg
+n = fg:thicket bg:thicket_bg
+o = fg:mountain bg:mountain_bg
+p = fg:peak bg:peak_bg
+q = fg:road bg:road_bg
+r = fg:enemy bg:#50281d
+s = fg:wood bg:water_bg
+t = fg:player bg:road_bg
+u = fg:enemy bg:#4c271c
+v = fg:fort bg:fort_bg
+w = fg:enemy bg:grass_bg
+x = fg:player bg:grass_bg
+y = fg:stone bg:stone_bg
+z = fg:floor bg:floor_bg
+A = fg:wood bg:stone_bg
+B = fg:text_dim bg:black
+--- overlays ---
+over  272,222 16x2  hp_high
+over  224,286 16x2  hp_high
+over  288,254 16x2  hp_high
+over  288,222 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  287,208 3x1  cursor
+over  287,208 1x3  cursor
+over  301,208 3x1  cursor
+over  303,208 1x3  cursor
+over  287,221 3x1  cursor
+over  287,219 1x3  cursor
+over  301,221 3x1  cursor
+over  303,219 1x3  cursor

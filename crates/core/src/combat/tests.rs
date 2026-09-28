@@ -1442,26 +1442,29 @@ fn combat_mods_add_up() {
     assert_eq!(m.sword_followup, Some((1, 1)));
 }
 
-/// The order of `by` in a combat where every strike misses.
-fn strike_order(attacker: u8, defender: u8) -> Vec<Side> {
+/// The order of `by` in a combat where every strike misses (checked
+/// against [`strike_order`]).
+fn missed_order(attacker: u8, defender: u8) -> Vec<Side> {
     let f = Forecast {
         attacker: numbers(1, 1, 0, 0, attacker),
         defender: Some(numbers(1, 1, 0, 0, defender)),
     };
     let mut rng = ScriptedRng::new(vec![0; 2 * usize::from(attacker + defender)]);
     let out = resolve(&rules(), &f, hp(10, 10), hp(10, 10), &mut rng);
-    out.strikes.iter().map(|s| s.by).collect()
+    let order: Vec<Side> = out.strikes.iter().map(|s| s.by).collect();
+    assert_eq!(order, strike_order(&f));
+    order
 }
 
 #[test]
 fn strikes_after_the_first_two_alternate_when_both_sides_have_some() {
     use Side::{Attacker as A, Defender as D};
-    assert_eq!(strike_order(3, 2), [A, D, A, D, A]);
-    assert_eq!(strike_order(2, 3), [A, D, A, D, D]);
-    assert_eq!(strike_order(2, 2), [A, D, A, D]);
-    assert_eq!(strike_order(1, 3), [A, D, D, D]);
-    assert_eq!(strike_order(4, 1), [A, D, A, A, A]);
-    assert_eq!(strike_order(1, 1), [A, D]);
+    assert_eq!(missed_order(3, 2), [A, D, A, D, A]);
+    assert_eq!(missed_order(2, 3), [A, D, A, D, D]);
+    assert_eq!(missed_order(2, 2), [A, D, A, D]);
+    assert_eq!(missed_order(1, 3), [A, D, D, D]);
+    assert_eq!(missed_order(4, 1), [A, D, A, A, A]);
+    assert_eq!(missed_order(1, 1), [A, D]);
 }
 
 proptest! {
@@ -1662,4 +1665,118 @@ fn close_shot_lets_a_bow_shoot_adjacent() {
     );
     // At distance 2 it still works, with the lower hit.
     assert_eq!(fc(&rules, &shot, &target, 2).attacker, near);
+}
+
+// ---------------------------------------------------------------------------
+// The forecast's strike plan (ticket 0404): every strike as if it hit.
+
+#[test]
+fn the_plan_lists_every_strike_in_order_and_marks_the_kill() {
+    let rules = rules();
+    // Example 3: A, D, A, A. The defender falls on the third strike.
+    let f = fc(&rules, &ex3_attacker(30), &ex3_defender(16), 1);
+    assert_eq!(
+        strike_order(&f),
+        [
+            Side::Attacker,
+            Side::Defender,
+            Side::Attacker,
+            Side::Attacker
+        ]
+    );
+    let d = f.attacker.damage;
+    let plan = if_all_hit(&f, hp(34, 34), hp(2 * d, 40));
+    let by: Vec<Side> = plan.strikes.iter().map(|s| s.by).collect();
+    assert_eq!(by, strike_order(&f));
+    let kills: Vec<bool> = plan.strikes.iter().map(PlannedStrike::kills).collect();
+    assert_eq!(kills, [false, false, true, false]);
+    let after: Vec<bool> = plan.strikes.iter().map(|s| s.after_a_fall).collect();
+    assert_eq!(after, [false, false, false, true]);
+    // The strike after the fall changes nothing.
+    assert_eq!(plan.strikes[3].target_hp_after, 0);
+    assert_eq!(plan.defender_hp, 0);
+    let counter = f.defender.unwrap().damage;
+    assert_eq!(plan.attacker_hp, 34 - counter);
+    assert_eq!(plan.strikes[1].target_hp_after, 34 - counter);
+}
+
+#[test]
+fn the_plan_uses_sword_followups_and_no_crits() {
+    let rules = rules();
+    let (swordsman, brigand) = w1();
+    let f = fc(&rules, &swordsman, &brigand, 1);
+    let plan = if_all_hit(&f, hp(22, 22), hp(40, 40));
+    let dmg: Vec<StatValue> = plan.strikes.iter().map(|s| s.damage).collect();
+    let def = f.defender.unwrap();
+    assert_eq!(
+        dmg,
+        [f.attacker.damage, def.damage, f.attacker.followup_damage]
+    );
+    assert!(plan.strikes.iter().all(|s| !s.kills() && !s.after_a_fall));
+    assert_eq!(plan.defender_hp, 40 - dmg[0] - dmg[2]);
+}
+
+#[test]
+fn a_counter_can_be_the_kill_and_absorb_never_is() {
+    let rules = rules();
+    let f = fc(&rules, &ex1_attacker(), &ex1_defender(), 1);
+    let counter = f.defender.unwrap().damage;
+    let plan = if_all_hit(&f, hp(counter, 22), hp(20, 20));
+    assert!(plan.strikes[1].kills());
+    assert_eq!(plan.attacker_hp, 0);
+    // Absorb heals up to max HP and never kills.
+    let f = fc(
+        &rules,
+        &mage(spell(Element::Ice, 4, 95)),
+        &frost_elemental(Affinity::Absorb),
+        2,
+    );
+    let plan = if_all_hit(&f, hp(18, 18), hp(25, 30));
+    let first = plan.strikes[0];
+    assert!(first.healed && !first.kills());
+    assert_eq!(first.target_hp_after, 30);
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(300))]
+
+    /// The plan is what `resolve` does when every strike hits and none
+    /// crits, and its order is `resolve`'s when nobody falls.
+    #[test]
+    fn the_plan_matches_resolve_with_sure_hits(a in spec(), d in spec(), distance in 1..=2u32, hp_a in 1..=80i32, hp_d in 1..=80i32) {
+        let rules = rules();
+        let (a, d) = (build(&a), build(&d));
+        let Some(f) = forecast(&rules, &a, &d, distance) else {
+            return Ok(());
+        };
+        let (ha, hd) = (hp(hp_a.min(a.stats.hp), a.stats.hp), hp(hp_d.min(d.stats.hp), d.stats.hp));
+        let order = strike_order(&f);
+        let plan = if_all_hit(&f, ha, hd);
+        let by: Vec<Side> = plan.strikes.iter().map(|s| s.by).collect();
+        prop_assert_eq!(&by, &order);
+        let sides = [Some(f.attacker), f.defender];
+        // Everything misses, where that can happen: nobody falls, every
+        // strike is made.
+        if sides.iter().flatten().all(|s| s.hit < 100) {
+            let misses = resolve(&rules, &f, ha, hd, &mut ScriptedRng::new(vec![99; 3 * order.len()]));
+            let made: Vec<Side> = misses.strikes.iter().map(|s| s.by).collect();
+            prop_assert_eq!(&made, &order);
+        }
+        // Everything hits without a crit, where that can happen.
+        if sides.iter().flatten().all(|s| s.hit > 0 && s.crit < 100) {
+            let out = resolve(&rules, &f, ha, hd, &mut ScriptedRng::new([0, 0, 99].repeat(order.len())));
+            let happened: Vec<(Side, StatValue, StatValue)> = plan
+                .strikes
+                .iter()
+                .filter(|s| !s.after_a_fall)
+                .map(|s| (s.by, s.damage, s.target_hp_after))
+                .collect();
+            let real: Vec<(Side, StatValue, StatValue)> =
+                out.strikes.iter().map(|s| (s.by, s.damage, s.target_hp_after)).collect();
+            prop_assert_eq!(happened, real);
+            prop_assert_eq!((plan.attacker_hp, plan.defender_hp), (out.attacker_hp, out.defender_hp));
+            let kills = plan.strikes.iter().filter(|s| s.kills()).count();
+            prop_assert_eq!(kills, usize::from(out.attacker_hp == 0 || out.defender_hp == 0));
+        }
+    }
 }

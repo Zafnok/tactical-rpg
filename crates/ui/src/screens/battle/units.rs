@@ -5,6 +5,7 @@
 
 use trpg_core::{Faction, StatValue, Unit};
 
+use super::layout::TILE_W_CELLS;
 use crate::color::{Palette, UiColor};
 use crate::console::{CELL_H_PX, CELL_W_PX};
 use crate::glyph_buffer::{Cell, GlyphBuffer, Layer, Overlay, Rect};
@@ -74,7 +75,39 @@ pub fn hp_fill(hp: StatValue, max: StatValue, full: i32) -> (i32, UiColor) {
 /// Draws `unit` on the tile whose left cell is `(x, y)`: the label over the
 /// cells' existing (terrain) background, then the HP bar overlays.
 pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &Unit, x: i32, y: i32) {
+    draw_fading_unit(buf, palette, unit, x, y, 0.0);
+}
+
+/// Draws `unit` as [`draw_unit`] does, `fade` of the way through falling
+/// (ticket 0404): over the first half its label and HP bar fade into the
+/// tile's background, over the second half the terrain's glyphs fade back
+/// in; at `1` (or more) only the terrain is left.
+pub fn draw_fading_unit(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    unit: &Unit,
+    x: i32,
+    y: i32,
+    fade: f32,
+) {
+    let fade = if fade.is_finite() {
+        fade.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    if fade >= 0.5 {
+        let k = (fade - 0.5) * 2.0;
+        for i in 0..TILE_W_CELLS {
+            if let Some(&cell) = buf.get(x + i, y) {
+                let fg = cell.bg.lerp(cell.fg, k);
+                buf.set(x + i, y, Cell { fg, ..cell });
+            }
+        }
+        return;
+    }
+    let k = fade * 2.0;
     let faction = palette.get(faction_color(unit.faction));
+    let tile_bg = buf.get(x, y).map_or(faction, |c| c.bg);
     for (i, glyph) in (0..).zip(shown_label(unit).chars()) {
         let Some(&cell) = buf.get(x + i, y) else {
             continue;
@@ -84,13 +117,15 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &Unit, x: i32, 
         } else {
             faction
         };
+        let fg = fg.lerp(cell.bg, k);
         buf.set(x + i, y, Cell { glyph, fg, ..cell });
     }
     let (width, color) = hp_bar(unit.hp, unit.stats.hp);
     let px = x * i32::from(CELL_W_PX);
     let py = (y + 1) * i32::from(CELL_H_PX) - HP_BAR_H;
     let bar = |bx: i32, w: i32, c: UiColor| {
-        Overlay::new(Rect::new(bx, py, w, HP_BAR_H), palette.get(c), Layer::Over)
+        let color = palette.get(c).lerp(tile_bg, k);
+        Overlay::new(Rect::new(bx, py, w, HP_BAR_H), color, Layer::Over)
     };
     // An empty part (full or zero HP) is dropped by `add_overlay`.
     buf.add_overlay(bar(px, width, color));
@@ -198,6 +233,41 @@ mod tests {
         assert_eq!(full.overlays(), [bar(8, 16, UiColor::HpHigh)]);
         let empty = drawn(&unit("Br", 0, 30, false));
         assert_eq!(empty.overlays(), [bar(8, 16, UiColor::Black)]);
+    }
+
+    #[test]
+    fn a_falling_unit_fades_into_its_tile_then_the_terrain_comes_back() {
+        let p = game_palette();
+        let (terrain, bg) = (Rgb::new(1, 1, 1), Rgb::new(0, 0, 100));
+        let fading = |fade| {
+            let mut b = GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg));
+            draw_fading_unit(&mut b, &p, &unit("Br", 15, 30, false), 1, 1, fade);
+            b
+        };
+        let enemy = p.get(UiColor::Enemy);
+        // Not faded: as drawn normally.
+        assert_eq!(fading(0.0), drawn(&unit("Br", 15, 30, false)));
+        assert_eq!(fading(f32::NAN), fading(0.0));
+        // A quarter: the letters and the bar halfway to the background.
+        let b = fading(0.25);
+        assert_eq!(b.get(1, 1), Some(&Cell::new('B', enemy.lerp(bg, 0.5), bg)));
+        let half = p.get(hp_bar(15, 30).1).lerp(bg, 0.5);
+        assert_eq!(b.overlays()[0].color, half);
+        // Three quarters: the terrain back, halfway to its own colour.
+        let b = fading(0.75);
+        assert_eq!(
+            b.get(1, 1),
+            Some(&Cell::new('.', bg.lerp(terrain, 0.5), bg))
+        );
+        assert_eq!(
+            b.get(2, 1),
+            Some(&Cell::new('.', bg.lerp(terrain, 0.5), bg))
+        );
+        assert!(b.overlays().is_empty());
+        // Gone: the tile as it was.
+        let b = fading(1.0);
+        assert_eq!(b, GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg)));
+        assert_eq!(fading(7.0), b);
     }
 
     #[test]

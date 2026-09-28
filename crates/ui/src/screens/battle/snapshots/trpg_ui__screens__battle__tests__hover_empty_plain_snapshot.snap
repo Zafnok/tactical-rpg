@@ -16,8 +16,8 @@ expression: buf.to_snapshot(&c.palette)
                     ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      │                            │
-                    ..≈≈≈≈..··..............Br..                      │                            │
-                    ....Ar····........▓▓▓▓▓▓▓▓..                      │                            │
+                    ..≈≈≈≈..··..............[]..                      │                            │
+                    ....Ar····....Br..▓▓▓▓▓▓▓▓..                      │                            │
                     ..♣♣··Lo..[]......▓▓░░[]▓▓..                      │                            │
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
@@ -50,10 +50,10 @@ aaaaaaaaaaaaaaaaaaaaeeeeeeffffgggghhhhiiiijjjjkkaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaeeeeffffggggllmmllhhhhjjjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaeeffffnnnnlllllloogghhhhggggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaggffffggllggggggggggggggppggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaggggqqllllggggggggrrrrrrrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaagghhllssggttggggggrruuttrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaahhhhllggssggggggggrruuuurrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaahhiillggggggggggggrrrrvvrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaggggqqllllggggooggrrrrrrrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaagghhllssggppggggggrrttpprrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhllggssggggggggrrttttrrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhiillggggggggggggrrrruurrggaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -66,7 +66,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-awwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+avvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -83,20 +83,19 @@ l = fg:road bg:road_bg
 m = fg:enemy bg:road_bg
 n = fg:wood bg:water_bg
 o = fg:enemy bg:grass_bg
-p = fg:enemy bg:fort_bg
+p = fg:fort bg:fort_bg
 q = fg:player bg:road_bg
 r = fg:stone bg:stone_bg
 s = fg:player bg:grass_bg
-t = fg:fort bg:fort_bg
-u = fg:floor bg:floor_bg
-v = fg:wood bg:stone_bg
-w = fg:text_dim bg:black
+t = fg:floor bg:floor_bg
+u = fg:wood bg:stone_bg
+v = fg:text_dim bg:black
 --- overlays ---
 over  208,270 16x2  hp_high
 over  224,286 16x2  hp_high
 over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
-over  352,238 16x2  hp_high
+over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
 over  255,256 3x1  cursor
 over  255,256 1x3  cursor

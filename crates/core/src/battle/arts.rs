@@ -5,7 +5,7 @@
 
 use super::{BattleState, CommandError, Event, Fight, Phase, Pos, Step, UnitAction};
 use crate::art::{ArtEffect, ArtId, ArtNote};
-use crate::combat::{Forecast, SideForecast, forecast};
+use crate::combat::{CombatHp, Forecast, SideForecast, StrikePlan, forecast, if_all_hit};
 use crate::item::{Equipped, ItemId};
 use crate::skill::{
     CostSource, EffectSource, SkillCost, SkillId, TimedEffect, check_cost, pay_cost,
@@ -48,6 +48,9 @@ pub struct AttackPreview {
     /// Line Pierce's strike: the unit behind the target and the strike's
     /// numbers, if there is one to hit.
     pub pierce: Option<(UnitId, SideForecast)>,
+    /// The combat if every strike hit and none crit, from both units'
+    /// current HP (the forecast's strike list and kill mark).
+    pub plan: StrikePlan,
 }
 
 /// Whether `unit` may use arts and active skills (`combat-arts.md`,
@@ -233,7 +236,15 @@ impl BattleState {
             let left = self.unit(unit)?.loadout.weapon(*slot)?.durability_left;
             Some((left, left - cost))
         });
+        let hp = |id| {
+            self.unit(id)
+                .map_or(CombatHp { current: 0, max: 0 }, |u| CombatHp {
+                    current: u.hp,
+                    max: u.stats.hp,
+                })
+        };
         Ok(AttackPreview {
+            plan: if_all_hit(&step.forecast, hp(unit), hp(step.target)),
             forecast: step.forecast,
             art: step.art.as_ref().map(|a| a.art.clone()),
             active: step.active.as_ref().map(|a| a.skill.clone()),

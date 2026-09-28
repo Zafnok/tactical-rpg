@@ -202,3 +202,22 @@ fn confirm_on_an_enemy_toggles_its_range() {
     assert_eq!(bg(&h), plain);
     assert_eq!(h.top_screen(), "battle");
 }
+
+#[test]
+fn the_lord_fights_the_near_brigand_on_turn_one() {
+    let mut h = quick_battle();
+    // The lord to (6, 4), beside the brigand at (7, 4).
+    h.keys("f Right Right Right Up f").wait(0.5);
+    // Attack: two swords reach, so the weapon list; the iron sword; the
+    // forecast against the brigand.
+    h.keys("f f");
+    assert_eq!(panel(&h)[1], "Test Lord     Brigand");
+    assert_eq!(help(&h), "arrows next target · f attack · d back");
+    // Attack, then a tap skips the playback.
+    h.keys("f");
+    assert_eq!(help(&h), "f skip · hold f fast");
+    h.keys("f");
+    // The lord has acted, lowercase at (6, 4) (cells 32..34, row 15).
+    assert_eq!(tile(&h, 32, 15), "lo");
+    assert!(help(&h).ends_with("s next unit · d back"), "{}", help(&h));
+}
