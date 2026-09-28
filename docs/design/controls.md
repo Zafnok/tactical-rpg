@@ -96,7 +96,8 @@ Confirm tap skipped and holding it sped up):
 ### Cursor speed
 
 - **No fast-cursor key** for now: no "jump ×5" and no hold-to-scroll-faster.
-  Held keys repeat (first repeat after 170 ms, then every 55 ms, *tunable*),
+  Held keys repeat (first repeat after 300 ms, then every 55 ms, *tunable*; the first delay
+  was 170 ms until ticket 0421: Nick found a single tap in menus often moved twice),
   and Next/Previous unit jump straight to your units.
 - **Revisit after playtesting** a chapter with large-map fights (0804 or
   later). If crossing big maps feels slow, the options were: hold a key to

@@ -1445,13 +1445,13 @@ mod tests {
         let (delay, interval) = (repeat.delay_ms, repeat.interval_ms);
         let moves = |ms: u32| i32::try_from(1 + 1 + (ms - delay) / interval).unwrap();
         let mut h = big_battle_harness();
-        h.hold("Right", 1.0);
-        // 1 press + repeats at 170 ms, then every 55 ms: 17 tiles, to x = 20.
-        assert_eq!(moves(1000), 17);
-        assert_eq!(cursor_cell(h.game().buffer()), (2 * (3 + 17), 5));
-        h.hold("Right", 1.0);
-        // x = 37: the camera keeps it 3 tiles from the right edge.
-        let x = 3 + 2 * moves(1000);
+        h.hold("Right", 1.2);
+        // 1 press + repeats at 300 ms, then every 55 ms: 18 tiles, to x = 21.
+        assert_eq!(moves(1200), 18);
+        assert_eq!(cursor_cell(h.game().buffer()), (2 * (3 + 18), 5));
+        h.hold("Right", 1.2);
+        // x = 39: the camera keeps it 3 tiles from the right edge.
+        let x = 3 + 2 * moves(1200);
         let origin = x - (layout::VIEW_TILES_W - 1 - Camera::MARGIN);
         assert_eq!(cursor_cell(h.game().buffer()), (2 * (x - origin), 5));
         // Far right, then back: the cursor stops at the edge and the

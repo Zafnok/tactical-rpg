@@ -284,12 +284,18 @@ mod tests {
         assert_eq!(km.action(chord("Shift+Left")), None);
         assert_eq!(km.action(chord("Shift+f")), None);
         assert_eq!(km.action(chord("z")), None);
-        assert_eq!(km.repeat(), RepeatDef::default());
-        let custom = state_with(300, 40);
+        assert_eq!(
+            km.repeat(),
+            RepeatDef {
+                delay_ms: 170,
+                interval_ms: 55
+            }
+        );
+        let custom = state_with(400, 40);
         assert_eq!(
             custom.keymap().repeat(),
             RepeatDef {
-                delay_ms: 300,
+                delay_ms: 400,
                 interval_ms: 40
             }
         );
