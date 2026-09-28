@@ -15,6 +15,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
 | `debug` | Debug menu (F12 in debug builds): glyph sampler, portrait viewer |
+| `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
 ## How a frame runs

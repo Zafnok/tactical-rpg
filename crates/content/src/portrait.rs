@@ -26,6 +26,9 @@ pub const PORTRAIT_SIZE: (u16, u16) = (32, 32);
 /// Expressions every portrait must have (ADR-0018).
 pub const REQUIRED_EXPRESSIONS: [&str; 5] = ["neutral", "happy", "angry", "sad", "surprised"];
 
+/// Portraits by character id.
+pub type PortraitTable = BTreeMap<String, Portrait>;
+
 /// A validated portrait.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Portrait {
@@ -78,7 +81,7 @@ struct Header {
 
 /// Loads every `*.portrait` file in the bundle, keyed by file stem, checking
 /// colour names against `palette`. Reports every error of every file.
-pub fn load_all(palette: &PaletteDef) -> Result<BTreeMap<String, Portrait>, Vec<ContentError>> {
+pub fn load_all(palette: &PaletteDef) -> Result<PortraitTable, Vec<ContentError>> {
     let mut portraits = BTreeMap::new();
     let mut errors = Vec::new();
     for path in bundle::files_in(PORTRAITS_DIR) {

@@ -1,6 +1,6 @@
 # ADR-0025: Event playback runs inside the battle screen, as a mode
 
-- **Status:** Accepted
+- **Status:** Accepted; the playback's keys changed in ticket 0418 (Cancel skips, see `docs/design/controls.md`)
 - **Date:** 2026-09-27
 - **Related tickets:** 0404, 0502, 0410, 0407, 0705
 

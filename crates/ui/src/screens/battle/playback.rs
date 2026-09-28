@@ -9,8 +9,7 @@
 //! then the result (`HIT -7`, `MISS`, `CRITICAL! -21`) while the target's
 //! HP bar drains, with a pause between strikes; then one fall per fallen
 //! unit and a short hold. Holding Confirm plays it [`Timings::fast`] times
-//! as fast; a tap (a press released within [`Timings::tap`]) skips to the
-//! end.
+//! as fast; Cancel skips to the end (ticket 0418, `docs/design/controls.md`).
 
 use std::collections::BTreeMap;
 
@@ -40,8 +39,6 @@ pub struct Timings {
     pub outro: f32,
     /// Speed-up while Confirm is held.
     pub fast: f32,
-    /// A Confirm press released sooner than this is a tap, which skips.
-    pub tap: f32,
     /// Half-period of the striker's name flashing.
     pub blink: f32,
 }
@@ -57,7 +54,6 @@ pub const TIMINGS: Timings = Timings {
     fall: 0.5,
     outro: 0.4,
     fast: 4.0,
-    tap: 0.2,
     blink: 0.075,
 };
 
@@ -149,9 +145,6 @@ pub struct Playback {
     steps: Vec<Step>,
     timings: Timings,
     t: f32,
-    /// Seconds Confirm has been held since it was pressed during the
-    /// playback, until released.
-    press: Option<f32>,
 }
 
 impl Playback {
@@ -217,7 +210,6 @@ impl Playback {
             steps,
             timings,
             t: 0.0,
-            press: None,
         })
     }
 
@@ -262,28 +254,16 @@ impl Playback {
         Some((*step, (self.t - step.start).clamp(0.0, step.len)))
     }
 
-    /// Confirm was pressed: while it stays held the playback runs fast; if
-    /// it is released within [`Timings::tap`], it skips to the end.
-    pub fn press(&mut self) {
-        self.press.get_or_insert(0.0);
+    /// Cancel was pressed: jump to the end.
+    pub fn skip(&mut self) {
+        self.t = self.total();
     }
 
     /// Advances the clock by `dt` seconds (`confirm_held`: Confirm is down
-    /// this frame): [`Timings::fast`] times faster while held, to the end
-    /// when a tap is released. A bad `dt` counts as 0.
+    /// this frame): [`Timings::fast`] times faster while held. A bad `dt`
+    /// counts as 0.
     pub fn tick(&mut self, dt: f32, confirm_held: bool) {
         let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
-        if let Some(held) = self.press {
-            if confirm_held {
-                self.press = Some(held + dt);
-            } else {
-                self.press = None;
-                if held < self.timings.tap {
-                    self.t = self.total();
-                    return;
-                }
-            }
-        }
         let speed = if confirm_held { self.timings.fast } else { 1.0 };
         self.t = (self.t + dt * speed).min(self.total());
     }
@@ -728,37 +708,20 @@ mod tests {
     }
 
     #[test]
-    fn holding_confirm_is_four_times_as_fast_and_a_tap_skips() {
-        // Held, pressed during the playback: four times as fast.
+    fn holding_confirm_is_four_times_as_fast_and_skip_ends_it() {
+        // Held: four times as fast.
         let mut pb = playback();
-        pb.press();
         pb.tick(0.1, true);
         pb.tick(0.1, true);
         assert!((pb.time() - 0.8).abs() < 1e-5);
-        // Released after a long hold: no skip.
+        // Released: normal speed again, and letting go never skips.
         pb.tick(0.1, false);
         assert!((pb.time() - 0.9).abs() < 1e-5);
         assert!(!pb.done());
-        // Held without a press in the playback (still down from the
-        // Confirm that attacked): fast, and letting go never skips.
-        let mut pb = playback();
-        pb.tick(0.1, true);
-        pb.tick(0.1, false);
-        assert!((pb.time() - 0.5).abs() < 1e-5);
-        // A tap: pressed, released within the tap time.
-        let mut pb = playback();
-        pb.press();
-        pb.tick(1.0 / 60.0, true);
-        assert!(!pb.done());
-        pb.tick(1.0 / 60.0, false);
+        // Skip: at the end at once.
+        pb.skip();
         assert!(pb.done());
-        // A second press while held doesn't restart the hold.
-        let mut pb = playback();
-        pb.press();
-        pb.tick(T.tap, true);
-        pb.press();
-        pb.tick(0.01, false);
-        assert!(!pb.done());
+        assert!((pb.time() - pb.total()).abs() < 1e-6);
     }
 
     #[test]

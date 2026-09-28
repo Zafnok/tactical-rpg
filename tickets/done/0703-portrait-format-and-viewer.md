@@ -91,8 +91,10 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
   - The viewer uses the cursor actions, not literal `h/l` and `j/k`: since
     ADR-0015 the layouts bind them to arrows or `wasd`. The help line names
     the real keys.
-  - Step 3 (dialogue expressions must exist in the speaker's portrait) moved
-    to 0702: dialogue doesn't exist yet. 0702's text now says so.
+  - Step 3: 0702 (dialogue) merged while this PR was open, and it left the
+    cross-check to 0703. It's done here: a character with a portrait may use
+    exactly its portrait's expressions in `.dlg` scripts. A character
+    without one keeps the five standard ones.
   - The glyph sampler no longer lists colours that only portraits use. With
     29 new portrait colours the palette no longer fits on one screen, and
     0706 will add more. The portrait viewer shows those colours in use.
