@@ -14,6 +14,7 @@ use trpg_content::{Content, ContentErrors};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Keymap, Layout};
+use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
 
 /// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
@@ -117,6 +118,10 @@ pub struct Ctx {
     /// feature (the Pages build, ADR-0023); the test harness turns it on
     /// everywhere so tests don't depend on the build profile.
     pub debug_tools: bool,
+    /// How the battle cursor is drawn (corner marks unless the player picks
+    /// an accessibility style). Lives here until the Options menu (0805)
+    /// moves it into the saved settings.
+    pub cursor_style: CursorStyle,
 }
 
 impl Ctx {
@@ -133,6 +138,7 @@ impl Ctx {
             layout: None,
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
+            cursor_style: CursorStyle::default(),
         })
     }
 

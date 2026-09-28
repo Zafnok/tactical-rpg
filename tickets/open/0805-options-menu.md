@@ -32,7 +32,7 @@ screen reachable from title and map menu, key rebinding UI.
 
 ## Implementation steps
 
-1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default true, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), key_overrides: BTreeMap<Action, Vec<Chord>>, reset_tips }`.
+1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default true, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), key_overrides: BTreeMap<Action, Vec<Chord>>, reset_tips, cursor_style: CursorStyle (Corners (default) | LargeCorners | TileGlow, ticket 0415; move it out of `Ctx::cursor_style`) }`.
    Defaults match current behaviour. Loaded at startup into `Ctx`; saved on change.
 2. Wire each setting into its consumer (0704 typewriter, 0404 playback, 0502
    pacing, `app` fullscreen via a `FrameOutput` request flag).
@@ -40,6 +40,7 @@ screen reachable from title and map menu, key rebinding UI.
    player likes (`docs/design/controls.md`): `f` on it opens the same
    `LayoutPickerScreen` as first launch (0208), with the current layout
    focused and Cancel allowed there (it backs out without changing anything);
+   a "Cursor" row (Corners / Large corners / Tile glow, `docs/design/look-and-feel.md`);
    picking saves the layout and switches keys immediately; `f` on "Key
    bindings" opens the rebinding screen; "Reset tips"; "Restore defaults".
 4. **Rebinding:** list actions with current chords; `f` → "Press a key…" →

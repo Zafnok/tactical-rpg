@@ -57,29 +57,33 @@ fn panel(h: &Harness) -> Vec<String> {
         .collect()
 }
 
-/// The column of the cursor's `[` on row `y` (not a fort's).
-fn bracket_x(h: &Harness, y: i32) -> Option<i32> {
-    let buf = h.game().buffer();
-    let fort = h.game().ctx().palette.lookup("fort");
-    (0..70).find(|&x| {
-        buf.get(x, y)
-            .is_some_and(|c| c.glyph == '[' && Some(c.fg) != fort)
-    })
+/// The left cell of the tile under the cursor on row `y`, found from the
+/// corner marks' right-hand vertical arms (the only 1 × 3 px overlays), which
+/// sit in the tile's last pixel column.
+fn cursor_x(h: &Harness, y: i32) -> Option<i32> {
+    h.game()
+        .buffer()
+        .overlays()
+        .iter()
+        .map(|o| o.rect)
+        .filter(|r| (r.w, r.h) == (1, 3) && r.y / 16 == y)
+        .map(|r| (r.x + 1) / 8 - 2)
+        .max()
 }
 
 #[test]
 fn arrows_move_the_cursor_and_the_panel_follows() {
     let mut h = quick_battle();
     // The lord at (3, 5), drawn from cell 26 on row 16.
-    assert_eq!(bracket_x(&h, 16), Some(25));
+    assert_eq!(cursor_x(&h, 16), Some(26));
     assert_eq!(panel(&h)[4], "Test Lord");
     h.keys("Right Right Right");
-    assert_eq!(bracket_x(&h, 16), Some(31));
+    assert_eq!(cursor_x(&h, 16), Some(32));
     assert_eq!(panel(&h)[0], "Plain");
     assert_eq!(panel(&h)[4], "");
     // Held: stops at the map's right edge (x = 13, cell 46).
     h.hold("Right", 1.0);
-    assert_eq!(bracket_x(&h, 16), Some(45));
+    assert_eq!(cursor_x(&h, 16), Some(46));
     assert_eq!(panel(&h)[0], "Plain");
     // Two tiles left is a fort.
     h.keys("Left Left");
