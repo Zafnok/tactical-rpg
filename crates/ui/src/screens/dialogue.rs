@@ -45,7 +45,8 @@ pub const FAST_FORWARD: f32 = 6.0;
 const BLINK_S: f32 = 0.5;
 
 /// Plays a scene: Confirm reveals the text at once, or moves on when it's
-/// all shown; holding Confirm reveals faster; Cancel asks whether to skip
+/// all shown; holding Confirm reveals faster. The End Turn key (Space) does
+/// everything Confirm does. Cancel asks whether to skip
 /// the scene. Pops when the scene ends or is skipped.
 #[derive(Debug, Clone)]
 pub struct DialogueScreen {
@@ -138,6 +139,19 @@ impl DialogueScreen {
     }
 }
 
+/// The actions that advance the dialogue: Confirm, and End Turn (Space in
+/// every layout), so either key reads through a scene.
+const ADVANCE_KEYS: [Action; 2] = [Action::Confirm, Action::EndTurn];
+
+/// `action`, with End Turn treated as Confirm.
+fn advance_key(action: Action) -> Action {
+    if ADVANCE_KEYS.contains(&action) {
+        Action::Confirm
+    } else {
+        action
+    }
+}
+
 /// Characters on a page.
 fn page_len(lines: &[String]) -> f32 {
     let n: usize = lines.iter().map(|l| l.chars().count()).sum();
@@ -157,6 +171,7 @@ impl Screen for DialogueScreen {
             return Transition::Pop;
         }
         for &action in &input.actions {
+            let action = advance_key(action);
             match (self.asking_skip, action) {
                 (true, Action::Confirm) => return Transition::Pop,
                 (true, Action::Cancel) => self.asking_skip = false,
@@ -172,7 +187,7 @@ impl Screen for DialogueScreen {
             if self.is_revealed() {
                 self.waiting += input.dt;
             } else {
-                let fast = if input.is_held(Action::Confirm) {
+                let fast = if ADVANCE_KEYS.iter().any(|&a| input.is_held(a)) {
                     FAST_FORWARD
                 } else {
                     1.0

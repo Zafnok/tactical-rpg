@@ -75,6 +75,10 @@ typewriter reveal, advance/fast-forward/skip, caption and narration styles.
   greedily). Text boxes are 92 characters wide, 3 lines a page.
 - **Text speed:** `Ctx::text_speed`, default 60 characters/second, for 0805
   to move into the saved settings. Holding Confirm reveals 6× faster.
+- **Space advances too (Nick asked while the PR was open):** the End Turn
+  key (Space in both layouts) does everything Confirm does in a scene:
+  reveal, next box, hold to fast-forward, and "yes" to the skip question.
+  The box corner and skip question still name only the Confirm key.
 - **Debug menu:** two entries, not one: "Play test scene" (full-screen) and
   "Play test scene (overlay)". The overlay entry replaces the debug menu, so
   pressing F2 (the debug key since main moved it from F12) during a battle plays the scene over that battle's map.

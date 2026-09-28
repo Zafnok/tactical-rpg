@@ -62,6 +62,22 @@ fn the_overlay_scene_plays_to_the_end() {
 }
 
 #[test]
+fn space_plays_the_scene_too() {
+    let mut h = full_screen();
+    for _ in 0..2 * TEST_BOXES {
+        h.keys("Space");
+    }
+    assert_eq!(h.screens(), ["title", "debug_menu"]);
+}
+
+#[test]
+fn holding_space_fast_forwards() {
+    let mut h = full_screen();
+    h.keys("Space").hold("Space", 0.05);
+    assert!(row(&h, 23).contains("You're late."));
+}
+
+#[test]
 fn waiting_reveals_the_text_so_one_press_moves_on() {
     let mut h = full_screen();
     for _ in 0..TEST_BOXES {

@@ -115,6 +115,26 @@ fn confirm_reveals_then_advances() {
 }
 
 #[test]
+fn end_turn_advances_like_confirm() {
+    let mut c = ctx();
+    let mut s = DialogueScreen::new(two_speakers("First."));
+    press(&mut s, &mut c, Action::EndTurn);
+    assert!(s.is_revealed());
+    press(&mut s, &mut c, Action::EndTurn);
+    assert_eq!(s.page_lines(), ["Second."]);
+    // Held, it fast-forwards.
+    let held = FrameInput::new(vec![], 0.05, vec![Action::EndTurn]);
+    s.update(&mut c, &held);
+    assert!(s.is_revealed(), "{}", s.shown);
+    // It answers yes to the skip question.
+    press(&mut s, &mut c, Action::Cancel);
+    assert!(matches!(
+        press(&mut s, &mut c, Action::EndTurn),
+        Transition::Pop
+    ));
+}
+
+#[test]
 fn long_text_pages_three_lines_at_a_time() {
     let mut c = ctx();
     // 10 lines of 90 characters: four pages.
