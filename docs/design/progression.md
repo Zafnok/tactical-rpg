@@ -310,6 +310,10 @@ nothing.
 
 ### Stat caps
 
+> **Under review (ticket 0019):** per-class caps are Claude's starting rule,
+> not Nick's decision; Nick questioned them on 2026-09-28. They stay in force
+> until 0019 is answered.
+
 - Each class has a cap per stat (table below). A stat at its cap can't gain.
   Caps are always ≤ the hard ceilings in `stats-and-combat.md`.
 - **After a class change into a class with lower caps** (a reclass), stats

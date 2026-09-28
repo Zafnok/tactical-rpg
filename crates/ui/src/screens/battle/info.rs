@@ -1,8 +1,8 @@
 //! The unit info screen (ticket 0405): everything about one unit, over the
 //! map and side panel. A 24 × 12 portrait area on the left (a placeholder
 //! box until portraits exist, 0703), then the unit's name, level, EXP, HP
-//! and stats with their class caps dimmed (`Str 7/20`), and on the right its
-//! loadout, spells and skills.
+//! and stats as plain numbers (`Str 7`; no class caps, ticket 0423), and on
+//! the right its loadout, spells and skills.
 
 use trpg_core::{BattleState, StatKind, Stats, Unit, WEAPON_SLOTS};
 
@@ -162,7 +162,8 @@ fn draw_left(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     }
 }
 
-/// Name, class and level, EXP, HP with a bar, stats with caps, skills.
+/// Name, class and level, EXP, HP with a bar, stats, skills. Max HP is
+/// shown on the HP line, so the stat list leaves HP out.
 fn draw_middle(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let class = state.classes().get(&unit.class);
     let x = MID_X;
@@ -200,13 +201,13 @@ fn draw_middle(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
         pen.text(x + 11 + i, 4, &glyph.to_string(), fg);
     }
     pen.text(x, 6, "Stats", UiColor::TextHighlight);
-    for (y, kind) in (7..).zip(StatKind::GROWABLE) {
+    let listed = StatKind::GROWABLE
+        .into_iter()
+        .filter(|&k| k != StatKind::Hp);
+    for (y, kind) in (7..).zip(listed) {
         pen.text(x, y, stat_name(kind), UiColor::Text);
         let value = format!("{:>3}", unit.stats.get(kind));
-        let vx = pen.text(x + 4, y, &value, UiColor::Text);
-        if let Some(c) = class {
-            pen.text(vx, y, &format!("/{}", c.caps.get(kind)), UiColor::TextDim);
-        }
+        pen.text(x + 4, y, &value, UiColor::Text);
     }
     pen.text(x, 15, "Skills", UiColor::TextHighlight);
     let skills = unit.usable_skills(state.classes(), state.skills());

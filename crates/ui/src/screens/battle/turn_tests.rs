@@ -255,22 +255,21 @@ fn info_opens_on_any_unit_cycles_its_faction_and_closes_on_the_last_one() {
 }
 
 #[test]
-fn info_shows_stats_with_caps_and_the_loadout() {
+fn info_shows_plain_stats_and_the_loadout() {
     let mut c = ctx();
     let mut s = quick();
     press(&mut s, &mut c, &[Action::Info]);
     let buf = render(&s, &c);
     let lord = s.state().unit(UnitId(1)).unwrap().clone();
-    let class = s.state().classes().get(&lord.class).unwrap().clone();
     let text = |x: i32, y: i32, n: i32| -> String {
         (x..x + n).map(|x| buf.get(x, y).unwrap().glyph).collect()
     };
     assert_eq!(text(29, 1, 9), "Test Lord");
-    let str_line = format!("Str {:>3}/{}", lord.stats.str, class.caps.str);
-    assert_eq!(text(29, 8, 20).trim(), str_line);
-    // The cap is dim.
-    let dim = c.palette.get(UiColor::TextDim);
-    assert_eq!(buf.get(36, 8).unwrap().fg, dim);
+    // Stats are plain numbers, no class caps (0423); HP is only on the HP
+    // line, so Str is the first stat.
+    assert_eq!(text(29, 7, 20).trim(), format!("Str {:>3}", lord.stats.str));
+    assert_eq!(text(29, 8, 20).trim(), format!("Mag {:>3}", lord.stats.mag));
+    assert!(!shows(&buf, "/22"));
     assert!(shows(&buf, "Weapons"));
     assert!(shows(&buf, "Weapon ranks"));
     assert!(shows(&buf, "portrait"));
