@@ -3,13 +3,18 @@
 //! bottom. The player browses with the cursor (ticket 0402), selects a unit,
 //! steers its path, moves it and picks an action (0403, [`mode`]), and
 //! attacks: picks a weapon and a target, reads the [`forecast`] and watches
-//! the combat's [`playback`] (0404).
+//! the combat's [`playback`] (0404). Around that (0405): the unit
+//! [`info`] screen, the danger zone, the [`map_menu`], ending the turn (and
+//! auto-end), and the phase and outcome [`banner`]s.
 
 pub mod attack;
+pub mod banner;
 pub mod camera;
 pub mod cursor;
 pub mod forecast;
+pub mod info;
 pub mod layout;
+pub mod map_menu;
 pub mod mode;
 pub mod panel;
 pub mod path;
@@ -18,11 +23,15 @@ pub mod units;
 
 use std::sync::Arc;
 
+use std::collections::VecDeque;
 use trpg_content::{Content, character_unit, check_map_labels};
+
 use trpg_core::{
     BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective, Phase, Pos, Stock,
-    TileSet, Unit, UnitId,
+    TileSet, Unit, UnitId, danger_zone,
 };
+
+use self::banner::{Banner, BannerKind};
 
 use self::camera::{Camera, tile_to_cell};
 use self::cursor::{Cursor, draw_cursor};
@@ -36,7 +45,7 @@ use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::widgets::help::{cursor_keys_name, help_line, key_name};
+use crate::widgets::help::{SEPARATOR, cursor_keys_name, help_line, key_name};
 
 /// Map id of the debug Quick Battle.
 pub const QUICK_BATTLE_MAP: &str = "test_small";
@@ -132,15 +141,51 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
 /// (`look-and-feel.md`: about 75%). *Tunable.*
 pub const OVERLAY_BLEND: f32 = 0.75;
 
+/// How long the `Auto-end: ON/OFF` message stays, in seconds. *Tunable.*
+pub const TOAST_S: f32 = 1.5;
+
+/// The tiles units hostile to the player could attack this turn
+/// ([`danger_zone`] with each unit's attack ranges); empty if it can't be
+/// worked out.
+pub fn danger_tiles(state: &BattleState) -> TileSet {
+    let tiles = &state.map().tiles;
+    danger_zone(
+        state.map(),
+        state.terrain(),
+        state.classes(),
+        state.units(),
+        Faction::Player,
+        |u| u.attack_ranges(state.classes(), state.items(), state.spells()),
+    )
+    .unwrap_or_else(|_| TileSet::new(tiles.width(), tiles.height()))
+}
+
 /// The battle screen: the player browses the map with the cursor, selects
-/// and moves units ([`Mode`]); Cancel while browsing leaves it (until the
-/// map menu, 0405).
+/// and moves units ([`Mode`]), opens the map menu, ends the turn; phase and
+/// outcome banners show as the battle goes on, and the outcome's closes the
+/// screen.
+///
+/// Until the enemy AI exists (0502), the Enemy and Other phases end as soon
+/// as their banner closes.
 #[derive(Debug, Clone)]
 pub struct BattleScreen {
     state: BattleState,
     camera: Camera,
     cursor: Cursor,
     mode: Mode,
+    /// The danger zone, while shown (recomputed after every command).
+    danger: Option<TileSet>,
+    /// Auto-end: end the player phase when its last unit has acted. Kept
+    /// here until the Options menu (0805) saves it.
+    auto_end: bool,
+    /// The last command left no player unit ready: auto-end is checked once
+    /// the screen is back to browsing.
+    end_armed: bool,
+    /// A short message and the seconds it has left.
+    toast: Option<(String, f32)>,
+    /// Banners waiting to be shown, the first on screen (after a combat's
+    /// playback).
+    banners: VecDeque<Banner>,
 }
 
 impl BattleScreen {
@@ -166,6 +211,85 @@ impl BattleScreen {
             cursor: Cursor::new(start),
             mode: Mode::after_command(&state),
             state,
+            danger: None,
+            auto_end: true,
+            end_armed: false,
+            toast: None,
+            banners: VecDeque::new(),
+        }
+    }
+
+    /// Whether auto-end is on.
+    pub fn auto_end(&self) -> bool {
+        self.auto_end
+    }
+
+    /// The danger zone, while shown.
+    pub fn danger(&self) -> Option<&TileSet> {
+        self.danger.as_ref()
+    }
+
+    /// The banner on screen, if any: the first waiting, once no combat is
+    /// playing.
+    pub fn banner(&self) -> Option<&Banner> {
+        if matches!(self.mode, Mode::Combat(_)) {
+            return None;
+        }
+        self.banners.front()
+    }
+
+    /// The message shown for a moment, if any.
+    pub fn toast(&self) -> Option<&str> {
+        self.toast.as_ref().map(|(t, _)| t.as_str())
+    }
+
+    /// Shows or hides the danger zone.
+    fn toggle_danger(&mut self) {
+        self.danger = match self.danger {
+            Some(_) => None,
+            None => Some(danger_tiles(&self.state)),
+        };
+    }
+
+    /// Flips auto-end and says so.
+    fn toggle_auto_end(&mut self) {
+        self.auto_end = !self.auto_end;
+        let text = format!("Auto-end: {}", on_off(self.auto_end));
+        self.toast = Some((text, TOAST_S));
+    }
+
+    /// Closes the banner on screen. An outcome's leaves the battle; an AI
+    /// phase's ends that phase (the stub until 0502).
+    fn close_banner(&mut self) -> Transition {
+        let Some(banner) = self.banners.pop_front() else {
+            return Transition::None;
+        };
+        match banner.kind {
+            BannerKind::Outcome(_) => Transition::Pop,
+            BannerKind::Phase { phase, .. } => {
+                let ai = phase != Phase::Player;
+                if ai && self.state.phase() == phase && self.state.outcome().is_none() {
+                    self.apply(&Command::EndPhase);
+                }
+                Transition::None
+            }
+        }
+    }
+
+    /// With auto-end on, ends the player phase once the screen is back to
+    /// browsing after the command that left no player unit ready.
+    fn check_auto_end(&mut self) {
+        if !self.end_armed || !matches!(self.mode, Mode::Idle { .. }) || !self.banners.is_empty() {
+            return;
+        }
+        self.end_armed = false;
+        let player = self.state.phase() == Phase::Player;
+        if self.auto_end
+            && player
+            && self.state.outcome().is_none()
+            && map_menu::ready_players(&self.state) == 0
+        {
+            self.apply(&Command::EndPhase);
         }
     }
 
@@ -211,15 +335,25 @@ impl BattleScreen {
 
     /// Applies `cmd` (built by [`mode::step`] from legal choices), then
     /// plays its combat if it had one, and continues browsing (or with the
-    /// unit's move after its attack). A refused command changes nothing.
+    /// unit's move after its attack); queues the banners of its events and
+    /// updates the danger zone. A refused command changes nothing.
     fn apply(&mut self, cmd: &Command) {
         let before = self.state.units().to_vec();
         // Refused: the battle is unchanged and the player browses again.
-        let playback = self
-            .state
-            .apply(cmd)
-            .ok()
-            .and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
+        let events = self.state.apply(cmd).ok();
+        if let Some(events) = &events {
+            self.banners
+                .extend(events.iter().filter_map(Banner::for_event));
+            if self.danger.is_some() {
+                self.danger = Some(danger_tiles(&self.state));
+            }
+            let player = self.state.phase() == Phase::Player;
+            if *cmd != Command::EndPhase && player && map_menu::ready_players(&self.state) == 0 {
+                self.end_armed = true;
+            }
+        }
+        let playback =
+            events.and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
         self.mode = match playback {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
@@ -318,23 +452,40 @@ impl BattleScreen {
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
         let moves = (keys.clone(), "move");
+        if let Some(banner) = self.banner() {
+            let label = match banner.kind {
+                BannerKind::Outcome(_) => "continue",
+                BannerKind::Phase { .. } => "skip",
+            };
+            return help_line(&[confirm(label)]);
+        }
+        let end = (key_name(km, Action::EndTurn), "end turn");
         match &self.mode {
             Mode::Idle { threat } => {
                 let back = cancel(if threat.is_some() {
                     "hide range"
                 } else {
-                    "back"
+                    "menu"
                 });
                 match self.hovered() {
                     Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                        help_line(&[confirm("select"), info, next, back])
+                        help_line(&[confirm("select"), info, next, back, end])
                     }
                     Some(u) if u.faction != Faction::Player => {
-                        help_line(&[moves, confirm("range"), info, next, back])
+                        help_line(&[moves, confirm("range"), info, next, back, end])
                     }
-                    Some(_) => help_line(&[moves, info, next, back]),
-                    None => help_line(&[moves, next, back]),
+                    Some(_) => help_line(&[moves, info, next, back, end]),
+                    None => help_line(&[moves, confirm("menu"), next, back, end]),
                 }
+            }
+            Mode::Objective => help_line(&[cancel("back")]),
+            Mode::EndTurnPrompt { .. } => {
+                let space = (key_name(km, Action::EndTurn), "yes");
+                help_line(&[space, confirm("yes"), cancel("no")])
+            }
+            Mode::Info { .. } => {
+                let prev = (key_name(km, Action::PrevUnit), "previous");
+                help_line(&[next, prev, cancel("close")])
             }
             Mode::Selected(sel) => {
                 if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
@@ -344,7 +495,10 @@ impl BattleScreen {
                 }
             }
             Mode::Moving { .. } => help_line(&[confirm("skip")]),
-            Mode::ActionMenu { .. } | Mode::WeaponMenu { .. } => {
+            Mode::ActionMenu { .. }
+            | Mode::WeaponMenu { .. }
+            | Mode::MapMenu { .. }
+            | Mode::UnitList { .. } => {
                 help_line(&[(keys, "choose"), confirm("confirm"), cancel("back")])
             }
             Mode::Targeting(_) => {
@@ -365,6 +519,18 @@ impl BattleScreen {
                 }
             }
         }
+    }
+
+    /// The toggles' state for the message row, e.g. `w danger zone: OFF ·
+    /// Shift+Space auto-end: ON`.
+    pub fn status(&self, ctx: &Ctx) -> String {
+        let km = &ctx.keymap;
+        let danger = format!("danger zone: {}", on_off(self.danger.is_some()));
+        let auto = format!("auto-end: {}", on_off(self.auto_end));
+        help_line(&[
+            (key_name(km, Action::DangerZone), &danger),
+            (key_name(km, Action::ToggleAutoEnd), &auto),
+        ])
     }
 
     /// Draws the terrain of every viewport tile; tiles off the map are left
@@ -396,9 +562,10 @@ impl BattleScreen {
         }
     }
 
-    /// Tints the tiles of the mode's ranges: a selected unit's move
-    /// (`move_range`) and attack (`attack_range`) ranges, a shown threat
-    /// area, or where a unit may move after its attack.
+    /// Tints the danger zone, if shown (`danger_zone`), then the tiles of
+    /// the mode's ranges over it: a selected unit's move (`move_range`) and
+    /// attack (`attack_range`) ranges, a shown threat area, or where a unit
+    /// may move after its attack.
     fn draw_ranges(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let tint = |buf: &mut GlyphBuffer, tiles: Vec<Pos>, color| {
             let color = ctx.palette.get(color);
@@ -409,6 +576,9 @@ impl BattleScreen {
             }
         };
         let all = |set: &TileSet| set.iter().collect();
+        if let Some(zone) = &self.danger {
+            tint(buf, all(zone), UiColor::DangerZone);
+        }
         match &self.mode {
             Mode::Selected(sel) => {
                 tint(buf, all(&sel.moves), UiColor::MoveRange);
@@ -452,7 +622,11 @@ impl BattleScreen {
             Mode::Moving { .. }
             | Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
-            | Mode::Combat(_) => return,
+            | Mode::Combat(_)
+            | Mode::UnitList { .. }
+            | Mode::Objective
+            | Mode::EndTurnPrompt { .. }
+            | Mode::Info { .. } => return,
             Mode::Selected(sel) => {
                 let color = ctx.palette.get(UiColor::Path);
                 for overlay in path_overlays(&sel.path, self.camera, color) {
@@ -462,22 +636,67 @@ impl BattleScreen {
                     return;
                 }
             }
-            Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Targeting(_) => {}
+            Mode::Idle { .. }
+            | Mode::MoveAfter { .. }
+            | Mode::Targeting(_)
+            | Mode::MapMenu { .. } => {}
         }
         if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
             draw_cursor(buf, &ctx.palette, &self.cursor, ctx.cursor_style, x, y);
         }
     }
 
-    /// Draws the action menu or the weapon list beside its unit, if open.
+    /// Draws the action menu or the weapon list beside its unit, or the
+    /// map menu beside the cursor, if open.
     fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        let (Mode::ActionMenu { sel, menu, .. } | Mode::WeaponMenu { sel, menu, .. }) = &self.mode
-        else {
-            return;
+        let (tile, menu) = match &self.mode {
+            Mode::ActionMenu { sel, menu, .. } | Mode::WeaponMenu { sel, menu, .. } => {
+                (sel.dest(), menu)
+            }
+            Mode::MapMenu { menu, .. } => (self.cursor.pos, menu),
+            _ => return,
         };
-        if let Some(cell) = tile_to_cell(sel.dest(), &self.camera) {
+        if let Some(cell) = tile_to_cell(tile, &self.camera) {
             let (x, y) = menu_origin(cell, menu.size());
             menu.draw(&ctx.palette, buf, x, y);
+        }
+    }
+
+    /// Draws the boxes over the map: the unit list, the objective, the
+    /// end-turn question, the info screen, and the banner on screen.
+    fn draw_dialogs(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let p = &ctx.palette;
+        match &self.mode {
+            Mode::UnitList { menu, .. } => map_menu::draw_centred_menu(buf, p, menu),
+            Mode::Objective => {
+                let lines = [
+                    (map_menu::objective_text(&self.state), UiColor::Text),
+                    (map_menu::turn_text(&self.state), UiColor::Text),
+                ];
+                map_menu::draw_dialog(buf, p, "Objective", &lines);
+            }
+            Mode::EndTurnPrompt { ready } => {
+                let km = &ctx.keymap;
+                let yes_no = help_line(&[
+                    (key_name(km, Action::Confirm), "yes"),
+                    (key_name(km, Action::Cancel), "no"),
+                ])
+                .replace(SEPARATOR, " / ");
+                let lines = [
+                    (map_menu::end_turn_question(*ready), UiColor::Text),
+                    (yes_no, UiColor::TextDim),
+                ];
+                map_menu::draw_dialog(buf, p, "", &lines);
+            }
+            Mode::Info { unit } => {
+                if let Some(u) = self.state.unit(*unit) {
+                    info::draw_info(buf, p, &self.state, u);
+                }
+            }
+            _ => {}
+        }
+        if let Some(banner) = self.banner() {
+            banner.draw(buf, p, map_menu::shown_limit(&self.state));
         }
     }
 }
@@ -526,6 +745,11 @@ fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
     (mx, my)
 }
 
+/// `ON` or `OFF`.
+const fn on_off(on: bool) -> &'static str {
+    if on { "ON" } else { "OFF" }
+}
+
 /// The palette colour called `name`, or `fallback` (content validation
 /// makes sure terrain colours exist, so this only guards against a bug).
 fn named(palette: &Palette, name: &str, fallback: UiColor) -> Rgb {
@@ -541,8 +765,33 @@ impl Screen for BattleScreen {
 
     fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
         self.cursor.tick(input.dt);
+        let dt = if input.dt.is_finite() {
+            input.dt.max(0.0)
+        } else {
+            0.0
+        };
+        if let Some((_, left)) = &mut self.toast {
+            *left -= dt;
+            if *left <= 0.0 {
+                self.toast = None;
+            }
+        }
         for &action in &input.actions {
+            if action == Action::ToggleAutoEnd {
+                self.toggle_auto_end();
+                continue;
+            }
+            if self.banner().is_some() {
+                if action == Action::Confirm {
+                    let t = self.close_banner();
+                    if !matches!(t, Transition::None) {
+                        return t;
+                    }
+                }
+                continue;
+            }
             match action {
+                Action::DangerZone if self.mode.cursor_free() => self.toggle_danger(),
                 Action::NextUnit | Action::PrevUnit if matches!(self.mode, Mode::Idle { .. }) => {
                     self.cycle(action == Action::NextUnit);
                 }
@@ -565,13 +814,24 @@ impl Screen for BattleScreen {
                             self.cursor.jump(to);
                             self.follow(to);
                         }
-                        Effect::Leave => return Transition::Pop,
                     }
                 }
             }
         }
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        if let Some(banner) = self.banners.front_mut()
+            && !matches!(self.mode, Mode::Combat(_))
+        {
+            banner.t += dt;
+            if banner.expired() {
+                let t = self.close_banner();
+                if !matches!(t, Transition::None) {
+                    return t;
+                }
+            }
+        }
+        self.check_auto_end();
         Transition::None
     }
 
@@ -588,11 +848,23 @@ impl Screen for BattleScreen {
             playback::draw_box(buf, &ctx.palette, pb);
         }
         self.draw_panel(ctx, buf);
+        self.draw_dialogs(ctx, buf);
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));
+        let status = self.status(ctx);
+        let w = i32::try_from(status.chars().count()).unwrap_or(0);
+        buf.print(
+            HELP_BAR.w - 1 - w,
+            HELP_BAR.y,
+            &status,
+            c(UiColor::TextDim),
+            black,
+        );
         if let Mode::Combat(pb) = &self.mode
             && let Some(message) = pb.message()
         {
             buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
+        } else if let Some(toast) = self.toast() {
+            buf.print(1, HELP_BAR.y, toast, c(UiColor::TextHighlight), black);
         }
         buf.print(1, HELP_ROW, &self.help(ctx), c(UiColor::TextDim), black);
     }
@@ -701,6 +973,9 @@ pub(crate) mod testing {
 
 #[cfg(test)]
 mod attack_tests;
+
+#[cfg(test)]
+mod turn_tests;
 
 #[cfg(test)]
 mod tests {
@@ -828,7 +1103,7 @@ mod tests {
     }
 
     #[test]
-    fn cancel_pops_and_nothing_else_does() {
+    fn cancel_opens_the_map_menu_and_nothing_pops() {
         let mut s = quick();
         let mut c = ctx();
         let step = |s: &mut BattleScreen, c: &mut Ctx, a: &[Action]| {
@@ -844,15 +1119,11 @@ mod tests {
         assert_eq!(step(&mut s, &mut c, &[Action::Confirm]), "None");
         assert_eq!(step(&mut s, &mut c, &[Action::Cancel]), "None");
         assert_eq!(s.mode(), &Mode::default());
-        // Browsing: Cancel leaves.
-        assert_eq!(
-            step(
-                &mut s,
-                &mut c,
-                &[Action::Confirm, Action::Cancel, Action::Cancel]
-            ),
-            "Pop"
-        );
+        // Browsing: Cancel opens the map menu, and Cancel again closes it.
+        assert_eq!(step(&mut s, &mut c, &[Action::Cancel]), "None");
+        assert!(matches!(s.mode(), Mode::MapMenu { .. }), "{:?}", s.mode());
+        assert_eq!(step(&mut s, &mut c, &[Action::Cancel]), "None");
+        assert_eq!(s.mode(), &Mode::default());
     }
 
     #[test]
@@ -863,29 +1134,44 @@ mod tests {
         wait(&mut state, 2);
         let mut s = BattleScreen::new(state);
         // On the lord, ready to act.
-        assert_eq!(s.help(&c), "f select · e info · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "f select · e info · s next unit · d menu · Space end turn"
+        );
         // On the archer, who has acted, and on an enemy.
         s.cursor.jump(Pos::new(2, 4));
-        assert_eq!(s.help(&c), "arrows move · e info · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "arrows move · e info · s next unit · d menu · Space end turn"
+        );
         s.cursor.jump(Pos::new(8, 2));
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d back"
+            "arrows move · f range · e info · s next unit · d menu · Space end turn"
         );
         // An enemy's range shown: Cancel hides it.
         step(&mut s, &mut c, &[Action::Confirm]);
         assert_eq!(
             s.help(&c),
-            "arrows move · f range · e info · s next unit · d hide range"
+            "arrows move · f range · e info · s next unit · d hide range · Space end turn"
         );
         step(&mut s, &mut c, &[Action::Cancel]);
         // On an empty tile.
         s.cursor.jump(Pos::new(0, 0));
-        assert_eq!(s.help(&c), "arrows move · s next unit · d back");
+        assert_eq!(
+            s.help(&c),
+            "arrows move · f menu · s next unit · d menu · Space end turn"
+        );
         c.use_layout(crate::input::Layout::LeftHanded);
-        assert_eq!(s.help(&c), "wasd move · l next unit · k back");
+        assert_eq!(
+            s.help(&c),
+            "wasd move · j menu · l next unit · k menu · Space end turn"
+        );
         s.cursor.jump(Pos::new(3, 5));
-        assert_eq!(s.help(&c), "j select · i info · l next unit · k back");
+        assert_eq!(
+            s.help(&c),
+            "j select · i info · l next unit · k menu · Space end turn"
+        );
     }
 
     #[test]

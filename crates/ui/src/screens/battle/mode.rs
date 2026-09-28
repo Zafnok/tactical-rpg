@@ -9,6 +9,10 @@
 //! then the unit's new tile is a drawing override ([`Mode::drawn_pos`]) and
 //! the [`BattleState`] is untouched.
 //!
+//! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
+//! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]) and
+//! the unit info screen ([`Mode::Info`]).
+//!
 //! Transitions are pure ([`step`], [`Mode::tick`]); the screen owns the
 //! cursor and applies the [`Effect`]s.
 
@@ -18,6 +22,7 @@ use trpg_core::{
 };
 
 use super::attack::{Targeting, WeaponChoice, weapon_choices, weapon_menu};
+use super::map_menu::{MapEntry, map_menu, ready_players, unit_list};
 use super::path::steer;
 use super::playback::Playback;
 use crate::input::Action;
@@ -207,6 +212,33 @@ pub enum Mode {
         /// Where it may go ([`BattleState::move_after_tiles`]).
         tiles: Vec<Pos>,
     },
+    /// The map menu is open.
+    MapMenu {
+        /// The menu widget.
+        menu: Menu,
+        /// What each item is.
+        entries: Vec<MapEntry>,
+    },
+    /// The map menu's list of player units.
+    UnitList {
+        /// The list.
+        menu: Menu,
+        /// Which unit each item is.
+        units: Vec<UnitId>,
+    },
+    /// The objective and turn are shown.
+    Objective,
+    /// `End turn with N units ready?`: `EndTurn` again or Confirm ends the
+    /// phase, Cancel backs out.
+    EndTurnPrompt {
+        /// Units still ready.
+        ready: usize,
+    },
+    /// The info screen for a unit.
+    Info {
+        /// The unit shown.
+        unit: UnitId,
+    },
 }
 
 impl Default for Mode {
@@ -225,8 +257,6 @@ pub enum Effect {
     Apply(Command),
     /// Put the cursor on this tile.
     Cursor(Pos),
-    /// Leave the battle screen (until the map menu, 0405).
-    Leave,
 }
 
 impl Mode {
@@ -266,7 +296,14 @@ impl Mode {
             | Mode::ActionMenu { sel, .. }
             | Mode::WeaponMenu { sel, .. } => Some(sel),
             Mode::Targeting(t) => Some(&t.sel),
-            Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Combat(_) => None,
+            Mode::Idle { .. }
+            | Mode::MoveAfter { .. }
+            | Mode::Combat(_)
+            | Mode::MapMenu { .. }
+            | Mode::UnitList { .. }
+            | Mode::Objective
+            | Mode::EndTurnPrompt { .. }
+            | Mode::Info { .. } => None,
         }
     }
 
@@ -505,7 +542,120 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
                 _ => (Mode::MoveAfter { unit, tiles }, Effect::None),
             }
         }
+        other => step_around(other, action, state),
     }
+}
+
+/// [`step`] in the modes around the move loop: the map menu and what it
+/// opens, the end-turn prompt, the info screen.
+fn step_around(mode: Mode, action: Action, state: &BattleState) -> (Mode, Effect) {
+    match mode {
+        Mode::MapMenu { menu, entries } => step_map_menu(menu, entries, action, state),
+        Mode::UnitList { mut menu, units } => match menu.handle(action) {
+            Some(MenuEvent::Chosen(i)) => {
+                let at = units.get(i).and_then(|&id| state.unit(id)).map(|u| u.pos);
+                (Mode::default(), at.map_or(Effect::None, Effect::Cursor))
+            }
+            Some(MenuEvent::Cancelled) => (open_map_menu(state, MapEntry::Units), Effect::None),
+            None => (Mode::UnitList { menu, units }, Effect::None),
+        },
+        Mode::Objective => match action {
+            Action::Confirm | Action::Cancel => {
+                (open_map_menu(state, MapEntry::Objective), Effect::None)
+            }
+            _ => (Mode::Objective, Effect::None),
+        },
+        Mode::EndTurnPrompt { ready } => match action {
+            Action::EndTurn | Action::Confirm => {
+                (Mode::default(), Effect::Apply(Command::EndPhase))
+            }
+            Action::Cancel => (Mode::default(), Effect::None),
+            _ => (Mode::EndTurnPrompt { ready }, Effect::None),
+        },
+        Mode::Info { unit } => step_info(unit, action, state),
+        other => (other, Effect::None),
+    }
+}
+
+/// The map menu, focused on `focus`.
+fn open_map_menu(state: &BattleState, focus: MapEntry) -> Mode {
+    let (menu, entries) = map_menu(state, focus);
+    Mode::MapMenu { menu, entries }
+}
+
+/// Ending the turn: the prompt if player units are still ready, else
+/// `EndPhase` at once.
+fn end_turn(state: &BattleState) -> (Mode, Effect) {
+    match ready_players(state) {
+        0 => (Mode::default(), Effect::Apply(Command::EndPhase)),
+        ready => (Mode::EndTurnPrompt { ready }, Effect::None),
+    }
+}
+
+/// [`step`] in the map menu.
+fn step_map_menu(
+    mut menu: Menu,
+    entries: Vec<MapEntry>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => match entries.get(i) {
+            Some(MapEntry::Units) => {
+                let (menu, units) = unit_list(state);
+                (Mode::UnitList { menu, units }, Effect::None)
+            }
+            Some(MapEntry::Objective) => (Mode::Objective, Effect::None),
+            Some(MapEntry::EndTurn) => end_turn(state),
+            // Disabled: the menu never chooses them.
+            Some(MapEntry::Options | MapEntry::Suspend) | None => {
+                (Mode::MapMenu { menu, entries }, Effect::None)
+            }
+        },
+        Some(MenuEvent::Cancelled) => (Mode::default(), Effect::None),
+        None => (Mode::MapMenu { menu, entries }, Effect::None),
+    }
+}
+
+/// The units the info screen cycles through from `id`: its faction's, in
+/// reading order `(y, x)`.
+fn same_faction(state: &BattleState, id: UnitId) -> Vec<UnitId> {
+    let Some(faction) = state.unit(id).map(|u| u.faction) else {
+        return vec![];
+    };
+    let mut units: Vec<_> = state
+        .units()
+        .iter()
+        .filter(|u| u.faction == faction)
+        .collect();
+    units.sort_by_key(|u| (u.pos.y, u.pos.x));
+    units.iter().map(|u| u.id).collect()
+}
+
+/// [`step`] on the info screen: Down or `NextUnit` shows the next unit of
+/// the same faction, Up or `PrevUnit` the previous one (wrapping); Cancel
+/// or Info closes it with the cursor on the unit last shown.
+fn step_info(unit: UnitId, action: Action, state: &BattleState) -> (Mode, Effect) {
+    let forward = match action {
+        Action::CursorDown | Action::NextUnit => true,
+        Action::CursorUp | Action::PrevUnit => false,
+        Action::Cancel | Action::Info => {
+            let at = state.unit(unit).map(|u| u.pos);
+            return (Mode::default(), at.map_or(Effect::None, Effect::Cursor));
+        }
+        _ => return (Mode::Info { unit }, Effect::None),
+    };
+    let units = same_faction(state, unit);
+    let n = units.len();
+    let next = units.iter().position(|&u| u == unit).map_or(unit, |i| {
+        let j = if forward {
+            (i + 1) % n
+        } else {
+            (i + n - 1) % n
+        };
+        units[j]
+    });
+    (Mode::Info { unit: next }, Effect::None)
 }
 
 /// Attack chosen in the action menu: the weapon list if several weapons
@@ -578,8 +728,10 @@ fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mod
 }
 
 /// [`step`] while browsing: Confirm selects a ready player unit or toggles
-/// another faction's unit's threat area; Cancel hides the threat area, or
-/// leaves if none is shown.
+/// another faction's unit's threat area, and opens the map menu on an empty
+/// tile; Cancel hides the threat area, or opens the map menu if none is
+/// shown; `Info` opens the info screen of the unit under the cursor;
+/// `EndTurn` ends the phase (asking first if units are still ready).
 fn step_idle(
     threat: Option<Threat>,
     action: Action,
@@ -590,7 +742,7 @@ fn step_idle(
     match action {
         Action::Confirm => {
             let Some(unit) = state.units().iter().find(|u| u.pos == cursor) else {
-                return idle(threat);
+                return (open_map_menu(state, MapEntry::Units), Effect::None);
             };
             if is_ready_player(state, unit.id) {
                 return match Selection::new(state, unit.id) {
@@ -608,7 +760,12 @@ fn step_idle(
             }
         }
         Action::Cancel if threat.is_some() => idle(None),
-        Action::Cancel => (Mode::default(), Effect::Leave),
+        Action::Cancel | Action::Menu => (open_map_menu(state, MapEntry::Units), Effect::None),
+        Action::Info => match state.units().iter().find(|u| u.pos == cursor) {
+            Some(unit) => (Mode::Info { unit: unit.id }, Effect::None),
+            None => idle(threat),
+        },
+        Action::EndTurn => end_turn(state),
         _ => idle(threat),
     }
 }
@@ -688,11 +845,6 @@ mod tests {
     #[test]
     fn confirm_elsewhere_while_browsing_does_nothing() {
         let mut s = quick();
-        // An empty tile.
-        assert_eq!(
-            step(Mode::default(), Action::Confirm, p(6, 5), &s),
-            (Mode::default(), Effect::None)
-        );
         // A player unit that has acted.
         wait(&mut s, 2);
         assert_eq!(
@@ -940,15 +1092,13 @@ mod tests {
         assert!(threat.area.contains(p(8, 2)));
         assert!(threat.area.contains(p(8, 7)));
         assert!(!threat.area.contains(p(0, 7)));
-        // Browsing on with it shown: the cursor may move, Info does nothing.
+        // Browsing on with it shown: the cursor may move, cycling doesn't
+        // hide it.
         assert!(mode.cursor_free());
-        let (mode, _) = step(mode, Action::Info, p(8, 2), &s);
+        let (mode, _) = step(mode, Action::NextUnit, p(8, 2), &s);
         assert_eq!(shown(&mode), Some(UnitId(4)));
         // Another enemy: its area instead.
         let (mode, _) = step(mode, Action::Confirm, p(7, 1), &s);
-        assert_eq!(shown(&mode), Some(UnitId(6)));
-        // An empty tile keeps it.
-        let (mode, _) = step(mode, Action::Confirm, p(6, 5), &s);
         assert_eq!(shown(&mode), Some(UnitId(6)));
         // The same enemy again hides it.
         let (mode, _) = step(mode, Action::Confirm, p(7, 1), &s);
@@ -959,10 +1109,9 @@ mod tests {
             step(mode, Action::Cancel, p(8, 2), &s),
             (Mode::default(), Effect::None)
         );
-        assert_eq!(
-            step(Mode::default(), Action::Cancel, p(8, 2), &s),
-            (Mode::default(), Effect::Leave)
-        );
+        let (menu, effect) = step(Mode::default(), Action::Cancel, p(8, 2), &s);
+        assert!(matches!(menu, Mode::MapMenu { .. }), "{menu:?}");
+        assert_eq!(effect, Effect::None);
     }
 
     #[test]
