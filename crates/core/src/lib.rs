@@ -10,6 +10,7 @@ pub mod item;
 pub mod magic;
 pub mod map;
 pub mod movement;
+pub mod progression;
 pub mod rng;
 pub mod shop;
 pub mod skill;
@@ -46,6 +47,10 @@ pub use map::{BattleMap, TileFeature};
 pub use movement::{
     AttackRange, MoveError, PathError, Reach, TileSet, attack_tiles, danger_zone, path_cost,
     reachable, threat_area,
+};
+pub use progression::{
+    CombatResult, StatGains, apply_gains, exp_for_combat, grant_class_points, grant_exp, growth,
+    level_up,
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};

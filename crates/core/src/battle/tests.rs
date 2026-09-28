@@ -596,6 +596,18 @@ fn classes() -> ClassTable {
     }
 }
 
+/// `table` with levels on: level cap 99, class level cap 10, 2 minimum
+/// gains and 10 CP per class level at every tier (0601).
+fn leveling(table: ClassTable) -> ClassTable {
+    ClassTable {
+        level_cap: 99,
+        class_level_cap: 10,
+        min_gains: vec![2],
+        cp_per_class_level: vec![10],
+        ..table
+    }
+}
+
 /// The starter spells of `magic.md` (`fire`: forest → burning, then burnt;
 /// `frost`: water or sea → ice; `force`, `heal`, `mend`), plus `bolt`: a
 /// hit-100, might-3 attack spell, range 1–2, 2 uses, for exact combats.
@@ -889,6 +901,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        talent: None,
     };
     carrying(u, &[weapon(1, 1, 3)])
 }
@@ -3183,6 +3196,13 @@ proptest! {
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
+            // An `Act` always ends the unit's action: it is done (or fell),
+            // or it waits to move after its attack.
+            if let Command::Act { unit, .. } = cmd {
+                let done = s.unit(*unit).is_none_or(|u| u.acted);
+                let waits = s.pending_move().is_some_and(|m| m.unit == *unit);
+                prop_assert!(done || waits, "{:?} left unit {:?} ready", cmd, unit);
+            }
             // Spell uses never exceed a spell's uses, and each one is spent
             // only with its event, one at a time.
             let uses_after = spell_uses(&s);
@@ -3334,6 +3354,7 @@ proptest! {
 }
 
 mod art;
+mod progression;
 mod shop;
 mod skill;
 mod spell;

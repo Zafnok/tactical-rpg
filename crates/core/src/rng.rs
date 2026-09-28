@@ -10,10 +10,14 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Where combat gets its `0..=99` rolls from.
+/// Where game rules get their random numbers from.
 pub trait RandomSource {
     /// A uniform, unbiased integer in `0..=99`.
     fn roll_percent(&mut self) -> u8;
+
+    /// A uniform, unbiased integer in `0..n` (the level-up safety net,
+    /// `progression.md`). `n` must be at least 1; `0` gives `0`.
+    fn roll_below(&mut self, n: u32) -> u32;
 }
 
 /// The PCG32 multiplier (O'Neill, "PCG: A Family of Simple Fast
@@ -85,6 +89,34 @@ impl SimRng {
         }
         u8::try_from(x % 100).unwrap_or(u8::MAX)
     }
+
+    /// A uniform integer in `0..n` (`0` when `n` is 0). Rejection sampling
+    /// as in [`Self::roll_percent`]: draws at or above the largest multiple
+    /// of `n` that fits in `2^32` are redrawn, at most 16 times.
+    pub fn roll_below(&mut self, n: u32) -> u32 {
+        if n == 0 {
+            return 0;
+        }
+        let mut x = self.next_u32();
+        for _ in 0..MAX_REDRAWS {
+            if accepted_below(x, n) {
+                break;
+            }
+            x = self.next_u32();
+        }
+        x % n
+    }
+}
+
+/// The largest multiple of `n` (≥ 1) that is at most `u32::MAX`: a `u32`
+/// below it, taken mod `n`, is uniform.
+fn below_limit(n: u32) -> u32 {
+    (u32::MAX / n) * n
+}
+
+/// Whether `x mod n` is unbiased: `x` is below [`below_limit`]`(n)`.
+fn accepted_below(x: u32, n: u32) -> bool {
+    x < below_limit(n)
 }
 
 /// Whether `x mod 100` is unbiased: `x` is below [`PERCENT_LIMIT`].
@@ -96,14 +128,22 @@ impl RandomSource for SimRng {
     fn roll_percent(&mut self) -> u8 {
         SimRng::roll_percent(self)
     }
+
+    fn roll_below(&mut self, n: u32) -> u32 {
+        SimRng::roll_below(self, n)
+    }
 }
 
 /// A [`RandomSource`] that returns a fixed list of rolls, in order. For
-/// tests that need an exact combat trace.
+/// tests that need an exact combat or level-up trace. Percent rolls and
+/// [`roll_below`](RandomSource::roll_below) draws come from two separate
+/// lists.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ScriptedRng {
     rolls: Vec<u8>,
     next: usize,
+    below: Vec<u32>,
+    next_below: usize,
 }
 
 impl ScriptedRng {
@@ -111,13 +151,26 @@ impl ScriptedRng {
     pub fn new(rolls: impl Into<Vec<u8>>) -> Self {
         Self {
             rolls: rolls.into(),
-            next: 0,
+            ..Self::default()
         }
     }
 
-    /// How many rolls have been taken so far.
+    /// Also returns `draws`, one by one, from
+    /// [`roll_below`](RandomSource::roll_below).
+    #[must_use]
+    pub fn with_below(mut self, draws: impl Into<Vec<u32>>) -> Self {
+        self.below = draws.into();
+        self
+    }
+
+    /// How many percent rolls have been taken so far.
     pub fn consumed(&self) -> usize {
         self.next
+    }
+
+    /// How many `roll_below` draws have been taken so far.
+    pub fn consumed_below(&self) -> usize {
+        self.next_below
     }
 }
 
@@ -131,6 +184,19 @@ impl RandomSource for ScriptedRng {
         };
         self.next += 1;
         roll
+    }
+
+    /// # Panics
+    ///
+    /// When the draws are used up, or the next one isn't below `n`: the
+    /// test expected other draws.
+    fn roll_below(&mut self, n: u32) -> u32 {
+        let Some(&draw) = self.below.get(self.next_below) else {
+            panic!("ScriptedRng ran out after {} draws", self.next_below);
+        };
+        assert!(draw < n.max(1), "scripted draw {draw} is not below {n}");
+        self.next_below += 1;
+        draw
     }
 }
 
@@ -241,6 +307,76 @@ mod tests {
         assert_eq!(rng.consumed(), 2);
         assert_eq!(rng.roll_percent(), 0);
         assert_eq!(rng.consumed(), 3);
+    }
+
+    #[test]
+    fn below_limit_is_a_multiple_of_n() {
+        assert_eq!(below_limit(1), u32::MAX);
+        assert_eq!(below_limit(100), PERCENT_LIMIT);
+        assert_eq!(below_limit(3), u32::MAX);
+        assert_eq!(below_limit(280), 4_294_967_040);
+        assert_eq!(below_limit(u32::MAX), u32::MAX);
+    }
+
+    #[test]
+    fn biased_below_draws_are_rejected() {
+        // 280 × 15_339_168 = 4_294_967_040: draws from there on are redrawn.
+        assert!(accepted_below(0, 280));
+        assert!(accepted_below(4_294_967_039, 280));
+        assert!(!accepted_below(4_294_967_040, 280));
+        assert!(!accepted_below(u32::MAX, 280));
+    }
+
+    #[test]
+    fn roll_below_stays_in_range_and_is_fixed_by_the_seed() {
+        let mut rng = SimRng::new(2026);
+        let got: Vec<u32> = (0..10).map(|_| rng.roll_below(280)).collect();
+        assert!(got.iter().all(|&r| r < 280));
+        let mut again = SimRng::new(2026);
+        let same: Vec<u32> = (0..10)
+            .map(|_| RandomSource::roll_below(&mut again, 280))
+            .collect();
+        assert_eq!(got, same);
+        assert_eq!(rng.roll_below(0), 0);
+        assert_eq!(rng.roll_below(1), 0);
+    }
+
+    #[test]
+    fn roll_below_is_roughly_uniform() {
+        // Chi-square over 7 buckets (6 degrees of freedom: mean 6, sd ≈ 3.5).
+        let mut rng = SimRng::new(99);
+        let n = 70_000;
+        let mut counts = [0u32; 7];
+        for _ in 0..n {
+            counts[rng.roll_below(7) as usize] += 1;
+        }
+        let expected = f64::from(n) / 7.0;
+        let chi2: f64 = counts
+            .iter()
+            .map(|&c| (f64::from(c) - expected).powi(2) / expected)
+            .sum();
+        assert!(chi2 < 25.0, "chi-square {chi2}");
+    }
+
+    #[test]
+    fn scripted_rng_replays_its_draws() {
+        let mut rng = ScriptedRng::new([4]).with_below([7, 0]);
+        assert_eq!(rng.roll_below(10), 7);
+        assert_eq!(rng.roll_percent(), 4);
+        assert_eq!(rng.roll_below(1), 0);
+        assert_eq!((rng.consumed(), rng.consumed_below()), (1, 2));
+    }
+
+    #[test]
+    #[should_panic(expected = "not below 5")]
+    fn scripted_rng_checks_draws_are_in_range() {
+        ScriptedRng::new([]).with_below([5]).roll_below(5);
+    }
+
+    #[test]
+    #[should_panic(expected = "ran out after 0 draws")]
+    fn scripted_rng_panics_when_draws_run_out() {
+        ScriptedRng::new([]).roll_below(5);
     }
 
     #[test]
