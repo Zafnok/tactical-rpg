@@ -926,7 +926,7 @@ mod tests {
         assert_eq!(get("w"), Some(Action::DangerZone));
         assert_eq!(get("Space"), Some(Action::EndTurn));
         assert_eq!(get("Shift+Space"), Some(Action::ToggleAutoEnd));
-        assert_eq!(get("F12"), Some(Action::Debug));
+        assert_eq!(get("F2"), Some(Action::Debug));
         assert_eq!(get("r"), Some(Action::Rewind));
     }
 
@@ -947,7 +947,7 @@ mod tests {
         assert_eq!(get("o"), Some(Action::DangerZone));
         assert_eq!(get("Space"), Some(Action::EndTurn));
         assert_eq!(get("Shift+Space"), Some(Action::ToggleAutoEnd));
-        assert_eq!(get("F12"), Some(Action::Debug));
+        assert_eq!(get("F2"), Some(Action::Debug));
         assert_eq!(get("u"), Some(Action::Rewind));
     }
 

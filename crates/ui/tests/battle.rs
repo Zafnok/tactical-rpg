@@ -252,10 +252,10 @@ fn tile(h: &Harness, x: i32, y: i32) -> String {
         .collect()
 }
 
-/// The key-help line.
+/// The key-help line, left of the right-aligned debug hint.
 fn help(h: &Harness) -> String {
     let buf = h.game().buffer();
-    (0..100)
+    (0..90)
         .map(|x| buf.get(x, 31).map_or(' ', |c| c.glyph))
         .collect::<String>()
         .trim()

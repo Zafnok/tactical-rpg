@@ -74,9 +74,12 @@ fn holding_down_repeats_and_wraps() {
 }
 
 #[test]
-fn f12_opens_the_debug_menu() {
+fn f2_opens_the_debug_menu() {
     let mut h = title();
+    // F12 opens the browser's developer tools on the web; it does nothing here.
     h.keys("F12");
+    assert_eq!(h.top_screen(), "title");
+    h.keys("F2");
     assert_eq!(h.top_screen(), "debug_menu");
     h.keys("f");
     assert_eq!(h.top_screen(), "glyph_sampler");
