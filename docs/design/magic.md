@@ -384,12 +384,14 @@ equips Force on their turn, the mage counters with Force (and spends a use).
 
 ## Open sub-questions (deferred)
 
-- **What magic is in the world:** deferred to the story bible (0701; Nick,
-  Q3). The bible's "rules of magic" must fit the mechanics here.
+- **What magic is in the world:** decided in the story bible (0701 gate 1,
+  Nick: "probably B"): **vows** sworn to the memory of dead gods, controlled by
+  the church (the Vigil). See `docs/story/bible.md`, "Rules of magic".
 - **Class spell lists, magic class tree with ≥3 tiers, EXP for heals and tile
   casts:** 0005.
-- **Personal signature spells:** named by 0701, with numbers set by 0005 or a
-  balance ticket.
+- **Personal signature spells:** named by 0701 (in `docs/story/characters/`:
+  Piers, Rue, and Crane as an enemy), with numbers set by 0005 or a balance
+  ticket.
 - **Elemental enemies in Chapter 1, and a terrain-magic moment on the Chapter
   1 map:** neither in Chapter 1 (0009, `chapter-1.md`).
 - **Push spells, more elements, more terrain interactions, spell Combat
