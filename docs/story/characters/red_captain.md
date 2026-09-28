@@ -56,8 +56,8 @@ exile, the old man, and the girl with the burned hands" at Harrowby.
 - (Engage, the lead) "Nothing personal, Your Grace. You're three hundred
   crowns and a hot meal for my lads."
 - (Engage, Tamsin) "Rook. You left before pay-day. Bad habit."
-- (Death) "Your friend pays in good silver, Veyne... Ask him what he paid
-  for the last lot. Ask him about the cart."
+- (Death) "The new lord of Veyne pays in good silver... Your own crest on
+  the order, and everything. Must be nice, having friends."
 
 ## Portrait brief
 

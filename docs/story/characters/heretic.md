@@ -46,15 +46,16 @@ Piers at Harrowby as his "cook" (she can't cook).
 ## Arc
 
 - **Start:** a hunted girl who trusts nobody and burns first.
-- **End:** she swears her fire vow again, in front of the party, in new words:
-  "I will burn only what I must." In the finale she chooses to shield rather
+- **End:** she swears her fire vow again, in front of the party, in her own
+  words: "I burn so nobody else has to." In the finale she chooses to shield rather
   than burn. She finds the children, and some of them come home.
 
 | Where | What changes |
 | ----- | ------------ |
-| Ch1 | Recognises the Veyne seal on Harl's orders. Tells the lead, coldly, that she's seen it before. |
+| Ch1 | Recognises the Veyne seal on Harl's orders; it was on the cart's passes. Tells the lead, coldly, that she's seen it before, and suspects the lead's family. |
 | Ch3 | Tells the lead what Dace did at the mill, and hears Piers confess the report. Both relationships crack before they can heal. |
-| Ch6 | At the Ashfields, tells Hollis that Wren was alive after the fire. Aske learns she was a Candle. |
+| Ch3 | (Also) the register shows she was a Candle, and Aske hears it. |
+| Ch6 | At the Ashfields, tells Hollis that Wren was alive after the fire. Aske learns she stood on the fire line that burned his brother's company. |
 | Ch7 | Side quest "The Other Cart" (a Candle who escaped with her). |
 | Acts 2–3 | Swears her vow anew; finds the children. |
 
@@ -65,7 +66,7 @@ Piers at Harrowby as his "cook" (she can't cook).
 | The lead | Hostile | Dace's friend. She wants to know what they knew |
 | Hollis (`retainer`) | Wary | Dace's father. Later, the person she owes the truth about Wren |
 | Tamsin (`sergeant`) | Friendship | The first person Rue lets tease her |
-| Aske (`poacher`) | Hatred → understanding | Candles burned his brother |
+| Aske (`poacher`) | Strangers; his hatred from Ch3, understanding by Act 3 | Candles burned his brother |
 | Piers (`keeper`) | Guilt → reconciliation | He sheltered her and reported her |
 | Wren (`sister`) | A friend from the Candles' barracks | The girl she couldn't take with her |
 
@@ -84,8 +85,8 @@ Piers at Harrowby as his "cook" (she can't cook).
 - "I'm not a cook, Keeper. I'm a girl who can light the oven without a match.
   Different thing."
 - "I've seen that seal before, heir. On a cart. At night. With children in it."
-- "Your friend lifted me in by the collar. He said 'sorry, little one.' He was
-  very polite about it."
+- "Your friend lifted me in by the collar. He said 'up you go, little one.' He
+  was very gentle about it."
 
 ## Portrait brief
 

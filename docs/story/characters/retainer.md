@@ -26,9 +26,12 @@ the night at the mill, and has never said a word about it.
 - **Flaw:** loyalty that becomes silence. He'd rather carry a thing alone than
   say it and break something.
 - **Secret:** after the exile, Hollis found a purse of Vosse's silver hidden in
-  Dace's old room, and a list of names in Dace's hand. He burned both. He
+  Dace's old room, a list of names in Dace's hand, and a spare road pass
+  stamped with the Veyne seal. He burned all three. He
   let the lead go on believing Dace was a hero, because he couldn't bear to be
   the one who said otherwise.
+- **At the mill:** he got there with the lead minutes after the killing, and
+  carried Wren home.
 - **Pressure:** his daughter Wren was tested by Piers and taken by the Vigil
   three years ago, and "died at the Ashfields". He has never forgiven Piers,
   and never forgiven himself for letting her go.
@@ -40,8 +43,9 @@ the night at the mill, and has never said a word about it.
 | Ch1 | Recognises his son's handwriting on the letter and his son's seal on the kill order, and says nothing. |
 | Ch3 | The Greywater register puts Dace's name among Vosse's paid informants. Hollis goes very quiet; Rue notices. |
 | Ch4 | At Veyne Hall, Dace doesn't deny it. The lead learns Hollis *knew*. Their bond cracks. |
-| Ch5–7 | He earns it back by telling the truth, all of it, to the lead and to Rue. Side quest "The Captain's Oath". |
-| Ch8 | Holds the Saltmere gangway against the Hounds while the party boards. Dace orders the archers to stop, too late. Hollis dies between his son and the lead, telling Dace he's ashamed of him and loves him, both. |
+| Ch5 | **Main story:** the night before the Saltmere battle, he tells the lead everything: the purse, the list, the pass, and why he burned them. Side quest "The Captain's Oath" adds the scene at his wife's grave and his goodbye to the life before exile. |
+| Ch6 | Rue tells him Wren walked out of the Ashfields fire alive. |
+| Ch8 | Holds the Saltmere gangway against the Hounds while the party boards. Dace orders the archers to stop, too late. His last words to his son aren't a speech; they're the one thing Dace doesn't know: "Your sister's alive. Rue saw her walk out of the fire. Go and get her, boy." It hands Dace his Act 2. |
 
 - **Start:** a silent protector of a lie.
 - **End:** a father who told the truth and paid for it. His death is where

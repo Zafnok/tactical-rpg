@@ -67,12 +67,19 @@ exist; almost nobody has been to either.
   them, and paid locals to point them out.
 - **The night at the mill** (4 years ago). Dace Marr, the lead's best friend
   and the son of House Veyne's guard captain, killed Vosse when Vosse took
-  Dace's own sister, Wren. Dace begged: "They'll hang me. They won't hang
-  you." The lead, 17, confessed. Lord Veyne gave up the house's title to save
-  his heir's life, the lead was exiled to the Thornmarch, and Hollis Marr, the
-  captain, went too, unasked. A girl named Rue escaped from Vosse's cart that
-  night. What the lead doesn't know: Dace had spent a year selling other
-  families' gifted children to Vosse.
+  Dace's own sister, Wren. The lead and Hollis, out looking for Dace, got there
+  minutes later: Vosse dead, Wren crying, Dace covered in blood. Dace begged:
+  "They'll hang me. They won't hang you." The lead, 17, confessed. Lord Veyne
+  gave up the house's title to save his heir's life, the lead was exiled to
+  the Thornmarch, and Hollis, the captain, went too, unasked. A girl named Rue
+  escaped from Vosse's cart that night.
+  **What the lead doesn't know:** Dace had spent a year pointing out other
+  families' gifted children to Vosse. Vosse forced him to: Dace is **gifted**
+  himself, has hidden it all his life, and Vosse had found out ("point them
+  out, or I register you"). Dace was paid for it too, and took the money. So
+  Vosse's cart could pass unchecked on Veyne roads, Dace stamped its road passes
+  with **the Veyne seal**, taken from Lord Veyne's study. That's the seal Rue
+  saw.
 - **The Ashfields** (3 years ago). The king ordered the Candles to burn
   Brennmark's army on the plain. It ended the war. Prince Aurel, 15, had ridden
   into the field against orders to lead a charge, and died in the fire. The
@@ -80,14 +87,21 @@ exist; almost nobody has been to either.
   knows, is that his own order killed his son. Wren Marr, taken as a Candle a
   year after the mill, was on that field and didn't die there. Her family was
   told she did.
+  **Secret until the midpoint twist (writers only):** Crane had secretly sworn
+  the Candles to the Door Vow before the battle, as an experiment. The fire's
+  thousands of deaths paid for one soul, and three days later Aurel walked
+  out of the ash, **Unfinished**: himself, but cold, tasteless, sleepless and
+  heartless. The king hid him in the palace. Keepers led the strongest
+  surviving Candle, Wren, away to be his bearer.
 - **The Ash Peace** (3 years ago to now). The treaty ended the war, but the
   army was never paid; the unpaid veterans turned brigand. Dace, a war hero at
   19, was given House Veyne's lands and title and made captain of the king's
-  **Hounds**. The king withdrew from court. Crane began to teach him the Door
-  Vow.
-- **Now.** The Door Vow needs lives given "under the vow": deaths near a
-  gifted bearer who has sworn it. A war would supply them. The king is
-  provoking one. A routine Vigil report from Harrowby mentioned "a gifted girl
+  **Hounds**. The king withdrew from court. Crane offered to finish what the
+  Ashfields began.
+- **Now.** Every death paid under the Door Vow makes Aurel a little more real,
+  and passes through Wren, emptying her. A war would supply thousands. Aurel,
+  terrified of going back into the dark, asked for one, and the king can't
+  refuse him. A routine Vigil report from Harrowby mentioned "a gifted girl
   with burned hands" sheltering at the chapel, and Crane recognised a
   surviving Candle. He ordered everyone from the night at the mill silenced.
   The order went to Dace.
@@ -194,9 +208,13 @@ Nick picked **vows** at gate 1. Mechanics are in
   a broken promise never removes a spell**: that's story flavour only.
 - **The Door Vow** is sworn to Othe. It opens the Door for one soul to come
   back, and its price is lives: every death "under the vow", meaning near a
-  gifted bearer who has sworn it, pays toward the opening. The Candles who
-  survived the Ashfields are the king's bearers. What exactly comes back
-  through the Door is a gate-2 question (the midpoint twist).
+  gifted bearer who has sworn it, pays toward the opening. What comes back
+  is **Unfinished** (the midpoint twist, `outline.md`): the dead person as
+  they were, remembering everything, but cold, tasteless, sleepless and
+  without a heartbeat. More deaths make them more real, drawn through a
+  bearer who is emptied by it (the later twist: Wren). The Jade Reach has its
+  own Unfinished in its history, and knows how the Door was shut. Writing
+  rules for the Unfinished prince ("sad, not creepy") are in `outline.md`.
 - **The East doesn't swear vows.** In the Jade Reach they train **breath**, a
   discipline of body and spirit (the wuxia continent). How that works in play
   is decided when Act 2 is designed.
@@ -217,6 +235,7 @@ Nick picked **vows** at gate 1. Mechanics are in
 | **Keeper** | A Vigil priest. Keepers heal, register the gifted and keep the dead gods' vows. |
 | **The Long Dusk** | The age in which the gods died. |
 | **The Unpaid** | Veterans of the Border War the crown never paid. |
+| **Unfinished** | Someone who came back through the Door incomplete: cold, tasteless, sleepless and without a heartbeat. The Jade Reach's word (secret until the midpoint). |
 | **Vow** | A spell: a promise sworn to a dead god, and the power that answers it. |
 | **Breath** | The Jade Reach's discipline instead of vows (Act 2). |
 

@@ -18,8 +18,8 @@ only to his son. Three years ago he gave the order that ended the Border War:
 the Candles would burn Brennmark's army on the Ashfields. His son Aurel, 15,
 had ridden into that field against orders, and burned with it. The court was
 told Aurel died leading a charge. The king knows exactly whose order killed
-him. Since then he has not appeared in public, and has let Keeper Crane teach
-him the Door Vow.
+him. He withdrew from court after the Ashfields, and for the past year hasn't
+appeared in public at all. Keeper Crane has been his only regular visitor.
 
 ## Want, need, flaw, secret
 
@@ -29,9 +29,15 @@ him the Door Vow.
 - **Flaw:** grief turned entitlement ("I gave this kingdom everything. It owes
   me one life."). He can't bear to be the man who killed his son, so he has
   to be the man who brings him back.
-- **Secret:** his own burning order killed Aurel. Nobody alive knows but him,
-  Crane and one battle-mage (Oriel Mast, who gave the Candles the order and
-  sees Aurel ride in; Chapter 6).
+- **Secret:**
+  - His own burning order killed Aurel. Nobody alive knows but him, Crane and
+    one battle-mage (Oriel Mast, who gave the Candles the order and saw Aurel
+    ride in; Chapter 6).
+  - **Aurel came back.** Three days after the Ashfields a boy walked out of
+    the ash, **Unfinished** (see `outline.md`, the midpoint twist). The king
+    hides him in the palace, reads to him every night, and has never once
+    been able to say no to him. The war is what Aurel asked for, because every
+    death makes him a little more real.
 - **Pressure:** the Door needs a war. He is provoking one against Brennmark,
   and Brennmark is starting to believe it.
 
@@ -39,24 +45,24 @@ him the Door Vow.
 
 - **Start:** a grieving father hidden inside a king, and the story's unseen
   hand.
-- **End:** at the Door, he gets what he wanted, or what's left of it, and
-  finally lets go. He shuts the Door himself, or lets the lead do it; he dies
-  or abdicates. That's decided by the Act 3 outline and the midpoint twist.
-  **Not a tragedy for the player:** his letting go is part of the victory.
+- **End:** at the Door, he tells his son to go, and Aurel goes. The king
+  lives to abdicate and stand trial, or dies at the Door; the Act 3 tickets
+  decide. **Not a tragedy for the player:** his letting go is part of the
+  victory.
 
 | Where | What changes |
 | ----- | ------------ |
-| Act 1 | Unseen except in the Chapter 7 or 8 tease; declares war on Brennmark after Kell's Ford; declares the lead a traitor. |
-| Ch6 | The truth about Aurel's death comes out (Oriel Mast). |
-| Act 2 | The midpoint twist (gate 2) reshapes what he's doing. |
-| Act 3 | Faced at the Door. |
+| Act 1 | Unseen except in Chapter 8's closing scene (reading to someone unseen); declares war on Brennmark after Kell's Ford; declares the lead a traitor. |
+| Ch6 | The truth about Aurel's death comes out (Oriel Mast), and that the body was never found. |
+| Act 2 | The midpoint twist: the party learns the prince came back Unfinished. |
+| Act 3 | Faced at the Door, where he finally lets go. |
 
 ## Relationships
 
 | With | Now | Why |
 | ---- | --- | --- |
-| Aurel (`prince`) | He talks to him | He keeps his son's rooms exactly as they were |
-| Dace (`rival`) | A tool he half-loves | Dace is the age Aurel would have been, and wants someone back too |
+| Aurel (`prince`) | Father and son, three years past the end | He came back Unfinished; the king can refuse him nothing |
+| Dace (`rival`) | A tool he half-loves | Dace wants someone back too; the king recognises the look |
 | Crane (`vowmaster`) | Dependence | The only person who offered a way |
 | The lead | Contempt | A Veyne: a family that "couldn't even keep its own name" |
 
@@ -80,7 +86,7 @@ him the Door Vow.
 - **Silhouette:** tall, gaunt and very straight, with a heavy black mourning
   mantle over royal robes, and a plain iron crown with a black ribbon tied
   around it.
-- **Hair:** iron grey, long and unkept, and a close beard gone white at the
+- **Hair:** iron grey, long and unkempt, and a close beard gone white at the
   chin.
 - **Face:** 58, hollow-cheeked, with deep-set eyes that don't blink enough.
   Heavier shading is fine.

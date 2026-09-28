@@ -41,8 +41,9 @@ home to his mother. He hates Ardevali nobles on principle, and the lead is one.
 | ----- | ------------ |
 | Ch1 | Scouts for the lead because Harl's men shoot deer out of season. That's his joke; the truth is he likes Harrowby. |
 | Ch2 | Sees through the false flag at Kell's Ford. His hatred loses its target. |
-| Ch5 | His spying comes out in Saltmere; his contact is the Brennish envoy's network. The lead's reaction (a reply tone) matters to him. Side quest "Letters Home". |
-| Ch6 | At the Ashfields he learns Rue burned there as a child. The hardest scene of his arc. |
+| Ch5 | His spying comes out in Saltmere: his buyer, a Brennish smuggler, also sells to the envoy's people, and Ragna knows his name. The lead's reaction (a reply tone) matters to him. Side quest "Letters Home". |
+| Ch3 | The Greywater register says Rue was a Candle. He stops speaking to her. |
+| Ch6 | At the Ashfields he learns she stood on the fire line that burned his brother's company. The hardest scene of his arc. |
 | Act 3 | Brings the envoy and the lead together; speaks for Brennmark. |
 
 ## Relationships
@@ -53,14 +54,14 @@ home to his mother. He hates Ardevali nobles on principle, and the lead is one.
 | Hollis (`retainer`) | Wary respect | The first Ardevali soldier who treats him like a recruit, not a threat |
 | Tamsin (`sergeant`) | Rivalry | She rode the Ashfields road; he never lets her forget it |
 | Piers (`keeper`) | Friendship | Piers teaches him to write, and helps with the letters home |
-| Rue (`heretic`) | Hatred → understanding | She was a Candle, and Candles burned his brother |
+| Rue (`heretic`) | Strangers; hatred from Ch3, understanding by Act 3 | She was a Candle, and Candles burned his brother |
 
 ## Voice notes
 
 - Very short sentences, flat and literal. Deadpan by accident: he means
   everything he says exactly. Counts things ("Twelve men. Fourteen. Bad
   archers.").
-- Brennish words for home and family (*mor* for mother, *holt* for home);
+- Brennish words for home and family (*mor* for mother, *hus* for home);
   Ardevali idioms trip him up ("Why would I hold my horses? I have no horse.").
 - Calls the lead "noble" until he doesn't. The day he says "Veyne" is a quiet
   beat.

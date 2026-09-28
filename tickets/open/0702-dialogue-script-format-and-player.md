@@ -30,6 +30,21 @@ None.
 `content`, `ui::dialogue::DialoguePlayer` (state machine, no drawing),
 one example scene.
 
+**Names are variables (Nick, 0701 gate 1).** Nick isn't sold on the story's
+names yet and asked that renaming be easy. `docs/story/names.md` gives every
+character, place, faction and term a stable id. So:
+
+- Speaker ids in `.dlg` files are the **role ids** from `names.md` (`retainer`,
+  `rival`, `king`…), never the display names.
+- A names table in game data (e.g. `assets/data/names.ron`: id → display name,
+  seeded from `names.md`) is the only place a display name is written.
+  `characters.ron` display names come from it.
+- Text refers to names with a token (e.g. `{n:king}`; pick a syntax that
+  doesn't clash with 0708's `{lead}` / pronoun tokens, and document it). The
+  validator rejects unknown ids, and **flags any registered display name
+  written literally in a text line**. It measures line length with the
+  longest possible substitution, as 0708 does.
+
 **Out:** drawing (0704), portraits (0703), battle triggers (0705), lead reply
 choices and `{lead}`/pronoun tokens (0708, which extends this format; keep the
 parser easy to extend with block steps).
@@ -72,6 +87,7 @@ parser easy to extend with block steps).
 - [ ] Spec documented with a full example; the `story-writing` skill's format section points to it (edit the skill if needed).
 - [ ] Every validator error has a test with the exact message.
 - [ ] `DialoguePlayer` walks the example scene correctly (test lists each `View`).
+- [ ] Name tokens resolve from the names table; renaming a character there changes every line that uses the token (test); a literal registered name in text is a validator error (test).
 
 ## Tests required
 

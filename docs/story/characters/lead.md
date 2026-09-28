@@ -34,17 +34,19 @@ not**. The player supplies them through reply tones.
   exiled to the Thornmarch, forbidden to leave it, bear arms in the king's
   lands, or use the Veyne name or crest. Lord Veyne died the next winter.
   Hollis followed the lead into exile. Nobody ordered him to.
-- **What the lead believes:** Dace was a good man who did a terrible thing for
-  the right reason, and saving him was worth it.
-- **What the lead doesn't know:** Dace had been selling other families'
-  gifted children to Vosse for a year before that night.
+- **What the lead has been told** (and has had no reason to doubt): Dace
+  killed Vosse to save his sister, and that's all there was to it. How the lead
+  *feels* about the confession is the player's to decide.
+- **What the lead doesn't know:** Dace had been pointing out other families'
+  gifted children to Vosse for a year before that night, under Vosse's threat
+  and for Vosse's silver, stamping the cart's passes with the Veyne seal.
 
 ## Situation at the start
 
 - Lives in Harrowby, a Thornmarch hamlet, in a rented house with Hollis:
   chopping wood, fixing the mill, training with Hollis in the yard with
-  wooden swords (steel is forbidden, and they keep a real one under the
-  floor).
+  wooden swords (steel is forbidden, and they keep two real ones under
+  the floor).
 - Dace, meanwhile, is a war hero, captain of the king's Hounds, and holds the
   Veyne lands and title. He hasn't written in four years.
 - Wren, Hollis's daughter, was tested by the local keeper (Piers) and taken
@@ -109,7 +111,7 @@ in 0707.)
 
 | With | Now | Why |
 | ---- | --- | --- |
-| Dace (`rival`) | Loyal, four years out of date | Raised together; the lead gave up everything for him |
+| Dace (`rival`) | Four years of silence | Raised together; the last thing the lead did for Dace was give up everything |
 | Hollis (`retainer`) | Family in all but name | He followed the lead into exile and raised them after Lord Veyne died |
 | Tamsin (`sergeant`) | Easy, joking friendship | She guards Harrowby for bread and ale and calls the lead "Your Former Grace" |
 | Aske (`poacher`) | Wary | He hates Ardevali nobles, and the lead is one, title or no |

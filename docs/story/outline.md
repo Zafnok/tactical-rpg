@@ -1,6 +1,6 @@
 # Story outline
 
-Status: **draft for gate 2** (ticket 0701). Nick's feedback goes at the
+Status: approved at gate 2 (2026-09-28, ticket 0701). Nick's words are at the
 bottom.
 
 Built from [`beats.md`](beats.md) (canon), [`bible.md`](bible.md), the
@@ -33,7 +33,7 @@ Act 3's home continent is a **new map**: the same land, but at war, with new
 nodes and some old places burned. The finale revisiting home is the story
 choice `world-structure.md` leaves to this outline.
 
-**Proposal for gate 2: Chapter 3 is linear**, so the world map opens at
+**Chapter 3 is linear** (Nick, gate 2: "sure"), so the world map opens at
 Chapter 4, one chapter later than the default in `world-structure.md`. Reason:
 Chapters 1–3 are one tight story run (the killers, the false flag, the
 register) that turns the lead from exile into outlaw, and gives the player a
@@ -61,7 +61,8 @@ confirms with Nick.*
 - **Conflict:** Red Harl's Unpaid band holds the old toll-fort by the ford, and
   the lead has no army, only five people who happen to be there.
 - **Turn:** Harl's orders carry the **Veyne seal**, which only Dace holds.
-  Rue has seen it before, on Vosse's cart. Dace sent the warning *and* the
+  Rue has seen it before, on the passes of Vosse's cart four years ago, so she
+  suspects House Veyne, and the lead. Dace sent the warning *and* the
   killers.
 - **Map idea:** the `chapter-1.md` sketch. The hamlet at the bottom left, the
   river with a bridge and a road, a forest lane, and Harl on the fort at the
@@ -145,8 +146,10 @@ confirms with Nick.*
   **Ragna Holt**, needs proof that the "Brennish raids" are staged, and Joss is
   a Hound willing to testify.
 - **Conflict:** the Saltmere League is neutral and for sale. A magistrate sells
-  the envoy's safe house to the Hounds. Aske's secret comes out: the raiders
-  he sold news to answer to the envoy's network.
+  the envoy's safe house to the Hounds. Aske's secret comes out: the Brennish
+  smuggler he sold march news to also sells to Ragna's people, which is how
+  she knows his name. The raiders who bought it are real, hungry hill bands;
+  the Hounds' false flags hide behind them.
 - **Turn:** the envoy gets Joss's testimony, but the League expels everyone
   involved. Ragna: both armies are massing at the Ashfields. "If you want to
   stop this war, you stop it there, or it's the Ashfields again."
@@ -162,8 +165,12 @@ confirms with Nick.*
     recruited and alive. A refugee boat carrying his letters and silver home
     has been seized by League privateers.
   - *The Captain's Oath*, Hollis's. Unlocked after Chapter 4's story battle,
-    with Hollis alive. At his wife's grave near Veyne Hall, Hollis tells the
-    lead everything: the purse, the list, and why he burned them.
+    with Hollis alive. His wife's grave near Veyne Hall, and his goodbye to
+    the life before exile. (His confession itself is in the main story, below,
+    so his arc never depends on an optional battle.)
+- **Main-story scene:** the night before the story battle, Hollis tells the
+  lead everything: the purse, the list, the stamped pass, and why he burned
+  them.
 - **Arcs advanced:** Aske (his secret), Hollis (confession), the lead and
   Hollis (mending).
 - **Recruit:** **Hedda Ravn** (Raider), Ragna's Brennish bodyguard, loaned to
@@ -178,7 +185,9 @@ confirms with Nick.*
 - **Turn:**
   - **Oriel Mast**, the crown battle-mage who gave the Candles the order three
     years ago, deserts to the party. He confesses that the prince rode into
-    the field and burned on **the king's own order**.
+    the field and burned on **the king's own order**, and that Aurel's body
+    was never found in the ash, "and they looked". (A clue for the midpoint
+    twist. It reads as an ordinary war mystery until then.)
   - Rue tells Hollis that Wren walked out of the fire alive.
   - The Brennish commander believes the proof, but the king's army attacks
     anyway. The war is on.
@@ -191,8 +200,9 @@ confirms with Nick.*
   - *Brennish Outriders*: optional.
 - **Town:** Cairnford (border town).
 - **Side quests:** none new (Act 1's side quests stay open).
-- **Arcs advanced:** Rue and Aske (she was a Candle; his brother burned
-  there), Hollis (Wren lives), the king's secret (for the player).
+- **Arcs advanced:** Rue and Aske (the register told him she was a Candle;
+  here he learns she stood on the fire line that burned his brother's
+  company), Hollis (Wren lives), the king's secret (for the player).
 - **Recruit:** **Oriel Mast** (Sorcerer, tier 2): a tired, guilty man who
   never wants to burn anything again, and has to.
 
@@ -230,7 +240,9 @@ confirms with Nick.*
 - **Conflict:** Dace and the Hounds are on the docks.
 - **Turn:** **Hollis dies.** He holds the gangway so the party can board.
   Dace orders the archers to stop, too late. Hollis dies between his son and
-  the lead, telling Dace he's ashamed of him and loves him. The ship sails.
+  the lead, and his last words to Dace are the one thing Dace doesn't know:
+  "Your sister's alive. Rue saw her walk out of the fire. Go and get her,
+  boy." The ship sails.
   Dace stands on the dock alone. This is the scripted loss Nick asked for
   (Expedition 33 at the end of Act 1).
 - **Story battle: "Saltmere Docks".** Hold the dock for a number of turns while
@@ -243,7 +255,11 @@ confirms with Nick.*
 - **Classic permadeath:** if Hollis already fell, the scene is rewritten so
   that the lead tells Dace instead (the Chapter 8 script ticket writes both
   versions).
-- **Recruits:** none. *Act 1 ends.*
+- **Recruits:** none.
+- **Closing scene (a clue for the midpoint twist):** Varenhall, the king's
+  private rooms, lamplight. The king reads aloud from a boy's adventure book
+  to someone the camera never shows. He stops, smiles and says, "Your hands
+  are warm tonight." *Act 1 ends.*
 
 ## Act 2: The Far Shore (the Jade Reach): one paragraph
 
@@ -253,11 +269,15 @@ monasteries, and duels settled on rooftops. The Jade Reach remembers the night
 the Door opened in its own history, and the sect that sealed it isn't eager to
 teach a stranger how. The chapters are sect trials, duels and a tournament
 (the wuxia encounters Nick asked for), with eastern recruits joining the army.
-Dace follows with a company of Hounds, hunting the lead, and begins to doubt
-what he serves. **The midpoint twist** lands here (options below). Rue swears
-her fire vow anew; Aske, Tamsin, Piers and Oriel find what they're fighting
-for. Act 2 ends with the lead learning how the Door can be shut, and at what
-price, and sailing home with eastern allies.
+Dace follows with a company of Hounds, hunting the lead, and hunting for Wren
+on his dying father's word. He begins to doubt what he serves. **The midpoint twist** lands around chapter 12 (see below):
+the Jade Reach's word for those who come back through the Door, the
+**Unfinished**, tells the party what the war is for, and Dace, called home to
+Varenhall, meets the prince who came back. Rue swears her fire vow anew; Aske,
+Tamsin, Piers and Oriel find what they're fighting for. Act 2 ends with the
+lead learning how the Door can be shut, and at what price, and with **the
+second twist**: Wren is the bearer the prince is being finished through.
+The party sails home with eastern allies.
 
 ## Act 3: The Door (the Old Kingdoms at war): one paragraph and the ending
 
@@ -265,14 +285,23 @@ Home is at war: Ardeval and Brennmark bleeding on a new map, with Harrowby
 burned and Candles on every front, each death feeding the Door. The lead
 rallies the people Act 1 met: Tamsin brings the Unpaid companies, Aske and
 Ragna bring Brennmark, Piers brings the keepers who refuse the Door, and the
-East sends its allies. Dace, broken by his father's death and by the midpoint
-twist, confesses publicly to the night at the mill and the year before it, and
-turns. The last battle is fought at the Door on the Ashfields.
+East sends its allies. Dace, broken by his father's death, by seeing what
+"coming back" means, and by learning his sister is being emptied to finish the
+prince, confesses publicly to the night at the mill and the year before it,
+and turns. The last battle is fought at the Door on the Ashfields, where
+Crane, the one character who never lets go, holds it open with the last
+Candles and the war's dead spilling through.
 
 **Ending:** a resolved, hard-fought victory, never a tragedy (Nick).
-- **The Door:** Dace pays the Door's price himself, and dies, so Wren and the
-  lead live (Nick: redeemable, "turns in the last act and pays for it").
-- **The king:** faces what came back and lets go. The Door is shut.
+- **The Door:** Dace takes Wren's place as bearer long enough for the Door to
+  be shut, and dies, so Wren lives and the Door closes (Nick: redeemable,
+  "turns in the last act and pays for it"). He can bear it because he is
+  gifted, which he has hidden all his life: the Door Vow is the first and
+  only vow he ever swears.
+- **The king and the prince:** the king tells his son to go, and Aurel, who is
+  frightened of the dark behind the Door but braver than his father, goes. The
+  "letting go" theme is paid off by the two characters who couldn't. The
+  final enemy is Crane and the Door, **never the boy**.
 - **The war:** Brennmark and Ardeval make a peace worth the name, and the
   Candles go home.
 - **The lead:** what they do with the Veyne name (take it back, refuse it, or
@@ -281,10 +310,71 @@ turns. The last battle is fought at the Door on the Ashfields.
 Each companion gets an epilogue line. How paired endings work with unlimited
 A-ranks is still open (`supports.md`).
 
-## The midpoint twist: options for gate 2
+## The twists (decided at gate 2)
 
-Nick deferred it until the lead was known ("Same as 1"). It lands in Act 2,
-around chapter 12.
+Nick picked **A as the midpoint twist and C as a later twist** (quote at the
+bottom). B isn't used, except that Crane stays the one who won't let go.
+
+### Midpoint (around chapter 12): the prince already came back
+
+- **What's true:** the Ashfields weren't only where Aurel died, they were
+  where the Door first cracked. Crane had secretly sworn the Candles to the
+  Door Vow as an experiment, so thousands of deaths in one fire paid for one
+  soul. Three days later a boy walked out of the ash wearing Aurel's face,
+  and the king hid him in the palace.
+- **What came back:** Aurel at 15, gentle and clever, remembering everything
+  up to the fire, but **Unfinished**. He feels no warmth, tastes nothing,
+  doesn't sleep, and has no heartbeat. Every death paid under the Door Vow
+  makes him a little more real; for a few hours after a battle his hands are
+  warm. He remembers the dark behind the Door and is terrified of going back.
+  He asked his father for the war the way a scared child asks for a light to
+  be left on. The king isn't a mad tyrant: he's a father who can't say no.
+- **How it's revealed:** in the Jade Reach, which remembers its own Unfinished
+  from the last time the Door opened, the party works out what the war is
+  *for*. Then a scene at Varenhall: Dace, summoned home, meets the boy ("You want
+  your sister back. My father wanted me back. Sit down, and I'll tell you what
+  it's like."). Dace sees what
+  "coming back" means, and it's what he was promised for Wren.
+- **Clues in Act 1** (subtle, so falling back to C alone later breaks
+  nothing): the prince's rooms are kept "lived in"; Oriel says the body was
+  never found (Chapter 6); the king reads to someone unseen (Chapter 8's
+  closing scene).
+
+**Keeping it sad, not creepy** (Nick: "A seems so creepy... I wonder if it's
+too creepy?"). These rules bind every script with Aurel in it:
+
+1. **No horror staging.** No jump scares, no body horror, nothing feeding on
+   screen, no spooky child voice or giggling. Aurel looks and talks like an
+   ordinary, well-brought-up 15-year-old.
+2. **The wrongness is quiet and physical:** cold hands, food he can't taste,
+   a candle he stares at because he can't feel its heat. It's shown as loss,
+   the way you'd show someone ill.
+3. **He knows something is wrong with him, and he's scared, not menacing.**
+   He's polite to his enemies and apologises for the war. His want (not to go
+   back into the dark) is one any player understands.
+4. **He's never a boss.** The player never fights him. The final enemy is
+   Crane and the Door.
+5. **His ending is brave.** He chooses to go back when his father finally lets
+   him go. The last scene with him is tender, not a defeat.
+
+If the prince still reads as too creepy once scripted, the fallback is **C
+alone**: drop the midpoint reveal, keep the Act 1 clues as an unsolved war
+mystery, and move Wren's reveal to the midpoint. Nothing in Act 1 needs to
+change.
+
+### Later twist (end of Act 2): Wren is the bearer
+
+- **What's true:** Wren is alive, and she's the bearer the prince is being
+  finished *through*. Every death paid under the Door Vow passes through her,
+  and finishing him means emptying her. The king's plan to save his son is
+  killing Dace's sister, and Dace has been serving it.
+- **What it does:** it gives Dace a second, personal reason to turn, pays off
+  Rue's secret (she saw Wren walk out of the fire), and gives Hollis's death
+  its sting (he died never knowing). Wren must have real choices: she knows
+  what she's for, and in Act 3 she chooses to fight it, swearing her own vow
+  instead of the one sworn for her.
+
+### The options Nick was shown (for the record)
 
 - **A. The prince already came back** (like Expedition 33 or NieR).
   - **What it is:** the Ashfields' deaths paid for one soul, and something
@@ -310,21 +400,42 @@ around chapter 12.
   - **Cons:** it's smaller in scope, and Wren must have real choices, not be a
     prize.
 
-**Claude's recommendation:** C as the midpoint twist, and B as the Act 3
-reveal (Crane's real aim). A personal twist in the middle, an epic one at the
-end.
+Claude first recommended C as the midpoint and B as the Act 3 reveal, then,
+after explaining A and B in more depth, recommended A as the midpoint with C
+woven in. Nick picked the second.
 
 ## Personal arcs by chapter (Act 1)
 
 | Character | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --------- | - | - | - | - | - | - | - | - |
-| Hollis | son's hand and seal | | silence shows | secret out | confession (side quest) | Wren lives | | **dies** |
+| Hollis | son's hand and seal | | silence shows | secret out | confession (main story; grave in side quest) | Wren lives | | **dies** |
 | Tamsin | kills Harl | | | ledger (side quest) | | | | |
-| Aske | | false flag | | | spying out; letters (side quest) | Rue was a Candle | | |
+| Aske | | false flag | Rue was a Candle | | spying out; letters (side quest) | Rue's fire line burned Tor | | |
 | Piers | his report | healing strangers | confesses, breaks with Vigil | | | | faces Crane; Unwritten (side quest) | |
 | Rue | the seal | | tells the truth about Dace | | | tells Hollis about Wren | The Other Cart (side quest) | |
 | Dace | letter and seal (offstage) | his Hounds | on paper | face to face | | | shaken | loses his father |
 
-## Gate 2: Nick's feedback
+## Gate 2: Nick's feedback (verbatim, 2026-09-28)
 
-*(Recorded verbatim when Nick answers.)*
+Round 1 (the one-page outline; Q1 the midpoint twist, Q2 is Chapter 3
+linear, Q3 anything to change):
+
+> "for 1) could you explain more about A and B? right now I am leaning between
+> A and C but want to hear more about A and B first
+>
+> 2) sure
+> 3) idrc rn, I'll lyk after a longer playtest if anything seems corny or
+> trite or I don't like character names or vibes. For now you can write
+> whatever you think works best and isn't totally derivative of another
+> SPRG/TRPG."
+
+Round 2 (A and B explained in depth, and how A and C combine):
+
+> "A seems so creepy... I wonder if it's too creepy? C definitely feels more
+> tragic and would have a good payoff... if we must have 2 twists, I guess A
+> as midpoint and C as later twist?"
+
+Recorded: **Chapter 3 is linear**, and the world map opens at Chapter 4. **A
+is the midpoint twist and C the later twist**, with the "sad, not creepy"
+rules above and C alone as the fallback. The outline is approved as written,
+subject to Nick's notes after a longer playtest.

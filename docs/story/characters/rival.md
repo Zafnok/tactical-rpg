@@ -19,8 +19,11 @@ Id: `rival` · [Name registry](../names.md)
 
 - **Who he was:** Hollis's son, raised beside the lead at Veyne Hall. He was
   quick, funny, charming, and never allowed to forget he was the servant's
-  boy. At 17 he was earning secret silver by pointing out gifted children to
-  Vosse ("the Vigil schools them; they eat better than we do").
+  boy. He is also **gifted**, and has hidden it all his life. Vosse found out,
+  and made him a deal: point out other gifted children, or be registered
+  himself. At 17 Dace was pointing them out, and taking Vosse's silver for it
+  ("the Vigil schools them; they eat better than we do"). He stamped the
+  cart's road passes with the Veyne seal from Lord Veyne's study.
 - **The night at the mill:** he brought two children to the cart as usual and
   found his own sister Wren in it. Vosse had found out Dace kept her name off
   the lists. Dace killed Vosse, and the other children ran. When the lead
@@ -44,6 +47,9 @@ Id: `rival` · [Name registry](../names.md)
 - **Secret:**
   - The year of selling children to Vosse, which only Rue (a witness) and
     Hollis (who suspects) know.
+  - **He's gifted**, and has never sworn a vow. Nobody alive knows (Vosse
+    did). That's what lets him take Wren's place as the Door's bearer at the
+    end: the first and only vow he ever swears.
   - In the present: he sent **both** the warning letter and Harl's kill
     order. Crane ordered the witnesses silenced; Dace obeyed, and warned the
     lead first because he couldn't not.
@@ -54,17 +60,18 @@ Id: `rival` · [Name registry](../names.md)
 
 - **Start:** a charming, successful man carrying a life built on someone
   else's sacrifice.
-- **End:** he confesses publicly (Act 3), turns on the king at the Door, and
-  dies paying for it: he takes the Door's price himself so Wren and the lead
-  live (Nick: "turns in the last act and pays for it").
+- **End:** he confesses publicly (Act 3), turns on the king and Crane at the
+  Door, and dies paying for it: he takes Wren's place as the Door's bearer so
+  Wren lives and the Door closes (Nick: "turns in the last act and pays for
+  it").
 
 | Where | What changes |
 | ----- | ------------ |
 | Ch1 | Offstage: his letter and his seal. Tease scene: he tells Crane "it's done" when it isn't. |
 | Ch4 | Face to face at Veyne Hall. Doesn't deny it. Escapes. |
-| Ch8 | Orders the Hounds against the ship, tries to stop the archers, too late. His father dies in front of him. |
-| Act 2 | Hunts the party in the Jade Reach, and begins to doubt. The midpoint twist hits him as hard as the lead. |
-| Act 3 | Turns. Fights beside the lead at the end, then dies at the Door. |
+| Ch8 | Orders the Hounds against the ship, tries to stop the archers, too late. His father dies in front of him, telling him Wren is alive. |
+| Act 2 | Hunts the party in the Jade Reach, and begins to doubt. Summoned home, he meets the prince who came back Unfinished: what he was promised for Wren. He already knows Wren is alive (his father's last words, Ch8). At the end of Act 2 he learns where: she's the bearer being emptied to finish the prince. |
+| Act 3 | Confesses publicly and turns. Fights beside the lead at the end, then takes Wren's place as bearer long enough for the Door to be shut, and dies. |
 
 ## Relationships
 

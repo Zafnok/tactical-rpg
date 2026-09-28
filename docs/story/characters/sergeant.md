@@ -68,7 +68,7 @@ friends. The ledger is her joke, her grudge and her grief, all in one book.
 
 **Sample lines**
 
-- "Fourteen of Harl's lot, on bad horses, before breakfast. I'm adding
+- "Harl's whole sorry company, on foot, before breakfast. I'm adding
   breakfast to the ledger."
 - "Your Former Grace, if we're committing treason, I'd like it noted I'm doing
   it for free. Well. For bread."

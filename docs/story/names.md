@@ -99,8 +99,25 @@ Later Act 1 recruits (named in `outline.md`, sheets written by later tickets):
 | `term.door` | the Door | Othe's door between the living and the dead |
 | `term.door_vow` | the Door Vow | The forbidden vow that opens it |
 | `term.echo` | an echo | A vow still burning with no caster (elementals) |
+| `term.unfinished` | the Unfinished | Those who come back through the Door incomplete |
 | `term.final_vow` | the Final Vow | The vow to lay down steel (tier-3 casters) |
 | `term.long_dusk` | the Long Dusk | The age in which the gods died |
 | `term.breath` | breath | The East's own discipline instead of vows |
 | `event.border_war` | the Border War | Ardeval against Brennmark, 13 to 3 years ago |
 | `event.ash_peace` | the Ash Peace | The treaty that ended it |
+
+## Minor names
+
+| Id | Current name | What |
+| -- | ------------ | ---- |
+| `brother_tor` | Tor | Aske's older brother, burned at the Ashfields |
+| `place.coldwell` | Coldwell | The farm the Red Company burned last winter |
+| `place.aldwater` | Aldwater Toll Bridge | Chapter 4 fixed skirmish |
+| `place.millhaven_road` | Millhaven Road | Chapter 4 fixed skirmish |
+| `place.salt_road` | the Salt Road | Chapter 5 fixed skirmish |
+| `place.smugglers_cove` | Smugglers' Cove | Chapter 5 fixed skirmish |
+| `place.burnt_mill` | the Burnt Mill | Chapter 6 fixed skirmish |
+| `place.pilgrims_road` | Pilgrims' Road | Chapter 7 fixed skirmish |
+| `place.ossuary_gate` | the Ossuary Gate | Chapter 7 fixed skirmish |
+| `word.mother` | *mor* | Brennish for mother (Aske) |
+| `word.home` | *hus* | Brennish for home (Aske) |

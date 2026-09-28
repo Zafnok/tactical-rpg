@@ -5,8 +5,8 @@ Id: `sister` · [Name registry](../names.md)
 ## Role and class
 
 - **Role:** NPC in Act 1: missing, and believed dead. She's the heart of the
-  Marr family's story and a key to the Door plot. Her part in Acts 2–3
-  depends on the midpoint twist (gate 2).
+  Marr family's story, and the later twist (gate 2): the bearer the returned
+  prince is finished through.
 - **Class:** none in Act 1. If she becomes playable later, a gifted class,
   decided by the Act 2/3 tickets.
 - **Age:** 16 (12 on the night at the mill, 13 at the Ashfields).
@@ -26,13 +26,19 @@ burned there. She didn't: Rue saw keepers lead her away alive after the fire.
   the lead teaching her to skip stones.)
 - **Need:** to choose her own vow, not the one sworn for her.
 - **Flaw:** she does what she's told. It kept her alive.
-- **Secret:** where she is and what she's for. It's decided at gate 2, and
-  it's one of the midpoint twist options.
+- **Secret (the later twist, end of Act 2, `outline.md`):** she's in the
+  palace at Varenhall, and she's **the bearer** the returned prince is being
+  finished through. Every death paid under the Door Vow passes through her.
+  Finishing him means emptying her. She knows. She has been kind to him
+  anyway; he's the only other child in the palace.
 - **Pressure:** everyone who loves her has been told she's dead.
 
 ## Arc
 
 - **Start:** gone.
+- **Act 3:** she stops doing what she's told. She swears a vow of her own
+  against the Door, and holds it long enough for her brother to take her
+  place.
 - **End:** home, in the victory, and alive. Nick's ending is a hard-fought
   victory, and bringing Wren home is part of what's won. Dace dies making that
   possible.
