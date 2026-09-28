@@ -51,7 +51,10 @@ map menu (0405).
    revisits a tile on the path, truncate to it; otherwise replace with
    `reach.path_to(cursor)` if reachable. Pure logic + property test.
    **Drawing** (`look-and-feel.md`, ADR-0018): while the cursor is on the
-   selected unit, the cursor shows `►` `◄` instead of brackets. Once it moves
+   selected unit, the cursor shows `►` `◄` instead of the corner marks (0416).
+   **Ask Nick first** (open question in `look-and-feel.md`): as whole glyphs in
+   the neighbouring cells they would hide a neighbour's initial, the bug 0416
+   fixed for the browsing cursor ([ADR-0024](../../docs/adr/0024-cursor-as-pixel-overlays.md)). Once it moves
    away: a 3-px `Under` overlay line in `path` colour through tile centres,
    starting at the **edge** of the unit's tile (never over its label), ending
    in a **single arrowhead** (`Over` overlay triangle) on the destination tile;
@@ -94,8 +97,11 @@ map menu (0405).
   `path_cost` and ends on the cursor whenever the cursor is reachable.
   Drawing: a 3-px `Under` line from the unit tile's edge, 6 stacked-rect `Over`
   arrowhead on the destination, clipped to the map view.
-- **Cursor:** `►Lo◄` on the selected unit, no frame on the arrowhead's tile,
-  brackets elsewhere; hidden while walking and in the menu.
+- **Cursor:** the corner marks (0416, ADR-0024) stay on the selected unit;
+  no cursor on the arrowhead's tile; hidden while walking and in the menu.
+  **Not done: the `►` `◄` arrows on the selected unit.** As whole glyphs
+  they would hide a neighbour's initial (the bug 0416 fixed), and the ticket
+  says to ask Nick first; that question is open in `look-and-feel.md`.
 - **Action menu** beside the unit (right, or left near the view edge; first
   item level with the unit): `Attack` (disabled until 0404), `Seize` when
   legal, `Wait`.

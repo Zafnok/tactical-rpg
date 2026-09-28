@@ -20,7 +20,7 @@ use trpg_core::{
 };
 
 use self::camera::{Camera, tile_to_cell};
-use self::cursor::{ARROWS, BRACKETS, Cursor, draw_cursor};
+use self::cursor::{Cursor, draw_cursor};
 use self::layout::{
     HELP_BAR, HELP_ROW, MAP_VIEW, SIDE_PANEL, TILE_W_CELLS, VIEW_TILES_H, VIEW_TILES_W,
 };
@@ -375,30 +375,27 @@ impl BattleScreen {
         }
     }
 
-    /// Draws the cursor for the mode: brackets while browsing; with a unit
-    /// selected, arrows on the unit, or the path with its arrowhead (and no
-    /// cursor on the arrowhead's tile); none during a walk or in the menu.
+    /// Draws the cursor for the mode (in the player's cursor style): on the
+    /// tile while browsing or on a selected unit; with a unit selected and
+    /// the cursor away from it, the path and its arrowhead, with no cursor
+    /// on the arrowhead's tile; none during a walk or in the menu.
     fn draw_cursor_and_path(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let pos = self.cursor.pos;
-        let marks = match &self.mode {
+        match &self.mode {
             Mode::Moving { .. } | Mode::ActionMenu { .. } => return,
             Mode::Selected(sel) => {
                 let color = ctx.palette.get(UiColor::Path);
                 for overlay in path_overlays(&sel.path, self.camera, color) {
                     buf.add_overlay(overlay);
                 }
-                if pos == sel.origin() {
-                    ARROWS
-                } else if pos == sel.dest() {
+                if pos == sel.dest() && pos != sel.origin() {
                     return;
-                } else {
-                    BRACKETS
                 }
             }
-            Mode::Idle { .. } | Mode::MoveAfter { .. } => BRACKETS,
-        };
-        if let Some(cell) = tile_to_cell(pos, &self.camera) {
-            draw_cursor(buf, &ctx.palette, &self.cursor, marks, cell);
+            Mode::Idle { .. } | Mode::MoveAfter { .. } => {}
+        }
+        if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
+            draw_cursor(buf, &ctx.palette, &self.cursor, ctx.cursor_style, x, y);
         }
     }
 
@@ -600,7 +597,7 @@ mod tests {
 
     use super::testing::{battle, vaulted, wait};
     use super::*;
-    use crate::console::{CONSOLE_H, CONSOLE_W};
+    use crate::console::{CELL_H_PX, CELL_W_PX, CONSOLE_H, CONSOLE_W};
     use crate::harness::Harness;
     use crate::screen::tests::ctx;
 
@@ -840,10 +837,15 @@ mod tests {
         let bright = render(&quick(), &c);
         let cursor = c.palette.get(UiColor::Cursor);
         // The lord's tile at (3, 5) starts at cell (26, 16).
-        assert_eq!(bright.get(25, 16).unwrap().fg, cursor);
-        assert_eq!(dim.get(25, 16).unwrap().fg, cursor.scale(0.5));
-        assert_eq!(bright.get(25, 16).unwrap().glyph, '[');
-        assert_eq!(bright.get(28, 16).unwrap().glyph, ']');
+        let colours = |b: &GlyphBuffer| {
+            b.overlays()
+                .iter()
+                .filter(|o| o.color == cursor || o.color == cursor.scale(0.5))
+                .map(|o| o.color)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(colours(&bright), [cursor; 8]);
+        assert_eq!(colours(&dim), [cursor.scale(0.5); 8]);
     }
 
     #[test]
@@ -909,35 +911,31 @@ mod tests {
     }
 
     /// The console cell of the left glyph of the tile under the cursor,
-    /// found from its brackets.
-    fn cursor_cell(buf: &GlyphBuffer, c: &Ctx) -> (i32, i32) {
-        let fort = c.palette.lookup("fort");
-        for y in 0..layout::MAP_VIEW.h {
-            for x in 0..layout::MAP_VIEW.w {
-                let cell = buf.get(x, y).unwrap();
-                if Some(cell.fg) == fort {
-                    continue;
-                }
-                match cell.glyph {
-                    '[' => return (x + 1, y),
-                    ']' => return (x - 2, y),
-                    _ => {}
-                }
-            }
-        }
-        panic!("no cursor on screen");
+    /// found from its top-right corner mark: the only 1 × 3 px overlays are
+    /// the corner marks' vertical arms, and the right ones are in the tile's
+    /// last pixel column.
+    fn cursor_cell(buf: &GlyphBuffer) -> (i32, i32) {
+        let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
+        let arms = buf
+            .overlays()
+            .iter()
+            .map(|o| o.rect)
+            .filter(|r| (r.w, r.h) == (1, 3));
+        let r = arms
+            .max_by_key(|r| (r.x, -r.y))
+            .expect("no cursor on screen");
+        ((r.x + 1) / cw - layout::TILE_W_CELLS, r.y / ch)
     }
 
     #[test]
     fn harness_keys_move_the_cursor() {
-        let c = ctx();
         let mut h = big_battle_harness();
         // The lord at (3, 5), camera at the top-left.
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (6, 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (6, 5));
         h.keys("Right Right Right");
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (12, 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (12, 5));
         h.keys("Down Left");
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (10, 6));
+        assert_eq!(cursor_cell(h.game().buffer()), (10, 6));
     }
 
     #[test]
@@ -950,18 +948,18 @@ mod tests {
         h.hold("Right", 1.0);
         // 1 press + repeats at 170 ms, then every 55 ms: 17 tiles, to x = 20.
         assert_eq!(moves(1000), 17);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (2 * (3 + 17), 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (2 * (3 + 17), 5));
         h.hold("Right", 1.0);
         // x = 37: the camera keeps it 3 tiles from the right edge.
         let x = 3 + 2 * moves(1000);
         let origin = x - (layout::VIEW_TILES_W - 1 - Camera::MARGIN);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (2 * (x - origin), 5));
+        assert_eq!(cursor_cell(h.game().buffer()), (2 * (x - origin), 5));
         // Far right, then back: the cursor stops at the edge and the
         // camera shows the map's last columns, then scrolls back.
         h.hold("Right", 3.0).hold("Down", 3.0);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (68, 29));
+        assert_eq!(cursor_cell(h.game().buffer()), (68, 29));
         h.hold("Left", 4.0).hold("Up", 3.0);
-        assert_eq!(cursor_cell(h.game().buffer(), &c), (0, 0));
+        assert_eq!(cursor_cell(h.game().buffer()), (0, 0));
     }
 
     /// The text of row `y` of the side panel, inside its border, trimmed.
@@ -1229,16 +1227,16 @@ mod tests {
     }
 
     #[test]
-    fn selecting_draws_ranges_arrows_and_a_double_panel_border() {
+    fn selecting_draws_ranges_and_a_double_panel_border() {
         let mut c = ctx();
         let mut s = quick();
         let plain = render(&s, &c);
         step(&mut s, &mut c, &[Action::Confirm]);
         let buf = render(&s, &c);
         let p = &c.palette;
-        // Arrows either side of the lord's tile (cells 26..28, row 16).
-        assert_eq!(buf.get(25, 16).unwrap().glyph, '►');
-        assert_eq!(buf.get(28, 16).unwrap().glyph, '◄');
+        // The cursor stays on the lord, as corner marks: 8 arms.
+        assert_eq!(cursor_marks(&buf, &c), 8);
+        assert_eq!(cursor_cell(&buf), (26, 16));
         // (6, 5), reachable, is tinted `move_range`.
         let tinted = |cell: (i32, i32), color| {
             let was = plain.get(cell.0, cell.1).unwrap().bg;
@@ -1275,11 +1273,12 @@ mod tests {
         assert_eq!(lines.filter(|o| o.layer == Layer::Over).count(), 6);
         // (5, 5) is a fort, drawn `[]` from cell 30: no cursor marks
         // around it, and the lord keeps its letters.
+        assert_eq!(cursor_marks(&buf, &c), 0);
         let glyphs: String = (25..34).map(|x| buf.get(x, 16).unwrap().glyph).collect();
         assert_eq!(glyphs, "·Lo..[]..");
         // On to the map's right edge, past the lord's reach (Mov 5): the
         // path, through the fort (cost 2), stops at (7, 5), and the cursor
-        // shows brackets.
+        // shows its corner marks.
         step(&mut s, &mut c, &[Action::CursorRight; 8]);
         assert_eq!(s.cursor().pos, Pos::new(13, 5));
         let Mode::Selected(sel) = s.mode() else {
@@ -1287,8 +1286,14 @@ mod tests {
         };
         assert_eq!(sel.dest(), Pos::new(7, 5));
         let buf = render(&s, &c);
-        assert_eq!(buf.get(45, 16).unwrap().glyph, '[');
-        assert_eq!(buf.get(48, 16).unwrap().glyph, ']');
+        assert_eq!(cursor_marks(&buf, &c), 8);
+        assert_eq!(cursor_cell(&buf), (46, 16));
+    }
+
+    /// How many overlays are in the cursor's full-brightness colour.
+    fn cursor_marks(buf: &GlyphBuffer, c: &Ctx) -> usize {
+        let cursor = c.palette.get(UiColor::Cursor);
+        buf.overlays().iter().filter(|o| o.color == cursor).count()
     }
 
     #[test]

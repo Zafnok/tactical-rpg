@@ -1,6 +1,6 @@
 # ADR-0018: Visual style v2 (after Nick's look sign-off)
 
-- **Status:** Accepted
+- **Status:** Accepted; the browsing cursor rule is superseded by ADR-0024
 - **Date:** 2026-09-25
 - **Related tickets:** 0011, 0401, 0402, 0403, 0703, 0704, 0706
 - **Supersedes:** ADR-0012

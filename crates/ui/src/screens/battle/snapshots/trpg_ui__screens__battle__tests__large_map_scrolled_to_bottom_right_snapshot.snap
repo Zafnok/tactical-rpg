@@ -31,7 +31,7 @@ expression: buf.to_snapshot(&c.palette)
 ··≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^│                            │
 ··≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^│                            │
 ≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^..│                            │
-≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^[Ra└────────────────────────────┘
+≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^Ra└────────────────────────────┘
                                                                                                     
  arrows move · f range · e info · s next unit · d back                                              
 --- colours ---
@@ -64,9 +64,9 @@ ccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeefggggggggg
 ddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaafggggggggggggggggggggggggggggf
 ddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaafggggggggggggggggggggggggggggf
 eeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbfggggggggggggggggggggggggggggf
-eeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaamnnffffffffffffffffffffffffffffff
-oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-opppppppppppppppppppppppppppppppppppppppppppppppppppppoooooooooooooooooooooooooooooooooooooooooooooo
+eeaaaaaabbbbbbccccccddddddeeeeeeaaaaaabbbbbbccccccddddddeeeeeeaaaaaammffffffffffffffffffffffffffffff
+nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+nooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
 --- legend ---
 a = fg:mountain bg:mountain_bg
 b = fg:grass bg:grass_bg
@@ -80,10 +80,17 @@ i = fg:enemy bg:forest_bg
 j = fg:enemy bg:panel_bg
 k = fg:hp_high bg:panel_bg
 l = fg:text_dim bg:panel_bg
-m = fg:cursor bg:mountain_bg
-n = fg:enemy bg:grass_bg
-o = fg:text bg:black
-p = fg:text_dim bg:black
+m = fg:enemy bg:grass_bg
+n = fg:text bg:black
+o = fg:text_dim bg:black
 --- overlays ---
 over  16,46 16x2  hp_high
 over  544,478 16x2  hp_high
+over  543,464 3x1  cursor
+over  543,464 1x3  cursor
+over  557,464 3x1  cursor
+over  559,464 1x3  cursor
+over  543,477 3x1  cursor
+over  543,475 1x3  cursor
+over  557,477 3x1  cursor
+over  559,475 1x3  cursor
