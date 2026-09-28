@@ -32,11 +32,11 @@ pub const COLUMN_W: usize = 13;
 /// Row of the names; weapons, a broken marker, HP, hit and crit follow.
 pub const NAME_ROW: i32 = SIDE_PANEL.y + 2;
 
-/// Row of the `(broken)` marker, under the weapon.
-pub const BROKEN_ROW: i32 = NAME_ROW + 2;
-
 /// Row of the HP line.
 pub const HP_ROW: i32 = NAME_ROW + 3;
+
+/// Row of the `(broken)` marker: under the weapon, above the HP line.
+pub const BROKEN_ROW: i32 = HP_ROW - 1;
 
 /// Row of the line above the strikes.
 pub const RULE_ROW: i32 = HP_ROW + 4;
@@ -355,7 +355,7 @@ mod tests {
         let mut t = targeting(&state);
         let plain = render(&state, &t);
         assert_eq!(text(&plain, LEFT_X + 6, STRIKE_ROW, 1), " ");
-        assert_eq!(text(&plain, LEFT_X, BROKEN_ROW, 8), "        ");
+        assert_eq!(text(&plain, LEFT_X, NAME_ROW + 2, 8), "        ");
         t.preview.forecast.attacker.effective = true;
         t.preview.forecast.attacker.broken = true;
         let marked = render(&state, &t);
@@ -365,7 +365,8 @@ mod tests {
             assert_eq!(cell.glyph, '!');
             assert_eq!(cell.fg, c.palette.get(UiColor::TextHighlight));
         }
-        assert_eq!(text(&marked, LEFT_X, BROKEN_ROW, 8), "(broken)");
+        // Two rows under the name, right under the weapon.
+        assert_eq!(text(&marked, LEFT_X, NAME_ROW + 2, 8), "(broken)");
         assert_eq!(text(&marked, RIGHT_X + 8, STRIKE_ROW + 1, 1), " ");
     }
 
