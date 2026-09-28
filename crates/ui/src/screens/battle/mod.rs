@@ -178,8 +178,8 @@ pub struct BattleScreen {
     /// Auto-end: end the player phase when its last unit has acted. Kept
     /// here until the Options menu (0805) saves it.
     auto_end: bool,
-    /// The last command left no player unit ready: auto-end is checked once
-    /// the screen is back to browsing.
+    /// A command was applied: auto-end is checked once the screen is back
+    /// to browsing.
     end_armed: bool,
     /// A short message and the seconds it has left.
     toast: Option<(String, f32)>,
@@ -347,10 +347,8 @@ impl BattleScreen {
             if self.danger.is_some() {
                 self.danger = Some(danger_tiles(&self.state));
             }
-            let player = self.state.phase() == Phase::Player;
-            if *cmd != Command::EndPhase && player && map_menu::ready_players(&self.state) == 0 {
-                self.end_armed = true;
-            }
+            // Checked (phase, units ready) once back to browsing.
+            self.end_armed = true;
         }
         let playback =
             events.and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
@@ -825,10 +823,8 @@ impl Screen for BattleScreen {
         {
             banner.t += dt;
             if banner.expired() {
-                let t = self.close_banner();
-                if !matches!(t, Transition::None) {
-                    return t;
-                }
+                // Only phase banners expire, and closing one never leaves.
+                self.close_banner();
             }
         }
         self.check_auto_end();

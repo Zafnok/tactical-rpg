@@ -29,6 +29,15 @@ const RIGHT_X: i32 = 56;
 /// Widest text in the right column, so nothing reaches the border.
 const RIGHT_W: usize = 42;
 
+/// Widest item name or bonus, indented two cells in the right column.
+const ITEM_W: usize = 40;
+
+/// Most skills listed (rows 16..28).
+const SKILL_ROWS: usize = 12;
+
+/// Most spells listed (rows 18..28).
+const SPELL_ROWS: usize = 10;
+
 /// Length of the HP bar, in cells.
 const HP_BAR_CELLS: i32 = 10;
 
@@ -204,7 +213,7 @@ fn draw_middle(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     if skills.is_empty() {
         pen.text(x, 16, "--", UiColor::TextDim);
     }
-    for (y, skill) in (16..INFO.h - 1).zip(skills) {
+    for (y, skill) in (16..).zip(skills.into_iter().take(SKILL_ROWS)) {
         pen.cut(x, y, &skill.name, 25, UiColor::Text);
     }
 }
@@ -247,7 +256,7 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
                     range_text(def.min_range, def.max_range),
                     def.weight
                 );
-                pen.cut(x + 2, y + 1, &numbers, RIGHT_W - 2, UiColor::TextDim);
+                pen.cut(x + 2, y + 1, &numbers, ITEM_W, UiColor::TextDim);
             }
             None => {
                 pen.text(x + 2, y, "--", UiColor::TextDim);
@@ -278,8 +287,8 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
         pen.text(x, y, title, UiColor::TextHighlight);
         match piece {
             Some((name, bonus)) => {
-                pen.cut(x + 2, y + 1, name, RIGHT_W - 2, UiColor::Text);
-                pen.cut(x + 2, y + 2, &bonus, RIGHT_W - 2, UiColor::TextDim);
+                pen.cut(x + 2, y + 1, name, ITEM_W, UiColor::Text);
+                pen.cut(x + 2, y + 2, &bonus, ITEM_W, UiColor::TextDim);
             }
             None => {
                 pen.text(x + 2, y + 1, "--", UiColor::TextDim);
@@ -296,7 +305,7 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     if spells.is_empty() {
         pen.text(x + 2, y + 1, "--", UiColor::TextDim);
     }
-    for (row, spell) in (y + 1..INFO.h - 1).zip(spells) {
+    for (row, spell) in (y + 1..).zip(spells.into_iter().take(SPELL_ROWS)) {
         let uses = unit.spells.uses_left(&spell.id);
         pen.cut(x + 2, row, &spell.name, 28, UiColor::Text);
         let text = format!("{uses}/{}", spell.uses);
@@ -335,5 +344,9 @@ mod tests {
     fn the_columns_fit_inside_the_border() {
         const { assert!(PORTRAIT.x + PORTRAIT.w < MID_X) };
         assert!(RIGHT_X + i32::try_from(RIGHT_W).unwrap() < INFO.x + INFO.w - 1);
+        const { assert!(ITEM_W + 2 <= RIGHT_W) };
+        // The lists end above the bottom border (row 29).
+        assert!(16 + i32::try_from(SKILL_ROWS).unwrap() < INFO.h);
+        assert!(18 + i32::try_from(SPELL_ROWS).unwrap() < INFO.h);
     }
 }

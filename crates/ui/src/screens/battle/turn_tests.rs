@@ -133,6 +133,10 @@ fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
     let under = plain.get(cx, cy).unwrap().bg.lerp(danger, OVERLAY_BLEND);
     let blue = c.palette.get(UiColor::MoveRange);
     assert_eq!(buf.get(cx, cy).unwrap().bg, under.lerp(blue, OVERLAY_BLEND));
+    // Not in a menu.
+    let mut menu = quick();
+    press(&mut menu, &mut c, &[Action::Cancel, Action::DangerZone]);
+    assert_eq!(menu.danger(), None);
     // The toggle works while a unit is selected, too.
     press(&mut s, &mut c, &[Action::DangerZone]);
     assert_eq!(s.danger(), None);
@@ -248,6 +252,36 @@ fn info_shows_stats_with_caps_and_the_loadout() {
     assert_in_font(&buf);
 }
 
+/// The knight (armoured) wounded, its spear broken, with a ring and a
+/// spell.
+#[test]
+fn info_screen_full_loadout_snapshot() {
+    let mut c = ctx();
+    let quick = quick_battle(&c.content).unwrap();
+    let mut units = quick.units().to_vec();
+    let knight = &mut units[1];
+    knight.hp = knight.stats.hp / 3;
+    knight.loadout.accessory = Some(ItemId::new("power_ring"));
+    knight.learned.insert(trpg_core::SpellId::new("fire"));
+    let rout = Objective::Rout { turn_limit: None };
+    let state = battle_with(&c, quick.map().clone(), units, rout);
+    // Its spear broken (durability survives the battle's start).
+    let mut units = state.units().to_vec();
+    if let Some(w) = units[1].loadout.weapons[0].as_mut() {
+        w.durability_left = 0;
+    }
+    let state = battle_with(&c, quick.map().clone(), units, rout);
+    let mut s = BattleScreen::new(state);
+    s.cursor.jump(Pos::new(4, 6));
+    press(&mut s, &mut c, &[Action::Info]);
+    let buf = render(&s, &c);
+    assert!(shows(&buf, "Armored"));
+    assert!(shows(&buf, "Power Ring"));
+    assert!(shows(&buf, "Str +2"));
+    assert!(shows(&buf, "Fire"));
+    assert_snapshot!(buf.to_snapshot(&c.palette));
+}
+
 /// The lord's info screen.
 #[test]
 fn info_screen_snapshot() {
@@ -341,6 +375,28 @@ fn map_menu_snapshot() {
     let buf = render(&s, &c);
     assert_in_font(&buf);
     assert_snapshot!(buf.to_snapshot(&c.palette));
+}
+
+/// The unit list, the objective and the end-turn question, centred on
+/// the map.
+#[test]
+fn map_menu_boxes_snapshot() {
+    let mut c = ctx();
+    let mut s = quick();
+    press(&mut s, &mut c, &[Action::Cancel, Action::Confirm]);
+    assert_snapshot!("unit_list", render(&s, &c).to_snapshot(&c.palette));
+    press(
+        &mut s,
+        &mut c,
+        &[Action::Cancel, Action::CursorDown, Action::Confirm],
+    );
+    assert_snapshot!("objective", render(&s, &c).to_snapshot(&c.palette));
+    press(
+        &mut s,
+        &mut c,
+        &[Action::Cancel, Action::Cancel, Action::EndTurn],
+    );
+    assert_snapshot!("end_turn_prompt", render(&s, &c).to_snapshot(&c.palette));
 }
 
 // Ending the turn.

@@ -248,6 +248,8 @@ mod tests {
         s.apply(&trpg_core::Command::EndPhase).unwrap();
         assert_eq!(s.phase(), Phase::Enemy);
         assert!(!MapEntry::EndTurn.enabled(&s));
+        // Nobody acted, but it isn't the player's phase: none ready.
+        assert_eq!(ready_players(&s), 0);
         assert!(MapEntry::Units.enabled(&s));
     }
 
@@ -307,6 +309,33 @@ mod tests {
             turn_limit: None,
         });
         assert_eq!(objective_text(&s), "Defeat the boss");
+        // A boss that has fallen keeps its name.
+        let mut s = battle_with(
+            &c,
+            q.map().clone(),
+            q.units().to_vec(),
+            Objective::DefeatUnit {
+                unit: UnitId(4),
+                turn_limit: None,
+            },
+        );
+        let mut units = s.units().to_vec();
+        units[0].pos = Pos::new(7, 2);
+        units[3].hp = 1;
+        s = battle_with(&c, q.map().clone(), units, s.objective());
+        s.apply(&trpg_core::Command::Act {
+            unit: UnitId(1),
+            dest: Pos::new(7, 2),
+            action: trpg_core::UnitAction::Attack {
+                target: UnitId(4),
+                slot: 0,
+                active: None,
+                art: None,
+            },
+        })
+        .unwrap();
+        assert!(s.unit(UnitId(4)).is_none());
+        assert_eq!(objective_text(&s), "Defeat Brigand");
         let s = with(Objective::Seize {
             pos: Pos::new(5, 5),
             by_lord: true,
