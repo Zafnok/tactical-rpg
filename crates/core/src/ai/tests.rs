@@ -232,6 +232,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         role: Role::Regular,
         ai: AiBehavior::Aggressive,
         weapon_ranks: BTreeMap::new(),
+        talent: None,
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
         loadout: Loadout::default(),

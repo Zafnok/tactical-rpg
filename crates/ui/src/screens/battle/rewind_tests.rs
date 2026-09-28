@@ -41,8 +41,7 @@ fn attacked(c: &mut Ctx, charges: u8) -> (BattleScreen, BattleState) {
     let mut s = BattleScreen::new(start.clone());
     // Select the lord, one step right, move there.
     press(&mut s, c, &[Confirm, CursorRight, Confirm], 0.5);
-    // Attack, the iron sword, the brigand, attack, skip the playback
-    // (Cancel, ticket 0418).
+    // Attack, the iron sword, the brigand, attack, skip the playback (Cancel).
     press(
         &mut s,
         c,
