@@ -35,7 +35,7 @@ fn characters() -> CharacterTable {
 /// Every error for one file `t.dlg`, checked against the embedded
 /// (placeholder) characters.
 fn errors(src: &str) -> Vec<String> {
-    from_sources(&[("t.dlg", src)], Some(&characters()))
+    from_sources(&[("t.dlg", src)], Some(&characters()), None)
         .err()
         .unwrap_or_default()
         .iter()
@@ -130,7 +130,7 @@ fn several_scenes_per_file_and_crlf() {
 #[test]
 fn a_valid_scene_loads() {
     let src = scene("test_lord[sad]: Hi.\n@left clear\n@left test_archer happy\ntest_archer: Yo.");
-    let table = from_sources(&[("t.dlg", src.as_str())], Some(&characters()));
+    let table = from_sources(&[("t.dlg", src.as_str())], Some(&characters()), None);
     assert_eq!(
         table.map(|t| t.get("s").map(|s| s.steps.len())),
         Ok(Some(6))
@@ -141,7 +141,7 @@ fn a_valid_scene_loads() {
 #[test]
 fn without_characters_ids_are_not_checked() {
     let src = "@scene a\n@left nobody neutral\nnobody: Hi.\n@end\n";
-    assert!(from_sources(&[("t.dlg", src)], None).is_ok());
+    assert!(from_sources(&[("t.dlg", src)], None, None).is_ok());
     assert_eq!(
         errors(src),
         [
@@ -334,6 +334,54 @@ fn same_character_on_both_sides() {
     );
 }
 
+/// Every error for `t.dlg`, with expressions checked against `portraits`.
+fn errors_with(src: &str, portraits: &PortraitTable) -> Vec<String> {
+    from_sources(&[("t.dlg", src)], Some(&characters()), Some(portraits))
+        .err()
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+}
+
+#[test]
+fn expressions_come_from_the_portrait() {
+    let palette = crate::palette::PaletteDef::load().unwrap_or_default();
+    let mut portraits = crate::portrait::load_all(&palette).unwrap_or_default();
+    // The lord's portrait gains a "smug" expression and loses "sad".
+    let lord = portraits.get_mut("test_lord").map(|p| &mut p.expressions);
+    if let Some(expressions) = lord {
+        expressions.retain(|e| e.name != "sad");
+        let smug = crate::portrait::Expression {
+            name: "smug".into(),
+            pixels: vec![],
+        };
+        expressions.push(smug);
+    }
+    let src = scene(
+        "@left test_lord smug
+test_lord[sad]: Hi.
+test_knight[smug]: Hi.",
+    );
+    assert_eq!(
+        errors_with(&src, &portraits),
+        [
+            "t.dlg:5: \"test_lord\"'s portrait has no expression \"sad\"; use one of neutral, happy, angry, surprised, smug",
+            "t.dlg:6: \"test_knight\"'s portrait has no expression \"smug\"; use one of neutral, happy, angry, sad, surprised",
+        ]
+    );
+    // Characters without a portrait keep the standard five.
+    portraits.clear();
+    assert_eq!(
+        errors_with(&src, &portraits),
+        [
+            "t.dlg:4: unknown expression \"smug\"; use one of neutral, happy, angry, sad, surprised",
+            "t.dlg:6: unknown expression \"smug\"; use one of neutral, happy, angry, sad, surprised",
+        ]
+    );
+    assert_eq!(STANDARD_EXPRESSIONS, crate::portrait::REQUIRED_EXPRESSIONS);
+}
+
 #[test]
 fn unknown_expressions() {
     assert_eq!(
@@ -388,7 +436,7 @@ fn scene_without_text() {
 fn duplicate_scene_ids_across_files() {
     let a = "@scene one\n> x\n@end\n@scene two\n> x\n@end\n";
     let b = "\n@scene two\n> y\n@end\n@scene one\n> y\n@end\n";
-    let errs: Vec<String> = from_sources(&[("a.dlg", a), ("b.dlg", b)], None)
+    let errs: Vec<String> = from_sources(&[("a.dlg", a), ("b.dlg", b)], None, None)
         .err()
         .unwrap_or_default()
         .iter()
@@ -428,7 +476,8 @@ fn files_that_are_not_utf8() {
     let load = |files: &[(&str, Option<&str>)]| {
         let files: Vec<(String, Option<&str>)> =
             files.iter().map(|&(f, s)| (f.to_owned(), s)).collect();
-        load_files(&files, None).map_err(|e| e.iter().map(ToString::to_string).collect::<Vec<_>>())
+        load_files(&files, None, None)
+            .map_err(|e| e.iter().map(ToString::to_string).collect::<Vec<_>>())
     };
     assert_eq!(load(&[("a.dlg", Some(ok))]).map(|t| t.scenes.len()), Ok(1));
     assert_eq!(
@@ -448,7 +497,7 @@ fn files_that_are_not_utf8() {
 
 #[test]
 fn embedded_test_scene_loads() {
-    let table = load(Some(&characters()));
+    let table = load(Some(&characters()), None);
     assert!(table.is_ok(), "{table:?}");
     let steps = table
         .ok()
@@ -480,7 +529,7 @@ fn embedded_test_scene_loads() {
 fn readme_example_is_valid() {
     let readme = bundle::file("dialogue/README.md").unwrap_or_default();
     let example = readme.split("```").nth(1).unwrap_or_default();
-    let table = from_sources(&[("README.md", example)], None);
+    let table = from_sources(&[("README.md", example)], None, None);
     assert!(table.is_ok(), "{table:?}");
     let table = table.unwrap_or_default();
     assert_eq!(

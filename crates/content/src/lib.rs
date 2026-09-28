@@ -15,6 +15,7 @@ pub mod item;
 pub mod keymap;
 pub mod map;
 pub mod palette;
+pub mod portrait;
 pub mod ron_loader;
 pub mod skill;
 pub mod spell;
@@ -31,6 +32,7 @@ pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
 pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
+pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
 
 /// All validated game content.
@@ -58,6 +60,8 @@ pub struct Content {
     pub arts: ArtTable,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
+    /// Character portraits by character id (file stem).
+    pub portraits: BTreeMap<String, Portrait>,
     /// Dialogue scenes by id.
     pub dialogue: DialogueTable,
     /// The AI's numbers.
@@ -91,7 +95,11 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     );
     let skills = check_skill_references(skill::load(), classes.as_ref().ok());
     let arts = check_art_references(art::load(), items.as_ref().ok());
-    let dialogue = dialogue::load(characters.as_ref().ok());
+    let portraits = match &palette {
+        Ok(p) => portrait::load_all(p),
+        Err(_) => Ok(BTreeMap::new()),
+    };
+    let dialogue = dialogue::load(characters.as_ref().ok(), portraits.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
@@ -105,6 +113,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             skills,
             arts,
             characters,
+            portraits,
             dialogue,
             ai: ai::load(),
         },
@@ -201,6 +210,7 @@ struct Loaded {
     skills: Result<SkillTable, Vec<ContentError>>,
     arts: Result<ArtTable, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
+    portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
     ai: Result<AiWeights, Vec<ContentError>>,
 }
@@ -237,6 +247,7 @@ fn assemble(
         skills: take(units.skills, &mut errors),
         arts: take(units.arts, &mut errors),
         characters: take(units.characters, &mut errors),
+        portraits: take(units.portraits, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
         ai: take(units.ai, &mut errors),
     };
@@ -275,8 +286,12 @@ mod tests {
         skill::load()
     }
 
+    fn ok_portraits() -> Result<BTreeMap<String, Portrait>, Vec<ContentError>> {
+        portrait::load_all(&PaletteDef::load().unwrap_or_default())
+    }
+
     fn ok_dialogue() -> Result<DialogueTable, Vec<ContentError>> {
-        dialogue::load(ok_characters().ok().as_ref())
+        dialogue::load(ok_characters().ok().as_ref(), ok_portraits().ok().as_ref())
     }
 
     fn ok_units() -> Loaded {
@@ -287,6 +302,7 @@ mod tests {
             skills: ok_skills(),
             arts: art::load(),
             characters: ok_characters(),
+            portraits: ok_portraits(),
             dialogue: ok_dialogue(),
             ai: ai::load(),
         }
@@ -342,6 +358,10 @@ mod tests {
             ok_characters().ok().as_ref()
         );
         assert_eq!(
+            content.as_ref().map(|c| &c.portraits),
+            ok_portraits().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.dialogue),
             ok_dialogue().ok().as_ref()
         );
@@ -358,8 +378,8 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 13] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "d", "w",
+    const NAMES: [&str; 14] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w",
     ];
 
     #[test]
@@ -379,6 +399,7 @@ mod tests {
                     skills: Err(e("x")),
                     arts: Err(e("a")),
                     characters: Err(e("u")),
+                    portraits: Err(e("o")),
                     dialogue: Err(e("d")),
                     ai: Err(e("w")),
                 },
@@ -415,8 +436,9 @@ mod tests {
                     } else {
                         ok_characters()
                     },
-                    dialogue: if i == 11 { Err(e("d")) } else { ok_dialogue() },
-                    ai: if i == 12 { Err(e("w")) } else { ai::load() },
+                    portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
+                    dialogue: if i == 12 { Err(e("d")) } else { ok_dialogue() },
+                    ai: if i == 13 { Err(e("w")) } else { ai::load() },
                 },
             )
         };
@@ -549,6 +571,10 @@ mod tests {
             ok_skills().ok().as_ref()
         );
         assert_eq!(content.as_ref().map(|c| &c.arts), art::load().ok().as_ref());
+        assert_eq!(
+            content.as_ref().map(|c| &c.portraits),
+            ok_portraits().ok().as_ref()
+        );
         assert_eq!(
             content.as_ref().map(|c| &c.dialogue),
             ok_dialogue().ok().as_ref()

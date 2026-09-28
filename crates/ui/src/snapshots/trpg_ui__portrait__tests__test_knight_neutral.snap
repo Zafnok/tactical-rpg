@@ -1,0 +1,80 @@
+---
+source: crates/ui/src/portrait.rs
+expression: "snap(\"test_knight\", \"neutral\", 0.0, false)"
+---
+           ▄▄▄▀▀▀▀▀▄▄           
+        ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄        
+      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      
+           ▄▀▀▀▀▀▀▀▀▄           
+       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     
+   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   
+ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ 
+--- colours ---
+aaaaaaaaaaabbbcdddebbaaaaaaaaaaa
+aaaaaaaabfghiijjjjjjjkfbaaaaaaaa
+aaaaaabfhiijjjjjjjjjjjlmfbaaaaaa
+aaaaaaejnjjjjjjjjjjjjjjojeaaaaaa
+aaaaaaehloppppphjpppppoomeaaaaaa
+aaaaaaenjoqqqqrjjrqqqsoooeaaaaaa
+aaaaaaejjortuervwreutxoooeaaaaaa
+aaaaaaejjorrrrryrrrrrxoooeaaaaaa
+aaaaaaejjoryzrrzAArrrxoooeaaaaaa
+aaaaaaejjorrrrBBBBrrxxoooeaaaaaa
+aaaaaabCCDCErrrFFrGxHCDDDbaaaaaa
+aaaaaaaaaaabkIJJJJJkbaaaaaaaaaaa
+aaaaaaaKLLLMojooooooMLLLNaaaaaaa
+aaaaaKijjjjOOOOPPOOOOjjjjlNaaaaa
+aaaKijjjjjjOOOOPPOOOOjjjjjjlNaaa
+aKijjjjjjjjOOOOPPOOOOjjjjjjjjlNa
+--- legend ---
+a = fg:panel_bg bg:panel_bg
+b = fg:portrait_outline bg:panel_bg
+c = fg:portrait_outline bg:plume_red
+d = fg:plume_red bg:plume_red
+e = fg:portrait_outline bg:portrait_outline
+f = fg:portrait_outline bg:armor_steel
+g = fg:portrait_outline bg:armor_steel_light
+h = fg:armor_steel bg:armor_steel_light
+i = fg:armor_steel_light bg:armor_steel
+j = fg:armor_steel bg:armor_steel
+k = fg:portrait_outline bg:armor_steel_dark
+l = fg:armor_steel_dark bg:armor_steel
+m = fg:armor_steel bg:armor_steel_dark
+n = fg:armor_steel_light bg:armor_steel_light
+o = fg:armor_steel_dark bg:armor_steel_dark
+p = fg:armor_steel_dark bg:skin_tan_mid
+q = fg:skin_tan bg:brow_dark
+r = fg:skin_tan bg:skin_tan
+s = fg:skin_tan_mid bg:brow_dark
+t = fg:portrait_outline bg:eye_white
+u = fg:portrait_outline bg:eye_green
+v = fg:armor_steel bg:skin_tan_highlight
+w = fg:armor_steel bg:skin_tan
+x = fg:skin_tan_mid bg:skin_tan_mid
+y = fg:skin_tan_highlight bg:skin_tan_highlight
+z = fg:skin_tan_highlight bg:skin_tan
+A = fg:skin_tan bg:skin_tan_shadow
+B = fg:skin_tan bg:mouth_dark
+C = fg:armor_steel bg:portrait_outline
+D = fg:armor_steel_dark bg:portrait_outline
+E = fg:skin_tan bg:portrait_outline
+F = fg:skin_tan_shadow bg:skin_tan
+G = fg:skin_tan bg:skin_tan_mid
+H = fg:skin_tan_mid bg:portrait_outline
+I = fg:skin_tan bg:armor_steel
+J = fg:skin_tan_mid bg:armor_steel_dark
+K = fg:armor_steel_light bg:panel_bg
+L = fg:armor_steel bg:panel_bg
+M = fg:portrait_outline bg:cloth_red
+N = fg:armor_steel_dark bg:panel_bg
+O = fg:cloth_red bg:cloth_red
+P = fg:cloth_red_dark bg:cloth_red_dark

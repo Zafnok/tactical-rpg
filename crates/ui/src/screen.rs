@@ -113,7 +113,7 @@ pub struct Ctx {
     /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
     /// the platform implementation with [`Ctx::with_storage`].
     pub storage: Box<dyn Storage>,
-    /// Whether debug tools are offered: the glyph sampler key and the title
+    /// Whether debug tools are offered: the debug menu key and the title
     /// screen's Quick Battle. On in debug builds and with the `debug-tools`
     /// feature (the Pages build, ADR-0023); the test harness turns it on
     /// everywhere so tests don't depend on the build profile.

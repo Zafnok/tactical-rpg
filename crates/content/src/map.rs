@@ -385,7 +385,7 @@ pub fn check_features(
 
 /// 1-based line and column of legend entry `c` in the header lines: the
 /// quoted character if found, else the terrain id string, else the start.
-fn legend_position(header: &[&str], c: char, id: &str) -> (u32, u32) {
+pub(crate) fn legend_position(header: &[&str], c: char, id: &str) -> (u32, u32) {
     let needles = [format!("'{c}'"), format!("\"{id}\"")];
     for needle in &needles {
         for (i, line) in header.iter().enumerate() {
@@ -398,12 +398,12 @@ fn legend_position(header: &[&str], c: char, id: &str) -> (u32, u32) {
 }
 
 /// 1-based line number of 0-based line index `i`.
-fn line_number(i: usize) -> u32 {
+pub(crate) fn line_number(i: usize) -> u32 {
     u32::try_from(i + 1).unwrap_or(u32::MAX)
 }
 
 /// 1-based column number of 0-based char index `i`.
-fn column_number(i: usize) -> u32 {
+pub(crate) fn column_number(i: usize) -> u32 {
     u32::try_from(i + 1).unwrap_or(u32::MAX)
 }
 

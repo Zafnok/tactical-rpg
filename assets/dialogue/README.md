@@ -67,9 +67,9 @@ The validator reports every broken rule, with the file and line:
 - **Two portraits at most**: one left, one right. A character can't stand on
   both sides at once.
 - **Speakers must be on screen.** Narration needs nobody.
-- **Expressions**: `neutral`, `happy`, `angry`, `sad`, `surprised` (every
-  portrait has these five; once portraits exist a script may also use the
-  extra expressions a character's portrait has).
+- **Expressions**: a character with a portrait (`assets/portraits/`) may use
+  exactly its portrait's expressions; one without may use `neutral`, `happy`,
+  `angry`, `sad`, `surprised` (the five every portrait has).
 - **Length**: a speech or narration line, continuation lines included, is
   at most **200 characters** (the text box is 3 lines of about 70).
 - **Plain ASCII text.** Use `'` and `"`, not curly quotes; `...` not `…`;

@@ -17,6 +17,7 @@ pub use parse::{ParsedScene, parse_dlg};
 use crate::bundle;
 use crate::character::CharacterTable;
 use crate::error::ContentError;
+use crate::portrait::PortraitTable;
 
 /// Directory of dialogue files inside the asset bundle.
 pub const DIALOGUE_DIR: &str = "dialogue";
@@ -25,8 +26,9 @@ pub const DIALOGUE_EXTENSION: &str = ".dlg";
 /// Longest text of one speech or narration line, in characters (two text
 /// boxes of about 3 × 70; ADR-0011).
 pub const MAX_TEXT_LEN: usize = 200;
-/// The expressions every portrait has. Until portraits exist (ticket 0703)
-/// these are the only expressions a script may use.
+/// The expressions every portrait has: the ones a script may use for a
+/// character without a portrait. A character with one may use exactly its
+/// portrait's expressions.
 pub const STANDARD_EXPRESSIONS: [&str; 5] = ["neutral", "happy", "angry", "sad", "surprised"];
 
 /// A side of the dialogue screen, where one portrait stands.
@@ -131,15 +133,19 @@ impl DialogueTable {
 }
 
 /// Loads and validates every `*.dlg` file in the bundle. Character ids are
-/// checked against `characters` when given (skipped if the character file
-/// failed to load). Reports every error of every file.
-pub fn load(characters: Option<&CharacterTable>) -> Result<DialogueTable, Vec<ContentError>> {
+/// checked against `characters`, and expressions against the characters'
+/// `portraits`, when given (each is skipped if its files failed to load).
+/// Reports every error of every file.
+pub fn load(
+    characters: Option<&CharacterTable>,
+    portraits: Option<&PortraitTable>,
+) -> Result<DialogueTable, Vec<ContentError>> {
     let files: Vec<(String, Option<&str>)> = bundle::files_in(DIALOGUE_DIR)
         .into_iter()
         .filter(|path| path.ends_with(DIALOGUE_EXTENSION))
         .map(|path| (bundle::display_path(path), bundle::file(path)))
         .collect();
-    load_files(&files, characters)
+    load_files(&files, characters, portraits)
 }
 
 /// Like [`from_sources`], for files given as `(file name, source)` where a
@@ -147,6 +153,7 @@ pub fn load(characters: Option<&CharacterTable>) -> Result<DialogueTable, Vec<Co
 fn load_files(
     files: &[(String, Option<&str>)],
     characters: Option<&CharacterTable>,
+    portraits: Option<&PortraitTable>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut sources = Vec::new();
     let mut errors = Vec::new();
@@ -156,7 +163,7 @@ fn load_files(
             None => errors.push(ContentError::new(file, "file is not valid UTF-8")),
         }
     }
-    match from_sources(&sources, characters) {
+    match from_sources(&sources, characters, portraits) {
         Ok(table) if errors.is_empty() => Ok(table),
         Ok(_) => Err(errors),
         Err(e) => {
@@ -171,6 +178,7 @@ fn load_files(
 pub fn from_sources<F: AsRef<str>>(
     files: &[(F, &str)],
     characters: Option<&CharacterTable>,
+    portraits: Option<&PortraitTable>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut scenes = Vec::new();
     let mut errors = Vec::new();
@@ -180,7 +188,7 @@ pub fn from_sources<F: AsRef<str>>(
         scenes.extend(parsed);
     }
     for s in &scenes {
-        errors.extend(check_scene(s, characters));
+        errors.extend(check_scene(s, characters, portraits));
     }
     errors.extend(check_duplicates(&scenes));
     if errors.is_empty() {

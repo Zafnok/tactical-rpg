@@ -4,7 +4,7 @@
 
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
-use crate::debug::GlyphSamplerScreen;
+use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::{Action, Chord, InputState, Key, Layout};
 use crate::screen::{Ctx, FrameInput, Screen, ScreenStack};
@@ -120,12 +120,14 @@ impl Game {
             .into_iter()
             .filter(|&a| self.input.is_held(a))
             .collect();
-        let opens_sampler = self.ctx.debug_tools
+        let opens_debug_menu = self.ctx.debug_tools
             && actions.contains(&Action::Debug)
-            && self.stack.top_name() != Some(GlyphSamplerScreen::NAME);
-        if opens_sampler {
-            self.stack
-                .push(Box::new(GlyphSamplerScreen::new(&self.ctx)));
+            && !self
+                .stack
+                .top_name()
+                .is_some_and(|n| debug::SCREENS.contains(&n));
+        if opens_debug_menu {
+            self.stack.push(Box::new(DebugMenuScreen::new()));
         } else {
             let input = FrameInput::new(actions, dt, held);
             self.quit = self.stack.update(&mut self.ctx, &input);
@@ -294,12 +296,24 @@ mod tests {
     }
 
     #[test]
-    fn debug_key_opens_the_sampler_once() {
+    fn debug_key_opens_the_debug_menu_once() {
         let mut game = Game::start(ctx()).with_debug_screens(true);
         tap(&mut game, Key::F12);
-        assert_eq!(game.screens(), ["title", "glyph_sampler"]);
+        assert_eq!(game.screens(), ["title", "debug_menu"]);
         tap(&mut game, Key::F12);
-        assert_eq!(game.screens(), ["title", "glyph_sampler"]);
+        assert_eq!(game.screens(), ["title", "debug_menu"]);
+        // Not over a debug tool either.
+        tap(&mut game, Key::F);
+        assert_eq!(game.screens(), ["title", "debug_menu", "glyph_sampler"]);
+        tap(&mut game, Key::F12);
+        assert_eq!(game.screens(), ["title", "debug_menu", "glyph_sampler"]);
+        tap(&mut game, Key::D);
+        tap(&mut game, Key::Down);
+        tap(&mut game, Key::F);
+        assert_eq!(game.screens(), ["title", "debug_menu", "portrait_viewer"]);
+        tap(&mut game, Key::F12);
+        assert_eq!(game.screens(), ["title", "debug_menu", "portrait_viewer"]);
+        tap(&mut game, Key::D);
         tap(&mut game, Key::D);
         assert_eq!(game.screens(), ["title"]);
     }

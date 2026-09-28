@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0205", "0302"]
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0703 — Portrait format, loader, renderer, viewer
@@ -64,9 +64,9 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
 
 ## Acceptance criteria
 
-- [ ] Spec documented; placeholders load; all-assets test passes.
-- [ ] Validator errors tested.
-- [ ] Viewer works; screenshot in PR.
+- [x] Spec documented; placeholders load; all-assets test passes.
+- [x] Validator errors tested.
+- [x] Viewer works; screenshot in PR.
 
 ## Tests required
 
@@ -75,3 +75,32 @@ a debug portrait viewer screen (F12 menu), two placeholder portraits.
 
 ## Completion notes
 
+- **Format** as planned, spec in `assets/portraits/README.md`; parser and
+  validator in `trpg_content::portrait` (every error has file:line[:col]),
+  loaded into `Content::portraits` and covered by the all-assets test. Also
+  checked: the `character` must match the file name. Size must be exactly
+  (32, 32). Extra expressions beyond the five required are allowed.
+- **Drawing:** `trpg_ui::portrait::draw_portrait(buf, palette, (x, y),
+  portrait, expr, dim, mirror)`. It also takes the palette (colour names →
+  RGB). Transparent pixels show the background already in the buffer, and
+  dimming lerps each cell toward its own background.
+- **F12 now opens a small debug menu** (Glyph sampler, Portraits) instead of
+  going straight to the glyph sampler. Screenshot:
+  `docs/screenshots/0703-portrait-viewer.png`.
+- **Deviations:**
+  - The viewer uses the cursor actions, not literal `h/l` and `j/k`: since
+    ADR-0015 the layouts bind them to arrows or `wasd`. The help line names
+    the real keys.
+  - Step 3: 0702 (dialogue) merged while this PR was open, and it left the
+    cross-check to 0703. It's done here: a character with a portrait may use
+    exactly its portrait's expressions in `.dlg` scripts. A character
+    without one keeps the five standard ones.
+  - The glyph sampler no longer lists colours that only portraits use. With
+    29 new portrait colours the palette no longer fits on one screen, and
+    0706 will add more. The portrait viewer shows those colours in use.
+  - The `typos` config allows `iy`, a run of snapshot colour keys.
+- **Palette:** 29 portrait colours added to `palette.ron` (skin, hair, eyes,
+  mouth, steel, cloth, outline…), all tunable.
+- **Placeholders** `test_lord` (brown hair, blue tunic) and `test_knight`
+  (helmet with plume, red tabard) are marked PLACEHOLDER in their files.
+- Gameplay rules decided: none.

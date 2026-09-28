@@ -9,10 +9,16 @@ use super::parse::ParsedScene;
 use super::{MAX_TEXT_LEN, STANDARD_EXPRESSIONS, Side, Step};
 use crate::character::CharacterTable;
 use crate::error::ContentError;
+use crate::portrait::PortraitTable;
 
 /// Checks one scene, replaying it to know who is on screen at each line.
-/// Character ids are checked against `characters` when given.
-pub fn check_scene(parsed: &ParsedScene, characters: Option<&CharacterTable>) -> Vec<ContentError> {
+/// Character ids are checked against `characters`, and expressions against
+/// `portraits`, when given.
+pub fn check_scene(
+    parsed: &ParsedScene,
+    characters: Option<&CharacterTable>,
+    portraits: Option<&PortraitTable>,
+) -> Vec<ContentError> {
     let mut errors = Vec::new();
     let mut err = |line: u32, message: String| {
         errors.push(ContentError::new(&parsed.file, message).at(line, None));
@@ -42,7 +48,7 @@ pub fn check_scene(parsed: &ParsedScene, characters: Option<&CharacterTable>) ->
                 if !known(character) {
                     err(line, format!("unknown character \"{}\"", character.0));
                 }
-                if let Some(message) = expression_problem(expression) {
+                if let Some(message) = expression_problem(character, expression, portraits) {
                     err(line, message);
                 }
                 if screen[slot(side.other())] == Some(character) {
@@ -74,7 +80,10 @@ pub fn check_scene(parsed: &ParsedScene, characters: Option<&CharacterTable>) ->
                         ),
                     );
                 }
-                if let Some(message) = expression.as_deref().and_then(expression_problem) {
+                let problem = expression
+                    .as_deref()
+                    .and_then(|e| expression_problem(speaker, e, portraits));
+                if let Some(message) = problem {
                     err(line, message);
                 }
             }
@@ -90,9 +99,28 @@ pub fn check_scene(parsed: &ParsedScene, characters: Option<&CharacterTable>) ->
     errors
 }
 
-/// What is wrong with `expression`, if anything. Until portraits exist
-/// (ticket 0703) only the [`STANDARD_EXPRESSIONS`] are allowed.
-fn expression_problem(expression: &str) -> Option<String> {
+/// What is wrong with `character` showing `expression`, if anything: it
+/// must be one of the character's portrait's expressions when `portraits`
+/// has one, else one of the [`STANDARD_EXPRESSIONS`].
+fn expression_problem(
+    character: &CharacterId,
+    expression: &str,
+    portraits: Option<&PortraitTable>,
+) -> Option<String> {
+    if let Some(portrait) = portraits.and_then(|p| p.get(&character.0)) {
+        return portrait.expression(expression).is_none().then(|| {
+            let names: Vec<&str> = portrait
+                .expressions
+                .iter()
+                .map(|e| e.name.as_str())
+                .collect();
+            format!(
+                "\"{}\"'s portrait has no expression \"{expression}\"; use one of {}",
+                character.0,
+                names.join(", ")
+            )
+        });
+    }
     (!STANDARD_EXPRESSIONS.contains(&expression)).then(|| {
         format!(
             "unknown expression \"{expression}\"; use one of {}",

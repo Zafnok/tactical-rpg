@@ -1,13 +1,100 @@
-//! Debug screens. The glyph sampler shows every font glyph and palette
-//! colour, for judging the look (ticket 0011).
+//! Debug screens (F12 in debug builds): a menu of tools. The glyph sampler
+//! shows every font glyph and palette colour, for judging the look (ticket
+//! 0011); the portrait viewer shows every portrait (ticket 0703).
+
+mod portrait_viewer;
+
+pub use portrait_viewer::PortraitViewerScreen;
 
 use crate::color::{Palette, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
+use crate::screens::{centre_x, print_centred};
+use crate::widgets::help::{cursor_keys_name, help_line, key_name};
+use crate::widgets::{Menu, MenuEvent, MenuItem};
+use trpg_content::palette::REQUIRED_COLORS;
 
-/// The [`glyph_sampler`] as a screen (F12 in debug builds); Cancel closes it.
+/// Names of every debug screen: the debug key does nothing while one is on
+/// top.
+pub const SCREENS: [&str; 3] = [
+    DebugMenuScreen::NAME,
+    GlyphSamplerScreen::NAME,
+    PortraitViewerScreen::NAME,
+];
+
+/// The debug tools, in menu order.
+const TOOLS: [&str; 2] = ["Glyph sampler", "Portraits"];
+/// Row of the debug menu's title.
+const MENU_TITLE_ROW: i32 = 9;
+
+/// The debug menu the debug key opens; Cancel closes it.
+#[derive(Debug, Clone)]
+pub struct DebugMenuScreen {
+    menu: Menu,
+}
+
+impl DebugMenuScreen {
+    /// Name reported by [`Screen::name`].
+    pub const NAME: &'static str = "debug_menu";
+
+    /// The menu with its first tool focused.
+    pub fn new() -> Self {
+        Self {
+            menu: Menu::new(TOOLS.iter().map(|&t| MenuItem::new(t)).collect()),
+        }
+    }
+}
+
+impl Default for DebugMenuScreen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Screen for DebugMenuScreen {
+    fn name(&self) -> &'static str {
+        Self::NAME
+    }
+
+    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        for &action in &input.actions {
+            match self.menu.handle(action) {
+                Some(MenuEvent::Cancelled) => return Transition::Pop,
+                Some(MenuEvent::Chosen(0)) => {
+                    return Transition::Push(Box::new(GlyphSamplerScreen::new(ctx)));
+                }
+                Some(MenuEvent::Chosen(_)) => {
+                    return Transition::Push(Box::new(PortraitViewerScreen::new()));
+                }
+                None => {}
+            }
+        }
+        Transition::None
+    }
+
+    fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let c = |u| ctx.palette.get(u);
+        let black = c(UiColor::Black);
+        buf.fill_rect(buf.bounds(), Cell::new(' ', c(UiColor::Text), black));
+        let hi = c(UiColor::TextHighlight);
+        print_centred(buf, MENU_TITLE_ROW, "Debug tools", hi, black);
+        let (w, _) = self.menu.size();
+        let x = centre_x(buf, usize::try_from(w).unwrap_or(0));
+        self.menu.draw(&ctx.palette, buf, x, MENU_TITLE_ROW + 2);
+        let km = &ctx.keymap;
+        let help = help_line(&[
+            (cursor_keys_name(km), "move"),
+            (key_name(km, Action::Confirm), "open"),
+            (key_name(km, Action::Cancel), "back"),
+        ]);
+        let bottom = i32::from(buf.height()) - 1;
+        print_centred(buf, bottom, &help, c(UiColor::TextDim), black);
+    }
+}
+
+/// The [`glyph_sampler`] as a screen; Cancel closes it.
 #[derive(Debug, Clone)]
 pub struct GlyphSamplerScreen {
     /// Drawn once on creation; the sampler never changes.
@@ -18,13 +105,32 @@ impl GlyphSamplerScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "glyph_sampler";
 
-    /// The sampler for the font and palette in `ctx`.
+    /// The sampler for the font and palette in `ctx`, without the portrait
+    /// colours ([`sampler_palette`]).
     pub fn new(ctx: &Ctx) -> Self {
         let glyphs: Vec<char> = ctx.content.font.glyphs.keys().copied().collect();
         Self {
-            sampler: glyph_sampler(&ctx.palette, &glyphs),
+            sampler: glyph_sampler(&sampler_palette(ctx), &glyphs),
         }
     }
+}
+
+/// The palette the sampler shows: every colour except those portraits use
+/// (there are too many to fit, and the portrait viewer shows them in
+/// context). UI colours always stay.
+pub fn sampler_palette(ctx: &Ctx) -> Palette {
+    let content = &ctx.content;
+    let portrait_only = |name: &str| {
+        !REQUIRED_COLORS.contains(&name)
+            && content
+                .portraits
+                .values()
+                .any(|p| p.colors.values().any(|c| c == name))
+    };
+    let mut def = content.palette.clone();
+    def.colors.retain(|name, _| !portrait_only(name));
+    // The UI colours are kept, so this can't fail.
+    Palette::new(&def).unwrap_or_else(|_| ctx.palette.clone())
 }
 
 impl Screen for GlyphSamplerScreen {
@@ -179,9 +285,34 @@ mod tests {
         FontAtlasDef::load().unwrap().glyphs.into_keys().collect()
     }
 
+    /// The palette the sampler screen shows.
+    fn sampler_colours() -> Palette {
+        sampler_palette(&crate::screen::tests::ctx())
+    }
+
+    #[test]
+    fn sampler_leaves_out_portrait_colours_only() {
+        let all = game_palette();
+        let shown = sampler_colours();
+        assert_eq!(shown.lookup("skin_light"), None);
+        assert_eq!(shown.lookup("grass"), all.lookup("grass"));
+        for c in UiColor::ALL {
+            assert_eq!(shown.get(*c), all.get(*c));
+        }
+        // A UI colour a portrait uses stays.
+        let mut ctx = crate::screen::tests::ctx();
+        if let Some(p) = ctx.content.portraits.values_mut().next() {
+            p.colors.insert('Z', "cursor".to_owned());
+        }
+        assert!(sampler_palette(&ctx).lookup("cursor").is_some());
+        // Without portraits, nothing is left out.
+        ctx.content.portraits.clear();
+        assert_eq!(sampler_palette(&ctx), all);
+    }
+
     #[test]
     fn sampler_shows_every_glyph_and_colour() {
-        let p = game_palette();
+        let p = sampler_colours();
         let glyphs = atlas_glyphs();
         let b = glyph_sampler(&p, &glyphs);
         assert_eq!((b.width(), b.height()), (CONSOLE_W, CONSOLE_H));
@@ -218,7 +349,7 @@ mod tests {
 
     #[test]
     fn demo_panels_fit_below_the_embedded_palette() {
-        let p = game_palette();
+        let p = sampler_colours();
         let glyphs = atlas_glyphs();
         assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 4);
     }
@@ -235,7 +366,7 @@ mod tests {
             Cell::new('x', p.get(UiColor::Text), p.get(UiColor::Black)),
         );
         screen.draw(&ctx, &mut buf);
-        assert_eq!(buf, glyph_sampler(p, &atlas_glyphs()));
+        assert_eq!(buf, glyph_sampler(&sampler_palette(&ctx), &atlas_glyphs()));
         let frame = |a: &[Action]| FrameInput::new(a.to_vec(), 0.0, vec![]);
         let stay = screen.update(&mut ctx, &frame(&[Action::Confirm]));
         assert!(matches!(stay, Transition::None));
@@ -244,8 +375,46 @@ mod tests {
     }
 
     #[test]
+    fn debug_menu_opens_each_tool() {
+        use Action::{Cancel, Confirm, CursorDown, CursorUp};
+        let mut ctx = crate::screen::tests::ctx();
+        let mut menu = DebugMenuScreen::default();
+        assert_eq!(menu.name(), "debug_menu");
+        let mut outcome = |m: &mut DebugMenuScreen, a: &[Action]| {
+            format!(
+                "{:?}",
+                m.update(&mut ctx, &FrameInput::new(a.to_vec(), 0.0, vec![]))
+            )
+        };
+        assert_eq!(outcome(&mut menu, &[CursorUp]), "None");
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(glyph_sampler)"
+        );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(portrait_viewer)"
+        );
+        assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
+        assert_eq!(SCREENS, ["debug_menu", "glyph_sampler", "portrait_viewer"]);
+    }
+
+    #[test]
+    fn debug_menu_snapshot() {
+        let ctx = crate::screen::tests::ctx();
+        let p = &ctx.palette;
+        let mut buf = GlyphBuffer::new(
+            CONSOLE_W,
+            CONSOLE_H,
+            Cell::new('x', p.get(UiColor::Text), p.get(UiColor::PanelBg)),
+        );
+        DebugMenuScreen::new().draw(&ctx, &mut buf);
+        assert_snapshot!(buf.to_snapshot(p));
+    }
+
+    #[test]
     fn sampler_snapshot() {
-        let p = game_palette();
+        let p = sampler_colours();
         let snap = glyph_sampler(&p, &atlas_glyphs()).to_snapshot(&p);
         assert_snapshot!(snap);
     }
