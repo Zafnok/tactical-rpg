@@ -85,8 +85,7 @@
 //!   anyone falls. See [`crate::item`] for the formula; a Combat Art
 //!   doubles its user's base.
 //! - **Items** ([`UnitAction::UseItem`]): a player unit uses a consumable
-//!   from the shared [`BattlePack`]; other factions use their own
-//!   ([`Unit::consumables`]). The target is the unit itself or a non-hostile
+//!   from the shared [`BattlePack`]. The target is the unit itself or a non-hostile
 //!   unit adjacent to `dest`. The item is used up ([`Event::ItemUsed`]),
 //!   heals ([`Event::Healed`], never above max HP) and ends the action.
 //! - **Shops** ([`UnitAction::Shop`]): a player unit on a shop tile applies
@@ -462,8 +461,7 @@ pub enum UnitAction {
     },
     /// Use a consumable on `target` (the unit itself or an adjacent ally).
     UseItem {
-        /// Index in the battle pack (player units) or the unit's own
-        /// consumables (other factions).
+        /// Index in the battle pack.
         pack_index: usize,
         /// Who it is used on.
         target: UnitId,
@@ -980,7 +978,7 @@ pub enum CommandError {
         /// The weapon.
         item: ItemId,
     },
-    /// No item at this index of the pack (or the unit's consumables).
+    /// No item at this index of the pack.
     NoItem {
         /// The unit.
         unit: UnitId,
@@ -1003,7 +1001,7 @@ pub enum CommandError {
     /// Seizing isn't possible: not a seize map, not the seize tile, not a
     /// player unit, or not a lord when the map needs one.
     CannotSeize,
-    /// Only player units can shop or open chests.
+    /// Only player units can shop, open chests or use items.
     PlayerOnly(UnitId),
     /// There is no shop on this tile.
     NoShop(Pos),
@@ -2061,12 +2059,10 @@ impl BattleState {
         index: usize,
         target: UnitId,
     ) -> Result<Step, CommandError> {
-        let items = if unit.faction == Faction::Player {
-            &self.pack.items
-        } else {
-            &unit.consumables
-        };
-        let item = items.get(index).ok_or(CommandError::NoItem {
+        if unit.faction != Faction::Player {
+            return Err(CommandError::PlayerOnly(unit.id));
+        }
+        let item = self.pack.items.get(index).ok_or(CommandError::NoItem {
             unit: unit.id,
             index,
         })?;
@@ -2462,14 +2458,7 @@ impl BattleState {
         target: UnitId,
         events: &mut Vec<Event>,
     ) {
-        let Some(user) = self.unit_mut(id) else {
-            return;
-        };
-        if user.faction == Faction::Player {
-            self.pack.items.remove(index);
-        } else {
-            user.consumables.remove(index);
-        }
+        self.pack.items.remove(index);
         events.push(Event::ItemUsed {
             unit: id,
             item,

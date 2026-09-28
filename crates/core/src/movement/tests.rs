@@ -96,7 +96,6 @@ fn unit(id: u32, class: &str, faction: Faction, pos: Pos, mov: StatValue) -> Uni
         map_label: format!("u{id}"),
         weapon_exp: BTreeMap::new(),
         loadout: crate::item::Loadout::default(),
-        consumables: vec![],
         personal_spells: vec![],
         learned: std::collections::BTreeSet::new(),
         spells: crate::spell::SpellState::default(),
