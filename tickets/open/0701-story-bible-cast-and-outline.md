@@ -5,7 +5,7 @@ type: content
 milestone: M6 Story & dialogue
 model: fable-5.1
 effort: high
-status: todo
+status: in-progress
 blocked_by: ["0004", "0007", "0008"]
 nick_input: sign-off
 completed:
