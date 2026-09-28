@@ -1572,7 +1572,8 @@ impl BattleState {
         self.objective
     }
 
-    /// Rewind charges the battle started with.
+    /// Rewind charges the battle started with (the charges left are
+    /// [`BattleHistory::charges_left`](crate::BattleHistory::charges_left)).
     pub fn rewind_charges(&self) -> u8 {
         self.rewind_charges
     }
@@ -2634,4 +2635,4 @@ use arts::{ArtUse, check_arts_allowed};
 use skills::{ActiveUse, AttackPlan, Fight, SkillStep};
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

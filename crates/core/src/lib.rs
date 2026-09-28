@@ -5,6 +5,7 @@ pub mod battle;
 pub mod class;
 pub mod combat;
 pub mod geom;
+pub mod history;
 pub mod item;
 pub mod magic;
 pub mod map;
@@ -34,6 +35,7 @@ pub use combat::{
     if_all_hit, resolve, roll_hit, strike_order,
 };
 pub use geom::{Dir, Grid, GridSizeError, Pos};
+pub use history::{BattleHistory, Replayed, RewindError};
 pub use item::{
     AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, Equipped, ItemDef,
     ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef,
