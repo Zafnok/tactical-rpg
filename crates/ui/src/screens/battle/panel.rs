@@ -49,8 +49,15 @@ fn line(buf: &mut GlyphBuffer, y: i32, text: &str, fg: Rgb) {
     buf.print(TEXT_X, y, &cut, fg, bg);
 }
 
-/// Draws the terrain and unit under `pos` into the (already cleared) panel.
-pub fn draw_hover(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, pos: Pos) {
+/// Draws the terrain of `pos` and `unit` (the unit shown there, if any) into
+/// the (already cleared) panel.
+pub fn draw_hover(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    state: &BattleState,
+    pos: Pos,
+    unit: Option<&Unit>,
+) {
     let c = |u| palette.get(u);
     if let Some(t) = state
         .map()
@@ -66,7 +73,7 @@ pub fn draw_hover(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState,
             line(buf, TERRAIN_ROW + 2, &heal, c(UiColor::Text));
         }
     }
-    if let Some(unit) = state.units().iter().find(|u| u.pos == pos) {
+    if let Some(unit) = unit {
         draw_unit(buf, palette, state, unit);
     }
 }

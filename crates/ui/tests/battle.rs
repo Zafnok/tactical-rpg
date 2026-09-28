@@ -27,7 +27,8 @@ fn quick_battle_renders() {
 #[test]
 fn back_returns_to_the_title() {
     let mut h = quick_battle();
-    h.keys("f Up");
+    // With the lord selected, back only drops the selection.
+    h.keys("f Up d");
     assert_eq!(h.top_screen(), "battle");
     h.keys("d");
     assert_eq!(h.screens(), ["title"]);
@@ -103,4 +104,101 @@ fn next_unit_jumps_between_ready_units() {
     assert_eq!(panel(&h)[4], "Test Lord");
     h.keys("a");
     assert_eq!(panel(&h)[4], "Test Archer");
+}
+
+/// The two glyphs drawn on the tile whose left cell is `(x, y)`.
+fn tile(h: &Harness, x: i32, y: i32) -> String {
+    let buf = h.game().buffer();
+    (x..x + 2)
+        .map(|x| buf.get(x, y).map_or(' ', |c| c.glyph))
+        .collect()
+}
+
+/// The key-help line.
+fn help(h: &Harness) -> String {
+    let buf = h.game().buffer();
+    (0..100)
+        .map(|x| buf.get(x, 31).map_or(' ', |c| c.glyph))
+        .collect::<String>()
+        .trim()
+        .to_owned()
+}
+
+/// The lord (at (3, 5), cells 26..28 of row 16) selected, the path steered
+/// two tiles right onto the fort at (5, 5) (cells 30..32).
+fn lord_path() -> Harness {
+    let mut h = quick_battle();
+    h.keys("f Right Right");
+    h
+}
+
+/// The lord selected: blue move and red attack ranges, the path from the
+/// lord's tile edge to an arrowhead on the fort, no cursor frame there,
+/// a double-line panel border.
+#[test]
+fn selected_unit_with_ranges_and_path_snapshot() {
+    let h = lord_path();
+    assert_eq!(help(&h), "arrows move · f move here · d cancel");
+    assert_snapshot!(h.snapshot());
+}
+
+/// The lord walked to the fort, its action menu open beside it.
+#[test]
+fn action_menu_snapshot() {
+    let mut h = lord_path();
+    h.keys("f").wait(0.5);
+    assert_eq!(help(&h), "arrows choose · f confirm · d back");
+    assert_snapshot!(h.snapshot());
+}
+
+#[test]
+fn select_move_and_wait_dims_the_unit_and_lowercases_its_label() {
+    let mut h = lord_path();
+    h.keys("f").wait(0.5).keys("f");
+    // The lord stands on the fort, x + 2, lowercase: it has acted.
+    assert_eq!(tile(&h, 30, 16), "lo");
+    assert_eq!(tile(&h, 26, 16), "..");
+    assert_eq!(panel(&h)[4], "Test Lord");
+    // Browsing again, on a unit that can't act.
+    assert_eq!(help(&h), "arrows move · e info · s next unit · d back");
+    // It is no longer selectable.
+    h.keys("f");
+    assert_eq!(help(&h), "arrows move · e info · s next unit · d back");
+}
+
+#[test]
+fn cancelling_the_menu_then_the_selection_restores_the_unit() {
+    let mut h = quick_battle();
+    let before = h.snapshot();
+    h.keys("f Right Right f").wait(0.5);
+    assert_eq!(tile(&h, 30, 16), "Lo");
+    // Back to the steered path: the lord back on its tile.
+    h.keys("d");
+    assert_eq!(tile(&h, 26, 16), "Lo");
+    assert_eq!(tile(&h, 30, 16), "[]");
+    assert_eq!(help(&h), "arrows move · f move here · d cancel");
+    // Back to browsing, the cursor on the lord (its pulse restarted, as
+    // when the battle opened): the screen exactly as it was.
+    h.keys("d");
+    assert_eq!(cursor_x(&h, 16), Some(26));
+    assert_eq!(help(&h), "f select · e info · s next unit · d back");
+    assert_eq!(h.snapshot(), before);
+}
+
+#[test]
+fn confirm_on_an_enemy_toggles_its_range() {
+    let mut h = quick_battle();
+    // To the brigand at (8, 2): cells 36..38, row 13.
+    h.keys("Right Right Right Right Right Up Up Up");
+    assert_eq!(panel(&h)[4], "Brigand");
+    let bg = |h: &Harness| h.game().buffer().get(36, 18).map(|c| c.bg);
+    let plain = bg(&h);
+    h.keys("f");
+    assert_ne!(bg(&h), plain, "(8, 7) is in its range");
+    assert!(help(&h).ends_with("d hide range"), "{}", help(&h));
+    h.keys("f");
+    assert_eq!(bg(&h), plain);
+    h.keys("f d");
+    assert_eq!(bg(&h), plain);
+    assert_eq!(h.top_screen(), "battle");
 }

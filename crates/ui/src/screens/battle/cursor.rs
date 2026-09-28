@@ -164,7 +164,7 @@ fn corner_arms(x: i32, y: i32, arm: i32) -> [Rect; 8] {
 }
 
 /// `cells` in console pixels.
-fn px_rect(cells: Rect) -> Rect {
+pub(super) fn px_rect(cells: Rect) -> Rect {
     let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
     Rect::new(cells.x * cw, cells.y * ch, cells.w * cw, cells.h * ch)
 }

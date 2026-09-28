@@ -1753,6 +1753,14 @@ fn seize_wins_on_the_tile() {
         turn_limit: None,
     };
     let mut s = with_objective(cast(), seize(true));
+    // Only the lord, only on the tile; not an enemy, not a missing unit.
+    assert!(s.can_seize(UnitId(1), p(2, 1)));
+    assert!(!s.can_seize(UnitId(1), p(2, 0)));
+    assert!(!s.can_seize(UnitId(2), p(2, 1)));
+    assert!(!s.can_seize(UnitId(3), p(2, 1)));
+    assert!(!s.can_seize(UnitId(99), p(2, 1)));
+    let rout = with_objective(cast(), Objective::Rout { turn_limit: None });
+    assert!(!rout.can_seize(UnitId(1), p(2, 1)));
     act(&mut s, 2, p(1, 1), UnitAction::Wait);
     assert_eq!(s.outcome(), None);
     assert_eq!(
@@ -1772,6 +1780,7 @@ fn seize_wins_on_the_tile() {
     );
     // Any player unit may seize when the map doesn't need the lord.
     let mut s = with_objective(cast(), seize(false));
+    assert!(s.can_seize(UnitId(2), p(2, 1)));
     let events = act(&mut s, 2, p(2, 1), UnitAction::Seize);
     assert_eq!(events.last(), Some(&ended(Outcome::Victory)));
 }

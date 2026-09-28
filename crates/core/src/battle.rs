@@ -1587,6 +1587,14 @@ impl BattleState {
         self.pending_move
     }
 
+    /// Whether unit `id` may choose [`UnitAction::Seize`] after moving to
+    /// `dest` (the action menu offers it only then). Doesn't check that it
+    /// can reach `dest` or still act.
+    pub fn can_seize(&self, id: UnitId, dest: Pos) -> bool {
+        self.unit(id)
+            .is_some_and(|u| self.check_seize(u, dest).is_ok())
+    }
+
     /// Applies `cmd`: validates it, changes the state and returns what
     /// happened. On `Err` nothing changed.
     pub fn apply(&mut self, cmd: &Command) -> Result<Vec<Event>, CommandError> {

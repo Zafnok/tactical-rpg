@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0402", "0305"]
 nick_input: none
-completed:
+completed: 2026-09-27
 ---
 
 # 0403 — Select, move, action menu
@@ -73,10 +73,10 @@ map menu (0405).
 
 ## Acceptance criteria
 
-- [ ] Full loop works in Quick Battle: select, steer path, move, Wait, unit dims and its label turns lowercase.
-- [ ] Cancel from action menu restores the unit exactly (state unchanged — test).
-- [ ] Only valid destinations are accepted.
-- [ ] Harness integration tests and snapshots below pass.
+- [x] Full loop works in Quick Battle: select, steer path, move, Wait, unit dims and its label turns lowercase.
+- [x] Cancel from action menu restores the unit exactly (state unchanged — test).
+- [x] Only valid destinations are accepted.
+- [x] Harness integration tests and snapshots below pass.
 
 ## Tests required
 
@@ -85,4 +85,50 @@ map menu (0405).
 - Snapshot: selected unit with overlays and path arrow; action menu open.
 
 ## Completion notes
+- **Interaction state machine** (`crates/ui/src/screens/battle/mode.rs`):
+  `Mode::{Idle, Selected, Moving, ActionMenu, MoveAfter}` with pure
+  transitions `step(mode, action, cursor, &BattleState) -> (Mode, Effect)`
+  and `Mode::tick` for the walk. The screen owns the cursor and applies the
+  `Effect` (`Apply(Command)`, `Cursor`, `Leave`). The unit's position during
+  `Moving`/`ActionMenu` is a drawing override (`Mode::drawn_pos`); the
+  `BattleState` changes only when `Command::Act` is applied.
+- **Path arrow** (`path.rs`): `steer` (cut back / append / cheapest path /
+  unchanged if unreachable) with a property test that the path always passes
+  `path_cost` and ends on the cursor whenever the cursor is reachable.
+  Drawing: a 3-px `Under` line from the unit tile's edge, 6 stacked-rect `Over`
+  arrowhead on the destination, clipped to the map view.
+- **Cursor:** the corner marks (0416, ADR-0024) stay on the selected unit;
+  no cursor on the arrowhead's tile; hidden while walking and in the menu.
+  **Not done: the `►` `◄` arrows on the selected unit.** As whole glyphs
+  they would hide a neighbour's initial (the bug 0416 fixed), and the ticket
+  says to ask Nick first; that question is open in `look-and-feel.md`.
+- **Action menu** beside the unit (right, or left near the view edge; first
+  item level with the unit): `Attack` (disabled until 0404), `Seize` when
+  legal, `Wait`.
+- **Enemy threat area:** Confirm on any non-player unit toggles its red area;
+  Confirm again, on another enemy (switches), selecting a unit or Cancel
+  hides it. Help shows `f range` / `d hide range`.
+- **Move after attack:** when `BattleState::pending_move()` is set, the screen
+  enters `MoveAfter`: the tiles are tinted blue, Confirm on one sends
+  `Command::MoveAfter { to: Some(tile) }`, Confirm on the unit sends `to: None`
+  (stay), everything else is ignored. Tested with a real Vault attack.
+- **Side panel** border turns double-line while a unit is selected
+  (`look-and-feel.md`) and shows the unit where it is drawn.
+- **Core:** `BattleState::can_seize(unit, dest)` so the menu doesn't duplicate
+  the seize rule. **Content:** `path` joined the required palette colours (it
+  was already in `palette.ron`).
 
+Deviations:
+
+- Blue range covers every tile the unit can move *through* (including an
+  ally's tile), not only stoppable tiles, so an ally's tile never looks like
+  attack range. Only stoppable tiles are accepted as destinations.
+- "Hold Confirm = instant": holding Confirm skips the walk once held for
+  0.2 s (`HOLD_SKIP_S`), so the tap that starts the walk doesn't skip it; a
+  second press skips at once.
+- Ranges are hidden while walking and in the action menu.
+- The harness test uses `Right Right` (right-handed layout) where the ticket
+  said `l l` (written before the layouts ticket).
+- Ticket 0415 (Quick Battle starts fresh) landed first; this branch builds on it.
+
+No gameplay rules decided: every choice above is UI presentation.
