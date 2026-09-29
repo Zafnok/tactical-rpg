@@ -376,3 +376,13 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
         help(&h)
     );
 }
+
+#[test]
+fn tips_show_when_switched_on() {
+    let mut h = Harness::with_layout(Layout::RightHanded);
+    h.with_tips().keys("Down f");
+    assert!(shows(&h, "Your move"));
+    assert_eq!(help(&h), "f close");
+    h.keys("f");
+    assert!(!shows(&h, "Your move"));
+}

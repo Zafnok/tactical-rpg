@@ -207,6 +207,12 @@ impl Game {
         &self.ctx
     }
 
+    /// The shared context, to change settings mid-run (tests).
+    #[cfg(any(test, feature = "harness"))]
+    pub(crate) fn ctx_mut(&mut self) -> &mut Ctx {
+        &mut self.ctx
+    }
+
     /// Ends the game, handing back the shared context (and so its storage).
     pub fn into_ctx(self) -> Ctx {
         self.ctx

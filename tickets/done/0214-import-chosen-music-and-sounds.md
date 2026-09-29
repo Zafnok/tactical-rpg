@@ -5,10 +5,10 @@ type: content
 milestone: M1 Engine
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0212"]
 nick_input: setup
-completed:
+completed: 2026-09-29
 ---
 
 # 0214 — Import the chosen third-party music and sounds
@@ -113,16 +113,16 @@ sound's page (links in `audio.md`), click **Download**, and put the files in
 
 ## Acceptance criteria
 
-- [ ] Every cue in `audio.md`'s music and sound tables has a file and a
+- [x] Every cue in `audio.md`'s music and sound tables has a file and a
       credit, except the ones marked open.
-- [ ] Every credit has title, author, source URL, license, tags and a note.
-- [ ] `THIRD_PARTY_ASSETS.md` has a row for every work, with license files
+- [x] Every credit has title, author, source URL, license, tags and a note.
+- [x] `THIRD_PARTY_ASSETS.md` has a row for every work, with license files
       committed.
-- [ ] Loop versions and no-vocal versions used wherever the source offers
+- [x] Loop versions and no-vocal versions used wherever the source offers
       them (list which in the Completion notes).
-- [ ] Size report in the Completion notes.
-- [ ] Manifest validation and the cue-coverage test pass.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Size report in the Completion notes.
+- [x] Manifest validation and the cue-coverage test pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -131,4 +131,69 @@ sound's page (links in `audio.md`), click **Download**, and put the files in
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+**Done.** All 25 music tracks and 16 recorded sound files (17 recorded
+sound cues: `hit_axe` shares `hit_spear`'s file) are in `music/` and
+`assets/audio/sfx/`, each with a credit (title, author, link, license,
+tags, note) in `assets/audio/audio.ron` and a row in
+`THIRD_PARTY_ASSETS.md`. Every license was re-checked on its page on
+2026-09-29: all still CC0 or CC BY 4.0 as `audio.md` says (Battle
+Theme A's page lists several licenses; we take its CC0). The in-house
+cues (`menu_*`, `cursor_move`, `miss`, `heal`) are 0213's.
+
+**Licenses (Nick, on this ticket):** "idc which CC it is as long as I can
+freely use it (and redistribute)", and CC BY 3.0 is fine. ADR-0027 adds
+`CC-BY-3.0` to the allowed art/audio licenses (validator too). NC, ND and
+SA stay out (NC forbids selling; ND forbids our trims and loops; SA is
+copyleft). None of the chosen works turned out to be CC BY 3.0.
+
+**Versions used:**
+- Loop files: Squirrel Village `SV_loop.mp3` (not the head/tail files),
+  Father's Scabbard `Loop.wav` (not the intro). Hope and RPG - Battle
+  Theme are made to loop (the uncompressed WAV for the latter).
+- New Sunrise V1 (`New Sunrise.wav`) → `title`, V2 → `city_first_visit`;
+  Ending Scene's orchestral version; Battle Themes 1, 2, 3, 5 (not 4).
+- **Epic Endgame Cinematic has no instrumental version**; the only file
+  has the female vocals Nick heard on the audition page.
+- Hesitation: FMA's download button needs a login, so we use the MP3 its
+  player streams. freesound sounds: the public HQ previews (as planned).
+
+**Deviations:**
+- The originals (~430 MB) are **not committed**: `assets-src/audio/originals/`
+  is git-ignored, and `assets-src/audio/import.py` re-downloads them
+  (SHA-256 checked) and rebuilds every file (ADR-0027).
+- `step_foot` has three authors, so the manifest gained
+  `credit: Credits([...])` (ADR-0027), with tests.
+- Dark Quest (4:20) and Sigil (4:19) are a little over "about 4 minutes";
+  kept whole (cutting would break their loops). Each decodes to ~92 MB.
+- Release packages now include `THIRD_PARTY_ASSETS.md` and
+  `audio-licenses/` (CC0 and CC BY 4.0 legal code), the attribution
+  CC BY needs until the credits screen (0808).
+
+**Loudness** (ADR-0027): music −20 LUFS integrated, sounds −18 LUFS
+momentary max, linear gain, true peak ≤ −1 dBTP. Every track hit its
+target. Sounds kept below target by that peak ceiling: `step_mounted`
+−25.8, `hit_bow` −21.9, `step_foot`'s dirt variant −21.7 and gravel
+variant −20.1, `hit_spear`/`hit_axe` −20.4, `step_armored` −20.0,
+`hit_sword` −19.8. Per-cue `volume` tunes the mix in game (0424/0425).
+
+**Sizes:**
+- Music: 25 files, 52,887,835 bytes (50.4 MiB), not in the WASM.
+- Sounds: 16 files, 216,240 bytes (211 KiB), embedded.
+- WASM (release, before `wasm-opt`): 2,541,402 → 2,806,684 bytes
+  (+259 KiB: the sounds, the two license texts, the manifest).
+
+**Frame hitch** (native, release, quad-snd 0.2.8's decode timed on each
+track on Nick's machine): 80 ms (48 s track) to 460 ms (4:19); most
+110–260 ms. That's a visible freeze whenever the music changes, so I
+wrote **0215** (decode off the main thread).
+
+**Claude's starting rules** (Nick can veto; all *tunable*):
+- `step_mounted` is one hoof-beat pair (0.14 s) played per tile, like the
+  other footsteps, rather than the gallop looping while the unit moves.
+  Units walk 12 tiles/s.
+- Mla's "Battle" loops as a whole file: its ~8 s intro plays again on
+  each loop (the author's loop point needs seeking, which the player
+  can't do).
+- Sounds are mixed a little louder than the music (targets above).
+
+**Follow-up tickets:** 0215.

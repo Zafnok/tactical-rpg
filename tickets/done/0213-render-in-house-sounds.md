@@ -97,7 +97,7 @@ the PR, or a small HTML page with `<audio>` tags sent with SendUserFile).
       + hold + decay, plus the reverb tail trimmed at −60 dB). `heal` is about
       1.5 s; `menu_move` is under 0.15 s.
 - [x] Manifest validates with the five cues.
-- [ ] Nick signed off that they sound like the page.
+- [x] Nick signed off that they sound like the page.
 - [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
@@ -150,5 +150,9 @@ the PR, or a small HTML page with `<audio>` tags sent with SendUserFile).
 - The WAV writer is 20 lines in `sfx.rs` instead of the `hound` crate (no
   new dependency; the file layout is fixed).
 
-No gameplay rules were decided. Sign-off pending: Nick compares the five
-WAVs with the audition page.
+No gameplay rules were decided. Nick signed off on 2026-09-29 ("the sounds
+sound good to me").
+
+Merging main (0214's third-party sounds) needed one test change:
+`every_design_cue_is_in_the_manifest` now accepts `Own` cues without a
+credit id.
