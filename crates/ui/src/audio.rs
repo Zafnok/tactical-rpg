@@ -506,6 +506,13 @@ mod tests {
         }
     }
 
+    /// The published splitmix64 outputs for state 0 (the first two steps).
+    #[test]
+    fn splitmix64_matches_the_reference() {
+        assert_eq!(splitmix64(0), 0xE220_A839_7B1D_CDAF);
+        assert_eq!(splitmix64(0x9E37_79B9_7F4A_7C15), 0x6E78_9E6A_A1B9_65F4);
+    }
+
     #[test]
     fn an_unknown_or_empty_pool_picks_nothing() {
         let mut m = manifest();

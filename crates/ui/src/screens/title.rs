@@ -293,6 +293,20 @@ mod tests {
         assert_eq!(picked.len(), pool.len(), "{picked:?}");
     }
 
+    /// The n-th Quick Battle's track comes from the seed mixed with n.
+    #[test]
+    fn quick_battle_tracks_follow_the_seed_and_the_count() {
+        let mut c = ctx();
+        c.music_seed = 0xA5A5;
+        let mut t = TitleScreen::with_quick_battle();
+        for n in 0..16 {
+            let cues = music_of(&mut t, &mut c, &[Action::CursorDown, Action::Confirm]);
+            let want = pick_from_pool(&c.content.audio, QUICK_BATTLE_MUSIC_POOL, 0xA5A5 ^ n);
+            assert_eq!(cues.last().map(String::as_str), want, "battle {n}");
+            t.menu = TitleScreen::with_quick_battle().menu;
+        }
+    }
+
     #[test]
     fn placeholder_pops_on_cancel_only() {
         let mut p = PlaceholderScreen;
