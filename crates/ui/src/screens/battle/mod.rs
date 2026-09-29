@@ -319,7 +319,7 @@ impl BattleScreen {
         if state.phase() == Phase::Enemy {
             self.tips.fire(TipTrigger::FirstEnemyPhase);
         }
-        let low = |u: &Unit| u.faction == Faction::Player && u.hp > 0 && u.hp * 4 <= u.stats.hp;
+        let low = |u: &Unit| u.faction == Faction::Player && u.hp > 0 && u.hp * 2 <= u.stats.hp;
         if state.units().iter().any(low) {
             self.tips.fire(TipTrigger::FirstLowHp);
         }

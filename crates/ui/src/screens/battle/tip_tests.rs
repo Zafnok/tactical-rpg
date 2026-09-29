@@ -309,7 +309,7 @@ fn edited(c: &Ctx, edit: impl FnOnce(&mut Vec<Unit>)) -> BattleScreen {
 }
 
 #[test]
-fn low_hp_is_a_quarter_of_max_hp_or_less_of_a_unit_still_standing() {
+fn low_hp_is_half_of_max_hp_or_less_of_a_unit_still_standing() {
     let low = |hp| {
         let mut c = tipped();
         let mut s = edited(&c, |units| {
@@ -318,8 +318,8 @@ fn low_hp_is_a_quarter_of_max_hp_or_less_of_a_unit_still_standing() {
         });
         dismiss_all(&mut s, &mut c).contains(&TipTrigger::FirstLowHp)
     };
-    assert!(low(5));
-    assert!(!low(6));
+    assert!(low(10));
+    assert!(!low(11));
     assert!(!low(0));
     // An enemy's low HP is not a player's worry.
     let mut c = tipped();

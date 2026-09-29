@@ -84,7 +84,7 @@ Deviations and notes:
 
 *Claude's starting rules* (gameplay-affecting, Nick can veto):
 
-- "Low HP" is a player unit at or below 25% of max HP.
+- "Low HP" is a player unit at or below 50% of max HP (Nick: fine for a one-time tip).
 - `FirstEnemyInRange`: a selected unit could reach an enemy (move or
   attack tiles).
 - `DangerZoneAvailable`: the cursor rests on an enemy while browsing and
