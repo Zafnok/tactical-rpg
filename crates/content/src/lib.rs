@@ -4,6 +4,7 @@
 
 pub mod ai;
 pub mod art;
+pub mod audio;
 pub mod bundle;
 pub mod character;
 pub mod class;
@@ -25,6 +26,7 @@ use std::collections::BTreeMap;
 
 use trpg_core::{AiWeights, ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
 
+pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use dialogue::{DialogueTable, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
@@ -66,6 +68,8 @@ pub struct Content {
     pub dialogue: DialogueTable,
     /// The AI's numbers.
     pub ai: AiWeights,
+    /// Sound and music cues, pools and credits (ADR-0026).
+    pub audio: AudioManifest,
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -116,6 +120,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             portraits,
             dialogue,
             ai: ai::load(),
+            audio: audio::load(),
         },
     )
 }
@@ -213,6 +218,7 @@ struct Loaded {
     portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
     ai: Result<AiWeights, Vec<ContentError>>,
+    audio: Result<AudioManifest, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -250,6 +256,7 @@ fn assemble(
         portraits: take(units.portraits, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
         ai: take(units.ai, &mut errors),
+        audio: take(units.audio, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -305,6 +312,7 @@ mod tests {
             portraits: ok_portraits(),
             dialogue: ok_dialogue(),
             ai: ai::load(),
+            audio: audio::load(),
         }
     }
 
@@ -366,6 +374,10 @@ mod tests {
             ok_dialogue().ok().as_ref()
         );
         assert_eq!(content.as_ref().map(|c| &c.ai), ai::load().ok().as_ref());
+        assert_eq!(
+            content.as_ref().map(|c| &c.audio),
+            audio::load().ok().as_ref()
+        );
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -378,8 +390,8 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 14] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w",
+    const NAMES: [&str; 15] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "v",
     ];
 
     #[test]
@@ -402,6 +414,7 @@ mod tests {
                     portraits: Err(e("o")),
                     dialogue: Err(e("d")),
                     ai: Err(e("w")),
+                    audio: Err(e("v")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -439,6 +452,7 @@ mod tests {
                     portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
                     dialogue: if i == 12 { Err(e("d")) } else { ok_dialogue() },
                     ai: if i == 13 { Err(e("w")) } else { ai::load() },
+                    audio: if i == 14 { Err(e("v")) } else { audio::load() },
                 },
             )
         };

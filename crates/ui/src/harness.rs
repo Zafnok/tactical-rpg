@@ -15,6 +15,7 @@
 //! assert_eq!(h.top_screen(), "title");
 //! ```
 
+use crate::audio::{AudioRequest, MusicCommand};
 use crate::game::{Game, RawKeyEvent};
 use crate::input::{Chord, Layout};
 use crate::screen::{Ctx, LAYOUT_KEY, Screen};
@@ -30,6 +31,10 @@ pub const MAX_FRAMES: u32 = 2_000;
 /// Drives a [`Game`] with simulated key presses and time.
 pub struct Harness {
     game: Game,
+    /// Every frame's audio requests, oldest first.
+    audio: Vec<Vec<AudioRequest>>,
+    /// Every music command of the run, in order.
+    music: Vec<MusicCommand>,
 }
 
 impl Harness {
@@ -72,6 +77,8 @@ impl Harness {
     pub fn from_game(game: Game) -> Self {
         Self {
             game: game.with_debug_screens(true),
+            audio: Vec::new(),
+            music: Vec::new(),
         }
     }
 
@@ -85,8 +92,8 @@ impl Harness {
     pub fn keys(&mut self, script: &str) -> &mut Self {
         for token in script.split_whitespace() {
             let chord = parse(token);
-            self.game.frame(&[RawKeyEvent::Down(chord)], FRAME_DT);
-            self.game.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
+            self.frame(&[RawKeyEvent::Down(chord)], FRAME_DT);
+            self.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
         }
         self
     }
@@ -100,7 +107,7 @@ impl Harness {
     pub fn hold(&mut self, chord: &str, seconds: f32) -> &mut Self {
         let chord = parse(chord);
         self.advance(&[RawKeyEvent::Down(chord)], seconds);
-        self.game.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
+        self.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
         self
     }
 
@@ -125,7 +132,7 @@ impl Harness {
         let mut events = first;
         for _ in 0..MAX_FRAMES {
             let dt = left.min(FRAME_DT);
-            self.game.frame(events, dt);
+            self.frame(events, dt);
             events = &[];
             left -= dt;
             if left <= 0.0 {
@@ -133,6 +140,37 @@ impl Harness {
             }
         }
         panic!("Harness: more than {MAX_FRAMES} frames in one hold or wait");
+    }
+
+    /// Runs one game frame, recording its audio.
+    fn frame(&mut self, events: &[RawKeyEvent], dt: f32) {
+        let out = self.game.frame(events, dt);
+        self.audio.push(out.audio.to_vec());
+        self.music.extend_from_slice(out.music);
+    }
+
+    /// Every audio request of the run so far, in order.
+    pub fn audio_requests(&self) -> Vec<AudioRequest> {
+        self.audio.concat()
+    }
+
+    /// The audio requests of the last frame run (a key press runs two
+    /// frames, press and release; this is the release).
+    pub fn last_frame_audio(&self) -> &[AudioRequest] {
+        self.audio.last().map_or(&[], Vec::as_slice)
+    }
+
+    /// Every music command of the run so far, in order.
+    pub fn music_commands(&self) -> &[MusicCommand] {
+        &self.music
+    }
+
+    /// Forgets the audio recorded so far, so the next checks see only
+    /// what comes after.
+    pub fn clear_audio(&mut self) -> &mut Self {
+        self.audio.clear();
+        self.music.clear();
+        self
     }
 
     /// Name of the top screen; empty once every screen has closed.
@@ -343,5 +381,74 @@ mod tests {
     #[should_panic(expected = "bad chord in test script")]
     fn bad_chord_panics() {
         Harness::with_layout(Layout::RightHanded).keys("Ctrl+x");
+    }
+
+    /// Plays `beep` on Confirm and music `theme` on Cancel.
+    struct Beeper;
+
+    impl Screen for Beeper {
+        fn name(&self) -> &'static str {
+            "beeper"
+        }
+        fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+            for action in &input.actions {
+                match action {
+                    Action::Confirm => ctx.audio.play_sound("beep"),
+                    Action::Cancel => ctx.audio.play_music("theme"),
+                    _ => {}
+                }
+            }
+            Transition::None
+        }
+        fn draw(&self, _: &Ctx, _: &mut GlyphBuffer) {}
+    }
+
+    fn beeper() -> Harness {
+        let ctx = crate::screen::tests::ctx_with_cues(&["beep"], &["theme"]);
+        Harness::from_game(Game::new(ctx, Box::new(Beeper)))
+    }
+
+    fn beep() -> AudioRequest {
+        AudioRequest::PlaySound {
+            cue: "beep".into(),
+            volume: 1.0,
+        }
+    }
+
+    #[test]
+    fn records_the_audio_screens_ask_for() {
+        let theme = AudioRequest::PlayMusic {
+            cue: "theme".into(),
+        };
+        let mut h = beeper();
+        assert!(h.audio_requests().is_empty());
+        assert!(h.last_frame_audio().is_empty());
+        h.keys("f");
+        assert_eq!(h.audio_requests(), [beep()]);
+        h.keys("d f");
+        assert_eq!(h.audio_requests(), [beep(), theme, beep()]);
+        let load = MusicCommand::Load {
+            cue: "theme".into(),
+        };
+        let start = MusicCommand::Start {
+            cue: "theme".into(),
+        };
+        assert_eq!(h.music_commands(), [load, start]);
+        h.clear_audio();
+        assert!(h.audio_requests().is_empty());
+        assert!(h.music_commands().is_empty());
+    }
+
+    #[test]
+    fn last_frame_audio_is_the_last_frame_only() {
+        let mut h = beeper();
+        // `keys` presses in one frame and releases in the next.
+        h.keys("f");
+        assert!(h.last_frame_audio().is_empty());
+        h.frame(&[RawKeyEvent::Down(parse("f"))], FRAME_DT);
+        assert_eq!(h.last_frame_audio(), [beep()]);
+        h.wait(0.1);
+        assert!(h.last_frame_audio().is_empty());
+        assert_eq!(h.audio_requests(), [beep(), beep()]);
     }
 }
