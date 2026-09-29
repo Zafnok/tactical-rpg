@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0308", "0403"]
+blocked_by: ["0308", "0403", "0028"]
 nick_input: sign-off
 completed:
 ---
@@ -30,7 +30,11 @@ tile yet). Build the village UI only if 0308 implemented villages.
 
 **In:** `ShopScreen` (Buy / Sell / Repair tabs by shop kind), `Shop`, `Visit`
 and `Open` entries in the action menu, gold in the side panel and shop
-header, gift/loot message lines.
+header, gift/loot message lines. The shop screen plays the `shop` music cue chosen in
+0028 (`docs/design/audio.md`), imported with `assets-src/audio/import.py` and
+added to `assets/audio/audio.ron`, `THIRD_PARTY_ASSETS.md` and the credits. On
+leaving, the previous track comes back (emit the battle's or scene's cue again).
+If 0028 recorded "no music here", skip this.
 
 **Out:** where between-chapter shopping sits in the game flow (0801 for linear chapters; town nodes on the world map, 1007).
 
