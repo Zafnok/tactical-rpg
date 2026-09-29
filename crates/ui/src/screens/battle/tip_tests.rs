@@ -336,6 +336,7 @@ fn the_start_tip_is_for_the_first_turn_of_the_player_phase_only() {
     let mut s = BattleScreen::new(state.clone());
     assert_eq!(dismiss_all(&mut s, &mut c), [TipTrigger::FirstEnemyPhase]);
     // Nor does a start tip wait behind it for the next player phase.
+    s.apply(&Command::EndPhase);
     for _ in 0..5 {
         frame(&mut s, &mut c, &[], 30.0);
     }
