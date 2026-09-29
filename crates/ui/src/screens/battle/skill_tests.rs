@@ -109,6 +109,14 @@ fn lord_on_brigand(c: &mut Ctx, state: BattleState) -> BattleScreen {
     s
 }
 
+/// The left cell of the two-letter label `label` (any case) on the map.
+fn label_cell(buf: &GlyphBuffer, label: &str) -> (i32, i32) {
+    (0..30)
+        .flat_map(|y| (0..70).map(move |x| (x, y)))
+        .find(|&(x, y)| text(buf, x, y, 2).eq_ignore_ascii_case(label))
+        .expect("the label is drawn")
+}
+
 /// The action menu's focus moved to `entry`.
 fn focus_entry(s: &mut BattleScreen, c: &mut Ctx, entry: MenuEntry) {
     for _ in 0..8 {
@@ -452,6 +460,12 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     assert!(shove.needs_target && shove.usable);
     assert_eq!(shove.targets, [UnitId(6), UnitId(4)]);
     // Choose it: the cursor starts on the raider, and the message names it.
+    let raider_bg = |s: &BattleScreen, c: &Ctx| {
+        let buf = render(s, c);
+        let (x, y) = label_cell(&buf, "Ra");
+        buf.get(x, y).unwrap().bg
+    };
+    let plain_bg = raider_bg(&s, &c);
     let i = choices.iter().position(|c| c.skill.0 == "shove").unwrap();
     for _ in 0..i {
         step(&mut s, &mut c, &[Action::CursorDown]);
@@ -461,6 +475,17 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
         panic!("{:?}", s.mode());
     };
     assert_eq!(t.target(), UnitId(6));
+    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(7, 2)));
+    assert_eq!(s.mode().drawn_pos(UnitId(4)), None);
+    // Whoever can be shoved is tinted as in an attack.
+    assert_ne!(raider_bg(&s, &c), plain_bg);
+    // Left goes back around to the brigand, and right to the raider.
+    step(&mut s, &mut c, &[Action::CursorLeft]);
+    let Mode::SkillTarget(t) = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(t.target(), UnitId(4));
+    step(&mut s, &mut c, &[Action::CursorRight]);
     let buf = render(&s, &c);
     let message = text(&buf, 1, 30, 60);
     assert!(message.starts_with("Shove on Raider"), "{message}");
@@ -489,4 +514,70 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     };
     expected.apply(&cmd).unwrap();
     assert_eq!(s.state(), &expected);
+}
+
+#[test]
+fn a_cycle_through_two_actives_returns_to_none() {
+    let mut c = ctx();
+    let state = battle(&c, |units| {
+        units[0].pos = p(6, 2);
+        learn(&c, &mut units[0], "keen_edge");
+        learn(&c, &mut units[0], "blade_flurry");
+    });
+    let mut s = lord_on_brigand(&mut c, state);
+    let active = |s: &BattleScreen| {
+        let Mode::Targeting(t) = s.mode() else {
+            panic!("{:?}", s.mode());
+        };
+        t.active.clone().map(|a| a.0)
+    };
+    assert_eq!(active(&s), None);
+    let mut seen = vec![];
+    for _ in 0..3 {
+        step(&mut s, &mut c, &[Action::Info]);
+        seen.push(active(&s));
+    }
+    assert_eq!(seen.len(), 3);
+    assert!(seen[0].is_some() && seen[1].is_some() && seen[2].is_none());
+    assert_ne!(seen[0], seen[1]);
+}
+
+#[test]
+fn the_info_screen_lists_at_most_two_effects_and_six_skills() {
+    let mut c = ctx();
+    let state = battle(&c, |units| {
+        for skill in [
+            "sword_focus_1",
+            "light_feet_1",
+            "axe_focus_1",
+            "bow_focus_1",
+            "steadfast_1",
+            "charge_1",
+            "black_magic_1",
+        ] {
+            learn(&c, &mut units[0], skill);
+        }
+        for id in ["brace", "fortify", "keen_edge"] {
+            units[0].add_effect(trpg_core::TimedEffect {
+                source: trpg_core::EffectSource::Skill(SkillId::new(id)),
+                mods: trpg_core::TimedMods::default(),
+                until: trpg_core::Phase::Enemy,
+            });
+        }
+    });
+    let mut s = BattleScreen::new(state);
+    step(&mut s, &mut c, &[Action::Info]);
+    let buf = render(&s, &c);
+    // Effects: three rows each from row 7; the third isn't listed.
+    let name = |y| text(&buf, 37, y, 18);
+    assert_eq!(name(7), "Brace");
+    assert_eq!(name(10), "Fortify");
+    assert_eq!(name(13), "");
+    // Skills: two rows each from row 16; the seventh isn't listed.
+    let rows: Vec<String> = (16..29).map(|y| text(&buf, 29, y, 26)).collect();
+    let listed = rows
+        .iter()
+        .filter(|r| r.starts_with("P ") || r.starts_with("A "))
+        .count();
+    assert_eq!(listed, 6, "{rows:?}");
 }

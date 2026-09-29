@@ -214,7 +214,7 @@ pub fn combat_actives(
     };
     u.usable_skills(state.classes(), state.skills())
         .into_iter()
-        .filter(|s| s.is_active() && s.is_combat())
+        .filter(|s| s.is_combat())
         .filter(|s| {
             let action = attack_with(target, slot, Some(s.id.clone()));
             state.preview_attack(unit, dest, &action).is_ok()
@@ -454,6 +454,7 @@ mod tests {
 
     use super::*;
     use crate::screen::tests::ctx;
+    use crate::screens::battle::testing::{battle_with, quick_units};
 
     fn def<'a>(skills: &'a SkillTable, id: &str) -> &'a SkillDef {
         skills.get(&SkillId::new(id)).unwrap()
@@ -487,6 +488,51 @@ mod tests {
             "push 1 tile, 5 on impact"
         );
         assert_eq!(skill_cost(def(skills, "sword_focus_1")), None);
+    }
+
+    #[test]
+    fn range_and_moves_after_show_only_when_set() {
+        let c = ctx();
+        let skills = &c.content.skills;
+        assert_eq!(effect_text(def(skills, "long_shot")), "Bow: +2 range");
+        assert_eq!(effect_text(def(skills, "vault")), "Bow: move 1 after");
+        assert!(!effect_text(def(skills, "keen_edge")).contains("range"));
+        assert!(!effect_text(def(skills, "keen_edge")).contains("after"));
+    }
+
+    #[test]
+    fn skill_targets_cycle_both_ways_and_wrap() {
+        let c = ctx();
+        let state = battle_with(
+            &c,
+            quick_units(&c).0,
+            quick_units(&c).1,
+            trpg_core::Objective::Rout { turn_limit: None },
+        );
+        let sel = Selection::new(&state, UnitId(1)).unwrap();
+        let choice = SkillChoice {
+            skill: SkillId::new("shove"),
+            needs_target: true,
+            targets: vec![UnitId(4), UnitId(5), UnitId(6)],
+            usable: true,
+        };
+        let menu = Menu::new(vec![]);
+        let mut t = SkillTargeting::new(sel, menu, vec![choice], 0).unwrap();
+        assert_eq!(t.targets(), [UnitId(4), UnitId(5), UnitId(6)]);
+        let mut seen = vec![t.target()];
+        for _ in 0..3 {
+            t.cycle(true);
+            seen.push(t.target());
+        }
+        assert_eq!(seen, [UnitId(4), UnitId(5), UnitId(6), UnitId(4)]);
+        t.cycle(false);
+        assert_eq!(t.target(), UnitId(6));
+        t.cycle(false);
+        assert_eq!(t.target(), UnitId(5));
+        assert_eq!(
+            t.command(),
+            use_command(&t.sel, &SkillId::new("shove"), Some(UnitId(5)))
+        );
     }
 
     #[test]

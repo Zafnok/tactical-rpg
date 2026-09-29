@@ -34,6 +34,9 @@ pub const COLUMN_W: usize = 13;
 /// 17)`), under the title, when one is chosen (0412).
 pub const SKILL_ROW: i32 = SIDE_PANEL.y + 1;
 
+/// Widest text of the skill line, inside the panel's border.
+const SKILL_W: usize = 26;
+
 /// Row of the names; weapons, a broken marker, HP, hit and crit follow.
 pub const NAME_ROW: i32 = SIDE_PANEL.y + 2;
 
@@ -160,14 +163,13 @@ fn draw_skill(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, t: 
         .durability
         .map_or_else(String::new, |(from, to)| format!(" ({from} → {to})"));
     let text = format!("{}{cost}", skill_name(state, id));
-    let width = usize::try_from(SIDE_PANEL.w - 4).unwrap_or(0);
     put(
         buf,
         LEFT_X,
         SKILL_ROW,
         &text,
         palette.get(UiColor::TextHighlight),
-        width,
+        SKILL_W,
     );
 }
 

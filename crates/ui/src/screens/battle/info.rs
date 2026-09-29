@@ -36,7 +36,7 @@ const ITEM_W: usize = 40;
 
 /// Most skills listed, two rows each: name and cost, then the effect (rows
 /// 16..28).
-const SKILL_ROWS: usize = 12;
+const SKILL_MAX: usize = 6;
 
 /// Column of the timed effects, right of the stats.
 const EFFECT_X: i32 = 37;
@@ -45,7 +45,7 @@ const EFFECT_X: i32 = 37;
 const EFFECT_W: usize = 18;
 
 /// Most timed effects listed, three rows each (rows 7..13).
-const EFFECT_ROWS: usize = 6;
+const EFFECT_MAX: usize = 2;
 
 /// Most spells listed (rows 18..28).
 const SPELL_ROWS: usize = 10;
@@ -241,7 +241,7 @@ fn draw_effects(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     }
     pen.text(EFFECT_X, 6, "Effects", UiColor::TextHighlight);
     let mut y = 7;
-    for effect in unit.effects.iter().take(EFFECT_ROWS / 3) {
+    for effect in unit.effects.iter().take(EFFECT_MAX) {
         pen.cut(
             EFFECT_X,
             y,
@@ -287,10 +287,7 @@ fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     if skills.is_empty() {
         pen.text(x, 16, "--", UiColor::TextDim);
     }
-    for (y, skill) in (16..)
-        .step_by(2)
-        .zip(skills.into_iter().take(SKILL_ROWS / 2))
-    {
+    for (y, skill) in (16..).step_by(2).zip(skills.into_iter().take(SKILL_MAX)) {
         let cost = skill_cost(skill);
         pen.text(
             x,
@@ -437,7 +434,7 @@ mod tests {
         assert!(RIGHT_X + i32::try_from(RIGHT_W).unwrap() < INFO.x + INFO.w - 1);
         const { assert!(ITEM_W + 2 <= RIGHT_W) };
         // The lists end above the bottom border (row 29).
-        assert!(16 + i32::try_from(SKILL_ROWS).unwrap() < INFO.h);
+        assert!(16 + 2 * i32::try_from(SKILL_MAX).unwrap() < INFO.h);
         assert!(18 + i32::try_from(SPELL_ROWS).unwrap() < INFO.h);
     }
 }
