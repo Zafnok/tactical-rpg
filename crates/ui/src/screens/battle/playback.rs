@@ -10,6 +10,13 @@
 //! HP bar drains, with a pause between strikes; then one fall per fallen
 //! unit and a short hold. Holding Confirm plays it [`Timings::fast`] times
 //! as fast; Cancel skips to the end (ticket 0418, `docs/design/controls.md`).
+//!
+//! Triggered scenes (0705, [`Event::SceneTriggered`]) are [`Beat::Scene`]s
+//! where their events put them: before the combat they come before (a boss
+//! engaged), before the fall (a death quote, so the unit is still on the
+//! map), or before the outro. The clock stops at a scene until the battle
+//! screen [takes](Playback::take_scene) it and plays it; a skip stops there
+//! too, then goes on skipping.
 
 use std::collections::BTreeMap;
 
@@ -115,11 +122,16 @@ pub enum Beat {
         /// Index into the bout's strikes.
         strike: usize,
     },
-    /// Fallen unit `fall` fades out with its message. Death quotes (0705)
-    /// go in as beats just before this one.
+    /// Fallen unit `fall` fades out with its message.
     Fall {
         /// Index into [`Playback::falls`].
         fall: usize,
+    },
+    /// Triggered scene `scene` plays (no time on the clock: it waits here
+    /// until taken).
+    Scene {
+        /// Index into [`Playback::scenes`].
+        scene: usize,
     },
     /// The end: everything stays up a moment.
     Outro,
@@ -142,12 +154,28 @@ pub struct Step {
 pub struct Playback {
     bouts: Vec<Bout>,
     /// Units that fell, as they were when they fell (for drawing their
-    /// fade), in [`Event::UnitFell`] order. The hook for death quotes
-    /// (0705).
+    /// fade), in [`Event::UnitFell`] order.
     falls: Vec<Unit>,
+    /// Triggered scenes' ids, in timeline order.
+    scenes: Vec<String>,
+    /// How many scenes have been taken.
+    played: usize,
+    /// Cancel was pressed: the clock jumps to the next scene or the end.
+    skipping: bool,
     steps: Vec<Step>,
     timings: Timings,
     t: f32,
+}
+
+/// What a triggered scene plays before.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Anchor {
+    /// Combat `n`'s intro.
+    Bout(usize),
+    /// Fall `n`.
+    Fall(usize),
+    /// The outro.
+    End,
 }
 
 impl Playback {
@@ -175,8 +203,19 @@ impl Playback {
         };
         let mut bouts = Vec::new();
         let mut falls = Vec::new();
+        // Scene ids and what each plays before (the outro until the
+        // combat or fall after it comes).
+        let mut scenes: Vec<(String, Anchor)> = Vec::new();
+        let mut placed = 0;
+        let mut place = |scenes: &mut Vec<(String, Anchor)>, at| {
+            for s in &mut scenes[placed..] {
+                s.1 = at;
+            }
+            placed = scenes.len();
+        };
         for event in events {
             match event {
+                Event::SceneTriggered { scene } => scenes.push((scene.clone(), Anchor::End)),
                 Event::CombatResolved {
                     attacker,
                     defender,
@@ -189,6 +228,7 @@ impl Playback {
                     };
                     hp.insert(*attacker, outcome.attacker_hp);
                     hp.insert(*defender, outcome.defender_hp);
+                    place(&mut scenes, Anchor::Bout(bouts.len()));
                     bouts.push(Bout {
                         attacker: a,
                         defender: d,
@@ -197,6 +237,7 @@ impl Playback {
                 }
                 Event::UnitFell { unit } => {
                     if let Some(u) = fallen.iter().find(|u| u.id == *unit) {
+                        place(&mut scenes, Anchor::Fall(falls.len()));
                         falls.push(u.clone());
                     }
                 }
@@ -206,10 +247,14 @@ impl Playback {
         if bouts.is_empty() {
             return None;
         }
-        let steps = timeline(&bouts, falls.len(), &timings);
+        let anchors: Vec<Anchor> = scenes.iter().map(|s| s.1).collect();
+        let steps = timeline(&bouts, falls.len(), &anchors, &timings);
         Some(Self {
             bouts,
             falls,
+            scenes: scenes.into_iter().map(|s| s.0).collect(),
+            played: 0,
+            skipping: false,
             steps,
             timings,
             t: 0.0,
@@ -241,9 +286,35 @@ impl Playback {
         self.steps.last().map_or(0.0, |s| s.start + s.len)
     }
 
-    /// Whether it has played to the end.
+    /// The triggered scenes' ids, in order.
+    pub fn scenes(&self) -> &[String] {
+        &self.scenes
+    }
+
+    /// Whether it has played to the end, every scene taken.
     pub fn done(&self) -> bool {
-        self.t >= self.total()
+        self.t >= self.total() && self.played == self.scenes.len()
+    }
+
+    /// Where the clock stops next: at the next scene not taken yet, else
+    /// at the end.
+    fn limit(&self) -> f32 {
+        let next = Beat::Scene { scene: self.played };
+        self.step(next).map_or_else(|| self.total(), |s| s.start)
+    }
+
+    /// The scene the clock has reached, if not taken yet, for the battle
+    /// screen to play; the playback goes on after it.
+    pub fn take_scene(&mut self) -> Option<String> {
+        if self.played >= self.scenes.len() || self.t < self.limit() {
+            return None;
+        }
+        let id = self.scenes[self.played].clone();
+        self.played += 1;
+        if self.skipping {
+            self.t = self.limit();
+        }
+        Some(id)
     }
 
     /// The step playing now and the seconds into it (the last step once
@@ -257,9 +328,11 @@ impl Playback {
         Some((*step, (self.t - step.start).clamp(0.0, step.len)))
     }
 
-    /// Cancel was pressed: jump to the end.
+    /// Cancel was pressed: jump to the end, stopping at each scene on the
+    /// way.
     pub fn skip(&mut self) {
-        self.t = self.total();
+        self.skipping = true;
+        self.t = self.limit();
     }
 
     /// Advances the clock by `dt` seconds (`confirm_held`: Confirm is down
@@ -268,7 +341,7 @@ impl Playback {
     pub fn tick(&mut self, dt: f32, confirm_held: bool) {
         let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
         let speed = if confirm_held { self.timings.fast } else { 1.0 };
-        self.t = (self.t + dt * speed).min(self.total());
+        self.t = (self.t + dt * speed).min(self.limit());
     }
 
     /// The combat the box shows now: the current one, or the last during
@@ -279,7 +352,9 @@ impl Playback {
             | Beat::Flash { bout, .. }
             | Beat::Result { bout, .. }
             | Beat::Gap { bout, .. } => bout,
-            Beat::Fall { .. } | Beat::Outro => self.bouts.len().checked_sub(1)?,
+            Beat::Fall { .. } | Beat::Scene { .. } | Beat::Outro => {
+                self.bouts.len().checked_sub(1)?
+            }
         };
         self.bouts.get(index)
     }
@@ -359,8 +434,9 @@ impl Playback {
 
 /// Lays out the beats: per combat an intro, then per strike a flash, the
 /// result (at least [`Timings::result`], longer while HP drains) and a gap
-/// (none after the very last strike); then each fall; then the outro.
-fn timeline(bouts: &[Bout], falls: usize, t: &Timings) -> Vec<Step> {
+/// (none after the very last strike); then each fall; then the outro. Each
+/// scene goes just before what its anchor says, taking no time.
+fn timeline(bouts: &[Bout], falls: usize, anchors: &[Anchor], t: &Timings) -> Vec<Step> {
     let mut steps = Vec::new();
     let mut at = 0.0;
     let mut push = |beat, len: f32| {
@@ -371,8 +447,14 @@ fn timeline(bouts: &[Bout], falls: usize, t: &Timings) -> Vec<Step> {
         });
         at += len;
     };
+    let scenes_before = |anchor, push: &mut dyn FnMut(Beat, f32)| {
+        for (scene, _) in anchors.iter().enumerate().filter(|(_, a)| **a == anchor) {
+            push(Beat::Scene { scene }, 0.0);
+        }
+    };
     let last_bout = bouts.len().saturating_sub(1);
     for (b, bout) in bouts.iter().enumerate() {
+        scenes_before(Anchor::Bout(b), &mut push);
         push(Beat::Intro { bout: b }, t.intro);
         let mut hp = [bout.attacker.start, bout.defender.start];
         let last_strike = bout.strikes.len().saturating_sub(1);
@@ -394,8 +476,10 @@ fn timeline(bouts: &[Bout], falls: usize, t: &Timings) -> Vec<Step> {
         }
     }
     for fall in 0..falls {
+        scenes_before(Anchor::Fall(fall), &mut push);
         push(Beat::Fall { fall }, t.fall);
     }
+    scenes_before(Anchor::End, &mut push);
     push(Beat::Outro, t.outro);
     steps
 }
@@ -616,6 +700,91 @@ mod tests {
         }
         let total: f32 = lens.iter().sum();
         assert!((pb.total() - total).abs() < 1e-5);
+    }
+
+    fn scene(id: &str) -> Event {
+        Event::SceneTriggered { scene: id.into() }
+    }
+
+    /// [`kill`] with a scene before the combat and one before the fall.
+    fn with_scenes() -> Playback {
+        let (mut events, before, fallen) = kill();
+        events.insert(2, scene("last_words"));
+        events.insert(1, scene("engage"));
+        Playback::new(&events, &before, &fallen, TIMINGS).unwrap()
+    }
+
+    #[test]
+    fn scenes_go_before_their_combat_and_their_fall() {
+        let pb = with_scenes();
+        assert_eq!(pb.scenes(), ["engage", "last_words"]);
+        let beats: Vec<Beat> = pb.steps().iter().map(|s| s.beat).collect();
+        assert_eq!(
+            beats[..2],
+            [Beat::Scene { scene: 0 }, Beat::Intro { bout: 0 }]
+        );
+        let n = beats.len();
+        assert_eq!(
+            beats[n - 3..],
+            [
+                Beat::Scene { scene: 1 },
+                Beat::Fall { fall: 0 },
+                Beat::Outro
+            ]
+        );
+        // Scenes take no time: the timeline is as long as without them.
+        assert!((pb.total() - playback().total()).abs() < 1e-6);
+        assert!(pb.steps().iter().all(|s| match s.beat {
+            Beat::Scene { .. } => s.len == 0.0,
+            _ => s.len > 0.0,
+        }));
+        // A scene after the last fall goes before the outro.
+        let (mut events, before, fallen) = kill();
+        events.push(scene("after"));
+        let pb = Playback::new(&events, &before, &fallen, TIMINGS).unwrap();
+        let beats: Vec<Beat> = pb.steps().iter().map(|s| s.beat).collect();
+        assert_eq!(
+            beats[beats.len() - 2..],
+            [Beat::Scene { scene: 0 }, Beat::Outro]
+        );
+    }
+
+    #[test]
+    fn the_clock_waits_at_each_scene_until_it_is_taken() {
+        let mut pb = with_scenes();
+        // Held at the first scene, before the combat.
+        pb.tick(1.0, true);
+        assert!(pb.time().abs() < f32::EPSILON);
+        assert!(!pb.done());
+        assert_eq!(pb.take_scene().as_deref(), Some("engage"));
+        assert_eq!(pb.take_scene(), None, "the next one isn't reached yet");
+        // Then up to the death quote: the unit is still fully drawn.
+        pb.tick(100.0, false);
+        let fall = pb.step(Beat::Fall { fall: 0 }).unwrap();
+        assert!((pb.time() - fall.start).abs() < 1e-6);
+        assert_eq!(pb.fade(UnitId(4)), Some(0.0));
+        assert!(!pb.done());
+        assert_eq!(pb.take_scene().as_deref(), Some("last_words"));
+        assert_eq!(pb.take_scene(), None);
+        // Then the fade and the end.
+        pb.tick(100.0, false);
+        assert!(pb.done());
+        assert_eq!(pb.fade(UnitId(4)), Some(1.0));
+    }
+
+    #[test]
+    fn a_skip_stops_at_each_scene_then_skips_on() {
+        let mut pb = with_scenes();
+        pb.tick(0.1, false);
+        pb.skip();
+        assert_eq!(pb.take_scene().as_deref(), Some("engage"));
+        // Still skipping: straight on to the next scene.
+        let fall = pb.step(Beat::Fall { fall: 0 }).unwrap();
+        assert!((pb.time() - fall.start).abs() < 1e-6);
+        assert!(!pb.done());
+        assert_eq!(pb.take_scene().as_deref(), Some("last_words"));
+        assert!(pb.done());
+        assert!((pb.time() - pb.total()).abs() < 1e-6);
     }
 
     #[test]

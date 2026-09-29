@@ -37,7 +37,7 @@ use crate::skill::{
 use crate::spell::{EffectDuration, SpellState, TerrainEffect};
 use crate::stats::{Growths, StatKind, StatValue, Stats};
 use crate::terrain::{MovementTypeId, TerrainId, TerrainRules};
-use crate::unit::Role;
+use crate::unit::{CharacterId, Role};
 use crate::weapon::WeaponKind;
 
 const OPEN: [&str; 5] = [
@@ -947,6 +947,8 @@ pub(crate) fn setup(units: Vec<Unit>) -> BattleSetup {
         objective: Objective::Rout { turn_limit: None },
         rewind_charges: 3,
         seed: 7,
+        triggers: vec![],
+        mode: crate::GameMode::Classic,
     }
 }
 
@@ -2630,21 +2632,11 @@ pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
             for action in legal_casts(s, u, dest) {
                 add(action);
             }
-            let own = if u.faction == Faction::Player {
-                s.pack().items.len()
-            } else {
-                0
-            };
-            for pack_index in 0..own {
-                for t in s.units() {
-                    let near = t.id != u.id && Pos::manhattan(dest, t.pos) == 1;
-                    if t.id == u.id || (near && !u.faction.is_hostile_to(t.faction)) {
-                        add(UnitAction::UseItem {
-                            pack_index,
-                            target: t.id,
-                        });
-                    }
-                }
+            for action in legal_item_uses(s, u, dest) {
+                add(action);
+            }
+            for target in s.talk_targets(u.id, dest) {
+                add(UnitAction::Talk { target });
             }
             if let Objective::Seize { pos, by_lord, .. } = s.objective()
                 && pos == dest
@@ -2669,6 +2661,29 @@ pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
     let arts = legal_art_commands(s, &out);
     out.extend(skills);
     out.extend(arts);
+    out
+}
+
+/// Every use of a pack item by `u` from `dest`: player units only, on
+/// itself or a non-hostile unit adjacent to `dest`.
+fn legal_item_uses(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
+    let own = if u.faction == Faction::Player {
+        s.pack().items.len()
+    } else {
+        0
+    };
+    let mut out = Vec::new();
+    for pack_index in 0..own {
+        for t in s.units() {
+            let near = t.id != u.id && Pos::manhattan(dest, t.pos) == 1;
+            if t.id == u.id || (near && !u.faction.is_hostile_to(t.faction)) {
+                out.push(UnitAction::UseItem {
+                    pack_index,
+                    target: t.id,
+                });
+            }
+        }
+    }
     out
 }
 
@@ -3090,6 +3105,37 @@ prop_compose! {
 }
 
 prop_compose! {
+    /// A trigger of any kind, about characters `c1` to `c11` (the ids of
+    /// [`arb_setup`]'s units), with no scene yet.
+    fn arb_trigger()(
+        kind in 0usize..5,
+        a in 1u32..=11,
+        b in 1u32..=11,
+        x in 0i32..8,
+        y in 0i32..6,
+        flag in any::<bool>(),
+        once in any::<bool>(),
+    ) -> Trigger {
+        let c = |id: u32| CharacterId(format!("c{id}"));
+        let when = match kind {
+            0 => TriggerWhen::TurnStart { turn: a % 4 + 1, phase: Phase::ALL[(b % 3) as usize] },
+            1 => TriggerWhen::UnitEntersArea {
+                who: if flag {
+                    Who::Character(c(a))
+                } else {
+                    Who::Faction([Faction::Player, Faction::Enemy, Faction::Ally][(b % 3) as usize])
+                },
+                area: TileRect { x, y, w: 3, h: 2 },
+            },
+            2 => TriggerWhen::CombatStart { unit: c(a), against: flag.then(|| c(b)), per_opponent: once && b % 2 == 0 },
+            3 => TriggerWhen::UnitFell { unit: c(a), mode: flag.then_some(GameMode::Casual) },
+            _ => TriggerWhen::Talk { a: c(a), b: c(b), recruit: flag },
+        };
+        Trigger { when, scene: String::new(), once }
+    }
+}
+
+prop_compose! {
     pub(crate) fn arb_setup()(
         players in 1usize..=3,
         enemies in 1usize..=3,
@@ -3106,6 +3152,8 @@ prop_compose! {
         seed in any::<u64>(),
         pack in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=4),
         gold in 0u32..=1500,
+        triggers in prop::collection::vec(arb_trigger(), 0..=6),
+        casual in any::<bool>(),
     ) -> BattleSetup {
         let factions = [Faction::Player, Faction::Enemy, Faction::Ally, Faction::Neutral];
         let mut units = Vec::new();
@@ -3113,7 +3161,8 @@ prop_compose! {
         let mut id = 0;
         let mut next = |faction: Faction, pos: Pos, stats: &mut dyn Iterator<Item = Unit>| {
             id += 1;
-            Unit { id: UnitId(id), faction, pos, ..stats.next().unwrap() }
+            let character = Some(CharacterId(format!("c{id}")));
+            Unit { id: UnitId(id), faction, pos, character, ..stats.next().unwrap() }
         };
         let mut tiles = tiles.into_iter();
         for (n, faction) in [
@@ -3149,6 +3198,13 @@ prop_compose! {
             seed,
             items,
             pack: BattlePack { items: pack.into_iter().map(item).collect(), cap: 4 },
+            // Scene ids name the trigger's index.
+            triggers: triggers
+                .into_iter()
+                .enumerate()
+                .map(|(i, t)| Trigger { scene: format!("s{i}"), ..t })
+                .collect(),
+            mode: if casual { GameMode::Casual } else { GameMode::Classic },
             ..setup(units)
         }
     }
@@ -3167,9 +3223,10 @@ proptest! {
         setup in arb_setup(),
         choices in prop::collection::vec(any::<u16>(), 0..120),
     ) {
-        let (mut s, _) = BattleState::new(setup);
+        let (mut s, start) = BattleState::new(setup);
         let mut decided = s.outcome();
         let mut pack = s.pack().items.len();
+        let mut scenes = scenes_placed(&start)?;
         for choice in choices {
             if decided.is_some() {
                 prop_assert_eq!(s.apply(&Command::EndPhase), Err(CommandError::BattleOver));
@@ -3340,6 +3397,25 @@ proptest! {
                 let slots = usize::from(s.classes().get(&u.class).unwrap().weapon_slots);
                 prop_assert!(u.loadout.weapon_count() <= slots.min(WEAPON_SLOTS));
             }
+            // Each scene is where its moment is; a `once` trigger fires
+            // once (per opponent, for one that says so); a recruited unit
+            // joins the player, done.
+            scenes.extend(scenes_placed(&events)?);
+            for (i, t) in s.triggers().iter().enumerate() {
+                let fired = scenes.iter().filter(|&&n| n == i).count();
+                let per_opponent =
+                    matches!(t.when, TriggerWhen::CombatStart { per_opponent: true, .. });
+                if t.once && !per_opponent {
+                    prop_assert!(fired <= 1, "{:?} fired {} times", t, fired);
+                }
+                prop_assert_eq!(s.has_fired(i), t.once && fired > 0, "{:?}", t);
+            }
+            for e in &events {
+                if let Event::UnitRecruited { unit } = e {
+                    let u = s.unit(*unit).unwrap();
+                    prop_assert!(u.faction == Faction::Player && u.acted);
+                }
+            }
             // The outcome, once set, never changes.
             if let Some(o) = decided {
                 prop_assert_eq!(s.outcome(), Some(o));
@@ -3349,9 +3425,41 @@ proptest! {
     }
 }
 
+/// The trigger index (from its `s<i>` id) of each scene in `events`,
+/// checking each is at its moment: after a run of scenes comes a combat, a
+/// fall, a recruit or the end of a talk (a unit's action), or before it a
+/// phase start or a move.
+fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
+    let mut out = Vec::new();
+    for (i, e) in events.iter().enumerate() {
+        let Event::SceneTriggered { scene } = e else {
+            continue;
+        };
+        out.push(scene[1..].parse().unwrap());
+        let not_scene = |e: &&Event| !matches!(e, Event::SceneTriggered { .. });
+        let before = events[..i].iter().rev().find(not_scene);
+        let after = events[i + 1..].iter().find(not_scene);
+        let placed = matches!(
+            before,
+            Some(Event::PhaseStarted { .. } | Event::UnitMoved { .. })
+        ) || matches!(
+            after,
+            Some(
+                Event::CombatResolved { .. }
+                    | Event::UnitFell { .. }
+                    | Event::UnitRecruited { .. }
+                    | Event::UnitActed { .. }
+            )
+        );
+        prop_assert!(placed, "{:?} at {} in {:?}", scene, i, events);
+    }
+    Ok(out)
+}
+
 mod art;
 mod progression;
 mod shop;
 mod skill;
 mod spell;
 mod terrain;
+mod triggers;

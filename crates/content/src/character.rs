@@ -820,7 +820,10 @@ mod tests {
         assert!(t.is_ok(), "{t:?}");
         let t = t.unwrap_or_default();
         let ids: Vec<&str> = t.characters.keys().map(|c| c.0.as_str()).collect();
-        assert_eq!(ids, ["test_archer", "test_knight", "test_lord"]);
+        assert_eq!(
+            ids,
+            ["test_archer", "test_knight", "test_lord", "test_rogue"]
+        );
         assert_eq!(t.generics.len(), 2);
         let lords: Vec<&str> = t
             .characters

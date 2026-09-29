@@ -293,6 +293,7 @@ pub fn describe(r: &Replayed) -> String {
                     let skill = s.skills().get(skill).map_or("a skill", |d| &d.name);
                     format!("{who} used {skill}")
                 }
+                UnitAction::Talk { target } => format!("{who} talked to {}", name(s, *target)),
             }
         }
         Command::Equip { unit, .. } => format!("{} changed weapons", name(s, *unit)),

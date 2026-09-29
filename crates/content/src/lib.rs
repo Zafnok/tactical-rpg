@@ -22,6 +22,7 @@ pub mod skill;
 pub mod spell;
 pub mod terrain;
 pub mod tip;
+pub mod trigger;
 
 use std::collections::BTreeMap;
 
@@ -38,6 +39,7 @@ pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
 pub use tip::{Tip, TipTable, TipTrigger};
+pub use trigger::check_triggers;
 
 /// All validated game content.
 #[derive(Debug, Clone, PartialEq, Eq)]

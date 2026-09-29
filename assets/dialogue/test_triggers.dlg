@@ -1,0 +1,43 @@
+# PLACEHOLDER test scenes for the battle triggers (0705), played by the
+# debug Quick Battle. Not story: the real Chapter 1 lines come from 0707.
+
+@scene test_turn_3
+> Turn 3. A rogue has slipped into the fort to the east.
+@end
+
+@scene test_fort
+@left test_lord neutral
+test_lord: The old fort. Someone was here not long ago.
+@end
+
+@scene test_engage
+@right test_rogue angry
+test_rogue: You picked the wrong fort to storm.
+@end
+
+@scene test_talk
+@left  test_lord neutral
+@right test_rogue surprised
+test_lord: Put the axe down. You aren't one of them.
+test_rogue[happy]: ...Fine. I was never paid anyway.
+@end
+
+@scene test_rogue_falls
+@right test_rogue sad
+test_rogue: Should have taken the other job...
+@end
+
+@scene test_lord_falls
+@left test_lord sad
+test_lord: I can't... go on...
+@end
+
+@scene test_knight_dies
+@left test_knight sad
+test_knight: Tell them I held the line.
+@end
+
+@scene test_knight_retreats
+@left test_knight angry
+test_knight: I'm hurt. Falling back!
+@end

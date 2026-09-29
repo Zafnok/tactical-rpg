@@ -1,6 +1,6 @@
 //! The placeholder title screen (the real game flow comes with ticket 0801).
 
-use super::battle::{BattleScreen, quick_battle};
+use super::battle::quick_battle_screen;
 use super::{centre_x, draw_debug_hint, print_centred};
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
@@ -99,8 +99,8 @@ impl Screen for TitleScreen {
                 // The placeholder data always builds (tested); should it
                 // ever not, the item does nothing.
                 Some(QUICK_BATTLE) => {
-                    if let Ok(state) = quick_battle(&ctx.content) {
-                        return Transition::Push(Box::new(BattleScreen::new(state)));
+                    if let Ok(screen) = quick_battle_screen(&ctx.content) {
+                        return Transition::Push(Box::new(screen));
                     }
                 }
                 Some(QUIT) => return Transition::Quit,

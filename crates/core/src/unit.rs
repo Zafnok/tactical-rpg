@@ -71,8 +71,11 @@ pub enum Role {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct UnitId(pub u32);
 
-/// String id of a named character, e.g. `"test_lord"`.
+/// String id of a named character, e.g. `"test_lord"`. Serialised as the
+/// bare string, so battle files (0801) name characters as `"ana"` in their
+/// triggers ([`Trigger`](crate::Trigger)).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct CharacterId(pub String);
 
 /// A unit's progress in one class it has unlocked.

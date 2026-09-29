@@ -126,6 +126,8 @@ fn battle(content: &Content, seed: u64) -> BattleState {
         objective: Objective::Rout { turn_limit: None },
         rewind_charges: 0,
         seed,
+        triggers: vec![],
+        mode: trpg_core::GameMode::Classic,
     });
     state
 }

@@ -114,6 +114,8 @@ fn battle_with(units: Vec<Unit>, forests: &[Pos]) -> BattleState {
         objective: Objective::Rout { turn_limit: None },
         rewind_charges: 0,
         seed: 1,
+        triggers: vec![],
+        mode: trpg_core::GameMode::Classic,
     })
     .0
 }

@@ -311,6 +311,8 @@ fn setup(map: BattleMap, units: Vec<Unit>) -> BattleSetup {
         objective: Objective::Survive { turns: 99 },
         rewind_charges: 0,
         seed: 1,
+        triggers: vec![],
+        mode: crate::GameMode::Classic,
     }
 }
 
