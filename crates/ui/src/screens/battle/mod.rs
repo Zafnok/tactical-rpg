@@ -15,6 +15,7 @@ pub mod camera;
 pub mod cursor;
 pub mod forecast;
 pub mod info;
+pub mod items;
 pub mod layout;
 pub mod map_menu;
 pub mod mode;
@@ -30,8 +31,8 @@ use std::collections::VecDeque;
 use trpg_content::{Content, character_unit, check_map_labels};
 
 use trpg_core::{
-    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Faction, ItemId, Objective,
-    Phase, Pos, Stock, TileSet, Unit, UnitId, danger_zone,
+    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Event, Faction, ItemId,
+    Objective, Phase, Pos, StatValue, Stock, TileSet, Unit, UnitId, danger_zone,
 };
 
 use self::banner::{Banner, BannerKind};
@@ -41,7 +42,7 @@ use self::cursor::{Cursor, draw_cursor};
 use self::layout::{
     HELP_BAR, HELP_ROW, MAP_VIEW, SIDE_PANEL, TILE_W_CELLS, VIEW_TILES_H, VIEW_TILES_W,
 };
-use self::mode::{Effect, Mode};
+use self::mode::{Effect, MenuEntry, Mode, Selection};
 use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
 use self::rewind::{RewindEffect, RewindScreen};
@@ -149,6 +150,18 @@ pub const OVERLAY_BLEND: f32 = 0.75;
 /// How long the `Auto-end: ON/OFF` message stays, in seconds. *Tunable.*
 pub const TOAST_S: f32 = 1.5;
 
+/// A `+10` shown over a unit that was healed, for
+/// [`Timings::heal_popup`](playback::Timings::heal_popup) seconds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HealPopup {
+    /// The tile it floats over.
+    pub pos: Pos,
+    /// HP restored.
+    pub amount: StatValue,
+    /// Seconds it has been up.
+    pub t: f32,
+}
+
 /// The tiles units hostile to the player could attack this turn
 /// ([`danger_zone`] with each unit's attack ranges); empty if it can't be
 /// worked out.
@@ -195,6 +208,8 @@ pub struct BattleScreen {
     /// playback).
     banners: VecDeque<Banner>,
     rewind: Option<RewindScreen>,
+    /// Heal numbers floating over units.
+    popups: Vec<HealPopup>,
 }
 
 impl BattleScreen {
@@ -228,7 +243,13 @@ impl BattleScreen {
             end_armed: false,
             toast: None,
             banners: VecDeque::new(),
+            popups: vec![],
         }
+    }
+
+    /// The heal numbers on screen.
+    pub fn popups(&self) -> &[HealPopup] {
+        &self.popups
     }
 
     /// Whether auto-end is on.
@@ -368,6 +389,17 @@ impl BattleScreen {
             self.history.push(cmd.clone());
             self.banners
                 .extend(events.iter().filter_map(Banner::for_event));
+            self.popups.extend(events.iter().filter_map(|e| match *e {
+                Event::Healed { target, amount } if amount > 0 => {
+                    let pos = self.state.unit(target)?.pos;
+                    Some(HealPopup {
+                        pos,
+                        amount,
+                        t: 0.0,
+                    })
+                }
+                _ => None,
+            }));
             if self.danger.is_some() {
                 self.danger = Some(danger_tiles(&self.state));
             }
@@ -380,6 +412,21 @@ impl BattleScreen {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
         };
+    }
+
+    /// Applies `cmd`, which leaves the unit's action open (`Equip`), and
+    /// reopens the action menu for the unit at the end of its path (its
+    /// ranges recomputed: the weapon changed), on `Equip`.
+    fn apply_stay(&mut self, cmd: &Command, sel: Selection) {
+        self.apply(cmd);
+        let Some(mut fresh) = Selection::new(&self.state, sel.unit) else {
+            return;
+        };
+        if self.state.unit(sel.unit).is_some_and(|u| u.acted) {
+            return;
+        }
+        fresh.path = sel.path;
+        self.mode = mode::back_to_entry(fresh, &self.state, MenuEntry::Equip);
     }
 
     /// The units as drawn, each with how far it has faded out: the
@@ -566,9 +613,16 @@ impl BattleScreen {
             Mode::Moving { .. } => help_line(&[confirm("skip")]),
             Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::ItemMenu { .. }
             | Mode::MapMenu { .. }
             | Mode::UnitList { .. } => {
                 help_line(&[(keys, "choose"), confirm("confirm"), cancel("back")])
+            }
+            Mode::EquipMenu { .. } => {
+                help_line(&[(keys, "choose"), confirm("equip"), cancel("back")])
+            }
+            Mode::ItemTarget(_) => {
+                help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
             }
             Mode::Targeting(_) => {
                 help_line(&[(keys, "next target"), confirm("attack"), cancel("back")])
@@ -655,6 +709,14 @@ impl BattleScreen {
                 let at = t.targets.iter().filter_map(|&id| self.state.unit(id));
                 tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
             }
+            Mode::ItemTarget(t) => {
+                let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
+                let dest = t.sel.dest();
+                let tiles = at
+                    .map(|u| if u.id == t.sel.unit { dest } else { u.pos })
+                    .collect();
+                tint(buf, tiles, UiColor::HealRange);
+            }
             _ => {}
         }
     }
@@ -685,6 +747,8 @@ impl BattleScreen {
             Mode::Moving { .. }
             | Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::ItemMenu { .. }
+            | Mode::EquipMenu { .. }
             | Mode::Combat(_)
             | Mode::UnitList { .. }
             | Mode::Objective
@@ -702,6 +766,7 @@ impl BattleScreen {
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Targeting(_)
+            | Mode::ItemTarget(_)
             | Mode::MapMenu { .. } => {}
         }
         if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
@@ -713,15 +778,38 @@ impl BattleScreen {
     /// map menu beside the cursor, if open.
     fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let (tile, menu) = match &self.mode {
-            Mode::ActionMenu { sel, menu, .. } | Mode::WeaponMenu { sel, menu, .. } => {
-                (sel.dest(), menu)
-            }
+            Mode::ActionMenu { sel, menu, .. }
+            | Mode::WeaponMenu { sel, menu, .. }
+            | Mode::ItemMenu { sel, menu, .. }
+            | Mode::EquipMenu { sel, menu, .. } => (sel.dest(), menu),
             Mode::MapMenu { menu, .. } => (self.cursor.pos, menu),
             _ => return,
         };
         if let Some(cell) = tile_to_cell(tile, &self.camera) {
             let (x, y) = menu_origin(cell, menu.size());
             menu.draw(&ctx.palette, buf, x, y);
+            if matches!(self.mode, Mode::ItemMenu { .. }) {
+                // The pack's size in the top border.
+                let header = format!(" {} ", items::pack_header(&self.state));
+                let (fg, bg) = (
+                    ctx.palette.get(UiColor::TextHighlight),
+                    ctx.palette.get(UiColor::PanelBg),
+                );
+                buf.print(x + 2, y, &header, fg, bg);
+            }
+        }
+    }
+
+    /// Draws the heal numbers floating up over the units they healed.
+    fn draw_popups(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let fg = ctx.palette.get(UiColor::HpHigh);
+        for p in &self.popups {
+            let Some((x, y)) = tile_to_cell(p.pos, &self.camera) else {
+                continue;
+            };
+            let y = (y - 1).max(MAP_VIEW.y);
+            let bg = ctx.palette.get(UiColor::Black);
+            buf.print(x, y, &format!("+{}", p.amount), fg, bg);
         }
     }
 
@@ -851,6 +939,10 @@ impl Screen for BattleScreen {
         } else {
             0.0
         };
+        for p in &mut self.popups {
+            p.t += dt;
+        }
+        self.popups.retain(|p| p.t < TIMINGS.heal_popup);
         if let Some((_, left)) = &mut self.toast {
             *left -= dt;
             if *left <= 0.0 {
@@ -896,6 +988,7 @@ impl Screen for BattleScreen {
                     match effect {
                         Effect::None => {}
                         Effect::Apply(cmd) => self.apply(&cmd),
+                        Effect::ApplyStay(cmd, sel) => self.apply_stay(&cmd, *sel),
                         Effect::Cursor(to) => {
                             self.cursor.jump(to);
                             self.follow(to);
@@ -932,6 +1025,7 @@ impl Screen for BattleScreen {
         self.draw_units(ctx, buf);
         self.draw_cursor_and_path(ctx, buf);
         self.draw_menu(ctx, buf);
+        self.draw_popups(ctx, buf);
         if let Mode::Combat(pb) = &self.mode {
             playback::draw_box(buf, &ctx.palette, pb);
         }
@@ -951,6 +1045,14 @@ impl Screen for BattleScreen {
             && let Some(message) = pb.message()
         {
             buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
+        } else if let Mode::ItemTarget(t) = &self.mode {
+            buf.print(
+                1,
+                HELP_BAR.y,
+                &t.preview(&self.state),
+                c(UiColor::Text),
+                black,
+            );
         } else if let Some(toast) = self.toast() {
             buf.print(1, HELP_BAR.y, toast, c(UiColor::TextHighlight), black);
         }
@@ -990,6 +1092,18 @@ pub(crate) mod testing {
         objective: Objective,
         charges: u8,
     ) -> BattleState {
+        battle_packed(c, map, units, objective, charges, BattlePack::default())
+    }
+
+    /// [`battle_charged`], with the battle pack `pack`.
+    pub fn battle_packed(
+        c: &Ctx,
+        map: BattleMap,
+        units: Vec<Unit>,
+        objective: Objective,
+        charges: u8,
+        pack: BattlePack,
+    ) -> BattleState {
         BattleState::new(BattleSetup {
             map,
             terrain: Arc::new(c.content.terrain.rules.clone()),
@@ -998,7 +1112,7 @@ pub(crate) mod testing {
             spells: Arc::new(c.content.spells.clone()),
             skills: Arc::new(c.content.skills.clone()),
             arts: Arc::new(c.content.arts.clone()),
-            pack: BattlePack::default(),
+            pack,
             gold: 0,
             stock: Stock::default(),
             units,
@@ -1008,6 +1122,12 @@ pub(crate) mod testing {
             seed: 0,
         })
         .0
+    }
+
+    /// The Quick Battle's map and units.
+    pub fn quick_units(c: &Ctx) -> (BattleMap, Vec<Unit>) {
+        let quick = super::quick_battle(&c.content).unwrap_or_else(|e| panic!("{e}"));
+        (quick.map().clone(), quick.units().to_vec())
     }
 
     /// A rout battle on `map` with `units`.
@@ -1078,6 +1198,9 @@ pub(crate) mod testing {
 
 #[cfg(test)]
 mod attack_tests;
+
+#[cfg(test)]
+mod item_tests;
 
 #[cfg(test)]
 mod rewind_tests;
@@ -1816,13 +1939,17 @@ mod tests {
         };
         // The lord at (5, 5), cells 30..32; its old tile shows its terrain.
         assert_eq!(row(16, 26, 6), "....Lo");
-        // The menu one cell right of the tile: `Attack` (dim), `Wait`.
+        // The menu one cell right of the tile: `Attack` and `Item` (dim),
+        // `Equip`, `Wait`.
         assert_eq!(row(16, 33, 10), "│ Attack │");
-        assert_eq!(row(17, 33, 10), "│ Wait   │");
+        assert_eq!(row(17, 33, 10), "│ Item   │");
+        assert_eq!(row(18, 33, 10), "│ Equip  │");
+        assert_eq!(row(19, 33, 10), "│ Wait   │");
         let p = &c.palette;
         assert_eq!(buf.get(35, 16).unwrap().fg, p.get(UiColor::TextDim));
+        assert_eq!(buf.get(35, 17).unwrap().fg, p.get(UiColor::TextDim));
         assert_eq!(
-            buf.get(35, 17).unwrap().bg,
+            buf.get(35, 19).unwrap().bg,
             p.get(UiColor::PanelBorderFocus)
         );
         // No cursor, no ranges, the panel shows the lord.
