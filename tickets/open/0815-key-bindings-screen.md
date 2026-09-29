@@ -1,5 +1,5 @@
 ---
-id: "0814"
+id: "0815"
 title: "Key bindings screen: press a key to bind, taken keys move, ! not mapped"
 type: feature
 milestone: M7 Chapter 1 & game flow
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0814 — Key bindings screen
+# 0815 — Key bindings screen
 
 ## Context
 

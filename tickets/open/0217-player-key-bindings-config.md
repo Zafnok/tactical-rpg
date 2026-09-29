@@ -17,7 +17,7 @@ completed:
 
 Nick's rebinding rules are in [`docs/design/controls.md`](../../docs/design/controls.md),
 *Rebinding keys* (ticket 0030). This ticket builds the model and saved
-config behind them; the screen that edits it is 0814, and 0805's Options
+config behind them; the screen that edits it is 0815, and 0805's Options
 menu opens that screen.
 
 Today (ADR-0015, tickets 0204/0208) `assets/data/keymap.ron` holds each
@@ -42,14 +42,14 @@ None. (Rules already decided in 0030.)
 - Required vs optional actions (`controls.md` table); Debug not rebindable.
 - `Esc` fixed as Cancel, `Delete` reserved; neither can be in a slot.
 - Player config saved per layout under the `Storage` key `keybindings`.
-- A pure editing API for 0814 (bind with "key moves" conflicts, clear,
+- A pure editing API for 0815 (bind with "key moves" conflicts, clear,
   restore defaults, list unmapped required actions).
 - More `Key`s, so "any key the game can read" covers a normal keyboard.
 - `! not mapped` in help bars and tips for an action with no key.
 - ADR for the config format and the fixed keys.
 
 **Out (do not do):**
-- The Key bindings screen (0814) and the Options menu (0805).
+- The Key bindings screen (0815) and the Options menu (0805).
 - The new Select / Confirm end turn actions (0218).
 - Controller or mouse input.
 - Changing any default key other than moving `Escape` out of Cancel's list
@@ -76,9 +76,9 @@ None. (Rules already decided in 0030.)
    `Cancel`. Update the header comment. Keep every other key as is.
 4. **Fixed keys** (`crates/ui/src/input.rs`, `Keymap`): plain `Escape`
    always maps to `Cancel` in every keymap, including the layout picker's.
-   `Delete` maps to nothing in play (0814's screen reads it as a raw key
+   `Delete` maps to nothing in play (0815's screen reads it as a raw key
    while editing). `Keymap::chords_for(Cancel)` does **not** include
-   `Escape`; add `Keymap::fixed_chords_for(action)` so 0814 and help can show
+   `Escape`; add `Keymap::fixed_chords_for(action)` so 0815 and help can show
    it. Debug's chords stay as in `keymap.ron` and are reserved (can't be
    bound by the player) in builds with the debug tools feature (ADR-0023).
 5. **Slots model** (new `crates/ui/src/input/bindings.rs`, or a module next
@@ -115,7 +115,7 @@ None. (Rules already decided in 0030.)
 7. **Wire it in**: at startup `Game` builds the active keymap from the saved
    layout + `PlayerKeys` instead of `Keymap::for_layout`. Add
    `Ctx::player_keys()` and `Ctx::set_layout_bindings(layout, LayoutBindings)`
-   (saves and rebuilds `InputState`'s keymap at once) for 0814, and make
+   (saves and rebuilds `InputState`'s keymap at once) for 0815, and make
    switching layout (today only the first-launch picker; later 0805) load
    that layout's saved bindings.
 8. **`! not mapped` in text** (`crates/ui/src/widgets/help.rs`, `tips.rs`):

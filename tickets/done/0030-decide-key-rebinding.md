@@ -60,6 +60,6 @@ Asked with the `ask-nick` skill.
   defaults row; which presses count as Select "on the map".
 - New tickets: 0216 (audit hard-coded keys, prerequisite), 0217 (player
   key-bindings config), 0218 (optional Select / Confirm end turn keys),
-  0814 (Key bindings screen). 0805 now opens 0814's screen instead of
+  0815 (Key bindings screen). 0805 now opens 0815's screen instead of
   building its own rebinding UI.
 - New skill: `.claude/skills/keyboard-input` (never hard-code keys).

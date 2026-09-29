@@ -20,7 +20,7 @@ Nick (ticket 0030, [`docs/design/controls.md`](../../docs/design/controls.md),
 (cursor) and confirm (action) keys, or separate end turn / confirm end turn
 keys (right now both can be space)". Both new actions are **optional** and
 start with **no key**, so the defaults play exactly as today; a player gives
-them keys on the Key bindings screen (0814).
+them keys on the Key bindings screen (0815).
 
 0217 built slots, optional actions and `! not mapped`; this ticket only adds
 the two actions and makes the battle screen honour them. Follow the
@@ -28,7 +28,7 @@ the two actions and makes the battle screen honour them. Follow the
 
 ## Nick input
 
-None. (Nick signs off on the split behaviour when playing 0814.)
+None. (Nick signs off on the split behaviour when playing 0815.)
 
 ## Scope
 
@@ -40,7 +40,7 @@ None. (Nick signs off on the split behaviour when playing 0814.)
 - Help bar and tips name the right key.
 
 **Out (do not do):**
-- The Key bindings screen (0814).
+- The Key bindings screen (0815).
 - Any change to the default keys or to how the game plays with the defaults.
 
 ## Implementation steps
