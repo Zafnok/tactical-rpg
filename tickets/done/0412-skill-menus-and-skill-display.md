@@ -76,10 +76,12 @@ skill quick?
     under it, highest rank per family), a `Effects` block right of the stats
     (name, changes, `until Player phase`), and stats that include timed
     effects, in the effect colour when changed.
-  - Attack flow: in targeting, the Info key (`e`/`i`) cycles `none → Keen
-    Edge → … → none`; the forecast is `core`'s with the active, and a line
-    under the title reads `Keen Edge (20 → 17)`. Actives the weapon can't
-    pay for are skipped; the help line names the key only when one exists.
+  - Attack flow: in targeting, Up/Down cycle the combat actives (`none →
+    Keen Edge → … → none`) while Left/Right and Next/Prev unit cycle the
+    targets; the forecast is `core`'s with the active, and a line under the
+    title reads `Keen Edge (20 → 17)`. Actives the weapon can't pay for are
+    skipped. A unit with no active to choose keeps Up/Down as target keys.
+    The help line reads `Left/Right target · Up/Down skill`.
   - Action menu: a `Skill` entry (between Seize and Item) for units that know
     a non-combat active; the list shows `Brace  3 dur  Wpn 20/20`, dimmed
     when unusable. Brace-like skills apply at once; Shove picks a target
@@ -87,9 +89,9 @@ skill quick?
   - Map: a unit under a timed effect has the new palette colour `effect`
     behind its glyphs.
 - **Deviations:** the ticket says `s` cycles the actives, but `s` is Next
-  unit (right-handed) / Down (left-handed) in targeting, so the existing
-  `Info` action does it (`e` / `i`), with no new key or keymap change.
-  0414 replaces this cycle with its list.
+  unit (right-handed) or Down (left-handed) and already cycles targets, so
+  Up/Down (the menu-style cursor keys) pick the skill and Left/Right pick
+  the target (Nick's call). 0414 replaces this cycle with its list.
 - **Palette:** added the required colour `effect`.
 - **Existing tests/snapshots updated on purpose:** the action menu now has
   `Skill` for units with a non-combat active (the lord's Inspire, the
@@ -98,7 +100,7 @@ skill quick?
 - **Follow-up:** 0426 (actives that add range, such as Long Shot, don't yet
   offer their extra targets).
 - **Claude's starting rules (please agree or veto):**
-  - The skill-cycle key while targeting is the Info key.
+  - Up/Down cycle skills while targeting (only when the unit has an active to choose).
   - The `Skill` entry only appears for units that know a non-combat
     active; it is dimmed if none can be used right now.
   - A skill that needs no target (Brace, Inspire, Sanctuary) is used the

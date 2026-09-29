@@ -1003,20 +1003,23 @@ fn step_equip(
     }
 }
 
-/// [`step`] while targeting: the cursor keys and `NextUnit`/`PrevUnit`
-/// cycle the targets (right, down and next go forward; left, up and
-/// previous go back), Info cycles the combat actives (0412), Confirm
-/// attacks, Cancel goes back to the weapon list
-/// or the action menu with the cursor on the unit.
+/// [`step`] while targeting: left, right and `NextUnit`/`PrevUnit` cycle the
+/// targets (right and next go forward, left and previous go back); up and
+/// down cycle the combat actives (0412) when there are any, else the
+/// targets too; Confirm attacks, Cancel goes back to the weapon list or the
+/// action menu with the cursor on the unit.
 fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mode, Effect) {
+    // Up and Down move a menu-style cursor over the skills, when the unit
+    // has any to choose from; else they cycle the targets like Left/Right.
+    let skills = !t.actives(state).is_empty();
     let forward = match action {
+        Action::CursorUp | Action::CursorDown if skills => {
+            t.cycle_skill(action == Action::CursorDown, state);
+            return (Mode::Targeting(Box::new(t)), Effect::None);
+        }
         Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
         Action::CursorLeft | Action::CursorUp | Action::PrevUnit => false,
         Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
-        Action::Info => {
-            t.cycle_skill(state);
-            return (Mode::Targeting(Box::new(t)), Effect::None);
-        }
         Action::Cancel => {
             let dest = t.sel.dest();
             let back = match t.weapons {

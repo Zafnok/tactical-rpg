@@ -40,6 +40,7 @@ use trpg_core::{
 
 use self::banner::{Banner, BannerKind};
 
+use self::attack::Targeting;
 use self::camera::{Camera, tile_to_cell};
 use self::cursor::{Cursor, draw_cursor};
 use self::layout::{
@@ -684,18 +685,7 @@ impl BattleScreen {
             Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
                 help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
             }
-            Mode::Targeting(t) => {
-                let skill = (
-                    key_name(km, Action::Info).filter(|_| !t.actives(&self.state).is_empty()),
-                    "skill",
-                );
-                help_line(&[
-                    (keys, "next target"),
-                    skill,
-                    confirm("attack"),
-                    cancel("back"),
-                ])
-            }
+            Mode::Targeting(t) => self.help_targeting(ctx, t),
             Mode::Combat(_) => {
                 let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
                 help_line(&[cancel("skip"), (hold, "fast")])
@@ -711,6 +701,24 @@ impl BattleScreen {
                 }
             }
         }
+    }
+
+    /// The help line while picking an attack's target: left/right pick the
+    /// target and up/down the combat active, if the unit has any.
+    fn help_targeting(&self, ctx: &Ctx, t: &Targeting) -> String {
+        let km = &ctx.keymap;
+        let confirm = (key_name(km, Action::Confirm), "attack");
+        let cancel = (key_name(km, Action::Cancel), "back");
+        if t.actives(&self.state).is_empty() {
+            return help_line(&[(cursor_keys_name(km), "next target"), confirm, cancel]);
+        }
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a)?, key_name(km, b)?));
+        help_line(&[
+            (pair(Action::CursorLeft, Action::CursorRight), "target"),
+            (pair(Action::CursorUp, Action::CursorDown), "skill"),
+            confirm,
+            cancel,
+        ])
     }
 
     /// The help line while browsing, over what is under the cursor.

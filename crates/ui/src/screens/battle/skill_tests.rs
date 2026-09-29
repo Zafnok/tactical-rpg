@@ -361,7 +361,7 @@ fn s_cycles_the_combat_actives_and_the_forecast_follows_core() {
     assert_eq!((hit, crit), shown(&plain));
     assert_eq!(line, "");
     // One press: Keen Edge, its numbers and `(20 → 17)` under the title.
-    step(&mut s, &mut c, &[Action::Info]);
+    step(&mut s, &mut c, &[Action::CursorDown]);
     let (hit, crit, line) = numbers(&s, &c);
     assert_eq!((hit, crit), shown(&keen));
     let (from, to) = keen.durability.unwrap();
@@ -373,7 +373,7 @@ fn s_cycles_the_combat_actives_and_the_forecast_follows_core() {
     assert_eq!(t.preview, keen);
     assert_snapshot!(render(&s, &c).to_snapshot(&c.palette));
     // Another: none again.
-    step(&mut s, &mut c, &[Action::Info]);
+    step(&mut s, &mut c, &[Action::CursorDown]);
     let (hit, crit, line) = numbers(&s, &c);
     assert_eq!((hit, crit), shown(&plain));
     assert_eq!(line, "");
@@ -392,7 +392,7 @@ fn the_chosen_active_is_used_and_paid_for_when_attacking() {
         .weapon(0)
         .unwrap()
         .durability_left;
-    step(&mut s, &mut c, &[Action::Info, Action::Confirm]);
+    step(&mut s, &mut c, &[Action::CursorDown, Action::Confirm]);
     let after = s
         .state()
         .unit(UnitId(1))
@@ -419,13 +419,15 @@ fn an_active_the_weapon_cannot_pay_for_is_skipped() {
     let Mode::Targeting(t) = s.mode() else {
         unreachable!()
     };
-    let plain = t.preview.clone();
+    let first = t.target();
     assert!(t.actives(s.state()).is_empty());
-    step(&mut s, &mut c, &[Action::Info]);
+    // With nothing to choose, Down cycles the targets like Right.
+    step(&mut s, &mut c, &[Action::CursorDown]);
     let Mode::Targeting(t) = s.mode() else {
         unreachable!()
     };
-    assert_eq!((t.active.clone(), t.preview.clone()), (None, plain));
+    assert_eq!(t.active, None);
+    assert_ne!(t.target(), first);
 }
 
 #[test]
@@ -433,7 +435,7 @@ fn the_help_line_names_the_skill_key_only_when_an_active_can_be_chosen() {
     let mut c = ctx();
     let state = keen_skirmish(&c);
     let with = lord_on_brigand(&mut c, state);
-    assert!(with.help(&c).contains("e skill"), "{}", with.help(&c));
+    assert!(with.help(&c).contains("skill"), "{}", with.help(&c));
     // A lord without Keen Edge (Inspire isn't a combat active).
     let state = battle(&c, |units| units[0].pos = p(6, 2));
     let without = lord_on_brigand(&mut c, state);
@@ -534,12 +536,17 @@ fn a_cycle_through_two_actives_returns_to_none() {
     assert_eq!(active(&s), None);
     let mut seen = vec![];
     for _ in 0..3 {
-        step(&mut s, &mut c, &[Action::Info]);
+        step(&mut s, &mut c, &[Action::CursorDown]);
         seen.push(active(&s));
     }
     assert_eq!(seen.len(), 3);
     assert!(seen[0].is_some() && seen[1].is_some() && seen[2].is_none());
     assert_ne!(seen[0], seen[1]);
+    // Up goes back around the ring: none, then the last active.
+    step(&mut s, &mut c, &[Action::CursorUp]);
+    assert_eq!(active(&s), seen[1]);
+    step(&mut s, &mut c, &[Action::CursorUp]);
+    assert_eq!(active(&s), seen[0]);
 }
 
 #[test]

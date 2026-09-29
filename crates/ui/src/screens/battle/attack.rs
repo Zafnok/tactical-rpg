@@ -203,18 +203,20 @@ impl Targeting {
         )
     }
 
-    /// Moves to the next combat active (`none → Keen Edge → … → none`) and
-    /// updates the forecast. Actives that can't be paid for are skipped.
-    pub fn cycle_skill(&mut self, state: &BattleState) {
-        let actives = self.actives(state);
-        let next = match &self.active {
-            None => actives.first().cloned(),
-            Some(current) => actives
-                .iter()
-                .position(|a| a == current)
-                .and_then(|i| actives.get(i + 1))
-                .cloned(),
-        };
+    /// Moves to the next combat active (or the previous one) in the ring
+    /// `none → Keen Edge → … → none` and updates the forecast. Actives that
+    /// can't be paid for are skipped.
+    pub fn cycle_skill(&mut self, forward: bool, state: &BattleState) {
+        let mut ring: Vec<Option<SkillId>> = vec![None];
+        ring.extend(self.actives(state).into_iter().map(Some));
+        let n = ring.len();
+        let at = ring.iter().position(|a| *a == self.active).unwrap_or(0);
+        let next = ring[if forward {
+            (at + 1) % n
+        } else {
+            (at + n - 1) % n
+        }]
+        .clone();
         let action = attack_with(self.target(), self.slot, next.clone());
         if let Ok(p) = state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
             self.active = next;
