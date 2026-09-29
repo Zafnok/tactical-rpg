@@ -6,7 +6,7 @@ milestone: M0 Foundation
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0020"]
+blocked_by: ["0021"]
 nick_input: setup
 completed:
 ---
@@ -15,7 +15,7 @@ completed:
 
 ## Context
 
-Nick is buying portrait art (0020) whose licence allows it in a sold game but
+Nick is buying portrait art (0021) whose licence allows it in a sold game but
 forbids redistributing the files on their own. This repo is public (ADR-0013),
 so the bought files can't be committed here. They go in a **private** GitHub
 repo and are pulled in only when a build is made. The shipped game (exe,
@@ -31,7 +31,7 @@ Assets are embedded with `include_dir!` over `assets/`
 
 1. Buy the bundle on itch.io and download every zip.
 2. Create a **private** GitHub repo `Zafnok/tactical-rpg-assets`. Upload the
-   zips as they are (the importer in 0710 reads them), plus a copy of each
+   zips as they are (the importer in 0711 reads them), plus a copy of each
    licence text from the store pages.
 3. Create a deploy key (read-only) or a fine-grained token with read access
    to that repo only, and add it to `Zafnok/tactical-rpg` as the Actions
@@ -54,7 +54,7 @@ Assets are embedded with `include_dir!` over `assets/`
 - The `THIRD_PARTY_ASSETS.md` convention for private assets (listed there
   and marked private, with the licence text kept in the private repo).
 
-**Out (do not do):** importing or drawing portraits (0710, 0706);
+**Out (do not do):** importing or drawing portraits (0711, 0706);
 encrypting assets inside the binary (the licence doesn't require it).
 
 ## Implementation steps

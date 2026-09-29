@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0701", "0703", "0011", "0020", "0110", "0710"]
+blocked_by: ["0701", "0703", "0011", "0021", "0110", "0711"]
 nick_input: sign-off
 completed:
 ---
@@ -19,10 +19,10 @@ Portraits for every character who speaks in Chapter 1, using the portrait
 briefs in `docs/story/characters/*.md` (0701).
 
 **Changed 2026-09-28:** Nick doesn't want Claude-drawn portraits. He chose
-bought art, CaptainSkolot's portrait bundle (0020 records the decision and
+bought art, CaptainSkolot's portrait bundle (0021 records the decision and
 its rules). This ticket now **assigns bought portraits** to the cast
 instead of drawing them. The files come from the private assets repo (0110)
-and use the 64×64 PNG format (0710).
+and use the 64×64 PNG format (0711).
 
 ## First mapping (from the store previews, 2026-09-28)
 
@@ -71,7 +71,7 @@ Villager (partial); `sister` Wren could be the village peasant girl
 eyes (a palette swap of a few exact colours), and small pixel edits (a scar,
 a missing `surprised` made from a neutral face, a spectacle rim). Not new
 hairstyles, removing beards, or new clothes: that's redrawing, and Nick
-doesn't want Claude's art. Gaps are resolved per Nick's answer to 0020
+doesn't want Claude's art. Gaps are resolved per Nick's answer to 0021
 question 3.
 
 ## Nick input
@@ -79,7 +79,7 @@ question 3.
 **Sign-off:** for each Chapter 1 speaker, Claude proposes two or three
 candidate faces from the bought packs (rendered in the dialogue screen,
 neutral plus one other expression), and Nick picks one or asks for others.
-Characters no pack fits follow Nick's answer to 0020 question 3.
+Characters no pack fits follow Nick's answer to 0021 question 3.
 
 ## Scope
 
@@ -89,7 +89,7 @@ the five required expressions mapped to the pack's expressions, plus any
 extra ones listed in the character sheet. One shared `soldier` portrait for
 unnamed enemies.
 
-**Out:** later chapters; drawing new art (unless 0020 allows edits, and then
+**Out:** later chapters; drawing new art (unless 0021 allows edits, and then
 only the edits it allows).
 
 ## Implementation steps
@@ -99,7 +99,7 @@ only the edits it allows).
    faces that match it (age, build, class, colours).
 3. Render the candidates in the dialogue screen (a rendered PNG, as in 0704)
    and send them to Nick. Record his picks.
-4. Import each pick with `cargo xtask portrait-import` (0710) into
+4. Import each pick with `cargo xtask portrait-import` (0711) into
    `assets-private/portraits/`. Map `neutral`, `happy`, `angry`, `sad` and
    `surprised` to the closest pack expressions, and note the mapping in the
    character sheet.

@@ -1,21 +1,21 @@
 ---
-id: "0710"
+id: "0711"
 title: 64×64 PNG portraits drawn as pixel overlays
 type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0020"]
+blocked_by: ["0021"]
 nick_input: sign-off
 completed:
 ---
 
-# 0710 — 64×64 PNG portraits
+# 0711 — 64×64 PNG portraits
 
 ## Context
 
-Nick chose bought 64×64 portraits (0020). Today portraits are 32×32 text
+Nick chose bought 64×64 portraits (0021). Today portraits are 32×32 text
 grids of palette keys, drawn as half-block cells: 2 pixels per cell, so 8×8
 screen pixels per portrait pixel (ADR-0018, `trpg_content::portrait`,
 `trpg_ui::portrait::draw_portrait`).
