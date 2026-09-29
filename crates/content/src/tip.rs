@@ -157,13 +157,12 @@ pub fn from_source(file: &str, source: &str) -> Result<TipTable, Vec<ContentErro
 pub fn placeholders(text: &str) -> Vec<&str> {
     let mut names = Vec::new();
     let mut rest = text;
-    while let Some(open) = rest.find('{') {
-        let after = &rest[open + 1..];
-        let Some(close) = after.find('}') else {
+    while let Some((_, after)) = rest.split_once('{') {
+        let Some((name, tail)) = after.split_once('}') else {
             break;
         };
-        names.push(&after[..close]);
-        rest = &after[close + 1..];
+        names.push(name);
+        rest = tail;
     }
     names
 }
@@ -237,6 +236,23 @@ mod tests {
         assert!(has("unknown placeholder {Nope}"), "{all:?}");
         assert!(has("1 to 3 lines"), "{all:?}");
         assert!(has("over 60 characters"), "{all:?}");
+    }
+
+    #[test]
+    fn length_limits_are_inclusive() {
+        let title = "t".repeat(MAX_TITLE_CHARS);
+        let line = "x".repeat(MAX_LINE_CHARS);
+        let source = format!(
+            r#"(tips: [(id: "a", trigger: FirstForecast, title: "{title}",
+            text: "{line}
+{line}
+{line}")])"#
+        );
+        assert_eq!(errors(&source), Vec::<String>::new());
+        let source = source.replace(&title, &format!("{title}t"));
+        assert_eq!(errors(&source).len(), 1, "{source}");
+        let source = source.replace(&line, &format!("{line}x"));
+        assert_eq!(errors(&source).len(), 4);
     }
 
     #[test]

@@ -4,9 +4,9 @@
 
 use insta::assert_snapshot;
 use trpg_content::TipTrigger;
-use trpg_core::{Event, Objective, Phase, StatGains, UnitId};
+use trpg_core::{Command, Event, Objective, Phase, StatGains, UnitId};
 
-use super::testing::{battle_with, skirmish};
+use super::testing::{battle_with, skirmish, skirmish_charged};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::input::Layout;
@@ -184,6 +184,12 @@ fn the_forecast_shows_its_tip() {
     assert_eq!(dismiss_all(&mut s, &mut c), [TipTrigger::FirstForecast]);
     // The forecast is still there under the dismissed tip.
     assert!(matches!(s.mode(), Mode::Targeting(_)));
+    // A tip waits out the combat that follows.
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::Combat(_)), "{:?}", s.mode());
+    s.tips.fire(TipTrigger::FirstLowHp);
+    press(&mut s, &mut c, &[]);
+    assert_eq!(s.shown_tip(), None);
 }
 
 #[test]
@@ -267,10 +273,72 @@ fn tips_wait_for_the_player_phase_to_settle() {
     // (The enemy-phase tip is queued behind it and shows first.)
     let shown = dismiss_all(&mut s, &mut c);
     assert_eq!(shown, [TipTrigger::FirstEnemyPhase]);
+    // The player phase's banner comes first; the tip waits for it.
+    frame(&mut s, &mut c, &[], 30.0);
+    assert_eq!(s.state().phase(), Phase::Player);
+    assert!(s.banner().is_some());
+    assert_eq!(s.shown_tip(), None);
     for _ in 0..4 {
         frame(&mut s, &mut c, &[], 30.0);
     }
+    assert!(s.banner().is_none());
     assert_eq!(s.shown_tip(), Some(TipTrigger::FirstLowHp));
+}
+
+#[test]
+fn tips_wait_while_the_rewind_screen_is_open() {
+    let mut c = tipped();
+    let mut s = BattleScreen::new(skirmish_charged(&c, 100, 3));
+    dismiss_all(&mut s, &mut c);
+    press(&mut s, &mut c, &[Action::Rewind]);
+    assert!(s.rewind().is_some());
+    s.tips.fire(TipTrigger::FirstLowHp);
+    press(&mut s, &mut c, &[]);
+    assert_eq!(s.shown_tip(), None);
+    press(&mut s, &mut c, &[Action::Cancel]);
+    assert_eq!(s.shown_tip(), Some(TipTrigger::FirstLowHp));
+}
+
+/// A battle like the Quick Battle, with `edit` applied to its units.
+fn edited(c: &Ctx, edit: impl FnOnce(&mut Vec<Unit>)) -> BattleScreen {
+    let quick = quick_battle(&c.content).unwrap();
+    let mut units = quick.units().to_vec();
+    edit(&mut units);
+    let rout = Objective::Rout { turn_limit: None };
+    BattleScreen::new(battle_with(c, quick.map().clone(), units, rout))
+}
+
+#[test]
+fn low_hp_is_a_quarter_of_max_hp_or_less_of_a_unit_still_standing() {
+    let low = |hp| {
+        let mut c = tipped();
+        let mut s = edited(&c, |units| {
+            units[1].stats.hp = 20;
+            units[1].hp = hp;
+        });
+        dismiss_all(&mut s, &mut c).contains(&TipTrigger::FirstLowHp)
+    };
+    assert!(low(5));
+    assert!(!low(6));
+    assert!(!low(0));
+    // An enemy's low HP is not a player's worry.
+    let mut c = tipped();
+    let mut s = edited(&c, |units| units[3].hp = 1);
+    assert_eq!(dismiss_all(&mut s, &mut c), [TipTrigger::FirstBattleStart]);
+}
+
+#[test]
+fn the_start_tip_is_for_the_first_turn_of_the_player_phase_only() {
+    let mut c = tipped();
+    let mut state = quick_battle(&c.content).unwrap();
+    state.apply(&Command::EndPhase).unwrap();
+    assert_eq!((state.turn(), state.phase()), (1, Phase::Enemy));
+    let mut s = BattleScreen::new(state.clone());
+    assert_eq!(dismiss_all(&mut s, &mut c), [TipTrigger::FirstEnemyPhase]);
+    state.apply(&Command::EndPhase).unwrap();
+    assert_eq!((state.turn(), state.phase()), (2, Phase::Player));
+    let mut s = BattleScreen::new(state);
+    assert_eq!(dismiss_all(&mut s, &mut c), []);
 }
 
 #[test]
