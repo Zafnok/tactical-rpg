@@ -290,11 +290,14 @@ fn action_menu_snapshot() {
 }
 
 #[test]
-fn select_move_and_wait_dims_the_unit_and_lowercases_its_label() {
+fn select_move_and_wait_dims_the_unit_and_keeps_its_label_case() {
     let mut h = lord_path();
+    let bright = h.game().buffer().get(26, 16).map(|c| c.fg).expect("cell");
     h.keys("f").wait(0.5).keys("f");
-    // The lord stands on the fort, x + 2, lowercase: it has acted.
-    assert_eq!(tile(&h, 30, 16), "lo");
+    // The lord stands on the fort, x + 2, dimmed: it has acted.
+    assert_eq!(tile(&h, 30, 16), "Lo");
+    let cell = h.game().buffer().get(30, 16).copied().expect("cell");
+    assert_eq!(cell.fg, bright.lerp(cell.bg, 0.5));
     assert_eq!(tile(&h, 26, 16), "..");
     assert_eq!(panel(&h)[4], "Test Lord");
     // Browsing again, on a unit that can't act.
@@ -368,8 +371,8 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     h.keys("f");
     assert_eq!(help(&h), "d skip · hold f fast");
     h.keys("d");
-    // The lord has acted, lowercase at (6, 4) (cells 32..34, row 15).
-    assert_eq!(tile(&h, 32, 15), "lo");
+    // The lord has acted, dimmed at (6, 4) (cells 32..34, row 15).
+    assert_eq!(tile(&h, 32, 15), "Lo");
     assert!(
         help(&h).ends_with("s next unit · r rewind · d menu · Space end turn"),
         "{}",

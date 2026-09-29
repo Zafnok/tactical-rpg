@@ -5,10 +5,10 @@ type: tuning
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0404"]
 nick_input: sign-off
-completed:
+completed: 2026-09-29
 ---
 
 # 0417 — Acted units keep their uppercase label, dimmed only
@@ -93,5 +93,4 @@ doesn't rely on hue alone.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Acted units keep their label case and are dimmed only. Removed `shown_label`; updated unit and integration tests (the integration test now checks the dimmed colour); no snapshots changed. Recorded in `look-and-feel.md` and new ADR-0028 (numbered 0028, since 0027 was taken). No gameplay rules decided; no follow-ups. Nick: play Quick Battle, Wait a unit, and check the dimming reads clearly.
