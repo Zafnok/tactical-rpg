@@ -876,9 +876,9 @@ mod tests {
         };
         let out = tone.render();
         let level = square.imag[1] * square.scale;
-        for i in frames(0.01)..frames(0.05) {
+        for (i, got) in out.iter().enumerate().take(frames(0.05)).skip(frames(0.01)) {
             let want = level * (2.0 * PI * 10_000.0 * time(i)).sin();
-            assert!((out[i] - want).abs() < 1e-6, "{i}: {} vs {want}", out[i]);
+            assert!((got - want).abs() < 1e-6, "{i}: {got} vs {want}");
         }
     }
 
