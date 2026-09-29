@@ -60,6 +60,11 @@ camp, and starts a story battle.
 - Entering a battle node runs its scenes and battle through the normal flow
   (0801), then comes back to the world map.
 - Towns: entering one opens the 0409 shop screen with that town's inventory.
+- Place music (ticket 0020, [`docs/design/audio.md`](../../docs/design/audio.md)):
+  a node may name a music cue (`village_home`, `village`, `city_first_visit`,
+  `dungeon_tense`, `graveyard_desert`, `side_quest`), played through 0212 when
+  the army enters it. What plays on the world map itself isn't decided yet
+  (`audio.md` open sub-questions): ask Nick before choosing.
 - World map menu: `Save` (0802 slots, any time no battle is running), `Camp`
   (1003 screen), `Unit` / `Items` if they exist, and `Options`.
 - Moving to a new act: when an act's final story battle is won, the next

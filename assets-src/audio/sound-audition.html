@@ -1,0 +1,318 @@
+<title>Tactical RPG Sound Audition</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of "listening stations", each a panel of play buttons, styled in the game's palette D */
+:root {
+  --bg: #0e0b08;
+  --panel: #1c1712;
+  --border: #6a5a40;
+  --border-hi: #c89a50;
+  --text: #d0c4a8;
+  --dim: #938770;
+  --gold: #e6b860;
+  --blue: #7ea8e0;
+  --red: #d46a50;
+  --green: #8ab050;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 17px/1.5 var(--font-body); }
+a { color: var(--blue); }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 60px; display: grid; gap: 30px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 600 12px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--font-body); margin: 0; text-wrap: balance; }
+h2 { font: 700 23px/1.2 var(--font-body); margin: 0; text-wrap: balance; }
+h3 { font: 600 13px/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin: 0; }
+p { margin: 0; max-width: 70ch; }
+.muted { color: var(--dim); }
+section { display: grid; gap: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--border); padding: 16px; display: grid; gap: 12px; min-width: 0; align-content: start; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button, select {
+  font: 600 14px/1 var(--font-mono); color: var(--text); background: #120e0a;
+  border: 1px solid var(--border); padding: 10px 12px; cursor: pointer;
+}
+select { padding: 8px 10px; }
+button:hover { border-color: var(--border-hi); color: var(--gold); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button.playing { border-color: var(--gold); color: #0e0b08; background: var(--gold); }
+button.stop { border-color: var(--red); color: var(--red); }
+button.go { border-color: var(--gold); color: var(--gold); }
+.tag { font: 600 11px/1 var(--font-mono); letter-spacing: .06em; padding: 4px 6px; border: 1px solid var(--border); color: var(--dim); text-transform: uppercase; white-space: nowrap; }
+.tag.pick { border-color: var(--green); color: var(--green); }
+.tag.new { border-color: var(--gold); color: var(--gold); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); border-bottom: 1px solid var(--border); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.bar label { font: 600 12px/1 var(--font-mono); color: var(--dim); display: flex; gap: 8px; align-items: center; }
+input[type=range] { accent-color: var(--gold); width: 140px; }
+#nowplaying { font: 13px/1.3 var(--font-mono); color: var(--gold); min-width: 0; }
+.opts { display: grid; gap: 8px; }
+.opt { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; border-top: 1px solid #2e261c; padding-top: 8px; }
+.opt:first-child { border-top: 0; padding-top: 0; }
+.opt .id { font: 600 13px/1 var(--font-mono); color: var(--gold); width: 2.2em; }
+.opt .desc { font-size: 15px; min-width: 0; }
+.opt .desc small { display: block; color: var(--dim); font-size: 14px; }
+.scroll { overflow-x: auto; }
+table.music { border-collapse: collapse; width: 100%; min-width: 720px; }
+table.music th, table.music td { border-bottom: 1px solid #2e261c; padding: 8px 6px; text-align: left; vertical-align: middle; }
+table.music th { font: 600 12px/1.2 var(--font-mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+table.music th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--dim); }
+table.music td.cue b { display: block; }
+table.music td.cue span { color: var(--dim); font-size: 14px; }
+table.music button { width: 100%; padding: 9px 6px; font-size: 13px; }
+.note { border-left: 3px solid var(--border-hi); padding-left: 12px; }
+ul.links { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+ul.links li { max-width: 70ch; }
+.tier { font: 600 12px/1 var(--font-mono); color: var(--dim); letter-spacing: .06em; text-transform: uppercase; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Sound audition · final picks · ticket 0020</div>
+    <h1>The game's sound</h1>
+    <p>Everything you picked over six rounds. It's recorded in <code>docs/design/audio.md</code> in the repo. The sounds we make ourselves play right here, and ticket 0213 will turn them into game files you'll compare against these buttons. Everything else links to its source page. Every author gets credited in the game.</p>
+  </header>
+
+  <div class="bar">
+    <label for="vol">Volume <input id="vol" type="range" min="0" max="100" value="70"></label>
+  </div>
+
+  <section>
+    <h2>Made in-house</h2>
+    <div class="panel">
+      <div class="opts">
+        <div class="opt"><span class="id">B</span><span class="desc">Menu move <small>menu_move</small></span><button data-menu="move:B">▶</button></div>
+        <div class="opt"><span class="id">B</span><span class="desc">Map cursor move <small>cursor_move: the same tick at 60 % volume</small></span><button id="cursor">▶</button></div>
+        <div class="opt"><span class="id">L</span><span class="desc">Select <small>menu_select</small></span><button data-menu="select:L">▶</button></div>
+        <div class="opt"><span class="id">B</span><span class="desc">Cancel <small>menu_cancel</small></span><button data-menu="cancel:B">▶</button></div>
+        <div class="opt"><span class="id">W2</span><span class="desc">Dodge / miss <small>miss</small></span><button data-sfx="miss:quick">▶</button></div>
+        <div class="opt"><span class="id">HE5</span><span class="desc">Heal <small>heal</small></span><button data-heal="HE5">▶</button></div>
+      </div>
+      <div class="row"><button class="go" id="seq">▶ Menu sequence</button></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recorded sounds</h2>
+    <div class="grid">
+      <div class="panel"><h3>Weapons</h3><ul class="links">
+        <li>Sword hit · <a href="https://freesound.org/s/568170/">Sword sound 1</a>, Merrick079</li>
+        <li>Spear &amp; axe hit · <a href="https://freesound.org/s/179222/">Knife Stab</a>, Mixedupmoviestuff</li>
+        <li>Arrow hit · <a href="https://freesound.org/s/205938/">Arrow Impact</a>, Twisted_Euphoria</li>
+        <li>Gauntlet hit · <a href="https://freesound.org/s/544680/">Punch</a>, EminYILDIRIM</li>
+        <li>Physical crit · <a href="https://freesound.org/s/420674/">Deep Cut</a>, SypherZent</li>
+        <li>Block (0 damage) · <a href="https://freesound.org/s/545021/">Combat Punch Metal Armor</a>, EminYILDIRIM</li>
+      </ul></div>
+      <div class="panel"><h3>Magic</h3><ul class="links">
+        <li>Fire goes off · <a href="https://freesound.org/s/267887/">Short Fireball Woosh</a>, wjl</li>
+        <li>Ice goes off · <a href="https://freesound.org/s/418194/">Hard Glass Impact</a></li>
+        <li>Spell lands · <a href="https://freesound.org/s/541477/">Magic Earth Spell Impact &amp; Punch</a>, EminYILDIRIM</li>
+        <li>Fire crit · <a href="https://freesound.org/s/577450/">Fireball Impact</a>, EminYILDIRIM</li>
+        <li>Ice crit · <a href="https://freesound.org/s/550267/">Magic Ice Impact Skill Spell</a>, EminYILDIRIM</li>
+      </ul></div>
+      <div class="panel"><h3>Movement</h3><ul class="links">
+        <li>Foot (one of three, at random) · <a href="https://freesound.org/s/270415/">F4</a>, <a href="https://freesound.org/s/223153/">F3</a>, <a href="https://freesound.org/s/421135/">F2</a></li>
+        <li>Armoured · <a href="https://freesound.org/s/384890/">Knight footstep, chainmail</a>, Ali_6868</li>
+        <li>Horse · <a href="https://freesound.org/s/274898/">Galloping Horse</a>, Podsburgh</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Music</h2>
+    <div class="grid">
+      <div class="panel"><h3>Places &amp; screens</h3><ul class="links">
+        <li>Title · <a href="https://opengameart.org/content/new-sunrise">New Sunrise</a> V1, nene</li>
+        <li>Large city, first visit · New Sunrise V2, nene</li>
+        <li>Home-base village · <a href="https://opengameart.org/content/squirrel-village">Squirrel Village</a>, SoManyWhales</li>
+        <li>Small / medium village · <a href="https://opengameart.org/content/aria">Aria</a>, Kistol</li>
+        <li>Tense dungeon · <a href="https://opengameart.org/content/dark-forest-theme">Dark Forest Theme</a>, cynicmusic</li>
+        <li>Graveyard / desert · <a href="https://opengameart.org/content/dark-quest">Dark Quest</a>, Alexandr Zhelanov</li>
+        <li>Side quest, young companion · <a href="https://opengameart.org/content/fathers-scabbard">Father's Scabbard</a>, SoManyWhales</li>
+      </ul></div>
+      <div class="panel"><h3>Scenes</h3><ul class="links">
+        <li>Calm conversation · <a href="https://opengameart.org/content/field-orchestra">Field – Orchestra</a>, migfus20</li>
+        <li>Antagonist · <a href="https://opengameart.org/content/classical-murder">Classical Murder</a>, Alexandr Zhelanov</li>
+        <li>Sad moment · <a href="https://opengameart.org/content/emotional-orchestral-music">Peractorum</a>, César da Rocha</li>
+        <li>Tragic scene · <a href="https://freemusicarchive.org/music/maarten-schellekens/free-music-made-for-screen/hesitation-orchestral-version/">Hesitation</a>, Maarten Schellekens</li>
+        <li>Mythic moment only · <a href="https://opengameart.org/content/epic-endgame-cinematic">Epic Endgame Cinematic</a>, cynicmusic</li>
+      </ul></div>
+      <div class="panel"><h3>Battles</h3><ul class="links">
+        <li>Little tragedy · <a href="https://opengameart.org/content/hopeorchestral-battle-music">Hope</a>, mintodog</li>
+        <li>Half tragic · <a href="https://opengameart.org/content/battle-0">Battle</a>, mla</li>
+        <li>Expected easy win · <a href="https://opengameart.org/content/sigil">Sigil</a>, Kistol</li>
+        <li>First battle in a new area · <a href="https://opengameart.org/content/ending-scene">Ending Scene</a> (orchestral), nene</li>
+        <li>Act boss · <a href="https://opengameart.org/content/battle-theme-a">Battle Theme A</a> / <a href="https://opengameart.org/content/battle-theme-b-for-rpg">B</a>, cynicmusic</li>
+        <li>Against the Church · <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces">Fantasy Choir</a> 2 / 3, César da Rocha</li>
+        <li>Skirmish pool · <a href="https://opengameart.org/content/battle-themes">Battle Themes</a> 1, 2, 3, 5 (Zhelanov) + <a href="https://opengameart.org/content/rpg-battle-theme-0">RPG - Battle Theme</a> (jocolloman)</li>
+      </ul></div>
+    </div>
+    <p class="note muted">Still open, none needed for Chapter 1: a banter conversation track, the crit of a spell with no element, fliers' wings, and music for places not asked about yet (capital, world map, camp, shops, victory and defeat).</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  let ctx = null, master = null, reverb = null, musicBus = null, sfxBus = null;
+  const M = n => { const m = /^([A-G])(#|b)?(-?\d)$/.exec(n); return (parseInt(m[3], 10) + 1) * 12 + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); };
+  const midiF = midi => 440 * Math.pow(2, (midi - 69) / 12);
+  const nf = n => midiF(M(n));
+
+  function newMusicBus() { const g = ctx.createGain(); g.gain.value = 0.55; g.connect(master); return g; }
+  function init() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = vol();
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(ctx.destination);
+    reverb = ctx.createConvolver();
+    const len = ctx.sampleRate * 1.8, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    reverb.buffer = ir;
+    const revGain = ctx.createGain(); revGain.gain.value = 0.32; reverb.connect(revGain); revGain.connect(master);
+    musicBus = newMusicBus();
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
+  }
+  const volEl = document.getElementById('vol');
+  const vol = () => Math.pow(volEl.value / 100, 1.6);
+  volEl.addEventListener('input', () => { if (master) master.gain.setTargetAtTime(vol(), ctx.currentTime, 0.03); });
+
+  // ---------- building blocks ----------
+  let noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+  }
+  const pulseWaves = {};
+  function pulse(duty) {
+    if (pulseWaves[duty]) return pulseWaves[duty];
+    const n = 64, re = new Float32Array(n), im = new Float32Array(n);
+    for (let k = 1; k < n; k++) { re[k] = Math.sin(2 * k * Math.PI * duty) / (k * Math.PI); im[k] = (2 / (k * Math.PI)) * Math.pow(Math.sin(k * Math.PI * duty), 2); }
+    return (pulseWaves[duty] = ctx.createPeriodicWave(re, im));
+  }
+  function env(g, t, a, peak, d, hold = 0) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + a);
+    if (hold > 0) g.gain.setValueAtTime(peak, t + a + hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + d);
+  }
+  function tone({ type = 'sine', wave = null, f, f2 = null, t, a = 0.005, d = 0.2, peak = 0.3, hold = 0, out, detune = 0, glide = null, filter = null, q = 0.7, vib = 0 }) {
+    const o = ctx.createOscillator(); if (wave) o.setPeriodicWave(wave); else o.type = type;
+    o.frequency.setValueAtTime(f, t); o.detune.value = detune;
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + (glide ?? d));
+    const g = ctx.createGain(); env(g, t, a, peak, d, hold);
+    let node = o;
+    const end = t + a + hold + d + 0.05;
+    if (vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 5.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(vib, t + 0.25); l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(end); }
+    if (filter) { const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = filter; fl.Q.value = q; o.connect(fl); node = fl; }
+    node.connect(g); g.connect(out);
+    o.start(t); o.stop(end);
+    return g;
+  }
+  function burst({ t, d = 0.1, peak = 0.3, type = 'bandpass', f = 2000, f2 = null, q = 1, a = 0.002, out }) {
+    const s = noise(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q;
+    if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+    env(g, t, a, peak, d);
+    s.connect(fl); fl.connect(g); g.connect(out);
+    s.start(t, Math.random()); s.stop(t + a + d + 0.05);
+    return g;
+  }
+  const wet = (node, amt = 0.4) => { const g = ctx.createGain(); g.gain.value = amt; node.connect(g); g.connect(reverb); return node; };
+
+  // ---------- menu sounds ----------
+  const P25 = () => pulse(0.25), P50 = () => pulse(0.5), P12 = () => pulse(0.125);
+  const bell = (n, t, d, peak, extra = {}) => tone({ f: nf(n), t, d, peak, out: sfxBus, ...extra });
+  const chip = (n, t, d, hold, peak, filt = 1500, w = P25) => tone({ wave: w(), f: nf(n), t, d, hold, peak, filter: filt, out: sfxBus });
+  const knock = (n, t, d, peak) => { tone({ f: nf(n), t, d, peak, out: sfxBus }); tone({ f: nf(n) * 3.9, t, d: 0.02, peak: peak * 0.2, out: sfxBus }); };
+
+  const MENU = {
+    move: [
+      { id: 'A', name: 'Soft bell', note: 'E4, very short', pick: true, play: t => bell('E4', t, 0.09, 0.12) },
+      { id: 'B', name: 'Muted chip', note: 'D4 pulse, filtered', pick: true, play: t => chip('D4', t, 0.05, 0.015, 0.07, 1400) },
+      { id: 'C', name: 'Wood knock', note: 'D4 tap', pick: true, play: t => knock('D4', t, 0.07, 0.16) },
+      { id: 'E', name: 'Chip, rounder', note: 'Square wave, darker filter: less buzz than B', play: t => chip('D4', t, 0.05, 0.012, 0.08, 900, P50) },
+      { id: 'F', name: 'Bell with a wood tap', note: "A's note with C's attack", play: t => { bell('E4', t, 0.1, 0.1); tone({ f: nf('E4') * 3.9, t, d: 0.015, peak: 0.03, out: sfxBus }); } },
+      { id: 'G', name: 'Felt tick', note: 'Lower (B3) and softer: the quietest option', play: t => tone({ type: 'triangle', f: nf('B3'), t, d: 0.06, peak: 0.14, filter: 1200, out: sfxBus }) },
+      { id: 'H', name: 'Chip + bell layer', note: "B's click over a bell body", play: t => { chip('D4', t, 0.03, 0.01, 0.04, 1400); bell('D4', t, 0.1, 0.08); } },
+    ],
+    select: [
+      { id: 'A', name: 'Soft bell', note: 'A4 with a little room echo', pick: true, play: t => { wet(bell('A4', t, 0.35, 0.26), 0.25); bell('A5', t, 0.12, 0.04); } },
+      { id: 'B', name: 'Muted chip', note: 'G4 pulse, filtered', pick: true, play: t => chip('G4', t, 0.14, 0.05, 0.12, 1700) },
+      { id: 'I', name: 'Bell, lower', note: 'F4: warmer and less "ding"', play: t => { wet(bell('F4', t, 0.4, 0.28), 0.25); bell('F5', t, 0.1, 0.03); } },
+      { id: 'J', name: 'Chip, rounder', note: 'Square wave, darker filter', play: t => chip('G4', t, 0.16, 0.04, 0.13, 1000, P50) },
+      { id: 'K', name: 'Chip attack, bell tail', note: 'Starts like B, rings out like A', play: t => { chip('G4', t, 0.05, 0.02, 0.07, 1600); wet(bell('G4', t + 0.01, 0.35, 0.18), 0.2); } },
+      { id: 'L', name: 'Chip, two quick notes up', note: 'D4 → G4. Not "one note", but reads clearly as "yes"', play: t => { chip('D4', t, 0.04, 0.02, 0.1, 1600); chip('G4', t + 0.06, 0.14, 0.04, 0.12, 1700); } },
+      { id: 'N', name: 'Bell chord', note: 'G4 and D5 together: fuller, still soft', play: t => { wet(bell('G4', t, 0.4, 0.2), 0.25); bell('D5', t, 0.3, 0.08); } },
+    ],
+    cancel: [
+      { id: 'B', name: 'Muted chip', note: 'D4 → A3, two notes down', pick: true, play: t => { chip('D4', t, 0.05, 0.03, 0.1, 1300, P50); chip('A3', t + 0.07, 0.1, 0.03, 0.1, 1300, P50); } },
+      { id: 'P', name: 'Chip, one falling note', note: 'D4 sliding down to A3', play: t => tone({ wave: P50(), f: nf('D4'), f2: nf('A3'), glide: 0.1, t, d: 0.14, hold: 0.02, peak: 0.1, filter: 1300, out: sfxBus }) },
+      { id: 'Q', name: 'Chip, lower', note: 'A3 → E3: heavier "no"', play: t => { chip('A3', t, 0.05, 0.03, 0.11, 1100, P50); chip('E3', t + 0.07, 0.12, 0.03, 0.11, 1000, P50); } },
+      { id: 'R', name: 'Chip, softer', note: 'Same two notes as B, with the buzz filtered further', play: t => { chip('D4', t, 0.06, 0.02, 0.1, 800, P50); chip('A3', t + 0.07, 0.12, 0.02, 0.1, 700, P50); } },
+      { id: 'S', name: 'Chip, reverse of select', note: 'G4 → D4: mirrors B select', play: t => { chip('G4', t, 0.04, 0.02, 0.09, 1600); chip('D4', t + 0.06, 0.12, 0.03, 0.1, 1400); } },
+    ],
+  };
+
+  const find = (kind, id) => MENU[kind].find(o => o.id === id);
+  document.querySelectorAll('[data-menu]').forEach(b => b.addEventListener('click', () => { init(); const [k, id] = b.dataset.menu.split(':'); find(k, id).play(ctx.currentTime + 0.01); }));
+  document.getElementById('seq').addEventListener('click', () => {
+    init();
+    const mv = find('move', 'B'), se = find('select', 'L'), ca = find('cancel', 'B'), t0 = ctx.currentTime + 0.05;
+    [[mv, 0], [mv, 0.3], [mv, 0.45], [se, 0.9], [mv, 1.5], [mv, 1.8], [ca, 2.4]].forEach(([o, dt]) => o.play(t0 + dt));
+  });
+
+  // ---------- combat (dodge only) ----------
+  const SFX = {
+    'miss:weighty': t => burst({ t, d: 0.28, a: 0.12, type: 'bandpass', f: 400, f2: 1800, q: 1.5, peak: 0.18, out: sfxBus }),
+    'miss:quick': t => burst({ t, d: 0.16, a: 0.07, type: 'bandpass', f: 700, f2: 2600, q: 1.6, peak: 0.18, out: sfxBus }),
+    'miss:swing': t => { burst({ t, d: 0.3, a: 0.12, type: 'bandpass', f: 350, f2: 1500, q: 1.4, peak: 0.16, out: sfxBus }); burst({ t: t + 0.04, d: 0.25, a: 0.1, type: 'lowpass', f: 250, f2: 500, q: 2, peak: 0.25, out: sfxBus }); },
+  };
+  document.querySelectorAll('[data-sfx]').forEach(b => b.addEventListener('click', () => { init(); SFX[b.dataset.sfx](ctx.currentTime + 0.01); }));
+
+  // ---------- heal (made in-house), all under 1 s and no note above G4 ----------
+  const soft = (n, t, d, peak, type = 'triangle', filt = 1400) => tone({ type, f: nf(n), t, a: 0.02, d, peak, filter: filt, out: sfxBus });
+  // HE's chord (C4 E4 G4, two detuned triangles each) swelling in over `a` seconds and fading over `d`, lifting 1.2% in pitch.
+  const bloom = (t, a, d) => ['C4', 'E4', 'G4'].forEach(n => [-6, 6].forEach(dt => wet(tone({ type: 'triangle', f: nf(n), f2: nf(n) * 1.012, glide: a + d * 0.6, t, a, d, peak: 0.05, detune: dt, filter: 1200, out: sfxBus }), 0.5)));
+  const HEAL = {
+    // Three warm notes rising, close together.
+    HA: t => { ['C4', 'E4', 'G4'].forEach((n, i) => wet(soft(n, t + i * 0.07, 0.45 - i * 0.05, 0.16), 0.35)); },
+    // Same rise in the menu's chip family (matches Select L).
+    HB: t => { ['C4', 'E4', 'G4'].forEach((n, i) => tone({ wave: pulse(0.5), f: nf(n), t: t + i * 0.06, a: 0.004, hold: 0.04, d: i === 2 ? 0.3 : 0.08, peak: 0.08, filter: 1000, out: sfxBus })); },
+    // A soft breath swelling up, with a low tone rising under it.
+    HC: t => { wet(burst({ t, a: 0.3, d: 0.35, type: 'lowpass', f: 300, f2: 1400, q: 0.8, peak: 0.18, out: sfxBus }), 0.3); wet(tone({ type: 'sine', f: nf('G3'), f2: nf('C4'), glide: 0.35, t, a: 0.25, d: 0.4, peak: 0.16, out: sfxBus }), 0.4); },
+    // A quick low harp-like run up.
+    HD: t => { ['G3', 'B3', 'D4', 'G4'].forEach((n, i) => { wet(tone({ f: nf(n), t: t + i * 0.05, a: 0.004, d: 0.6 - i * 0.08, peak: 0.13, out: sfxBus }), 0.45); tone({ f: nf(n) * 2, t: t + i * 0.05, a: 0.003, d: 0.12, peak: 0.02, out: sfxBus }); }); },
+    // A warm chord that blooms in and lifts slightly in pitch.
+    HE: t => { ['C4', 'E4', 'G4'].forEach(n => [-6, 6].forEach(dt => { const o = tone({ type: 'triangle', f: nf(n), f2: nf(n) * 1.012, glide: 0.5, t, a: 0.18, d: 0.5, peak: 0.05, detune: dt, filter: 1200, out: sfxBus }); wet(o, 0.5); })); },
+    // Longer blooms (round 5): same chord, slower swell and fade.
+    HE2: t => bloom(t, 0.25, 0.9),
+    HE3: t => bloom(t, 0.35, 1.3),
+    HE4: t => bloom(t, 0.5, 1.8),
+    // Bloom with a fifth added underneath (G3), fuller.
+    HE5: t => { bloom(t, 0.3, 1.2); [-5, 5].forEach(dt => wet(tone({ type: 'triangle', f: nf('G3'), t, a: 0.3, d: 1.2, peak: 0.045, detune: dt, filter: 900, out: sfxBus }), 0.5)); },
+    // HC's breath swell with the bloom rising out of it.
+    HE6: t => { burst({ t, a: 0.3, d: 0.35, type: 'lowpass', f: 300, f2: 1400, q: 0.8, peak: 0.14, out: sfxBus }); bloom(t + 0.15, 0.3, 1.1); },
+    // The bloom rising through the chord: C, then E joins, then G.
+    HE7: t => { ['C4', 'E4', 'G4'].forEach((n, i) => [-6, 6].forEach(dt => wet(tone({ type: 'triangle', f: nf(n), f2: nf(n) * 1.012, glide: 0.8, t: t + i * 0.12, a: 0.25, d: 1.1 - i * 0.12, peak: 0.05, detune: dt, filter: 1200, out: sfxBus }), 0.5))); },
+    // The breath swell ending on one soft low bell.
+    HF: t => { burst({ t, a: 0.22, d: 0.2, type: 'lowpass', f: 300, f2: 1200, q: 0.8, peak: 0.14, out: sfxBus }); wet(tone({ f: nf('G4'), t: t + 0.24, a: 0.01, d: 0.55, peak: 0.16, out: sfxBus }), 0.4); tone({ f: nf('G3'), t: t + 0.24, a: 0.01, d: 0.4, peak: 0.08, out: sfxBus }); },
+    // Two notes up a fifth, soft and round: the shortest.
+    HG: t => { wet(soft('C4', t, 0.18, 0.15, 'sine', 3000), 0.3); wet(soft('G4', t + 0.09, 0.45, 0.17, 'sine', 3000), 0.4); },
+  };
+  document.querySelectorAll('[data-heal]').forEach(b => b.addEventListener('click', () => { init(); HEAL[b.dataset.heal](ctx.currentTime + 0.01); }));
+  // Map cursor tick: menu move B through the sfx bus at 60 % (cursor_move in docs/design/audio.md).
+  document.getElementById('cursor').addEventListener('click', () => {
+    init();
+    const t = ctx.currentTime + 0.01;
+    sfxBus.gain.setValueAtTime(0.9 * 0.6, t);
+    MENU.move.find(o => o.id === 'B').play(t);
+    sfxBus.gain.setValueAtTime(0.9, t + 0.3);
+  });
+})();
+</script>
