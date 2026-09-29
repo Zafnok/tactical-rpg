@@ -93,7 +93,6 @@ fn class(id: &str, kinds: &[WeaponKind]) -> ClassDef {
         movement_type: MovementTypeId(0),
         move_points: 5,
         base: Stats::default(),
-        caps: Stats::default(),
         growths: Growths::default(),
         weapons: kinds
             .iter()

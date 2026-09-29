@@ -52,7 +52,6 @@ fn classes() -> ClassTable {
         movement_type: MovementTypeId(i),
         move_points: 5,
         base: Stats::from_growable([10; 7], 5),
-        caps: Stats::from_growable([50; 7], 5),
         growths: Growths([0; 7]),
         weapons: vec![],
         armour: vec![],

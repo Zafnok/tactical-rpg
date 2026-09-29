@@ -90,7 +90,6 @@ fn class(id: &str, tags: UnitTags) -> ClassDef {
         movement_type: MovementTypeId(0),
         move_points: 3,
         base: Stats::default(),
-        caps: Stats::default(),
         growths: Growths::default(),
         weapons: [
             WeaponKind::Sword,

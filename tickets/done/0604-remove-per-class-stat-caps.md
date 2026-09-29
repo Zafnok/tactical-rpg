@@ -5,10 +5,10 @@ type: feature
 milestone: M5 Progression
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0019"]
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0604 — Remove per-class stat caps (hard ceilings only)
@@ -85,19 +85,19 @@ screens and is part of 0603's choice screen, not this ticket.)
 
 ## Acceptance criteria
 
-- [ ] `classes.ron` has no `caps`; `Class` has no `caps` field.
-- [ ] A unit whose stat was at its old class cap still gains in that stat on
+- [x] `classes.ron` has no `caps`; `Class` has no `caps` field.
+- [x] A unit whose stat was at its old class cap still gains in that stat on
       level up (unit test with fixed rolls, e.g. a Swordsman at Spd 25 gains
       Spd on a roll under 60).
-- [ ] A stat at its hard ceiling never gains, and is not a safety-net
+- [x] A stat at its hard ceiling never gains, and is not a safety-net
       candidate (unit test).
-- [ ] Generic units at a high level are clamped to the hard ceilings, not a
+- [x] Generic units at a high level are clamped to the hard ceilings, not a
       class cap (unit test, e.g. a level-99 Brawler's Spd).
-- [ ] Property test: after any sequence of level ups, every stat ≤ its hard
+- [x] Property test: after any sequence of level ups, every stat ≤ its hard
       ceiling and never lower than before.
-- [ ] Content validation rejects a class or character base stat above the
+- [x] Content validation rejects a class or character base stat above the
       hard ceiling.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -109,5 +109,15 @@ screens and is part of 0603's choice screen, not this ticket.)
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Done as planned. `caps` is gone from the class format, `classes.ron`, the
+loader and `core::class::ClassDef`. `progression::level_up` now takes the
+hard ceilings (`&Stats`) as an argument; `Unit::from_character` and
+`Unit::generic` clamp to `ClassTable::hard_ceilings`; content validation
+rejects a class or character base stat over the ceiling. Still 7 RNG calls
+per level up. No replay or snapshot changed.
+
+Deviations: core tests that used tight class caps now pass tight hard
+ceilings instead (`roll_under` / `tight()` in `progression/tests.rs`). The
+"stat above cap after a reclass" case became "stat above its ceiling".
+
+No gameplay rules were decided here (*Claude's starting rule*: none).
