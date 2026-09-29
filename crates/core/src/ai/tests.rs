@@ -236,7 +236,6 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
         loadout: Loadout::default(),
-        consumables: vec![],
         personal_spells: vec![],
         learned: BTreeSet::new(),
         spells: SpellState::default(),
@@ -739,19 +738,6 @@ fn healers_with_nobody_to_heal_attack_or_keep_back() {
         .unwrap()
         .command;
     assert_eq!(healer_plan, wait(3, p(12, 0)));
-}
-
-#[test]
-fn wounded_units_never_drink_potions() {
-    // Enemies carry no consumables (Nick), and even one given a potion
-    // fights on at 1 HP.
-    let state = enemy_phase(&["P.E"], |u| {
-        edit(u, 2, |x| {
-            x.hp = 1;
-            x.consumables = vec![ItemId::new("potion")];
-        });
-    });
-    assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
 }
 
 // --- Order within the phase ------------------------------------------------

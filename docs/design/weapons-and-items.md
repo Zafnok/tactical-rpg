@@ -119,8 +119,9 @@ Order for a strike's damage: base `damage` → axe minimum → sword follow-up
 with more than one strike, the follow-up damage too.
 
 `A.Str`, `A.Spd`, `B.Def`, etc. are **gear-adjusted** stats: permanent stats
-plus the equipped armour and accessory bonuses. Gear may push a stat above
-its class cap but never above the hard ceiling in `stats-and-combat.md`.
+plus the equipped armour and accessory bonuses. Gear may never push a stat
+above the hard ceiling in `stats-and-combat.md` (classes have no caps,
+ticket 0019).
 
 ## Attack speed (`as_bonus`)
 

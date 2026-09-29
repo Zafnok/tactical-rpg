@@ -25,6 +25,9 @@ pub const LAYOUT_KEY: &str = "layout";
 /// with the `debug-tools` feature (ADR-0023).
 pub const DEBUG_TOOLS: bool = cfg!(any(debug_assertions, feature = "debug-tools"));
 
+/// Default dialogue [`Ctx::text_speed`], in characters per second.
+pub const DEFAULT_TEXT_SPEED: f32 = 60.0;
+
 /// One screen of the game: title, battle map, a menu overlay, …
 pub trait Screen {
     /// A stable, unique `snake_case` name, for tests and debugging.
@@ -122,6 +125,9 @@ pub struct Ctx {
     /// an accessibility style). Lives here until the Options menu (0805)
     /// moves it into the saved settings.
     pub cursor_style: CursorStyle,
+    /// How fast dialogue text is revealed, in characters per second. Lives
+    /// here until the Options menu (0805) moves it into the saved settings.
+    pub text_speed: f32,
 }
 
 impl Ctx {
@@ -139,6 +145,7 @@ impl Ctx {
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
+            text_speed: DEFAULT_TEXT_SPEED,
         })
     }
 

@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0405", "0207", "0801", "0208"]
+blocked_by: ["0405", "0207", "0801", "0208", "0212"]
 nick_input: none
 completed:
 ---
@@ -28,11 +28,14 @@ None.
 **In:** `Settings` struct persisted via `Storage` key `settings`, Options
 screen reachable from title and map menu, key rebinding UI.
 
-**Out:** audio volume (no audio yet), controller bindings.
+**Out:** controller bindings.
+
+**Audio (added by 0020):** music and sound volume settings, played through the
+0212 audio plumbing ([`docs/design/audio.md`](../../docs/design/audio.md)).
 
 ## Implementation steps
 
-1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default false, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), key_overrides: BTreeMap<Action, Vec<Chord>>, reset_tips, cursor_style: CursorStyle (Corners (default) | LargeCorners | TileGlow, ticket 0416; move it out of `Ctx::cursor_style`) }`.
+1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default false, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), key_overrides: BTreeMap<Action, Vec<Chord>>, reset_tips, cursor_style: CursorStyle (Corners (default) | LargeCorners | TileGlow, ticket 0416; move it out of `Ctx::cursor_style`), music_volume: u8, sound_volume: u8 (both 0–10, default 8, *tunable*; 0 = silent; applied by 0212's `app` audio as a multiplier on every cue's own volume) }`.
    Defaults match current behaviour. Loaded at startup into `Ctx`; saved on change.
 2. Wire each setting into its consumer (0704 typewriter, 0404 playback, 0502
    pacing, `app` fullscreen via a `FrameOutput` request flag).
@@ -59,6 +62,7 @@ screen reachable from title and map menu, key rebinding UI.
 - [ ] Classic → Casual switch works with a confirm; Casual never offers Classic (Harness test).
 - [ ] Layout can be switched from Options (both directions, repeatedly); the new keys work at once and persist across restart (Harness test).
 - [ ] Rebinding works, persists across restart (MemoryStorage round-trip test), conflicts handled.
+- [ ] Music and sound volume change what `app` plays (Harness test on the requests or the mixer multiplier), 0 silences, and they persist across restart.
 - [ ] Snapshots of both screens.
 
 ## Completion notes

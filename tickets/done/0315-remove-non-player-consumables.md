@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0501"]
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0315 — Remove non-player units' own consumables
@@ -80,14 +80,14 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `grep -rn "\.consumables\|consumables:" crates/core` finds only the item
+- [x] `grep -rn "\.consumables\|consumables:" crates/core` finds only the item
       table / battle pack, never a unit field.
-- [ ] Test `only_player_units_use_items` passes.
-- [ ] Test `old_saves_with_unit_consumables_still_load` (in
+- [x] Test `only_player_units_use_items` passes.
+- [x] Test `old_saves_with_unit_consumables_still_load` (in
       `crates/core/src/battle/tests.rs`, next to the other serde tests): a
       `BattleState` saved to RON with a `consumables: ["potion"]` entry added
       to a unit deserialises, and equals the state without it.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -98,5 +98,12 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Removed `Unit::consumables` and all uses; `plan_item` refuses non-player units
+with `PlayerOnly` and reads only the battle pack; docs updated. Added
+`only_player_units_use_items` and `old_saves_with_unit_consumables_still_load`;
+deleted `enemies_use_their_own_consumables` and `wounded_units_never_drink_potions`.
+
+Deviations: `crates/core/tests/replay.rs` scripted an enemy `UseItem`; it is now
+an enemy `Wait`. The proptest action generator offers no `UseItem` to non-player
+units. No gameplay rules were decided. No follow-up tickets. Nothing changes
+when playing.

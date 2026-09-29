@@ -14,7 +14,7 @@ here.
 | Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 |
 | Combat Arts for ranks C–S, special weapons | `combat-arts.md` | 0018 | ⏳ after playtest 0804 |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 (spells after a class change and terrain magic details revised 2026-09-27) |
-| Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017) |
+| Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017, 0019 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017; no per-class stat caps, 0019, 2026-09-28) |
 | Death, rewind, difficulty, saving | [`death-and-difficulty.md`](death-and-difficulty.md) | 0006 | ✅ decided 2026-09-25 |
 | Setting, tone & the lead | [`setting-and-tone.md`](setting-and-tone.md) (+ [`docs/story/beats.md`](../story/beats.md)) | 0007 | ✅ decided 2026-09-25 |
 | World structure, saving on the world map, camp | [`world-structure.md`](world-structure.md) | 0008 | ✅ decided 2026-09-26 |
@@ -22,6 +22,7 @@ here.
 | The lord's unique class line | [`progression.md`](progression.md) (*The lord's line*) | 0016 | ✅ decided 2026-09-25 |
 | Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |
 | Look & feel | [`look-and-feel.md`](look-and-feel.md) | 0011, 0404 (forecast) | ✅ decided 2026-09-25 (forecast 2026-09-27) |
+| Music & sound effects | [`audio.md`](audio.md) | 0020 | ✅ decided 2026-09-28 (banter track, plain-spell crit, fliers and later places still open) |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
 | Terrain: movement costs & bonuses | [`terrain.md`](terrain.md) | 0301 | ✅ decided 2026-09-26 (capturing & healing tiles deferred) |
 | Controls & key layouts | [`controls.md`](controls.md) | 0015 | ✅ decided 2026-09-25 |

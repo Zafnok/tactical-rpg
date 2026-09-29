@@ -1,6 +1,8 @@
-//! Debug screens (F12 in debug builds): a menu of tools. The glyph sampler
+//! Debug screens (F2 in debug builds): a menu of tools. The glyph sampler
 //! shows every font glyph and palette colour, for judging the look (ticket
-//! 0011); the portrait viewer shows every portrait (ticket 0703).
+//! 0011); the portrait viewer shows every portrait (ticket 0703); the test
+//! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
+//! menu was opened from (ticket 0704).
 
 mod portrait_viewer;
 
@@ -11,7 +13,7 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::screens::{centre_x, print_centred};
+use crate::screens::{DialogueScreen, centre_x, print_centred};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 use trpg_content::palette::REQUIRED_COLORS;
@@ -25,7 +27,14 @@ pub const SCREENS: [&str; 3] = [
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 2] = ["Glyph sampler", "Portraits"];
+const TOOLS: [&str; 4] = [
+    "Glyph sampler",
+    "Portraits",
+    "Play test scene",
+    "Play test scene (overlay)",
+];
+/// The scene the "Play test scene" tools play.
+pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
 const MENU_TITLE_ROW: i32 = 9;
 
@@ -65,8 +74,20 @@ impl Screen for DebugMenuScreen {
                 Some(MenuEvent::Chosen(0)) => {
                     return Transition::Push(Box::new(GlyphSamplerScreen::new(ctx)));
                 }
-                Some(MenuEvent::Chosen(_)) => {
+                Some(MenuEvent::Chosen(1)) => {
                     return Transition::Push(Box::new(PortraitViewerScreen::new()));
+                }
+                Some(MenuEvent::Chosen(tool)) => {
+                    let Some(scene) = ctx.content.dialogue.get(TEST_SCENE).cloned() else {
+                        continue;
+                    };
+                    // The overlay replaces this menu so it plays over the
+                    // screen the menu was opened from (e.g. the battle map).
+                    return if tool == 2 {
+                        Transition::Push(Box::new(DialogueScreen::new(scene)))
+                    } else {
+                        Transition::Replace(Box::new(DialogueScreen::overlay(scene)))
+                    };
                 }
                 None => {}
             }
@@ -154,9 +175,15 @@ impl Screen for GlyphSamplerScreen {
 /// Glyphs per sampler row; each glyph is followed by a blank cell.
 const GLYPHS_PER_ROW: usize = 48;
 /// Width of one palette swatch column (`██ name`).
-const SWATCH_W: i32 = 24;
+const SWATCH_W: i32 = 19;
+/// Longest colour name shown in a swatch column; longer names are cut.
+const SWATCH_NAME_W: usize = SWATCH_W as usize - 5;
 /// Swatch columns across the console.
-const SWATCH_COLUMNS: i32 = 4;
+const SWATCH_COLUMNS: i32 = 5;
+/// Palette size the layout must still fit, so adding colours doesn't clip the
+/// demo panels again (tickets 0209, 0210).
+#[cfg(test)]
+const PALETTE_HEADROOM: usize = 60;
 
 /// Row of the "Palette" heading: right after the glyph grid's own title and
 /// rows, no blank row between. Computed from `glyphs` (rather than a fixed
@@ -176,9 +203,12 @@ fn palette_top(glyphs: &[char]) -> i32 {
 /// with no blank rows between (every row here is scarce once the palette is
 /// large).
 fn panels_top(palette: &Palette, glyphs: &[char]) -> i32 {
-    let swatch_rows: i32 = palette
-        .iter()
-        .count()
+    panels_top_for(palette.iter().count(), glyphs)
+}
+
+/// [`panels_top`] for a palette of `colours` colours.
+fn panels_top_for(colours: usize, glyphs: &[char]) -> i32 {
+    let swatch_rows: i32 = colours
         .div_ceil(SWATCH_COLUMNS as usize)
         .try_into()
         .unwrap_or(i32::MAX);
@@ -211,7 +241,8 @@ pub fn glyph_sampler(palette: &Palette, glyphs: &[char]) -> GlyphBuffer {
             bottom + 1 + i / SWATCH_COLUMNS,
         );
         b.print(x, y, "██", rgb, black);
-        b.print(x + 3, y, name, dim, black);
+        let name: String = name.chars().take(SWATCH_NAME_W).collect();
+        b.print(x + 3, y, &name, dim, black);
     }
 
     let panels_top = panels_top(palette, glyphs);
@@ -355,6 +386,16 @@ mod tests {
     }
 
     #[test]
+    fn demo_panels_keep_margin_for_a_larger_palette() {
+        let p = sampler_colours();
+        let glyphs = atlas_glyphs();
+        assert!(p.iter().count() <= PALETTE_HEADROOM);
+        assert!(panels_top_for(PALETTE_HEADROOM, &glyphs) <= i32::from(CONSOLE_H) - 4);
+        // At least two spare rows for today's palette.
+        assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 6);
+    }
+
+    #[test]
     fn sampler_screen_draws_the_sampler_and_closes_on_cancel() {
         let mut ctx = crate::screen::tests::ctx();
         let mut screen = GlyphSamplerScreen::new(&ctx);
@@ -395,7 +436,18 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(portrait_viewer)"
         );
+        assert_eq!(outcome(&mut menu, &[CursorDown, Confirm]), "Push(dialogue)");
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Replace(dialogue)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
+        // Without the test scene, its tools do nothing.
+        ctx.content.dialogue.scenes.clear();
+        let mut menu = DebugMenuScreen::new();
+        let a = [CursorUp, Confirm];
+        let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
+        assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
         assert_eq!(SCREENS, ["debug_menu", "glyph_sampler", "portrait_viewer"]);
     }
 

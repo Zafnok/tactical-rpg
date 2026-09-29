@@ -1,7 +1,7 @@
 # Stats and combat maths
 
 Decided: 2026-09-25
-Source: ticket 0001
+Source: ticket 0001 (per-class stat caps removed by ticket 0019, 2026-09-28)
 
 ## Nick's words
 
@@ -45,25 +45,26 @@ tickets may change it without asking Nick. Unmarked rules are Nick's choices.
 
 All stats are non-negative integers. Code must use one stat value type
 alias everywhere (not a hard-wired `u8`) so the scale can grow later without a
-rewrite. Every unit also has a current HP (`0..=HP`). Per-class caps and growths come from
-`progression.md` (ticket 0005); the hard ceilings here are absolute limits
-that no class cap, gear or bonus may exceed.
+rewrite. Every unit also has a current HP (`0..=HP`). Growth rates come from
+the class (`progression.md`, ticket 0005). **Classes don't cap stats** (Nick,
+ticket 0019): the hard ceilings here, and the level cap, are the only limits
+on a stat, and no level up, gear or bonus may exceed them.
 
 | Stat | Meaning | Range |
 | ---- | ------- | ----- |
-| `HP`  | Max hit points. The unit is defeated at 0 current HP. | `1..=80` hard ceiling, cap per class *(tunable)* |
-| `Str` | Physical attack power (added to physical weapon might). | `0..=50` hard ceiling, cap per class *(tunable)* |
-| `Mag` | Magical attack power (added to magical weapon/tome might). | `0..=50` hard ceiling, cap per class *(tunable)* |
-| `Dex` | Precision: raises hit and crit, and lowers the crits taken. | `0..=50` hard ceiling, cap per class *(tunable)* |
-| `Spd` | Quickness: raises avoid and decides extra strikes. | `0..=50` hard ceiling, cap per class *(tunable)* |
-| `Def` | Reduces physical damage taken. | `0..=50` hard ceiling, cap per class *(tunable)* |
-| `Res` | Reduces magical damage taken. | `0..=50` hard ceiling, cap per class *(tunable)* |
+| `HP`  | Max hit points. The unit is defeated at 0 current HP. | `1..=80` hard ceiling *(tunable)* |
+| `Str` | Physical attack power (added to physical weapon might). | `0..=50` hard ceiling *(tunable)* |
+| `Mag` | Magical attack power (added to magical weapon/tome might). | `0..=50` hard ceiling *(tunable)* |
+| `Dex` | Precision: raises hit and crit, and lowers the crits taken. | `0..=50` hard ceiling *(tunable)* |
+| `Spd` | Quickness: raises avoid and decides extra strikes. | `0..=50` hard ceiling *(tunable)* |
+| `Def` | Reduces physical damage taken. | `0..=50` hard ceiling *(tunable)* |
+| `Res` | Reduces magical damage taken. | `0..=50` hard ceiling *(tunable)* |
 | `Mov` | Movement points per turn (see movement/pathfinding). Set by class; does not grow on level up. | `0..=15`, set per class, typically 4–8 *(tunable)* |
 
 All ranges above are *placeholders* for the FE-sized first build (see
-ticket 0013). Guideline for class caps (*tunable*, for 0005): specialist stats
-cap around 35–40 (e.g. a speed class's Spd), ordinary stats 20–30, HP 50–60.
-The strike thresholds below are sized for these numbers.
+ticket 0013). Ticket 0013 also decides the ceiling numbers and whether they
+stay fixed or rise with class tier (Nick, ticket 0019: "3C"). The strike
+thresholds below are sized for these numbers.
 
 No Luck, no Constitution/Build/weight stat. Whether weapons have weight (and
 what it would subtract from) is ticket 0003's decision; see *Attack speed*.
