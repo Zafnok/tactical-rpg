@@ -3,6 +3,7 @@
 
 use insta::assert_snapshot;
 use trpg_content::FontAtlasDef;
+use trpg_ui::audio::AudioRequest;
 use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
 
@@ -371,6 +372,10 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     h.keys("f");
     assert_eq!(help(&h), "d skip · hold f fast");
     h.keys("d");
+    // The lord's EXP bar; Confirm finishes it and it closes.
+    assert_eq!(help(&h), "f skip · hold f fast");
+    assert!(shows(&h, "EXP"));
+    h.keys("f");
     // The lord has acted, dimmed at (6, 4) (cells 32..34, row 15).
     assert_eq!(tile(&h, 32, 15), "Lo");
     assert!(
@@ -423,4 +428,44 @@ fn the_rogue_arrives_and_turn_three_opens_with_a_scene() {
         "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
     assert_eq!(tile(&h, 44, 14), "Ro");
+}
+
+/// The music cues the run asked for, in order.
+fn music(h: &Harness) -> Vec<String> {
+    h.audio_requests()
+        .into_iter()
+        .filter_map(|r| match r {
+            AudioRequest::PlayMusic { cue } => Some(cue),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Quick Battle plays one track from the `skirmish` pool, and nothing in the
+/// battle (combat, rewind, the enemy phase, the next turn) changes it.
+#[test]
+fn quick_battle_keeps_one_skirmish_track() {
+    let content = trpg_content::load_embedded().unwrap();
+    let pool = &content.audio.pools["skirmish"];
+    let mut h = quick_battle();
+    let cues = music(&h);
+    assert_eq!(cues.len(), 2, "{cues:?}");
+    assert_eq!(cues[0], "title");
+    assert!(pool.contains(&cues[1]), "{cues:?}");
+    // The lord attacks the brigand in reach, and the combat plays out.
+    h.keys("f Right Right Right Up f")
+        .wait(0.5)
+        .keys("f")
+        .wait(0.5);
+    h.keys("f").wait(0.5).keys("f").wait(30.0);
+    // Open rewind and back out, then end the turn through the enemy phase.
+    h.keys("r").wait(0.5).keys("d");
+    h.keys("Space Space");
+    assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
+    h.keys("f f");
+    assert!(!shows(&h, "PHASE"));
+    h.keys("d Down f");
+    assert!(shows(&h, "Turn 2"));
+    assert_eq!(music(&h), cues);
+    assert_eq!(h.screens(), ["title", "battle"]);
 }

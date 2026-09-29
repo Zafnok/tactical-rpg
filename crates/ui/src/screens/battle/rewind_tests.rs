@@ -7,6 +7,7 @@ use trpg_core::{BattleState, Command, UnitAction, UnitId};
 
 use super::BattleScreen;
 use super::layout::HELP_ROW;
+use super::progress::PROGRESS_TIMINGS;
 use super::rewind::RewindScreen;
 use super::rewind::{CHARGES_ROW, LIST_ROW, PROMPT_ROW, TITLE_ROW};
 use super::testing::skirmish_charged;
@@ -41,13 +42,16 @@ fn attacked(c: &mut Ctx, charges: u8) -> (BattleScreen, BattleState) {
     let mut s = BattleScreen::new(start.clone());
     // Select the lord, one step right, move there.
     press(&mut s, c, &[Confirm, CursorRight, Confirm], 0.5);
-    // Attack, the iron sword, the brigand, attack, skip the playback (Cancel).
+    // Attack, the iron sword, the brigand, attack, skip the playback
+    // (Cancel), and let the EXP bar close.
+    let exp = PROGRESS_TIMINGS.exp_fill + PROGRESS_TIMINGS.exp_hold;
     press(
         &mut s,
         c,
         &[Confirm, Confirm, CursorRight, Confirm, Cancel],
-        0.1,
+        0.1 + exp,
     );
+    assert!(s.progress().is_none());
     assert_eq!(s.history().len(), 1);
     assert!(matches!(
         s.history().commands()[0],

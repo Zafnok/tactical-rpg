@@ -136,7 +136,15 @@ pub struct Ctx {
     /// Sounds and music screens ask for this frame (ADR-0026), e.g.
     /// `ctx.audio.play_sound("menu_move")`. `Game` passes them to `app`.
     pub audio: AudioQueue,
+    /// Seeds random music picks (e.g. a track from a pool), kept apart
+    /// from core's simulation RNG (ADR-0019). A fixed
+    /// [`DEFAULT_MUSIC_SEED`] here, so tests are repeatable; `app` sets it
+    /// from the clock at startup so each launch picks differently.
+    pub music_seed: u64,
 }
+
+/// [`Ctx::music_seed`] until `app` sets it.
+pub const DEFAULT_MUSIC_SEED: u64 = 0;
 
 impl Ctx {
     /// Builds the shared context from loaded content. Fails with the names
@@ -156,6 +164,7 @@ impl Ctx {
             tips_enabled: false,
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),
+            music_seed: DEFAULT_MUSIC_SEED,
         })
     }
 

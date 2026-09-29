@@ -29,6 +29,9 @@
     "heal_range": "#2e5a34",
     "danger_zone": "#3e1812",
 
+    // Background of a unit under a timed effect (a buff or a debuff).
+    "effect": "#4a3468",
+
     // Cursor brackets and the movement path line
     "cursor": "#f0dca0",
     "path": "#f0d8a0",

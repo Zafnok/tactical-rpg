@@ -1,19 +1,24 @@
 ---
 id: "0807"
-title: "Title music and per-battle music (with the skirmish pool)"
+title: "Per-battle music from the battle file (cue or skirmish pool)"
 type: feature
 milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0212", "0214", "0801"]
+blocked_by: ["0212", "0214", "0801", "0814"]
 nick_input: sign-off
 completed:
 ---
 
-# 0807 — Title music and per-battle music
+# 0807 — Per-battle music from the battle file
 
 ## Context
+
+The title music and a stand-in for Quick Battle (a random `skirmish` track
+picked on the title screen) were split out into **0814** (2026-09-29) so
+the demo has music before 0801 lands. This ticket does the rest: each
+battle file names its music.
 
 From [`docs/design/audio.md`](../../docs/design/audio.md) (ticket 0020):
 
@@ -35,7 +40,6 @@ keeps playing across phases and combat.
 ## Scope
 
 **In:**
-- The title screen plays `title` when shown.
 - The battle file gets a required field
   `music: Cue("battle_bright") | Pool("skirmish")`. The validator checks that
   it names a music cue or a pool in the audio manifest. Update
@@ -65,31 +69,30 @@ keeps playing across phases and combat.
 
 ## Implementation steps
 
-1. `TitleScreen` emits `play_music("title")` on show.
-2. Add `music` to the battle file schema, loader and validator, and to every
+1. Add `music` to the battle file schema, loader and validator, and to every
    battle file.
-3. The battle screen, or the flow that starts it, emits `play_music` once
-   when the battle starts. For a `Pool`, pick with a `ui`-local RNG seeded
-   from the battle's seed plus a per-attempt counter, or pick in `app`. Record
-   the choice.
-4. Game Over and "To be continued" emit `stop_music`.
+2. The flow that starts a battle emits `play_music` once when the battle
+   starts. For a `Pool`, use 0814's `pick_from_pool` with `ctx.music_seed`
+   mixed with a per-attempt counter. Remove 0814's Quick Battle pick from
+   `TitleScreen` (0801 replaces the Quick Battle wiring anyway); the title
+   music part of 0814 stays.
+3. Game Over and "To be continued" emit `stop_music`.
 
 ## Acceptance criteria
 
-- [ ] Harness: the title emits `play_music("title")`.
 - [ ] Harness: a battle emits its cue once at the start, and not again across
       a full player phase → enemy phase → player phase cycle, combat
       playback, or a rewind.
-- [ ] A `Pool` battle picks a track from the pool; over many seeds every
-      track in the pool gets picked (property test).
+- [ ] A `Pool` battle plays a track from that pool (0814's property test
+      already covers reachability).
 - [ ] The validator rejects a battle file with a missing or unknown `music`.
 - [ ] Nick signed off.
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
-- Unit: schema/validator, pool pick.
-- Snapshot / integration: Harness title and battle music tests.
+- Unit: schema/validator.
+- Snapshot / integration: Harness battle music tests.
 
 ## Completion notes
 

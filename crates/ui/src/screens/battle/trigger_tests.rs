@@ -142,6 +142,7 @@ fn talk_is_offered_next_to_someone_to_talk_to_and_picks_a_target() {
         &[
             MenuEntry::Attack,
             MenuEntry::Talk,
+            MenuEntry::Skill,
             MenuEntry::Item,
             MenuEntry::Equip,
             MenuEntry::Wait

@@ -570,4 +570,45 @@ mod tests {
         assert!(!is_known(audio, &play("beep")));
         assert!(is_known(audio, &AudioRequest::StopMusic));
     }
+
+    /// A won battle pops back to the title, which asks for its music again.
+    #[test]
+    fn the_title_music_returns_after_a_battle() {
+        use crate::screens::battle::testing::battle_with;
+        use crate::screens::battle::{BattleScreen, quick_battle};
+        use trpg_core::{Objective, Pos, UnitId};
+
+        let c = ctx();
+        let quick = quick_battle(&c.content).unwrap();
+        // The lord next to a brigand on 1 HP, which one hit routs.
+        let mut units = quick.units().to_vec();
+        units.retain(|u| u.id == UnitId(1) || u.id == UnitId(4));
+        units[0].pos = Pos::new(7, 2);
+        units[1].hp = 1;
+        let rout = Objective::Rout { turn_limit: None };
+        let battle = battle_with(&c, quick.map().clone(), units, rout);
+        let mut stack = ScreenStack::new(Box::new(TitleScreen::with_quick_battle()));
+        stack.push(Box::new(BattleScreen::new(battle)));
+        let mut game = Game::with_stack(c, stack);
+        let mut music = Vec::new();
+        // Select the lord, stay, Attack, the brigand, confirm the forecast.
+        for key in [Key::F; 5] {
+            let quit = game.frame(&[down(key)], 0.0).quit;
+            assert!(!quit);
+            music.extend(game.frame(&[RawKeyEvent::Up(key)], 0.5).audio.to_vec());
+        }
+        for _ in 0..60 {
+            music.extend(game.frame(&[], 0.5).audio.to_vec());
+        }
+        assert!(music.is_empty(), "{music:?}");
+        assert_eq!(game.screens(), ["title", "battle"]);
+        // Past the VICTORY banner, back at the title.
+        assert!(game.frame(&[down(Key::F)], 0.0).audio.is_empty());
+        assert_eq!(game.screens(), ["title"]);
+        let title = AudioRequest::PlayMusic {
+            cue: "title".into(),
+        };
+        assert_eq!(game.frame(&[RawKeyEvent::Up(Key::F)], 0.0).audio, [title]);
+        assert!(game.frame(&[], 0.1).audio.is_empty());
+    }
 }

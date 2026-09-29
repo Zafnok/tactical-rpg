@@ -4,9 +4,11 @@
 //! and stats as plain numbers (`Str 7`; no class caps, ticket 0423), and on
 //! the right its loadout, spells and skills.
 
-use trpg_core::{BattleState, StatKind, Stats, Unit, WEAPON_SLOTS};
+use trpg_core::skill::effect_bonuses;
+use trpg_core::{BattleState, EffectSource, StatKind, Stats, TimedEffect, Unit, WEAPON_SLOTS};
 
 use super::layout::MAP_VIEW;
+use super::skills::{cost_text, effect_text, skill_cost, skill_name, timed_text, until_text};
 use super::units::{faction_color, hp_fill};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -32,8 +34,18 @@ const RIGHT_W: usize = 42;
 /// Widest item name or bonus, indented two cells in the right column.
 const ITEM_W: usize = 40;
 
-/// Most skills listed (rows 16..28).
-const SKILL_ROWS: usize = 12;
+/// Most skills listed, two rows each: name and cost, then the effect (rows
+/// 16..28).
+const SKILL_MAX: usize = 6;
+
+/// Column of the timed effects, right of the stats.
+const EFFECT_X: i32 = 37;
+
+/// Widest text in the effects column.
+const EFFECT_W: usize = 18;
+
+/// Most timed effects listed, three rows each (rows 7..13).
+const EFFECT_MAX: usize = 2;
 
 /// Most spells listed (rows 18..28).
 const SPELL_ROWS: usize = 10;
@@ -204,18 +216,93 @@ fn draw_middle(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let listed = StatKind::GROWABLE
         .into_iter()
         .filter(|&k| k != StatKind::Hp);
+    // Timed effects count: a raised or lowered stat shows in the effect
+    // colour.
+    let shown = effect_bonuses(&unit.effects).apply(unit.stats);
     for (y, kind) in (7..).zip(listed) {
         pen.text(x, y, stat_name(kind), UiColor::Text);
-        let value = format!("{:>3}", unit.stats.get(kind));
-        pen.text(x + 4, y, &value, UiColor::Text);
+        let value = format!("{:>3}", shown.get(kind));
+        let color = if shown.get(kind) == unit.stats.get(kind) {
+            UiColor::Text
+        } else {
+            UiColor::Effect
+        };
+        pen.text(x + 4, y, &value, color);
     }
+    draw_effects(pen, state, unit);
+    draw_skills(pen, state, unit);
+}
+
+/// The unit's timed effects right of the stats: name, what it changes, and
+/// until when it lasts (0412).
+fn draw_effects(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
+    if unit.effects.is_empty() {
+        return;
+    }
+    pen.text(EFFECT_X, 6, "Effects", UiColor::TextHighlight);
+    let mut y = 7;
+    for effect in unit.effects.iter().take(EFFECT_MAX) {
+        pen.cut(
+            EFFECT_X,
+            y,
+            &effect_name(state, effect),
+            EFFECT_W,
+            UiColor::Effect,
+        );
+        pen.cut(
+            EFFECT_X,
+            y + 1,
+            &timed_text(&effect.mods),
+            EFFECT_W,
+            UiColor::Text,
+        );
+        pen.cut(
+            EFFECT_X,
+            y + 2,
+            &until_text(effect),
+            EFFECT_W,
+            UiColor::TextDim,
+        );
+        y += 3;
+    }
+}
+
+/// What gave a timed effect: a skill's or an art's id, as a name.
+fn effect_name(state: &BattleState, effect: &TimedEffect) -> String {
+    match &effect.source {
+        EffectSource::Skill(id) => skill_name(state, id),
+        EffectSource::Art(id) => state
+            .arts()
+            .get(id)
+            .map_or_else(|| id.0.clone(), |a| a.name.clone()),
+    }
+}
+
+/// The skills block: `P` (passive, always on) or `A` (active) markers, the
+/// rank, the cost of an active, and each effect in a line under it.
+fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
+    let x = MID_X;
     pen.text(x, 15, "Skills", UiColor::TextHighlight);
     let skills = unit.usable_skills(state.classes(), state.skills());
     if skills.is_empty() {
         pen.text(x, 16, "--", UiColor::TextDim);
     }
-    for (y, skill) in (16..).zip(skills.into_iter().take(SKILL_ROWS)) {
-        pen.cut(x, y, &skill.name, 25, UiColor::Text);
+    for (y, skill) in (16..).step_by(2).zip(skills.into_iter().take(SKILL_MAX)) {
+        let cost = skill_cost(skill);
+        pen.text(
+            x,
+            y,
+            if cost.is_some() { "A" } else { "P" },
+            UiColor::TextHighlight,
+        );
+        let name_w = if cost.is_some() { 16 } else { 23 };
+        pen.cut(x + 2, y, &skill.name, name_w, UiColor::Text);
+        if let Some(cost) = cost {
+            let text = cost_text(cost);
+            let w = i32::try_from(text.len()).unwrap_or(0);
+            pen.text(x + 25 - w, y, &text, UiColor::TextDim);
+        }
+        pen.cut(x + 2, y + 1, &effect_text(skill), 23, UiColor::TextDim);
     }
 }
 
@@ -347,7 +434,7 @@ mod tests {
         assert!(RIGHT_X + i32::try_from(RIGHT_W).unwrap() < INFO.x + INFO.w - 1);
         const { assert!(ITEM_W + 2 <= RIGHT_W) };
         // The lists end above the bottom border (row 29).
-        assert!(16 + i32::try_from(SKILL_ROWS).unwrap() < INFO.h);
+        assert!(16 + 2 * i32::try_from(SKILL_MAX).unwrap() < INFO.h);
         assert!(18 + i32::try_from(SPELL_ROWS).unwrap() < INFO.h);
     }
 }

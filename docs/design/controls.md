@@ -47,8 +47,8 @@ needed). Key choices are Nick's; the defaults below are his.
 - **First launch:** before anything else, a one-screen **"Pick your layout"**
   menu shows both layouts (with a small key diagram) and asks the player to
   choose. The choice is saved and can be changed later in Options.
-- Individual keys stay rebindable in Options (ticket 0805), on top of the
-  chosen layout.
+- Individual keys stay rebindable in Options (tickets 0805, 0814), on top of
+  the chosen layout: see *Rebinding keys* below.
 
 ### Bindings
 
@@ -102,6 +102,104 @@ Confirm tap skipped and holding it sped up):
 - **Revisit after playtesting** a chapter with large-map fights (0804 or
   later). If crossing big maps feels slow, the options were: hold a key to
   scroll faster (FE's hold-B), or jump several tiles per press.
+
+### Rebinding keys
+
+Decided 2026-09-29, ticket 0030. Nick's words:
+
+> "we should allow remapping keys in the options menu. […] 1) never
+> hardcode keyboard input, draw from the config which can be set by user
+> 2) keyboard mapping screen, take any keyboard input to remap, check it's
+> not already taken, if it is, then overwrite but make the one that was
+> taken before have a flag like ! not mapped"
+>
+> "only some keys are necessary to map like cursor, select/confirm, cancel,
+> end turn"
+>
+> "we can have some that are optional like if user wants separate select
+> (cursor) and confirm (action) keys, or separate end turn / confirm end
+> turn keys (right now both can be space)"
+>
+> Follow-up answers:
+> - Leaving the screen while a required action has no key: **"Block leaving"**.
+> - Keys per action: **"3 each, only one needs to be filled out."**
+> - Custom keys when switching right/left-handed: **"Each layout keeps its own"**.
+> - Backing out of "Press a key…": **"Esc backs out, not bindable"**.
+> - Emptying a slot: **"Delete only"**.
+
+**Where:** a **Key bindings** screen opened from Options (ticket 0805).
+
+**Slots.** Every action has **3 key slots**. An action works with any of the
+keys in its slots. Only one slot needs a key.
+
+**Required and optional actions.**
+
+| Required (must keep at least one key) | Optional (may have no key) |
+| ------------------------------------- | -------------------------- |
+| Cursor up, down, left, right | Select *(new, see below)* |
+| Confirm | Confirm end turn *(new, see below)* |
+| Cancel | Previous / next ready unit |
+| End turn | Unit info, danger zone, auto-end on/off, rewind, map menu |
+
+The developer Debug key is not on the screen.
+
+**Binding a key.**
+
+1. Pick an action's slot and press Confirm: the slot shows `Press a key…`.
+2. The next key pressed goes in that slot. Any key the game can read counts,
+   with or without `Shift`, except `Esc` and `Delete` (below).
+3. **If that key is already in another slot, it moves:** the old slot is
+   emptied. An action left with no keys at all shows **`! not mapped`**.
+   (Same layout only; the other layout's keys are separate.)
+
+**`Esc` is fixed.** `Esc` always backs out of `Press a key…` without
+changing anything, and always works as Cancel everywhere, in both layouts.
+It can't be put in a slot; the screen shows it as a fixed extra key on
+Cancel.
+
+**`Delete` empties** the highlighted slot. `Delete` can't be put in a slot.
+
+**Leaving is blocked** while any *required* action shows `! not mapped`:
+backing out of the screen shows a message naming the action and stays put.
+Optional actions may be left `! not mapped`; that action then has no key
+until the player binds one.
+
+**Each layout keeps its own keys.** Custom keys are saved per layout.
+Switching right/left-handed in Options loads that layout's keys (its own
+custom keys if it has any, else its defaults); switching back brings the
+first layout's custom keys back.
+
+**Optional split keys.** Both start with no key, so the defaults behave
+exactly as before:
+
+- **Select (cursor)**: picking things *on the map with the cursor*
+  (choosing a unit, its destination tile, a target; Confirm on an empty tile
+  opening the map menu). With no key, Confirm does this. Once Select has a
+  key, Confirm stops doing it on the map and only accepts menus, prompts
+  and the forecast.
+- **Confirm end turn**: accepting the end-turn prompt. With no key, pressing
+  End turn again accepts it (today's double-tap Space). Once it has a key,
+  End turn pressed again no longer accepts; the new key does. Confirm still
+  accepts and Cancel still backs out, as before.
+
+**Help bar and tips** show the player's current keys. An action with no key
+shows as `! not mapped` there too.
+
+*Claude's starting rules (Nick to veto at sign-off of 0814):*
+
+- `Esc` doesn't count as Cancel's required key: Cancel still needs one of
+  its own slots filled, so it stays on the acting hand.
+- Emptying a required action's last key with `Delete` is allowed (it then
+  shows `! not mapped` and leaving is blocked), the same as losing it to
+  another action.
+- The blocked-leave message reads `Give <action> a key first`.
+- A **Restore defaults** row puts the current layout's default keys back
+  (the other layout is untouched).
+- Which Select/Confirm presses count as "on the map" is Claude's reading
+  of "select (cursor) and confirm (action)" above.
+- The Key bindings screen is steered with the keys the player had when
+  they opened it; changes take effect when they leave. This way moving
+  every cursor key elsewhere can't trap them on the screen.
 
 ## Open sub-questions
 

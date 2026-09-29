@@ -33,6 +33,7 @@ async fn main() {
     let ctx = match Ctx::embedded() {
         Ok(mut ctx) => {
             ctx.tips_enabled = true;
+            ctx.music_seed = miniquad::date::now().to_bits();
             ctx.with_storage(storage::platform())
         }
         Err(e) => return show_content_errors(&e.to_string()).await,

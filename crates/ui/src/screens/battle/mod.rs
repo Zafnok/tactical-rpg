@@ -26,7 +26,9 @@ pub mod mode;
 pub mod panel;
 pub mod path;
 pub mod playback;
+pub mod progress;
 pub mod rewind;
+pub mod skills;
 pub mod tips;
 pub mod units;
 
@@ -43,6 +45,7 @@ use trpg_core::{
 
 use self::banner::{Banner, BannerKind};
 
+use self::attack::Targeting;
 use self::camera::{Camera, tile_to_cell};
 use self::cursor::{Cursor, draw_cursor};
 use self::layout::{
@@ -51,6 +54,7 @@ use self::layout::{
 use self::mode::{Effect, MenuEntry, Mode, Selection};
 use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
+use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
 use super::dialogue::DialogueScreen;
@@ -347,6 +351,9 @@ pub struct BattleScreen {
     tips: TipState,
     /// Heal numbers floating over units.
     popups: Vec<HealPopup>,
+    /// The EXP bar and level-up pages of the last command (0602), shown
+    /// once its combat has played.
+    progress: Option<Progress>,
 }
 
 impl BattleScreen {
@@ -382,6 +389,7 @@ impl BattleScreen {
             queue: VecDeque::new(),
             tips: TipState::default(),
             popups: vec![],
+            progress: None,
         }
     }
 
@@ -396,10 +404,10 @@ impl BattleScreen {
         screen
     }
 
-    /// The scene waiting to play next, once no combat is playing and no
-    /// banner is before it.
+    /// The scene waiting to play next, once no combat is playing, no EXP or
+    /// level up is shown and no banner is before it.
     pub fn queued_scene(&self) -> Option<&str> {
-        if matches!(self.mode, Mode::Combat(_)) {
+        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
             return None;
         }
         match self.queue.front() {
@@ -423,10 +431,51 @@ impl BattleScreen {
         self.danger.as_ref()
     }
 
-    /// The banner on screen, if any: the first waiting, once no combat is
-    /// playing.
-    pub fn banner(&self) -> Option<&Banner> {
+    /// The EXP bar or level-up page on screen, if any: once the command's
+    /// combat has played.
+    pub fn progress(&self) -> Option<&Progress> {
         if matches!(self.mode, Mode::Combat(_)) {
+            return None;
+        }
+        self.progress.as_ref()
+    }
+
+    /// Gives `action` to the EXP bar or level-up page on screen, if any
+    /// (Confirm or Cancel finishes or closes a page; other keys wait). Returns
+    /// whether it took it.
+    fn progress_key(&mut self, action: Action) -> bool {
+        if matches!(self.mode, Mode::Combat(_)) {
+            return false;
+        }
+        let Some(progress) = self.progress.as_mut() else {
+            return false;
+        };
+        if matches!(action, Action::Confirm | Action::Cancel) {
+            progress.confirm();
+        }
+        if progress.done() {
+            self.progress = None;
+        }
+        true
+    }
+
+    /// Plays the EXP bar or level-up page on screen for `dt` seconds.
+    fn tick_progress(&mut self, dt: f32, confirm_held: bool) {
+        if matches!(self.mode, Mode::Combat(_)) {
+            return;
+        }
+        if let Some(progress) = self.progress.as_mut() {
+            progress.tick(dt, confirm_held);
+            if progress.done() {
+                self.progress = None;
+            }
+        }
+    }
+
+    /// The banner on screen, if any: the first waiting, once no combat is
+    /// playing and no EXP or level up is shown.
+    pub fn banner(&self) -> Option<&Banner> {
+        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
             return None;
         }
         match self.queue.front() {
@@ -509,6 +558,7 @@ impl BattleScreen {
     pub fn shown_tip(&self) -> Option<TipTrigger> {
         if self.rewind.is_some()
             || matches!(self.mode, Mode::Combat(_))
+            || self.progress.is_some()
             || self.queued_scene().is_some()
         {
             return None;
@@ -557,7 +607,11 @@ impl BattleScreen {
     /// With auto-end on, ends the player phase once the screen is back to
     /// browsing after the command that left no player unit ready.
     fn check_auto_end(&mut self) {
-        if !self.end_armed || !matches!(self.mode, Mode::Idle { .. }) || !self.queue.is_empty() {
+        if !self.end_armed
+            || !matches!(self.mode, Mode::Idle { .. })
+            || !self.queue.is_empty()
+            || self.progress.is_some()
+        {
             return;
         }
         self.end_armed = false;
@@ -660,6 +714,7 @@ impl BattleScreen {
             }
             // Checked (phase, units ready) once back to browsing.
             self.end_armed = true;
+            self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
         }
         self.mode = match playback {
             Some(p) => Mode::Combat(Box::new(p)),
@@ -736,6 +791,7 @@ impl BattleScreen {
                     self.state = state;
                     self.mode = Mode::after_command(&self.state);
                     self.queue.clear();
+                    self.progress = None;
                     self.end_armed = false;
                     if self.danger.is_some() {
                         self.danger = Some(danger_tiles(&self.state));
@@ -795,6 +851,22 @@ impl BattleScreen {
         }
     }
 
+    /// The help line of a tip, EXP or level-up page, or banner on screen.
+    fn overlay_help(&self, km: &crate::input::Keymap) -> Option<String> {
+        let confirm = |label| (key_name(km, Action::Confirm), label);
+        if self.shown_tip().is_some() {
+            return Some(help_line(&[confirm("close")]));
+        }
+        if let Some(p) = self.progress() {
+            return Some(progress_help(p, km));
+        }
+        let label = match self.banner()?.kind {
+            BannerKind::Outcome(_) => "continue",
+            BannerKind::Phase { .. } => "skip",
+        };
+        Some(help_line(&[confirm(label)]))
+    }
+
     /// The help line for the mode and what is under the cursor, e.g. `f
     /// select · e info · s next unit · r rewind · d back` over a ready unit while
     /// browsing. Key names come from the keymap.
@@ -809,17 +881,9 @@ impl BattleScreen {
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
         let moves = (keys.clone(), "move");
-        if self.shown_tip().is_some() {
-            return help_line(&[confirm("close")]);
+        if let Some(line) = self.overlay_help(km) {
+            return line;
         }
-        if let Some(banner) = self.banner() {
-            let label = match banner.kind {
-                BannerKind::Outcome(_) => "continue",
-                BannerKind::Phase { .. } => "skip",
-            };
-            return help_line(&[confirm(label)]);
-        }
-        let end = (key_name(km, Action::EndTurn), "end turn");
         match &self.mode {
             Mode::Idle { threat } => {
                 let back = cancel(if threat.is_some() {
@@ -827,20 +891,7 @@ impl BattleScreen {
                 } else {
                     "menu"
                 });
-                let rewind = (
-                    key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
-                    "rewind",
-                );
-                match self.hovered() {
-                    Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                        help_line(&[confirm("select"), info, next, rewind, back, end])
-                    }
-                    Some(u) if u.faction != Faction::Player => {
-                        help_line(&[moves, confirm("range"), info, next, rewind, back, end])
-                    }
-                    Some(_) => help_line(&[moves, info, next, rewind, back, end]),
-                    None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
-                }
+                self.help_idle(ctx, info, back)
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::EndTurnPrompt { .. } => {
@@ -861,6 +912,7 @@ impl BattleScreen {
             Mode::Moving { .. } => help_line(&[confirm("skip")]),
             Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::SkillMenu { .. }
             | Mode::ItemMenu { .. }
             | Mode::MapMenu { .. }
             | Mode::UnitList { .. } => {
@@ -869,15 +921,13 @@ impl BattleScreen {
             Mode::EquipMenu { .. } => {
                 help_line(&[(keys, "choose"), confirm("equip"), cancel("back")])
             }
-            Mode::ItemTarget(_) => {
+            Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
                 help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
             }
             Mode::TalkTarget { .. } => {
                 help_line(&[(keys, "next target"), confirm("talk"), cancel("back")])
             }
-            Mode::Targeting(_) => {
-                help_line(&[(keys, "next target"), confirm("attack"), cancel("back")])
-            }
+            Mode::Targeting(t) => self.help_targeting(ctx, t),
             Mode::Combat(_) => {
                 let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
                 help_line(&[cancel("skip"), (hold, "fast")])
@@ -892,6 +942,52 @@ impl BattleScreen {
                     help_line(&[moves])
                 }
             }
+        }
+    }
+
+    /// The help line while picking an attack's target: left/right pick the
+    /// target and up/down the combat active, if the unit has any.
+    fn help_targeting(&self, ctx: &Ctx, t: &Targeting) -> String {
+        let km = &ctx.keymap;
+        let confirm = (key_name(km, Action::Confirm), "attack");
+        let cancel = (key_name(km, Action::Cancel), "back");
+        if t.actives(&self.state).is_empty() {
+            return help_line(&[(cursor_keys_name(km), "next target"), confirm, cancel]);
+        }
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a)?, key_name(km, b)?));
+        help_line(&[
+            (pair(Action::CursorLeft, Action::CursorRight), "target"),
+            (pair(Action::CursorUp, Action::CursorDown), "skill"),
+            confirm,
+            cancel,
+        ])
+    }
+
+    /// The help line while browsing, over what is under the cursor.
+    fn help_idle(
+        &self,
+        ctx: &Ctx,
+        info: (Option<String>, &str),
+        back: (Option<String>, &str),
+    ) -> String {
+        let km = &ctx.keymap;
+        let confirm = |label| (key_name(km, Action::Confirm), label);
+        let next = (key_name(km, Action::NextUnit), "next unit");
+        let moves = (cursor_keys_name(km), "move");
+        let end = (key_name(km, Action::EndTurn), "end turn");
+        let rewind = (
+            key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
+            "rewind",
+        );
+        match self.hovered() {
+            Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
+                help_line(&[confirm("select"), info, next, rewind, back, end])
+            }
+            Some(u) if u.faction != Faction::Player => {
+                help_line(&[moves, confirm("range"), info, next, rewind, back, end])
+            }
+            Some(_) => help_line(&[moves, info, next, rewind, back, end]),
+            None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
         }
     }
 
@@ -960,6 +1056,10 @@ impl BattleScreen {
                 let at = t.targets.iter().filter_map(|&id| self.state.unit(id));
                 tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
             }
+            Mode::SkillTarget(t) => {
+                let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
+                tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
+            }
             Mode::ItemTarget(t) => {
                 let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
                 let dest = t.sel.dest();
@@ -998,6 +1098,7 @@ impl BattleScreen {
             Mode::Moving { .. }
             | Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::SkillMenu { .. }
             | Mode::ItemMenu { .. }
             | Mode::EquipMenu { .. }
             | Mode::Combat(_)
@@ -1017,6 +1118,7 @@ impl BattleScreen {
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Targeting(_)
+            | Mode::SkillTarget(_)
             | Mode::ItemTarget(_)
             | Mode::TalkTarget { .. }
             | Mode::MapMenu { .. } => {}
@@ -1032,6 +1134,7 @@ impl BattleScreen {
         let (tile, menu) = match &self.mode {
             Mode::ActionMenu { sel, menu, .. }
             | Mode::WeaponMenu { sel, menu, .. }
+            | Mode::SkillMenu { sel, menu, .. }
             | Mode::ItemMenu { sel, menu, .. }
             | Mode::EquipMenu { sel, menu, .. } => (sel.dest(), menu),
             Mode::MapMenu { menu, .. } => (self.cursor.pos, menu),
@@ -1183,6 +1286,18 @@ fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
     }
 }
 
+/// The help line of an EXP bar or level-up page: skip and fast while it
+/// plays, then continue.
+fn progress_help(p: &Progress, km: &crate::input::Keymap) -> String {
+    let confirm = key_name(km, Action::Confirm);
+    if p.page_played() {
+        help_line(&[(confirm, "continue")])
+    } else {
+        let hold = confirm.as_ref().map(|k| format!("hold {k}"));
+        help_line(&[(confirm, "skip"), (hold, "fast")])
+    }
+}
+
 /// `ON` or `OFF`.
 const fn on_off(on: bool) -> &'static str {
     if on { "ON" } else { "OFF" }
@@ -1232,6 +1347,9 @@ impl Screen for BattleScreen {
                 self.toggle_auto_end();
                 continue;
             }
+            if self.progress_key(action) {
+                continue;
+            }
             if self.banner().is_some() {
                 if action == Action::Confirm {
                     let t = self.close_banner();
@@ -1277,6 +1395,7 @@ impl Screen for BattleScreen {
         }
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        self.tick_progress(dt, input.is_held(Action::Confirm));
         let tip_up = self.shown_tip().is_some();
         if let Some(Queued::Banner(banner)) = self.queue.front_mut()
             && !matches!(self.mode, Mode::Combat(_))
@@ -1312,6 +1431,9 @@ impl Screen for BattleScreen {
         if let Mode::Combat(pb) = &self.mode {
             playback::draw_box(buf, &ctx.palette, pb);
         }
+        if let Some(p) = self.progress() {
+            progress::draw(buf, &ctx.palette, &ctx.content.portraits, p);
+        }
         self.draw_panel(ctx, buf);
         self.draw_dialogs(ctx, buf);
         if let Some(tip) = self
@@ -1336,6 +1458,14 @@ impl Screen for BattleScreen {
             && let Some(message) = pb.message()
         {
             buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
+        } else if let Mode::SkillTarget(t) = &self.mode {
+            buf.print(
+                1,
+                HELP_BAR.y,
+                &t.preview(&self.state),
+                c(UiColor::Text),
+                black,
+            );
         } else if let Mode::ItemTarget(t) = &self.mode {
             buf.print(
                 1,
@@ -1507,7 +1637,13 @@ mod attack_tests;
 mod item_tests;
 
 #[cfg(test)]
+mod progress_tests;
+
+#[cfg(test)]
 mod rewind_tests;
+
+#[cfg(test)]
+mod skill_tests;
 
 #[cfg(test)]
 mod tip_tests;
@@ -2250,16 +2386,17 @@ mod tests {
         // The lord at (5, 5), cells 30..32; its old tile shows its terrain.
         assert_eq!(row(16, 26, 6), "....Lo");
         // The menu one cell right of the tile: `Attack` and `Item` (dim),
-        // `Equip`, `Wait`.
+        // `Skill`, `Equip`, `Wait`.
         assert_eq!(row(16, 33, 10), "│ Attack │");
-        assert_eq!(row(17, 33, 10), "│ Item   │");
-        assert_eq!(row(18, 33, 10), "│ Equip  │");
-        assert_eq!(row(19, 33, 10), "│ Wait   │");
+        assert_eq!(row(17, 33, 10), "│ Skill  │");
+        assert_eq!(row(18, 33, 10), "│ Item   │");
+        assert_eq!(row(19, 33, 10), "│ Equip  │");
+        assert_eq!(row(20, 33, 10), "│ Wait   │");
         let p = &c.palette;
         assert_eq!(buf.get(35, 16).unwrap().fg, p.get(UiColor::TextDim));
-        assert_eq!(buf.get(35, 17).unwrap().fg, p.get(UiColor::TextDim));
+        assert_eq!(buf.get(35, 18).unwrap().fg, p.get(UiColor::TextDim));
         assert_eq!(
-            buf.get(35, 19).unwrap().bg,
+            buf.get(35, 20).unwrap().bg,
             p.get(UiColor::PanelBorderFocus)
         );
         // No cursor, no ranges, the panel shows the lord.

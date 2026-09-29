@@ -20,6 +20,10 @@ pub const HP_BAR_H: i32 = 2;
 /// all, `1` = invisible). *Tunable.*
 pub const ACTED_DIM: f32 = 0.5;
 
+/// How much of the effect colour a unit under a timed effect gets on its
+/// glyphs' background (`0` = none, `1` = all of it). *Tunable.*
+pub const EFFECT_BLEND: f32 = 0.8;
+
 /// The colour of `faction`: player blue, enemy red, ally green, neutral
 /// yellow.
 pub const fn faction_color(faction: Faction) -> UiColor {
@@ -94,6 +98,7 @@ pub fn draw_fading_unit(
     }
     let k = fade * 2.0;
     let faction = palette.get(faction_color(unit.faction));
+    let effect = palette.get(UiColor::Effect);
     let tile_bg = buf.get(x, y).map_or(faction, |c| c.bg);
     for (i, glyph) in (0..).zip(unit.map_label.chars()) {
         let Some(&cell) = buf.get(x + i, y) else {
@@ -105,7 +110,14 @@ pub fn draw_fading_unit(
             faction
         };
         let fg = fg.lerp(cell.bg, k);
-        buf.set(x + i, y, Cell { glyph, fg, ..cell });
+        // Under a timed effect (a buff or a debuff) the glyphs sit on the
+        // effect colour, so it shows on the map (0412).
+        let bg = if unit.effects.is_empty() {
+            cell.bg
+        } else {
+            cell.bg.lerp(effect, EFFECT_BLEND)
+        };
+        buf.set(x + i, y, Cell { glyph, fg, bg });
     }
     let (width, color) = hp_bar(unit.hp, unit.stats.hp);
     let px = x * i32::from(CELL_W_PX);

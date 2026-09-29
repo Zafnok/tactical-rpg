@@ -25,7 +25,7 @@ here.
 | Music & sound effects | [`audio.md`](audio.md) | 0020 | ✅ decided 2026-09-28 (banter track, plain-spell crit, fliers and later places still open) |
 | Title | `title.md` | 0012 | ⏳ after story bible 0701 |
 | Terrain: movement costs & bonuses | [`terrain.md`](terrain.md) | 0301 | ✅ decided 2026-09-26 (capturing & healing tiles deferred) |
-| Controls & key layouts | [`controls.md`](controls.md) | 0015 | ✅ decided 2026-09-25 |
+| Controls & key layouts | [`controls.md`](controls.md) | 0015, 0030 | ✅ decided 2026-09-25 (rebinding keys 0030, 2026-09-29) |
 | Battle scenes, talking & recruitment | [`battle-scenes-and-recruitment.md`](battle-scenes-and-recruitment.md) | 0705 | ✅ decided 2026-09-29 (quest recruitment later) |
 | Number scale & strike thresholds | [`stats-and-combat.md`](stats-and-combat.md) | 0013 | ⏳ after playtest 0804 |
 
