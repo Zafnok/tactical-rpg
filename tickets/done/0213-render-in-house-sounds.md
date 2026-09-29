@@ -5,10 +5,10 @@ type: infra
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0212"]
 nick_input: sign-off
-completed:
+completed: 2026-09-29
 ---
 
 # 0213 — Render our own sounds with `cargo xtask sfx`
@@ -88,17 +88,17 @@ the PR, or a small HTML page with `<audio>` tags sent with SendUserFile).
 
 ## Acceptance criteria
 
-- [ ] `cargo xtask sfx` writes five WAVs; running it twice gives
+- [x] `cargo xtask sfx` writes five WAVs; running it twice gives
       byte-identical files (test).
-- [ ] Unit tests: the pulse wave's harmonics match the page's formula; a
+- [x] Unit tests: the pulse wave's harmonics match the page's formula; a
       lowpass biquad attenuates a tone above cutoff; `env` reaches its peak
       at `t + a`.
-- [ ] Each WAV's length is within 50 ms of the page recipe's length (attack
+- [x] Each WAV's length is within 50 ms of the page recipe's length (attack
       + hold + decay, plus the reverb tail trimmed at −60 dB). `heal` is about
       1.5 s; `menu_move` is under 0.15 s.
-- [ ] Manifest validates with the five cues.
+- [x] Manifest validates with the five cues.
 - [ ] Nick signed off that they sound like the page.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -107,4 +107,48 @@ the PR, or a small HTML page with `<audio>` tags sent with SendUserFile).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+- `crates/xtask/src/sfx.rs` renders the five sounds offline with the page's
+  building blocks: `AudioParam` ramps (set / linear / exponential, Web Audio
+  rules), `env`, the `PeriodicWave` Fourier oscillator with Web Audio's
+  normalisation and Nyquist band-limiting (the page's 64-term `pulse`, and
+  the built-in triangle), the spec's `BiquadFilterNode` formulas (lowpass Q
+  in dB, bandpass Q linear) with sample-accurate frequency ramps, a seeded
+  looping noise source, the `wet` send into the generated 1.8 s reverb with
+  `ConvolverNode` normalisation (FFT convolution), the bus gains (sfx 0.9,
+  master 0.7^1.6, reverb 0.32) and a compressor.
+- `cargo xtask sfx` writes `assets/audio/sfx/{menu_move,menu_select,
+  menu_cancel,miss,heal}.wav` (44.1 kHz, 16-bit, mono). All five are
+  normalised with **one** shared gain (loudest peak −1 dBFS), so they keep
+  the page's relative loudness, then trimmed below −60 dBFS. Lengths:
+  menu_move 0.07 s, menu_select 0.23 s, menu_cancel 0.20 s, miss 0.20 s,
+  heal 1.64 s (1.5 s of chord plus the reverb tail).
+- `cargo xtask sfx --check` verifies the committed files; the test
+  `committed_sounds_are_up_to_date` runs it in CI, like the font atlas.
+- The five cues are in `assets/audio/audio.ron` with `credit: Own`.
+- **Checked against real Web Audio:** the page's recipes rendered in
+  Chrome's `OfflineAudioContext` at 44.1 kHz. A chip note without the
+  compressor matches this renderer sample for sample (correlation 1.0000,
+  same peak). With the whole chain, and the compressor settled as on the
+  page after the first click, each sound's peak and RMS are within 0.5 dB
+  of Chrome's and its length within 10 ms.
+
+**Differences from the page** (none should be audible):
+- Mono: the page's reverb is stereo (two independent noise channels); the
+  WAV has one of them, i.e. what one speaker played.
+- The compressor is simpler than Chrome's (quadratic soft knee from the
+  threshold, peak detector, no make-up gain, no 6 ms look-ahead). Only the
+  heal chord reaches its threshold, and only slightly; make-up gain is
+  replaced by the shared normalisation.
+- The noise, the reverb impulse and the burst's start offset use fixed
+  seeds instead of `Math.random()`: the dodge whoosh is one fixed take of
+  what the page varies on every click.
+- The page's reverb impulse length and scale follow the device's sample
+  rate (often 48 kHz); here it's 44.1 kHz. That's a 0.4 dB difference in
+  reverb level at most.
+- Not built because no chosen sound uses them: sawtooth, highpass and the
+  page's vibrato. They are one match arm each if a later sound needs them.
+- The WAV writer is 20 lines in `sfx.rs` instead of the `hound` crate (no
+  new dependency; the file layout is fixed).
+
+No gameplay rules were decided. Sign-off pending: Nick compares the five
+WAVs with the audition page.
