@@ -37,7 +37,7 @@
 //!   30) and stops at the class's max rank's threshold.
 //! - **Battle pack** ([`BattlePack`]): the player side's shared consumables.
 //!   The cap limits only what is brought in; items gained in battle go in
-//!   anyway. Other factions carry their own consumables on the unit.
+//!   anyway.
 
 use std::collections::BTreeMap;
 use std::fmt;

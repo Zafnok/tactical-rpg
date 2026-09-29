@@ -895,7 +895,6 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         map_label: "Un".into(),
         weapon_exp: BTreeMap::new(),
         loadout: Loadout::default(),
-        consumables: vec![],
         personal_spells: vec![],
         learned: BTreeSet::new(),
         spells: SpellState::default(),
@@ -2484,26 +2483,15 @@ fn use_item_errors() {
 }
 
 #[test]
-fn enemies_use_their_own_consumables() {
-    let mut units = cast();
-    units[2].consumables = vec![item("potion")];
-    units[2].hp = 1;
-    let mut s = start(setup(units));
+fn only_player_units_use_items() {
+    let mut s = start(setup(cast()));
     end(&mut s);
-    act(&mut s, 3, p(7, 0), use_item(0, 3));
-    assert_eq!(s.unit(UnitId(3)).unwrap().hp, 5);
-    assert!(s.unit(UnitId(3)).unwrap().consumables.is_empty());
-    // The player's pack is untouched; enemy 4 has nothing to use.
-    assert_eq!(s.pack().items.len(), 2);
     refused_act(
         &mut s,
-        4,
-        p(7, 2),
-        use_item(0, 4),
-        CommandError::NoItem {
-            unit: UnitId(4),
-            index: 0,
-        },
+        3,
+        p(7, 0),
+        use_item(0, 3),
+        CommandError::PlayerOnly(UnitId(3)),
     );
 }
 
@@ -2515,6 +2503,17 @@ fn the_state_exposes_items_and_pack() {
 }
 
 // ---- Saving --------------------------------------------------------------------
+
+#[test]
+fn old_saves_with_unit_consumables_still_load() {
+    let s = start(setup(skirmish()));
+    let text = ron::to_string(&s).unwrap();
+    let old = text.replacen("loadout:", "consumables:[\"potion\"],loadout:", 1);
+    assert_ne!(old, text);
+    let loaded: BattleState = ron::from_str(&old).unwrap();
+    let reference: BattleState = ron::from_str(&text).unwrap();
+    assert_eq!(loaded, reference);
+}
 
 #[test]
 fn state_round_trips_through_ron_and_needs_its_tables_back() {
@@ -2635,7 +2634,7 @@ pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
             let own = if u.faction == Faction::Player {
                 s.pack().items.len()
             } else {
-                u.consumables.len()
+                0
             };
             for pack_index in 0..own {
                 for t in s.units() {
@@ -3037,7 +3036,6 @@ prop_compose! {
         rank in prop::sample::select(vec![WeaponRank::E, WeaponRank::D]),
         role in prop::sample::select(vec![Role::Regular, Role::Boss, Role::Noncombatant]),
         armour in prop::option::of(prop::sample::select(vec!["vest", "mail"])),
-        consumables in prop::collection::vec(prop::sample::select(vec!["potion", "elixir"]), 0..=2),
         wounds in 0..=10_i32,
         wear in 0..=20_u32,
         mag in 0..=6,
@@ -3082,7 +3080,6 @@ prop_compose! {
             w.durability_left -= wear;
         }
         u.loadout.armour = armour.map(item);
-        u.consumables = consumables.into_iter().map(item).collect();
         u.learned = spells.iter().map(|sp| SpellId::new(sp)).collect();
         if spell_equipped
             && let Some(first) = spells.iter().find(|sp| !["heal", "mend"].contains(sp))

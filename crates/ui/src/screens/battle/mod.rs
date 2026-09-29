@@ -48,6 +48,7 @@ use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
 use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
+use super::draw_debug_hint;
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -851,6 +852,7 @@ impl BattleScreen {
         let black = ctx.palette.get(UiColor::Black);
         let dim = ctx.palette.get(UiColor::TextDim);
         buf.print(1, HELP_ROW, &self.help(ctx), dim, black);
+        draw_debug_hint(ctx, buf, HELP_ROW);
     }
 
     /// Draws the side panel: the forecast while targeting, else the
@@ -1044,6 +1046,7 @@ impl Screen for BattleScreen {
             buf.print(1, HELP_BAR.y, toast, c(UiColor::TextHighlight), black);
         }
         buf.print(1, HELP_ROW, &self.help(ctx), c(UiColor::TextDim), black);
+        draw_debug_hint(ctx, buf, HELP_ROW);
     }
 }
 

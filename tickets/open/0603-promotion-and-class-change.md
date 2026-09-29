@@ -50,15 +50,16 @@ prices/drops (chapter and shop data).
    `class_records`, and never `enemy_only`. A `lord_only` class (the lord's
    line, ticket 0016) is a valid target only for the `is_lord` unit; the
    lord reclasses out of and back into its line like anyone else. Saved class records come back
-   unchanged; a new class unlocks at class level 1. Stats never change, and
-   stats above the new caps are kept.
+   unchanged; a new class unlocks at class level 1. Stats never change
+   (classes have no stat caps, ticket 0019).
    Event `Reclassed { unit, from, to }`.
 3. Triggers: `UnitAction::UseItem` on a tier seal in battle (ends the
    action), plus the same actions from the between-battle unit menu /
    Preparations (0408) if it exists; otherwise note it as a follow-up ticket.
 4. **Choice screen:** two (or N) columns, each: class name, map glyph, move,
    weapons, the active gained, and every stat `current → promoted` with gains
-   highlighted; `h/l` switch column, `f` choose, confirm dialog, `d` cancel.
+   highlighted, and `MAX` after a stat at its hard ceiling (Nick, ticket
+   0019: shown out of battle only; `progression.md` *Showing a maxed stat*); `h/l` switch column, `f` choose, confirm dialog, `d` cancel.
    Reclass uses the same screen, listing every class the seal can reach
    (unlocked classes show their saved class level).
 5. After choice: stat-gain overlay (reuse 0602 widget) → back.
@@ -68,7 +69,7 @@ prices/drops (chapter and shop data).
 - [ ] All validation errors tested (not mastered, not in `promotes_to`, no seal, a seal for the wrong tier, enemy-only class, reclass into a tier-2 class whose prerequisite isn't mastered) — state unchanged.
 - [ ] Promotion keeps the character level and EXP; shared promotion (Iron Rider from Guard vs from Rider) gives different bonuses, matching a hand-worked example.
 - [ ] Reclass never changes stats and always consumes a seal; passives and saved class records are kept (leave a class at class level 6, come back, and it is still 6); the spells and active of a class left unmastered are gone after the reclass (`Unit::refresh_spells` reports them as lost) and come back on returning to it.
-- [ ] Choice screen shows correct previews (test against `promote` on a cloned unit).
+- [ ] Choice screen shows correct previews (test against `promote` on a cloned unit), with `MAX` on stats at their hard ceiling. If the screen can open during a battle (seal used from the battle menu), it still shows `MAX`: it is a class-choice screen, not a battle screen (Claude's reading of Nick's "not in battle"; flag it in the PR).
 - [ ] Harness: promote via item → class changed, stats as expected.
 - [ ] All gates in the `run-gates` skill pass.
 

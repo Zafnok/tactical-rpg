@@ -45,8 +45,9 @@ fn panel(h: &Harness, y: i32) -> String {
     text(h, 71, y, 28).trim().to_owned()
 }
 
+/// The help text: the row left of the right-aligned debug hint.
 fn help(h: &Harness) -> String {
-    row(h, HELP_ROW)
+    text(h, 0, HELP_ROW, 90).trim().to_owned()
 }
 
 /// The message line.
