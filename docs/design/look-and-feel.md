@@ -103,8 +103,13 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
     `Ra` Raider, `Ar` Archer); named enemies and bosses use their name.
   - Content can override the pair (e.g. two party members named "Al…"). A
     duplicate pair within one side on a map is a content validation error.
-- **Acted** units are drawn **lowercase and dimmed** (`al`), so "has acted" never
-  relies on colour alone.
+- **Acted** units are **dimmed** toward the background; their initials keep
+  their case (`Al` stays `Al`). The dimming is a brightness change, not a hue
+  change, so "has acted" doesn't rely on hue alone. *(Changed 2026-09-28 from
+  "lowercase and dimmed". Nick, after playing 0404: "seems after moving the
+  initials for my units goes from i.e. Lo to lo I think it should just stay Lo
+  but be shaded different (it already has this aspect so keep it like that)".
+  ADR-0029.)*
 - **HP bar:** a thin bar (2 px of the 16 px tile height) along the bottom of the
   unit's tile, filling left to right by current HP %. It's `hp_high` above 2/3,
   `hp_mid` above 1/3 and `hp_low` at or below 1/3 *(thresholds tunable)*. The

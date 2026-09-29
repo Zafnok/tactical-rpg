@@ -1,7 +1,7 @@
 //! How a unit looks on the map (ADR-0018, `docs/design/look-and-feel.md`):
 //! its two-letter map label in its faction colour on the terrain background,
-//! lowercased and dimmed once it has acted, and a 2-px HP bar along the
-//! bottom of its tile.
+//! dimmed once it has acted (the label keeps its case), and a 2-px HP bar
+//! along the bottom of its tile.
 
 use trpg_core::{Faction, StatValue, Unit};
 
@@ -28,19 +28,6 @@ pub const fn faction_color(faction: Faction) -> UiColor {
         Faction::Enemy => UiColor::Enemy,
         Faction::Ally => UiColor::Ally,
         Faction::Neutral => UiColor::Neutral,
-    }
-}
-
-/// The label as drawn: the unit's map label, lowercased once it has acted
-/// (so "acted" never relies on colour alone).
-pub fn shown_label(unit: &Unit) -> String {
-    if unit.acted {
-        unit.map_label
-            .chars()
-            .map(|c| c.to_lowercase().next().unwrap_or(c))
-            .collect()
-    } else {
-        unit.map_label.clone()
     }
 }
 
@@ -108,7 +95,7 @@ pub fn draw_fading_unit(
     let k = fade * 2.0;
     let faction = palette.get(faction_color(unit.faction));
     let tile_bg = buf.get(x, y).map_or(faction, |c| c.bg);
-    for (i, glyph) in (0..).zip(shown_label(unit).chars()) {
+    for (i, glyph) in (0..).zip(unit.map_label.chars()) {
         let Some(&cell) = buf.get(x + i, y) else {
             continue;
         };
@@ -171,14 +158,6 @@ mod tests {
         assert_eq!(faction_color(Faction::Enemy), UiColor::Enemy);
         assert_eq!(faction_color(Faction::Ally), UiColor::Ally);
         assert_eq!(faction_color(Faction::Neutral), UiColor::Neutral);
-    }
-
-    #[test]
-    fn labels_lowercase_when_acted() {
-        assert_eq!(shown_label(&unit("Br", 1, 1, false)), "Br");
-        assert_eq!(shown_label(&unit("Br", 1, 1, true)), "br");
-        assert_eq!(shown_label(&unit("KN", 1, 1, true)), "kn");
-        assert_eq!(shown_label(&unit("Él", 1, 1, true)), "él");
     }
 
     #[test]
@@ -278,12 +257,12 @@ mod tests {
     }
 
     #[test]
-    fn acted_units_are_lowercase_and_dimmed_toward_the_background() {
+    fn acted_units_keep_their_label_case_and_are_dimmed_toward_the_background() {
         let p = game_palette();
         let bg = Rgb::new(0, 0, 100);
         let b = drawn(&unit("Br", 30, 30, true));
         let dim = p.get(UiColor::Enemy).lerp(bg, ACTED_DIM);
-        assert_eq!(b.get(1, 1), Some(&Cell::new('b', dim, bg)));
+        assert_eq!(b.get(1, 1), Some(&Cell::new('B', dim, bg)));
         assert_eq!(b.get(2, 1), Some(&Cell::new('r', dim, bg)));
     }
 
