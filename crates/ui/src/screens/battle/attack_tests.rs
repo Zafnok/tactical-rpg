@@ -212,7 +212,8 @@ fn forecast_with_no_counter_and_a_kill_snapshot() {
     h.keys("Right Right Down Down f f f");
     assert_eq!(panel(&h, 2), "Test Archer   Brigand");
     assert_eq!(text(&h, RIGHT_X + 2, STRIKE_ROW, 10), "no counter");
-    assert_eq!(help(&h), "arrows next target · f attack · d back");
+    // The archer's Vault is a combat active, so the skill key is named.
+    assert_eq!(help(&h), "arrows next target · e skill · f attack · d back");
     assert_snapshot!(h.snapshot());
 }
 

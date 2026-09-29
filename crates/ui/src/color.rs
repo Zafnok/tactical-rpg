@@ -111,6 +111,7 @@ ui_colors! {
     AttackRange => "attack_range",
     HealRange => "heal_range",
     DangerZone => "danger_zone",
+    Effect => "effect",
     Cursor => "cursor",
     Path => "path",
     HpHigh => "hp_high",
