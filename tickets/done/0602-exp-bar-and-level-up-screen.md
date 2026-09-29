@@ -84,8 +84,8 @@ rules; Nick may veto any):
 - The EXP bar closes by itself 0.5 s after it fills; a class-level notice
   with nothing else closes by itself after 1.2 s. The level-up page and a
   mastery/`Learned:` box wait for Confirm.
-- Cancel does nothing on these pages, so a level up can't be skipped by
-  accident; Confirm finishes the animation, then closes.
+- Confirm or Cancel finishes the animation, then closes the page (Nick in
+  the PR: "cancel can do the same as confirm on these screens").
 - A stat that didn't grow shows as `Def   5` (dim), with no arrow.
 - A personal spell learned at a character level shows as `Learned: <spell>`
   in the class box (under the class's name) after the level-up page.

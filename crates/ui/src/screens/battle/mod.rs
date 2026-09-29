@@ -285,7 +285,7 @@ impl BattleScreen {
     }
 
     /// Gives `action` to the EXP bar or level-up page on screen, if any
-    /// (Confirm finishes or closes a page; other keys wait). Returns
+    /// (Confirm or Cancel finishes or closes a page; other keys wait). Returns
     /// whether it took it.
     fn progress_key(&mut self, action: Action) -> bool {
         if matches!(self.mode, Mode::Combat(_)) {
@@ -294,7 +294,7 @@ impl BattleScreen {
         let Some(progress) = self.progress.as_mut() else {
             return false;
         };
-        if action == Action::Confirm {
+        if matches!(action, Action::Confirm | Action::Cancel) {
             progress.confirm();
         }
         if progress.done() {

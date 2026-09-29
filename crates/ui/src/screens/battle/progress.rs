@@ -11,7 +11,8 @@
 //!
 //! Holding Confirm plays a page [`ProgressTimings::fast`] times as fast;
 //! pressing it finishes the page's animation (reveals every stat), and on a
-//! finished page that waits for the player, closes it.
+//! finished page that waits for the player, closes it. Cancel does the same
+//! (Nick, PR #87: "cancel can do the same as confirm on these screens").
 
 use std::collections::BTreeMap;
 

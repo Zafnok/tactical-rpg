@@ -302,12 +302,9 @@ fn cancel_skips_the_playback_and_the_next_keys_work() {
     h.keys("f f");
     assert_eq!(help(&h), "d skip · hold f fast");
     h.keys("d");
-    // The EXP bar: Cancel does nothing, Confirm finishes it (and it
-    // closes by itself).
+    // The EXP bar: Cancel finishes it too (and it closes by itself).
     assert_eq!(help(&h), "f skip · hold f fast");
     h.keys("d");
-    assert_eq!(help(&h), "f skip · hold f fast");
-    h.keys("f");
     // Browsing already: the keys after the skip move the cursor.
     assert_eq!(
         help(&h),

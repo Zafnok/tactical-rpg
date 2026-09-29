@@ -185,7 +185,8 @@ fn the_screen_waits_for_the_level_up_and_leaves_the_battle_cores() {
     // Rewind and the map keys wait too.
     press(&mut s, &mut c, &[Action::Rewind, Action::CursorLeft], 0.0);
     assert!(s.rewind().is_none());
-    press(&mut s, &mut c, &[Confirm], 0.0);
+    // Cancel closes it, like Confirm.
+    press(&mut s, &mut c, &[Cancel], 0.0);
     assert!(s.progress().is_none());
     assert_eq!(s.state(), &after);
 }
