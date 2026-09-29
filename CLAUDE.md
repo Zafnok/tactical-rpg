@@ -33,6 +33,9 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
    allowed by ADR-0013: no GPL/LGPL/MPL/copyleft, no non-commercial, nothing that
    costs money. Every non-crate asset goes in `THIRD_PARTY_ASSETS.md`. Never
    change `LICENSE`; that is Nick's call.
+7. **Never hard-code a key.** Game code reacts to `Action`s and text names
+   keys through the player's keymap; players rebind everything. Follow the
+   `keyboard-input` skill whenever input or key names are involved.
 
 ## Map of the repo
 
@@ -44,7 +47,7 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `LICENSE`, `THIRD_PARTY_ASSETS.md` | Proprietary source-available license; registry of shipped third-party assets |
 | `docs/design/` | Nick's game-design decisions (filled by `00xx` tickets) |
 | `docs/story/` | Story beats, bible, characters, outline, ledger (ADR-0011) |
-| `.claude/skills/` | `work-ticket`, `write-ticket`, `write-adr`, `ask-nick`, `story-writing`, `ascii-art`, `run-gates` |
+| `.claude/skills/` | `work-ticket`, `write-ticket`, `write-adr`, `ask-nick`, `story-writing`, `ascii-art`, `run-gates`, `keyboard-input` |
 | `crates/` | `core` (`trpg-core`), `content` (`trpg-content`), `ui` (`trpg-ui`), `app` (`trpg-app`, binary `tactical-rpg`), `xtask` (repo tooling) |
 | `assets/` | Everything embedded in the game: `data/`, `fonts/` (later: maps, dialogue, portraits) |
 | `assets-src/` | Inputs to asset tools (e.g. the font BDF for `cargo xtask font-atlas`); not embedded |
