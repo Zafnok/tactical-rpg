@@ -21,6 +21,13 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options, colour themes | 0801–0806 |
 | `09xx` | M8 Release | itch.io, Windows polish, Steam readiness | 0901–0903 |
 
+**Audio** (decided in 0020, [`docs/design/audio.md`](design/audio.md)) runs
+across the blocks: **0212** playback plumbing → **0213** our own sounds and
+**0214** the imported music and sounds → **0424** battle sounds, **0425** menu and
+cursor sounds, **0710** `@music` in scenes, **0807** title and battle music,
+**0808** credits screen; **0904** checks the music for Content ID claims before
+release. 0212–0214 have no game dependencies and can start any time.
+
 ## Nick's queue (answer these first; any order within a row)
 
 Design answers unblock most of the rules work. Suggested order:
@@ -72,7 +79,9 @@ early so every later PR is checked by them.
 - Controller support (needed for Steam Deck) — created by 0903.
 - Class tiers 4 and up; tier-3 class skills (1001).
 - Custom 16×16 class icons vs name initials on the map (1006).
-- Audio and music.
+- Audio still open after 0020: a banter conversation track, the crit sound of
+  a spell with no element, fliers' movement, world-map / capital / camp / shop
+  music, victory and defeat stings (`docs/design/audio.md`).
 - Colour-blind palette variant; text size options.
 - Difficulty modes; more chapters (story pipeline repeats per chapter).
 - Fuzzing the content parsers (`cargo-fuzz`).
