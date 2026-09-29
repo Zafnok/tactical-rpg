@@ -28,6 +28,10 @@ Proves the chapter is winnable with an automated replay.
 **In:** `assets/maps/ch01.map`, `assets/chapters/ch01.ron`, real characters
 in `characters.ron` (with class/level/stats/loadouts), enemy templates, trigger
 wiring, New Game starting at ch01, a winning-replay test, a difficulty sim.
+The battle file's `music` cue (0807) and the scenes' `@music` moods (0710),
+chosen from the cue list in [`docs/design/audio.md`](../../docs/design/audio.md)
+to fit the chapter's beats; ask Nick with the `ask-nick` skill if the beats
+don't make it obvious.
 
 **Out:** Chapter 2; balance changes to core formulas (file tickets instead).
 

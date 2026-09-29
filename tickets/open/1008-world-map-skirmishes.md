@@ -53,6 +53,8 @@ and (2) the random fights feel like useful training without being grindy.
 - Random skirmish maps: pick from a small pool of authored skirmish maps per
   act, with enemies built from templates at the capped level. Spawns use the
   campaign's deterministic RNG (0304), so they're saved and reproducible.
+- Skirmish music: every skirmish battle file uses `music: Pool("skirmish")`
+  (0807; `docs/design/audio.md`: one track at random from the pool).
 - The random-skirmish fights are ordinary battles. Death and retreat, rewind
   charges and the unused-charge bonus work as in `death-and-difficulty.md`.
 - Test data: two fixed skirmishes (one guarding) and a random pool of two
