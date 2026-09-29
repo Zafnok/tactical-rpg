@@ -47,9 +47,7 @@ pub fn item_targets(state: &BattleState, unit: UnitId, dest: Pos) -> Vec<UnitId>
         .iter()
         .filter(|u| {
             let near = u.id == unit || Pos::manhattan(dest, u.pos) == 1;
-            near && (u.id == unit || !user.faction.is_hostile_to(u.faction))
-                && u.hp > 0
-                && u.hp < u.stats.hp
+            near && !user.faction.is_hostile_to(u.faction) && u.hp < u.stats.hp
         })
         .map(|u| (if u.id == unit { dest } else { u.pos }, u.id))
         .collect();

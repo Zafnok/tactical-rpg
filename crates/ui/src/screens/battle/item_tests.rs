@@ -375,3 +375,152 @@ fn equip_menu_with_a_broken_weapon_snapshot() {
     assert!(text(&buf, 0, row, i32::from(CONSOLE_W)).contains("0/25"));
     assert_snapshot!(buf.to_snapshot(&c.palette));
 }
+
+/// The Quick Battle's units 1 (lord) and 2 (knight) placed at `lord` and
+/// `knight`, both `hurt` HP down, with a potion pack.
+fn placed(c: &Ctx, lord: Pos, knight: Pos, hurt: StatValue) -> BattleState {
+    let (map, mut units) = quick_units(c);
+    units[0].pos = lord;
+    units[1].pos = knight;
+    for u in &mut units[..2] {
+        u.hp = u.stats.hp - hurt;
+    }
+    let pack = BattlePack::bring(vec![ItemId::new("potion"); 2], 6).expect("fits");
+    let rout = Objective::Rout { turn_limit: None };
+    battle_packed(c, map, units, rout, 0, pack)
+}
+
+#[test]
+fn targets_are_hurt_allies_beside_the_destination_in_row_order() {
+    let c = ctx();
+    // The lord starts above the knight but ends below it, at (3, 6): the
+    // knight first.
+    let s = placed(&c, p(3, 4), p(3, 5), 5);
+    assert_eq!(item_targets(&s, UnitId(1), p(3, 6)), [UnitId(2), UnitId(1)]);
+    // Not beside it: only the user.
+    assert_eq!(item_targets(&s, UnitId(1), p(3, 3)), [UnitId(1)]);
+    // Unhurt units are not targets, the user included.
+    let s = placed(&c, p(3, 5), p(4, 5), 0);
+    assert!(item_targets(&s, UnitId(1), p(3, 5)).is_empty());
+    // A hostile unit beside the lord is never one (a hurt brigand).
+    let (map, mut units) = quick_units(&c);
+    let brigand = units.iter().position(|u| u.id == UnitId(4)).unwrap();
+    units[brigand].pos = p(4, 5);
+    units[brigand].hp = 1;
+    let rout = Objective::Rout { turn_limit: None };
+    let s = battle_packed(&c, map, units, rout, 0, BattlePack::default());
+    assert!(item_targets(&s, UnitId(1), p(3, 5)).is_empty());
+}
+
+#[test]
+fn cycling_back_wraps_over_three_targets() {
+    let c = ctx();
+    // The lord with two hurt allies beside it: the knight and the archer.
+    let (map, mut units) = quick_units(&c);
+    units[0].pos = p(3, 5);
+    units[1].pos = p(4, 5);
+    units[2].pos = p(3, 6);
+    for u in &mut units[..3] {
+        u.hp = u.stats.hp - 3;
+    }
+    let pack = BattlePack::bring(vec![ItemId::new("potion")], 6).expect("fits");
+    let rout = Objective::Rout { turn_limit: None };
+    let s = battle_packed(&c, map, units, rout, 0, pack);
+    let sel = super::mode::Selection::new(&s, UnitId(1)).unwrap();
+    let groups = pack_groups(&s, UnitId(1), p(3, 5));
+    let menu = super::items::pack_menu(&s, &groups);
+    let mut t = ItemTargeting::new(sel, menu, groups, 0).unwrap();
+    // Row order: the lord (3, 5), the knight (4, 5), the archer (3, 6).
+    assert_eq!(t.targets(), [UnitId(1), UnitId(2), UnitId(3)]);
+    assert_eq!(t.target(), UnitId(1));
+    t.cycle(false);
+    assert_eq!(t.target(), UnitId(3));
+    t.cycle(false);
+    assert_eq!(t.target(), UnitId(2));
+}
+
+#[test]
+fn a_heal_of_nothing_shows_no_popup_and_popups_last_their_time() {
+    let mut c = ctx();
+    let mut s = BattleScreen::new(placed(&c, p(3, 5), p(4, 5), 0));
+    // An item used on an unhurt unit (the core allows it) heals 0.
+    let use_on_full = trpg_core::Command::Act {
+        unit: UnitId(1),
+        dest: p(3, 5),
+        action: trpg_core::UnitAction::UseItem {
+            pack_index: 0,
+            target: UnitId(2),
+        },
+    };
+    s.apply(&use_on_full);
+    assert!(s.popups().is_empty());
+    // A real heal: the popup stays for exactly its time.
+    let mut s = BattleScreen::new(placed(&c, p(3, 5), p(4, 5), 5));
+    s.apply(&trpg_core::Command::Act {
+        unit: UnitId(1),
+        dest: p(3, 5),
+        action: trpg_core::UnitAction::UseItem {
+            pack_index: 0,
+            target: UnitId(2),
+        },
+    });
+    assert_eq!(s.popups().len(), 1);
+    assert_eq!(s.popups()[0].amount, 5, "capped at what was missing");
+    wait(&mut s, &mut c, 0.0);
+    wait(&mut s, &mut c, 0.3);
+    assert_eq!(s.popups().len(), 1, "still up after half its time");
+    wait(&mut s, &mut c, 0.3);
+    assert!(s.popups().is_empty(), "gone once its time is up");
+    assert!((TIMINGS.heal_popup - 0.6).abs() < f32::EPSILON);
+}
+
+#[test]
+fn the_popup_is_drawn_on_the_row_above_the_healed_unit() {
+    let c = ctx();
+    let mut s = BattleScreen::new(placed(&c, p(3, 5), p(4, 5), 15));
+    s.apply(&trpg_core::Command::Act {
+        unit: UnitId(1),
+        dest: p(3, 5),
+        action: trpg_core::UnitAction::UseItem {
+            pack_index: 0,
+            target: UnitId(2),
+        },
+    });
+    let (x, y) = super::camera::tile_to_cell(p(4, 5), &s.camera()).expect("in view");
+    let buf = render(&s, &c);
+    assert_eq!(text(&buf, x, y - 1, 3), "+10");
+    assert_eq!(
+        buf.get(x, y - 1).unwrap().fg,
+        c.palette.get(UiColor::HpHigh)
+    );
+}
+
+#[test]
+fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
+    let mut c = ctx();
+    // The lord walks down to (3, 6), beside the knight at (4, 6).
+    let state = placed(&c, p(3, 5), p(4, 6), 5);
+    let mut s = BattleScreen::new(state);
+    step(
+        &mut s,
+        &mut c,
+        &[Action::Confirm, Action::CursorDown, Action::Confirm],
+    );
+    wait(&mut s, &mut c, 1.0);
+    assert!(
+        matches!(s.mode(), Mode::ActionMenu { .. }),
+        "{:?}",
+        s.mode()
+    );
+    step(
+        &mut s,
+        &mut c,
+        &[Action::CursorUp, Action::CursorUp, Action::Confirm],
+    );
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
+    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(3, 6)));
+    assert_eq!(s.mode().drawn_pos(UnitId(2)), None);
+    // Its own tile is where the cursor goes for the user.
+    assert_eq!(s.cursor().pos, p(3, 6));
+}

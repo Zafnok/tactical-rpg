@@ -872,11 +872,12 @@ fn step_equip(
 ) -> (Mode, Effect) {
     match menu.handle(action) {
         Some(MenuEvent::Chosen(i)) => match choices.get(i) {
-            Some(c) if c.usable => {
+            // (The menu never chooses a dimmed, unusable weapon.)
+            Some(c) => {
                 let cmd = equip_command(sel.unit, c.slot);
                 (Mode::default(), Effect::ApplyStay(cmd, Box::new(sel)))
             }
-            _ => (Mode::EquipMenu { sel, menu, choices }, Effect::None),
+            None => (Mode::EquipMenu { sel, menu, choices }, Effect::None),
         },
         Some(MenuEvent::Cancelled) => (back_to_entry(sel, state, MenuEntry::Equip), Effect::None),
         None => (Mode::EquipMenu { sel, menu, choices }, Effect::None),
