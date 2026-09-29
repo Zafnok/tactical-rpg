@@ -1,5 +1,5 @@
 ---
-id: "0814"
+id: "0815"
 title: "Play the title music and a skirmish track in Quick Battle"
 type: feature
 milestone: M7 Chapter 1 & game flow
@@ -11,7 +11,11 @@ nick_input: sign-off
 completed: 2026-09-29
 ---
 
-# 0814 — Title music and Quick Battle music
+# 0815 — Title music and Quick Battle music
+
+*Renumbered from 0814 after it merged (PR #90) at the same time as the
+0030 decision that filed 0814 (Key bindings screen); the id was taken
+twice.*
 
 ## Context
 

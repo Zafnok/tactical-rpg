@@ -67,16 +67,17 @@ recruitment, death quotes, boss-battle quotes.
 
 ## Completion notes
 
-- **Nick reviewed the starting rules on the PR** and decided recruitment,
-  talking and boss lines; recorded in
+- **Nick reviewed the starting rules on the PR (two rounds)** and decided
+  recruitment, talking and boss lines; recorded in
   `docs/design/battle-scenes-and-recruitment.md` (new). In short: nobody
-  changes sides during a battle, recruits join the army after a won battle;
-  a talk that recruits makes the recruit leave the battlefield at once;
-  either character may start a talk; recruiting will mostly be by defeating
-  a character or (later) by quests; a boss has once-per-battle lines for
-  its first fight, the first time it drops to half HP, and its defeat; a
-  boss's special line for a character replaces its general line; an area
-  scene plays only where a unit stops.
+  changes sides during a battle; recruits join the army after a won
+  battle; for now the only way in battle is "joins you if defeated"
+  (quests later, no recruiting by talking); talking is a written scene,
+  either character may start it, and it doesn't use the unit's turn; a
+  fight plays one written scene, never a line from each fighter; a boss
+  has once-per-battle lines for its first fight, the first time it drops to
+  half HP, and its defeat; a boss's special scene with a character replaces
+  its general line; an area scene plays only where a unit stops.
 - **Core** (`trpg_core::battle`, `battle/triggers.rs`): `Trigger { when,
   scene, once }` with `TriggerWhen::{TurnStart, UnitEntersArea,
   CombatStart, HalfHp, UnitFell, Talk}`, `Who`, `TileRect` and `GameMode`
@@ -85,13 +86,14 @@ recruitment, death quotes, boss-battle quotes.
   recruits (`BattleState::recruited`). After every command (and at the
   start) the battle inserts `Event::SceneTriggered` at the moment it
   belongs (after a phase start, a move or a combat for half HP; before a
-  combat or a fall). `UnitAction::Talk { target }`,
-  `BattleState::talk_targets`, `Event::UnitRecruited`,
-  `CommandError::{CannotTalk, UnitLeft}`. ADR-0030 records the design.
-- **Deviations from the steps:** the ticket's step 3 had the target switch
-  to the player's side; Nick ruled that out (recruits join after the
-  battle), so it leaves the map instead. Added per Nick: `HalfHp`, and
-  `recruit` on `UnitFell` ("joins you if defeated"). `CombatStart` takes
+  combat or a fall). `Command::Talk { unit, dest, target }` (free, like
+  `Equip`), `BattleState::talk_targets`, `Event::UnitRecruited`,
+  `CommandError::CannotTalk`. ADR-0030 records the design.
+- **Deviations from the steps:** step 3's `UnitAction::Talk` with
+  recruitment became a free `Command::Talk` that never recruits (Nick);
+  recruiting is `recruit` on `UnitFell` ("joins you if defeated"), and the
+  recruit joins after a won battle. Added per Nick: `HalfHp`; one scene per
+  fight. `CombatStart` takes
   `against: Option<character>` (Chapter 1's beat sheet wants Harl's lines
   per opponent); the ticket's "once per pair" flag was dropped, since Nick
   wants each boss moment once per battle. `CharacterId` now reads from a
@@ -112,36 +114,40 @@ recruitment, death quotes, boss-battle quotes.
   placeholder scenes in `assets/dialogue/test_triggers.dlg`: turn 3's
   start, a player unit entering the walled fort room, the rogue's first
   fight, half HP and last words, the lord's and the knight's fall lines
-  (the knight's Classic vs Casual), and the lord and the rogue talking (the
-  rogue leaves, to join after the battle).
+  (the knight's Classic vs Casual), the rogue joining if defeated, and the
+  lord and the rogue talking.
 - **Tests:** core unit tests per trigger kind, Talk, recruits and
   save/load; the random-play property tests now get random triggers and
-  Talk commands (scenes always at their moment, `once` fires once, recruits
-  leave the map); replay and save/load determinism with triggers; content
+  Talk commands (scenes always at their moment, `once` fires once, talking
+  leaves the unit where it was and ready, recruits are fallen units); replay and save/load determinism with triggers; content
   validator; screen tests for the queue and Talk; harness runs for the
   engage and half-HP lines, the death quote before the fade, a skipped
   combat and the Quick Battle's turn 3; two snapshots (`trigger_tests__*`).
 - **Other tickets:** 0801 now adds `BattleState::recruited()` to the roster
   after a victory (step 3, new acceptance criterion) and runs
   `check_triggers`. New ticket **1009** (design recruitment by quests
-  outside battle).
+  outside battle). `main` had two tickets numbered 0814 (PRs #90 and #91
+  merged together), which failed ticket-lint on every PR: the archived
+  title-music ticket is renumbered **0815**. An AI test's phase loop got a
+  guard so a broken `apply` fails it instead of hanging (mutation testing
+  timed out on it).
 - **For 0502:** until the AI plays its phase, an AI phase ends when its
   banner closes, so a turn-start scene of an AI phase plays after that
   phase has ended in `core`. Enemy-phase boss lines and death quotes will
   work once 0502 routes the AI's commands through `apply`.
 - **Nick, when playing:** in the debug Quick Battle end two turns: the
   rogue shows up on the fort, turn 3 opens with a line; walk the lord next
-  to it and pick `Talk` (it leaves the map), or attack it for its fight,
-  half-HP and last lines. All the lines are placeholders (0707 writes the
+  to it and pick `Talk` (then still move or attack), or attack it for its
+  fight, half-HP and defeat lines (defeated, it joins after the battle). All the lines are placeholders (0707 writes the
   real ones).
 
 Gameplay rules Claude decided where the design was silent (veto any):
 
-1. **Talking** uses up the talker's turn and gives no EXP.
-2. **Boss lines when both fighters have one:** if the lead attacks Harl and
-   both have a line for that fight, the lead's plays first, then Harl's.
-3. **Recruiting the enemy you must defeat:** on a "defeat Harl" map, talking
-   Harl into joining also wins the map.
-4. **Half-HP line timing:** it plays right after the fight that brings the
-   boss to half HP or less, not in the middle of the fight, and not at all
-   if that fight defeats it (the defeat line plays instead).
+1. **Talking** gives no EXP.
+2. **Two fight lines at once:** if the lead has a general fight line and
+   Harl has one too (and no scene is written for the two of them), the one
+   the map lists first plays now; the other plays in that character's next
+   fight.
+3. **Half-HP line timing:** it plays right after the fight that brings the
+   boss to half HP or less, not in the middle of it, and not at all if that
+   fight defeats it (the defeat line plays instead). (Nick: "sure".)

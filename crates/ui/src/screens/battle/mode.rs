@@ -12,7 +12,8 @@
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
 //! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]) and
 //! the unit info screen ([`Mode::Info`]). Talking (0705): `Talk` in the
-//! action menu picks who to talk to ([`Mode::TalkTarget`]).
+//! action menu picks who to talk to ([`Mode::TalkTarget`]); it's free, so
+//! the menu opens again after the scene.
 //!
 //! Transitions are pure ([`step`], [`Mode::tick`]); the screen owns the
 //! cursor and applies the [`Effect`]s.
@@ -339,9 +340,9 @@ pub enum Effect {
     /// Apply this command to the battle, then continue from
     /// [`Mode::after_command`].
     Apply(Command),
-    /// Apply this command, which doesn't end the unit's action (`Equip`),
-    /// then reopen the action menu for the unit, still at the end of the
-    /// path.
+    /// Apply this command, which doesn't end the unit's action (`Equip`,
+    /// `Talk`), then reopen the action menu for the unit, still at the end
+    /// of the path.
     ApplyStay(Command, Box<Selection>),
     /// Put the cursor on this tile.
     Cursor(Pos),
@@ -860,8 +861,9 @@ fn choose_talk(sel: Selection, state: &BattleState) -> (Mode, Effect) {
 }
 
 /// [`step`] while picking who to talk to: the cursor keys and
-/// `NextUnit`/`PrevUnit` cycle the units, Confirm talks, Cancel goes back
-/// to the action menu (on `Talk`) with the cursor on the unit.
+/// `NextUnit`/`PrevUnit` cycle the units, Confirm talks (free: the action
+/// menu opens again after the scene), Cancel goes back to the action menu
+/// (on `Talk`) with the cursor on the unit.
 fn step_talk_target(
     sel: Selection,
     targets: Vec<UnitId>,
@@ -877,12 +879,12 @@ fn step_talk_target(
             let Some(&target) = targets.get(index) else {
                 return (back_to_entry(sel, state, MenuEntry::Talk), Effect::None);
             };
-            let cmd = Command::Act {
+            let cmd = Command::Talk {
                 unit: sel.unit,
                 dest: sel.dest(),
-                action: UnitAction::Talk { target },
+                target,
             };
-            return (Mode::default(), Effect::Apply(cmd));
+            return (Mode::default(), Effect::ApplyStay(cmd, Box::new(sel)));
         }
         Action::Cancel => {
             let dest = sel.dest();

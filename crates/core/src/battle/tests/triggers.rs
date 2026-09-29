@@ -72,12 +72,8 @@ fn combat_start(unit: u32, against: Option<u32>) -> TriggerWhen {
     }
 }
 
-fn talk(a: u32, b: u32, recruit: bool) -> TriggerWhen {
-    TriggerWhen::Talk {
-        a: c(a),
-        b: c(b),
-        recruit,
-    }
+fn talk(a: u32, b: u32) -> TriggerWhen {
+    TriggerWhen::Talk { a: c(a), b: c(b) }
 }
 
 // ---- Turn start ------------------------------------------------------------
@@ -248,7 +244,7 @@ fn the_default_line_never_plays_to_a_character_with_its_own_line() {
 }
 
 #[test]
-fn both_sides_lines_play_the_attackers_first() {
+fn a_fight_plays_one_scene_the_first_listed() {
     let mut s = triggered(
         near(),
         vec![
@@ -257,7 +253,31 @@ fn both_sides_lines_play_the_attackers_first() {
         ],
     );
     let events = act(&mut s, 1, p(1, 0), attack(3));
-    assert_eq!(scenes(&events), ["lord_line", "enemy_line"]);
+    assert_eq!(scenes(&events), ["enemy_line"]);
+    // The lord's plays in its next fight.
+    end(&mut s);
+    assert_eq!(scenes(&act(&mut s, 3, p(2, 0), attack(1))), ["lord_line"]);
+}
+
+#[test]
+fn a_pairs_scene_plays_whoever_attacks_and_whoever_lists_it() {
+    // Written as the lord's line against unit 3: unit 3 attacking the lord
+    // plays it too, and not unit 3's general line.
+    let mut s = triggered(
+        near(),
+        vec![
+            trigger(combat_start(3, None), "general", true),
+            trigger(combat_start(1, Some(3)), "lord_and_3", true),
+        ],
+    );
+    act(&mut s, 1, p(0, 0), UnitAction::Wait);
+    act(&mut s, 2, p(0, 2), UnitAction::Wait);
+    end(&mut s);
+    let events = act(&mut s, 3, p(1, 0), attack(1));
+    assert_eq!(scenes(&events), ["lord_and_3"]);
+    // A fight where neither fighter has a line plays nothing.
+    let events = act(&mut s, 4, p(1, 2), attack(2));
+    assert!(scenes(&events).is_empty(), "unit 4 has no line");
 }
 
 // ---- Half HP -------------------------------------------------------------------
@@ -391,22 +411,25 @@ fn a_fallen_player_unit_plays_its_line_for_the_mode() {
 // ---- Talk ----------------------------------------------------------------------
 
 /// Lord 1 at (0,0), unit 2 at (0,2); enemy 3 at (2,0) (in reach), enemy 4
-/// at (7,2). The lord and unit 3 can talk (3 joins); units 1 and 2 can
-/// chat (listed as 2 and 1).
+/// at (7,2). The lord and unit 3 can talk once; units 1 and 2 can chat any
+/// time (listed as 2 and 1).
 fn talkers() -> BattleState {
     let mut units = cast_named();
     units[2].pos = p(2, 0);
     triggered(
         units,
         vec![
-            trigger(talk(1, 3, true), "recruit", true),
-            trigger(talk(2, 1, false), "chat", false),
+            trigger(talk(1, 3), "parley", true),
+            trigger(talk(2, 1), "chat", false),
         ],
     )
 }
 
-fn talk_to(target: u32) -> UnitAction {
-    UnitAction::Talk {
+/// Unit `unit` talking to `target` from `dest`.
+fn talk_cmd(unit: u32, dest: Pos, target: u32) -> Command {
+    Command::Talk {
+        unit: UnitId(unit),
+        dest,
         target: UnitId(target),
     }
 }
@@ -426,38 +449,89 @@ fn talk_targets_are_adjacent_units_with_an_unfired_talk_either_way() {
 }
 
 #[test]
-fn talk_is_refused_without_a_trigger_or_out_of_reach() {
+fn talking_is_free_the_unit_stays_ready_where_it_was() {
     let mut s = talkers();
-    refused_act(
+    let events = s.apply(&talk_cmd(1, p(1, 0), 3)).unwrap();
+    assert_eq!(events, [scene("parley")]);
+    let lord = s.unit(UnitId(1)).unwrap();
+    assert_eq!((lord.pos, lord.acted), (p(0, 0), false));
+    assert!(s.has_fired(0));
+    // Nothing changes sides; the enemy is still an enemy on the map.
+    assert_eq!(s.unit(UnitId(3)).unwrap().faction, Faction::Enemy);
+    assert!(s.recruited().is_empty());
+    // Once: nothing more to say to it.
+    assert!(s.talk_targets(UnitId(1), p(1, 0)).is_empty());
+    // The lord still moves and acts.
+    let events = act(&mut s, 1, p(1, 0), attack(3));
+    assert!(events.contains(&Event::UnitActed { unit: UnitId(1) }));
+}
+
+#[test]
+fn a_talk_that_isnt_once_may_repeat() {
+    let mut s = talkers();
+    assert_eq!(s.apply(&talk_cmd(2, p(0, 1), 1)).unwrap(), [scene("chat")]);
+    assert_eq!(s.apply(&talk_cmd(1, p(0, 1), 2)).unwrap(), [scene("chat")]);
+    assert!(!s.has_fired(1));
+    assert!(!events_gain_exp(
+        &s.apply(&talk_cmd(2, p(0, 1), 1)).unwrap()
+    ));
+}
+
+fn events_gain_exp(events: &[Event]) -> bool {
+    events.iter().any(|e| matches!(e, Event::ExpGained { .. }))
+}
+
+#[test]
+fn talk_is_refused_without_a_trigger_out_of_reach_or_not_ready() {
+    let mut s = talkers();
+    refused(
         &mut s,
-        2,
-        p(1, 2),
-        talk_to(4),
+        &talk_cmd(2, p(1, 2), 4),
         CommandError::CannotTalk(UnitId(4)),
     );
-    refused_act(
+    refused(
         &mut s,
-        1,
-        p(0, 1),
-        talk_to(3),
+        &talk_cmd(1, p(0, 1), 3),
         CommandError::OutOfRange {
             target: UnitId(3),
             distance: 3,
         },
     );
-    refused_act(
+    refused(
         &mut s,
-        1,
-        p(1, 0),
-        talk_to(1),
+        &talk_cmd(1, p(1, 0), 1),
         CommandError::CannotTalk(UnitId(1)),
     );
-    refused_act(
+    refused(
         &mut s,
-        1,
-        p(1, 0),
-        talk_to(8),
+        &talk_cmd(1, p(1, 0), 8),
         CommandError::UnknownUnit(UnitId(8)),
+    );
+    // A tile it can't stop on (unit 2's), or can't reach.
+    refused(
+        &mut s,
+        &talk_cmd(1, p(0, 2), 2),
+        CommandError::CannotStop(p(0, 2)),
+    );
+    refused(
+        &mut s,
+        &talk_cmd(1, p(6, 0), 3),
+        CommandError::CannotStop(p(6, 0)),
+    );
+    // Not its phase, or already acted.
+    refused(
+        &mut s,
+        &talk_cmd(3, p(1, 0), 1),
+        CommandError::NotItsPhase {
+            unit: UnitId(3),
+            phase: Phase::Player,
+        },
+    );
+    act(&mut s, 2, p(0, 2), UnitAction::Wait);
+    refused(
+        &mut s,
+        &talk_cmd(2, p(0, 1), 1),
+        CommandError::AlreadyActed(UnitId(2)),
     );
     assert_eq!(
         CommandError::CannotTalk(UnitId(2)).to_string(),
@@ -465,122 +539,34 @@ fn talk_is_refused_without_a_trigger_or_out_of_reach() {
     );
 }
 
+// ---- Recruiting --------------------------------------------------------------------
+
 #[test]
-fn a_recruit_leaves_the_battlefield_to_join_after_the_battle() {
-    let mut s = talkers();
-    let events = act(&mut s, 1, p(1, 0), talk_to(3));
-    assert_eq!(
-        events,
-        [
-            Event::UnitMoved {
-                unit: UnitId(1),
-                path: vec![p(0, 0), p(1, 0)],
-            },
-            scene("recruit"),
-            Event::UnitRecruited { unit: UnitId(3) },
-            Event::UnitActed { unit: UnitId(1) },
-        ]
+fn recruits_survive_a_save_and_load() {
+    let mut s = triggered(
+        strong(),
+        vec![
+            trigger(fell(3, None, true), "yields", true),
+            trigger(talk(1, 2), "chat", true),
+        ],
     );
-    // Off the map, as it was (still an enemy: it joins after the battle).
-    assert!(s.unit(UnitId(3)).is_none());
-    let recruit = &s.recruited()[0];
-    assert_eq!((recruit.id, recruit.faction), (UnitId(3), Faction::Enemy));
-    assert!(s.has_fired(0));
-    // Once: nobody left to talk to; it can't be commanded or targeted.
-    assert!(s.talk_targets(UnitId(2), p(2, 1)).is_empty());
-    end(&mut s);
-    refused_act(
-        &mut s,
-        3,
-        p(3, 0),
-        UnitAction::Wait,
-        CommandError::UnitLeft(UnitId(3)),
-    );
-    assert_eq!(
-        CommandError::UnitLeft(UnitId(3)).to_string(),
-        "unit 3 has left the battle"
-    );
-    assert_eq!(s.outcome(), None, "enemy 4 is still there");
-}
-
-#[test]
-fn the_other_one_can_start_the_talk() {
-    let mut units = cast_named();
-    units[2].pos = p(2, 0);
-    units[2].faction = Faction::Ally;
-    let mut s = triggered(units, vec![trigger(talk(3, 1, false), "chat", true)]);
-    // The lord starts a talk listed as unit 3's.
-    let events = act(&mut s, 1, p(1, 0), talk_to(3));
-    assert_eq!(scenes(&events), ["chat"]);
-}
-
-#[test]
-fn talk_without_recruiting_ends_the_action_and_may_repeat() {
-    let mut s = talkers();
-    let events = act(&mut s, 2, p(0, 1), talk_to(1));
-    assert_eq!(scenes(&events), ["chat"]);
-    assert!(s.unit(UnitId(1)).is_some());
-    assert!(s.unit(UnitId(2)).unwrap().acted);
-    assert!(
-        !events
-            .iter()
-            .any(|e| matches!(e, Event::UnitRecruited { .. } | Event::ExpGained { .. }))
-    );
-    assert!(!s.has_fired(1));
-    assert!(s.recruited().is_empty());
-    end(&mut s);
-    end(&mut s);
-    assert_eq!(scenes(&act(&mut s, 2, p(0, 1), talk_to(1))), ["chat"]);
-}
-
-#[test]
-fn recruiting_the_last_enemy_wins_a_rout() {
-    let units = vec![
-        named(lord(1, p(0, 0))),
-        named(unit(3, Faction::Enemy, p(2, 0))),
-    ];
-    let mut s = triggered(units, vec![trigger(talk(1, 3, true), "recruit", true)]);
-    let events = act(&mut s, 1, p(1, 0), talk_to(3));
-    assert_eq!(events.last(), Some(&ended(Outcome::Victory)));
-}
-
-#[test]
-fn recruiting_the_unit_to_defeat_meets_the_objective() {
-    let mut units = cast_named();
-    units[2].pos = p(2, 0);
-    let mut s = start(BattleSetup {
-        triggers: vec![trigger(talk(1, 3, true), "recruit", true)],
-        objective: Objective::DefeatUnit {
-            unit: UnitId(3),
-            turn_limit: None,
-        },
-        ..setup(units)
-    });
-    let events = act(&mut s, 1, p(1, 0), talk_to(3));
-    assert_eq!(events.last(), Some(&ended(Outcome::Victory)));
-}
-
-// ---- Saving ----------------------------------------------------------------------
-
-#[test]
-fn fired_triggers_and_recruits_survive_a_save_and_load() {
-    let mut s = talkers();
-    act(&mut s, 1, p(1, 0), talk_to(3));
+    s.apply(&talk_cmd(1, p(0, 1), 2)).unwrap();
+    act(&mut s, 1, p(1, 0), attack(3));
     let text = ron::to_string(&s).unwrap();
     let mut loaded: BattleState = ron::from_str(&text).unwrap();
-    let mut units = cast_named();
-    units[2].pos = p(2, 0);
     loaded.restore_tables(
         Arc::new(terrain()),
         Arc::new(classes()),
-        Arc::new(items_for(&units)),
+        Arc::new(items_for(&strong())),
         Arc::new(spells()),
         Arc::new(skills()),
         Arc::new(test_arts()),
     );
     assert_eq!(loaded, s);
-    assert!(loaded.has_fired(0));
+    assert!(loaded.has_fired(0) && loaded.has_fired(1));
+    assert_eq!(loaded.triggers().len(), 2);
     assert_eq!(loaded.triggers(), s.triggers());
+    assert_eq!(loaded.recruited().len(), 1);
     assert_eq!(loaded.recruited(), s.recruited());
 }
 
@@ -595,7 +581,7 @@ fn triggers_read_from_ron_as_the_module_docs_write_them() {
         (when: UnitFell(unit: "harl"), scene: "ch01_harl_death", once: true),
         (when: UnitFell(unit: "tamsin", mode: Some(Casual)), scene: "ch01_tamsin_retreat", once: true),
         (when: UnitFell(unit: "brom", recruit: true), scene: "ch02_brom_yields", once: true),
-        (when: Talk(a: "ana", b: "rook", recruit: true), scene: "ch02_rook_joins", once: true),
+        (when: Talk(a: "ana", b: "rook"), scene: "ch02_ana_rook", once: true),
     ]"#;
     let triggers: Vec<Trigger> = ron::from_str(text).unwrap();
     let ch = |s: &str| CharacterId(s.into());
@@ -638,16 +624,15 @@ fn triggers_read_from_ron_as_the_module_docs_write_them() {
     );
     assert_eq!(
         triggers[8],
-        trigger(talk_between(ch("ana"), ch("rook")), "ch02_rook_joins", true)
+        trigger(
+            TriggerWhen::Talk {
+                a: ch("ana"),
+                b: ch("rook"),
+            },
+            "ch02_ana_rook",
+            true
+        )
     );
-}
-
-fn talk_between(a: CharacterId, b: CharacterId) -> TriggerWhen {
-    TriggerWhen::Talk {
-        a,
-        b,
-        recruit: true,
-    }
 }
 
 #[test]

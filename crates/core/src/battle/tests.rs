@@ -2635,9 +2635,6 @@ pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
             for action in legal_item_uses(s, u, dest) {
                 add(action);
             }
-            for target in s.talk_targets(u.id, dest) {
-                add(UnitAction::Talk { target });
-            }
             if let Objective::Seize { pos, by_lord, .. } = s.objective()
                 && pos == dest
                 && u.faction == Faction::Player
@@ -2657,10 +2654,34 @@ pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
             }
         }
     }
+    out.extend(legal_talks(s));
     let skills = legal_skill_commands(s, &out);
     let arts = legal_art_commands(s, &out);
     out.extend(skills);
     out.extend(arts);
+    out
+}
+
+/// Every talk of a ready unit of the phase: from each tile it can stop on,
+/// to each unit it can talk to there.
+fn legal_talks(s: &BattleState) -> Vec<Command> {
+    let mut out = Vec::new();
+    let ready = s
+        .units()
+        .iter()
+        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
+    for u in ready {
+        let reach = reachable(s.map(), s.terrain(), s.classes(), s.units(), u.id).unwrap();
+        for dest in reach.stoppable().iter() {
+            for target in s.talk_targets(u.id, dest) {
+                out.push(Command::Talk {
+                    unit: u.id,
+                    dest,
+                    target,
+                });
+            }
+        }
+    }
     out
 }
 
@@ -3137,7 +3158,7 @@ prop_compose! {
                 recruit: flag,
             },
             4 => TriggerWhen::HalfHp { unit: c(a) },
-            _ => TriggerWhen::Talk { a: c(a), b: c(b), recruit: flag },
+            _ => TriggerWhen::Talk { a: c(a), b: c(b) },
         };
         Trigger { when, scene: String::new(), once }
     }
@@ -3257,6 +3278,12 @@ proptest! {
             let events = s.apply(cmd);
             prop_assert!(events.is_ok(), "{:?} refused: {:?}", cmd, events);
             let events = events.unwrap_or_default();
+            // Talking is free: the unit stays where it was, ready.
+            if let Command::Talk { unit, .. } = cmd {
+                let u = s.unit(*unit).unwrap();
+                prop_assert_eq!(before.get(unit), Some(&u.pos));
+                prop_assert!(!u.acted);
+            }
             // An `Act` always ends the unit's action: it is done (or fell),
             // or it waits to move after its attack.
             if let Command::Act { unit, .. } = cmd {
@@ -3417,7 +3444,7 @@ proptest! {
             }
             for e in &events {
                 if let Event::UnitRecruited { unit } = e {
-                    prop_assert!(s.unit(*unit).is_none());
+                    prop_assert!(s.fallen().iter().any(|u| u.id == *unit));
                     prop_assert!(s.recruited().iter().any(|u| u.id == *unit));
                 }
             }
@@ -3431,9 +3458,9 @@ proptest! {
 }
 
 /// The trigger index (from its `s<i>` id) of each scene in `events`,
-/// checking each is at its moment: after a run of scenes comes a combat, a
-/// fall, a recruit or the end of a talk (a unit's action), or before it a
-/// phase start, a move or a combat (half HP).
+/// checking each is at its moment: after a run of scenes comes a combat or
+/// a fall, or before it a phase start, a move or a combat (half HP), or it
+/// is a talk's only event.
 fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
     let mut out = Vec::new();
     for (i, e) in events.iter().enumerate() {
@@ -3444,20 +3471,19 @@ fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
         let not_scene = |e: &&Event| !matches!(e, Event::SceneTriggered { .. });
         let before = events[..i].iter().rev().find(not_scene);
         let after = events[i + 1..].iter().find(not_scene);
-        let placed = matches!(
-            before,
-            Some(
-                Event::PhaseStarted { .. } | Event::UnitMoved { .. } | Event::CombatResolved { .. }
-            )
-        ) || matches!(
-            after,
-            Some(
-                Event::CombatResolved { .. }
-                    | Event::UnitFell { .. }
-                    | Event::UnitRecruited { .. }
-                    | Event::UnitActed { .. }
-            )
-        );
+        let talk = events.len() == 1;
+        let placed =
+            talk || matches!(
+                before,
+                Some(
+                    Event::PhaseStarted { .. }
+                        | Event::UnitMoved { .. }
+                        | Event::CombatResolved { .. }
+                )
+            ) || matches!(
+                after,
+                Some(Event::CombatResolved { .. } | Event::UnitFell { .. })
+            );
         prop_assert!(placed, "{:?} at {} in {:?}", scene, i, events);
     }
     Ok(out)

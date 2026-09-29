@@ -40,6 +40,18 @@ Then, on the follow-up questions:
 boss's special line for a character replaces its general line. 3A: an area
 scene plays only where a unit ends its move.)
 
+Then, on Claude's starting rules (PR #92):
+
+> 1. talking should not use the turn
+> 2. again, it should follow a script not just be a random line
+> 3. so far we shouldn't have this talk to recruit option... I thought I
+> already saaid this.
+> 4. sure
+
+(1: talking is free. 2: when two characters fight, one written scene plays,
+not a line from each. 3: no recruiting by talking, for now; this replaces
+1A above. 4: the half-HP timing below stands.)
+
 ## Rules
 
 ### Recruitment
@@ -54,14 +66,9 @@ scene plays only where a unit ends its move.)
   1. **Defeat them** (Nick expects this to be the usual way): a map marks an
      enemy as "joins you if defeated". When it falls it says its line,
      leaves the map, and joins after the battle.
-  2. **Talk to them**: a map marks a pair of characters who can talk. The
-     talk plays its scene; if it recruits, the recruit **leaves the
-     battlefield at once** (1A). It no longer counts as an enemy, so it
-     counts toward "defeat all enemies".
-  3. **Quests outside battle**: later, with the world map (see
+  2. **Quests outside battle**: later, with the world map (see
      `world-structure.md`); ticket 1009.
-- *Claude's starting rule:* if the map's goal is to defeat one enemy and you
-  recruit that enemy instead, the goal is met.
+- **No recruiting by talking** for now (Nick, PR #92).
 
 ### Talking
 
@@ -69,8 +76,10 @@ scene plays only where a unit ends its move.)
   (the player picks `Talk` with whichever of the two is their unit, next to
   the other). It always plays the same pre-written scene; who speaks first
   is up to the script.
-- Talking uses up the talker's action and gives no EXP (*Claude's starting
-  rule*). A talk that recruits happens once.
+- **Talking doesn't use the unit's turn** (Nick): like changing weapons,
+  the unit can still move and act afterwards. It gives no EXP (*Claude's
+  starting rule*). The map says whether a talk can happen once or again.
+- Talking never recruits (see above).
 
 ### Boss lines
 
@@ -82,8 +91,12 @@ scene plays only where a unit ends its move.)
   the lead). When that character fights it, the special line plays
   **instead of** the general one, and the general line never plays against
   that character (2A). Each line still plays only once.
-- When both fighters have a line for the fight, the attacker's plays first
-  (*Claude's starting rule*).
+- **One scene per fight** (Nick: "it should follow a script"): a fight
+  never strings together a line from each fighter. If the two fighters
+  have a scene written for the two of them (Harl and the lead), that scene
+  plays, whoever attacks. Otherwise the one fight line available plays; if
+  both fighters had one, the one the map lists first plays now and the
+  other waits for that character's next fight.
 
 ### Other scene moments
 

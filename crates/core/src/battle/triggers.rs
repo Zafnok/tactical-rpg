@@ -4,8 +4,8 @@
 //! checked by `trpg-content`) and the moment it plays. After every command
 //! (and at the battle's start) the battle inserts an
 //! [`Event::SceneTriggered`] into the events, right where its moment is, so
-//! the UI plays it in order. Some triggers also recruit a character, who
-//! leaves the battlefield and joins the army after a won battle
+//! the UI plays it in order. A fall can also recruit the character ("joins
+//! you if defeated"), who joins the army after a won battle
 //! ([`BattleState::recruited`]). The rules are in the parent module's docs.
 //!
 //! In a battle file (RON, 0801) a trigger reads:
@@ -19,15 +19,16 @@
 //! (when: UnitFell(unit: "harl"), scene: "ch01_harl_death", once: true)
 //! (when: UnitFell(unit: "tamsin", mode: Some(Casual)), scene: "ch01_tamsin_retreat", once: true)
 //! (when: UnitFell(unit: "brom", recruit: true), scene: "ch02_brom_yields", once: true)
-//! (when: Talk(a: "ana", b: "rook", recruit: true), scene: "ch02_rook_joins", once: true)
+//! (when: Talk(a: "ana", b: "rook"), scene: "ch02_ana_rook", once: true)
 //! ```
 
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use super::{BattleState, CommandError, Event, Phase, Step, Turn};
+use super::{BattleState, CommandError, Event, Phase, Turn};
 use crate::geom::Pos;
+use crate::movement::reachable;
 use crate::stats::StatValue;
 use crate::unit::{CharacterId, Faction, Unit, UnitId};
 
@@ -131,18 +132,14 @@ pub enum TriggerWhen {
         #[serde(default)]
         recruit: bool,
     },
-    /// When `a` and `b` talk: either chooses
-    /// [`UnitAction::Talk`](super::UnitAction::Talk) next to the other (the
-    /// scene decides who speaks first). With `recruit`, `b` leaves the
-    /// battlefield and joins the army after a won battle.
+    /// When `a` and `b` talk: either one's unit
+    /// ([`Command::Talk`](super::Command::Talk)) next to the other's. The
+    /// scene is their script: it decides who speaks first.
     Talk {
         /// One of the two.
         a: CharacterId,
-        /// The other; the one recruited.
+        /// The other.
         b: CharacterId,
-        /// Whether `b` joins after the battle.
-        #[serde(default)]
-        recruit: bool,
     },
 }
 
@@ -176,8 +173,8 @@ impl BattleState {
         self.fired.contains(&index)
     }
 
-    /// The units recruited so far, in order, as they were when they left
-    /// the map: they join the army if the battle is won (0801).
+    /// The fallen units recruited so far, in order: they join the army if
+    /// the battle is won (0801).
     pub fn recruited(&self) -> &[Unit] {
         &self.recruited
     }
@@ -198,13 +195,25 @@ impl BattleState {
             .collect()
     }
 
-    /// Validates `unit` talking to `target` from `dest`.
+    /// Validates unit `id` talking to `target` next to `dest`: the unit
+    /// may act now and can stop on `dest`. Returns the trigger.
     pub(super) fn plan_talk(
         &self,
-        unit: &Unit,
+        id: UnitId,
         dest: Pos,
         target: UnitId,
-    ) -> Result<Step, CommandError> {
+    ) -> Result<usize, CommandError> {
+        let unit = self.check_ready(id)?;
+        let reach = reachable(
+            &self.map,
+            &self.tables.terrain,
+            &self.tables.classes,
+            &self.units,
+            id,
+        )?;
+        if !reach.is_stoppable(dest) {
+            return Err(CommandError::CannotStop(dest));
+        }
         let other = self.living(target)?;
         let index = self
             .talk_trigger(unit, other)
@@ -214,30 +223,13 @@ impl BattleState {
         if distance != 1 {
             return Err(CommandError::OutOfRange { target, distance });
         }
-        Ok(Step::Talk { trigger: index })
+        Ok(index)
     }
 
-    /// Carries out a validated talk with trigger `index`: the scene, then,
-    /// if the trigger recruits, its `b` leaves the map for the recruits.
+    /// Carries out a validated talk with trigger `index`: its scene.
     pub(super) fn talk(&mut self, index: usize, events: &mut Vec<Event>) {
-        let Some(trigger) = self.triggers.get(index).cloned() else {
-            return;
-        };
-        self.fire(index, &trigger, events);
-        let TriggerWhen::Talk {
-            b, recruit: true, ..
-        } = &trigger.when
-        else {
-            return;
-        };
-        let at = self
-            .units
-            .iter()
-            .position(|u| u.character.as_ref() == Some(b));
-        if let Some(i) = at {
-            let unit = self.units.remove(i);
-            events.push(Event::UnitRecruited { unit: unit.id });
-            self.recruited.push(unit);
+        if let Some(trigger) = self.triggers.get(index).cloned() {
+            self.fire(index, &trigger, events);
         }
     }
 
@@ -250,7 +242,7 @@ impl BattleState {
         (0..self.triggers.len()).find(|&i| {
             let t = &self.triggers[i];
             let pair = match &t.when {
-                TriggerWhen::Talk { a, b, .. } => (a == me && b == them) || (a == them && b == me),
+                TriggerWhen::Talk { a, b } => (a == me && b == them) || (a == them && b == me),
                 _ => false,
             };
             pair && !self.spent(i, t)
@@ -294,8 +286,7 @@ impl BattleState {
                 } => {
                     let (a, d) = (*attacker, *defender);
                     let left = [(a, outcome.attacker_hp), (d, outcome.defender_hp)];
-                    self.combat_scenes(a, d, &mut out);
-                    self.combat_scenes(d, a, &mut out);
+                    self.combat_scene(a, d, &mut out);
                     out.push(event);
                     for (id, hp) in left {
                         self.half_hp_scenes(id, hp, &mut out);
@@ -390,26 +381,37 @@ impl BattleState {
         });
     }
 
-    /// The scenes of unit `id` going into a combat with `other`: its
-    /// [`TriggerWhen::CombatStart`]s against `other`'s character, or, if
-    /// it has none for that pair, its ones against anyone.
-    fn combat_scenes(&mut self, id: UnitId, other: UnitId, events: &mut Vec<Event>) {
-        let Some(me) = self.character_of(id) else {
-            return;
+    /// The scene of units `a` and `b` going into a combat: at most one.
+    /// If their characters have scenes for the pair
+    /// ([`TriggerWhen::CombatStart`] with `against`, either way round), the
+    /// first of those not played; else the first not played of either
+    /// fighter's scenes against anyone.
+    fn combat_scene(&mut self, a: UnitId, b: UnitId, events: &mut Vec<Event>) {
+        let (ca, cb) = (self.character_of(a), self.character_of(b));
+        let fighter = |c: &CharacterId| Some(c) == ca.as_ref() || Some(c) == cb.as_ref();
+        let pair_of = |when: &TriggerWhen| match when {
+            TriggerWhen::CombatStart {
+                unit,
+                against: Some(other),
+            } => fighter(unit) && fighter(other) && unit != other,
+            _ => false,
         };
-        let foe = self.character_of(other);
-        let for_me = |when: &TriggerWhen| match when {
-            TriggerWhen::CombatStart { unit, against } if *unit == me => Some(against.clone()),
-            _ => None,
+        let paired = self.triggers.iter().any(|t| pair_of(&t.when));
+        let fits = |when: &TriggerWhen| match when {
+            TriggerWhen::CombatStart {
+                against: Some(_), ..
+            } => paired && pair_of(when),
+            TriggerWhen::CombatStart {
+                unit,
+                against: None,
+            } => !paired && fighter(unit),
+            _ => false,
         };
-        let paired = self
-            .triggers
-            .iter()
-            .any(|t| for_me(&t.when).is_some_and(|a| a.is_some() && a == foe));
-        self.fire_matching(events, |when| match for_me(when) {
-            Some(Some(against)) => Some(against) == foe,
-            Some(None) => !paired,
-            None => false,
-        });
+        let first = (0..self.triggers.len())
+            .find(|&i| fits(&self.triggers[i].when) && !self.spent(i, &self.triggers[i]));
+        if let Some(i) = first {
+            let trigger = self.triggers[i].clone();
+            self.fire(i, &trigger, events);
+        }
     }
 }

@@ -5,8 +5,7 @@
 use insta::assert_snapshot;
 use trpg_content::character_unit;
 use trpg_core::{
-    BattleSetup, CharacterId, Faction, Objective, Phase, Pos, Trigger, TriggerWhen, Unit,
-    UnitAction, UnitId,
+    BattleSetup, CharacterId, Faction, Objective, Phase, Pos, Trigger, TriggerWhen, Unit, UnitId,
 };
 
 use super::mode::{Effect, MenuEntry, Mode, Selection, menu_entries, step};
@@ -169,16 +168,20 @@ fn talk_is_offered_next_to_someone_to_talk_to_and_picks_a_target() {
         panic!("{back:?}");
     };
     assert_eq!(entries[menu.focus()], MenuEntry::Talk);
-    // Confirm: the talk.
+    // Confirm: the talk, which keeps the unit's move and action open.
+    let sel = mode.selection().cloned().unwrap();
     let (after, effect) = step(mode, Action::Confirm, ROGUE_AT, &s);
     assert_eq!(after, Mode::default());
     assert_eq!(
         effect,
-        Effect::Apply(Command::Act {
-            unit: UnitId(1),
-            dest: Pos::new(3, 5),
-            action: UnitAction::Talk { target: UnitId(7) },
-        })
+        Effect::ApplyStay(
+            Command::Talk {
+                unit: UnitId(1),
+                dest: Pos::new(3, 5),
+                target: UnitId(7),
+            },
+            Box::new(sel)
+        )
     );
     // Nobody to talk to from elsewhere, or for the knight.
     let mut sel = Selection::new(&s, UnitId(1)).unwrap();
@@ -192,34 +195,47 @@ fn talk_is_offered_next_to_someone_to_talk_to_and_picks_a_target() {
 fn talk_cycles_between_several_targets() {
     let c = ctx();
     let mut setup = rogue_setup(&c, 22);
-    // A second rogue-like enemy below the lord, with its own talk.
-    let mut other: Unit = setup.units[6].clone();
-    other.id = UnitId(8);
-    other.pos = Pos::new(3, 6);
-    other.character = Some(CharacterId("test_archer".into()));
-    setup.units.push(other);
-    setup.triggers.push(Trigger {
-        when: TriggerWhen::Talk {
-            a: CharacterId("test_lord".into()),
-            b: CharacterId("test_archer".into()),
-            recruit: false,
-        },
-        scene: "test_talk".into(),
-        once: true,
-    });
+    // Two more rogue-like enemies, below and left of the lord, each with
+    // its own talk: three targets, in unit order.
+    for (id, pos, who) in [
+        (8, Pos::new(3, 6), "extra_1"),
+        (9, Pos::new(2, 5), "extra_2"),
+    ] {
+        let mut other: Unit = setup.units[6].clone();
+        other.id = UnitId(id);
+        other.pos = pos;
+        other.character = Some(CharacterId(who.into()));
+        setup.units.push(other);
+        setup.triggers.push(Trigger {
+            when: TriggerWhen::Talk {
+                a: CharacterId("test_lord".into()),
+                b: CharacterId(who.into()),
+            },
+            scene: "test_talk".into(),
+            once: true,
+        });
+    }
     let s = BattleState::new(setup).0;
     let (mode, _) = step(lord_menu(&s), Action::CursorDown, Pos::new(3, 5), &s);
     let (mode, _) = step(mode, Action::Confirm, Pos::new(3, 5), &s);
+    let at = |effect| match effect {
+        Effect::Cursor(p) => p,
+        other => panic!("{other:?}"),
+    };
     let (mode, effect) = step(mode, Action::CursorRight, ROGUE_AT, &s);
-    assert_eq!(effect, Effect::Cursor(Pos::new(3, 6)));
+    assert_eq!(at(effect), Pos::new(3, 6));
     let (mode, effect) = step(mode, Action::PrevUnit, Pos::new(3, 6), &s);
-    assert_eq!(effect, Effect::Cursor(ROGUE_AT));
-    let (_, effect) = step(mode, Action::CursorUp, ROGUE_AT, &s);
-    assert_eq!(effect, Effect::Cursor(Pos::new(3, 6)));
+    assert_eq!(at(effect), ROGUE_AT);
+    // Back from the first: the last.
+    let (mode, effect) = step(mode, Action::CursorUp, ROGUE_AT, &s);
+    assert_eq!(at(effect), Pos::new(2, 5));
+    // On from the last: the first.
+    let (_, effect) = step(mode, Action::NextUnit, Pos::new(2, 5), &s);
+    assert_eq!(at(effect), ROGUE_AT);
 }
 
 #[test]
-fn talking_plays_the_scene_and_the_rogue_leaves_to_join_later() {
+fn talking_plays_the_scene_and_keeps_the_units_turn() {
     let mut c = ctx();
     let mut s = BattleScreen::new(rogue_battle(&c, 22));
     s.cursor.jump(Pos::new(3, 5));
@@ -238,12 +254,25 @@ fn talking_plays_the_scene_and_the_rogue_leaves_to_join_later() {
         frame(&mut s, &mut c, &[Action::Confirm], 0.0),
         "Push(dialogue)"
     );
-    // The rogue has left the battlefield, to join after the battle.
-    assert!(s.state().unit(UnitId(7)).is_none());
-    let recruits: Vec<UnitId> = s.state().recruited().iter().map(|u| u.id).collect();
-    assert_eq!(recruits, [UnitId(7)]);
-    assert!(s.state().unit(UnitId(1)).unwrap().acted);
+    // Nobody changes sides; the lord hasn't used its turn: its menu is
+    // open again, with no Talk (it has been said).
+    assert_eq!(s.state().unit(UnitId(7)).unwrap().faction, Faction::Enemy);
+    assert!(s.state().recruited().is_empty());
+    assert!(!s.state().unit(UnitId(1)).unwrap().acted);
     assert_eq!(s.history().len(), 1);
+    let Mode::ActionMenu { entries, menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert!(!entries.contains(&MenuEntry::Talk));
+    assert_eq!(entries[menu.focus()], MenuEntry::Attack);
+    // Then it acts as usual.
+    s.apply(&Command::Act {
+        unit: UnitId(1),
+        dest: Pos::new(3, 5),
+        action: trpg_core::UnitAction::Wait,
+    });
+    assert!(s.state().unit(UnitId(1)).unwrap().acted);
+    assert_eq!(s.history().len(), 2);
 }
 
 // ---- In a combat: harness ------------------------------------------------------
@@ -314,7 +343,10 @@ fn a_fallen_rogue_says_its_last_words_before_it_fades() {
     h.wait(2.0);
     assert_eq!(h.screens(), ["battle", "dialogue"]);
     h.wait(1.0);
-    assert!(shows(&h, "Should have taken the other job..."));
+    assert!(shows(
+        &h,
+        "Should have taken the other job... Fine. You win. I'm yours."
+    ));
     assert_snapshot!(h.snapshot());
     close_line(&mut h);
     assert_eq!(h.screens(), ["battle"]);
@@ -337,10 +369,15 @@ fn skipping_a_combat_still_stops_for_its_scenes() {
     h.keys("d");
     assert_eq!(h.screens(), ["battle", "dialogue"]);
     h.wait(1.0);
-    assert!(shows(&h, "Should have taken the other job..."));
+    assert!(shows(
+        &h,
+        "Should have taken the other job... Fine. You win. I'm yours."
+    ));
     // Shown in full already: one press ends it.
     h.keys("f");
     assert_eq!(h.screens(), ["battle"]);
+    // Then the lord's EXP bar (0602), and browsing again.
+    h.wait(3.0);
     assert!(shows(&h, "d menu · Space end turn"), "{}", h.snapshot());
 }
 
@@ -348,10 +385,10 @@ fn skipping_a_combat_still_stops_for_its_scenes() {
 fn the_rewind_list_names_a_talk() {
     let c = ctx();
     let mut s = BattleScreen::new(rogue_battle(&c, 22));
-    s.apply(&Command::Act {
+    s.apply(&Command::Talk {
         unit: UnitId(1),
         dest: Pos::new(3, 5),
-        action: UnitAction::Talk { target: UnitId(7) },
+        target: UnitId(7),
     });
     let replayed = s.history().replay();
     assert_eq!(

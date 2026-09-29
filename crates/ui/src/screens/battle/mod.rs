@@ -83,7 +83,7 @@ pub const QUICK_BATTLE_POTIONS: usize = 3;
 pub const QUICK_BATTLE_ROGUE_TURN: trpg_core::Turn = 2;
 
 /// The character of the Quick Battle's rogue: an enemy the lord can talk
-/// into joining.
+/// to, which joins if defeated.
 pub const QUICK_BATTLE_ROGUE: &str = "test_rogue";
 
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
@@ -106,9 +106,9 @@ pub fn quick_battle_screen(content: &Content) -> Result<BattleScreen, String> {
 /// The debug Quick Battle's dialogue triggers (0705), one of each kind, on
 /// the scenes in `assets/dialogue/test_triggers.dlg`: turn 3 starts; a
 /// player unit ends a move in the walled fort (10, 5)–(11, 6); the rogue
-/// fights, drops to half HP or falls; the lord or the knight falls (the
-/// knight's line depends on the mode); the lord and the rogue talk, and the
-/// rogue leaves to join after the battle.
+/// fights, drops to half HP, or falls (and joins after the battle); the
+/// lord or the knight falls (the knight's line depends on the mode); the
+/// lord and the rogue talk.
 pub fn quick_battle_triggers() -> Vec<Trigger> {
     let c = |id: &str| CharacterId(id.into());
     let rogue = c(QUICK_BATTLE_ROGUE);
@@ -117,10 +117,10 @@ pub fn quick_battle_triggers() -> Vec<Trigger> {
         scene: scene.into(),
         once: true,
     };
-    let fell = |unit: &str, mode| TriggerWhen::UnitFell {
+    let fell = |unit: &str, mode, recruit| TriggerWhen::UnitFell {
         unit: c(unit),
         mode,
-        recruit: false,
+        recruit,
     };
     vec![
         once(
@@ -155,21 +155,20 @@ pub fn quick_battle_triggers() -> Vec<Trigger> {
             },
             "test_rogue_half",
         ),
-        once(fell(QUICK_BATTLE_ROGUE, None), "test_rogue_falls"),
-        once(fell("test_lord", None), "test_lord_falls"),
+        once(fell(QUICK_BATTLE_ROGUE, None, true), "test_rogue_falls"),
+        once(fell("test_lord", None, false), "test_lord_falls"),
         once(
-            fell("test_knight", Some(GameMode::Classic)),
+            fell("test_knight", Some(GameMode::Classic), false),
             "test_knight_dies",
         ),
         once(
-            fell("test_knight", Some(GameMode::Casual)),
+            fell("test_knight", Some(GameMode::Casual), false),
             "test_knight_retreats",
         ),
         once(
             TriggerWhen::Talk {
                 a: c("test_lord"),
                 b: rogue,
-                recruit: true,
             },
             "test_talk",
         ),
@@ -726,6 +725,11 @@ impl BattleScreen {
     /// reopens the action menu for the unit at the end of its path (its
     /// ranges recomputed: the weapon changed), on `Equip`.
     fn apply_stay(&mut self, cmd: &Command, sel: Selection) {
+        // Back on what was chosen (`Talk` is gone once its talk played).
+        let entry = match cmd {
+            Command::Talk { .. } => MenuEntry::Talk,
+            _ => MenuEntry::Equip,
+        };
         self.apply(cmd);
         let Some(mut fresh) = Selection::new(&self.state, sel.unit) else {
             return;
@@ -734,7 +738,7 @@ impl BattleScreen {
             return;
         }
         fresh.path = sel.path;
-        self.mode = mode::back_to_entry(fresh, &self.state, MenuEntry::Equip);
+        self.mode = mode::back_to_entry(fresh, &self.state, entry);
     }
 
     /// The units as drawn, each with how far it has faded out: the

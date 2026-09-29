@@ -24,12 +24,12 @@ test_rogue: That all you've got? I've had worse from my own crew.
 @left  test_lord neutral
 @right test_rogue surprised
 test_lord: Put the axe down. You aren't one of them.
-test_rogue[happy]: ...Fine. I was never paid anyway. Find me when this is over.
+test_rogue[happy]: ...Maybe not. Beat me fair, and we'll talk terms after.
 @end
 
 @scene test_rogue_falls
 @right test_rogue sad
-test_rogue: Should have taken the other job...
+test_rogue: Should have taken the other job... Fine. You win. I'm yours.
 @end
 
 @scene test_lord_falls

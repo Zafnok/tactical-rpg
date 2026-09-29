@@ -95,8 +95,8 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
    rewind charge (per the design; express it as a percentage of the
    EXP-per-level constant, not a fixed number), returns
    unused pack items to the stock and adds gold. On a **victory** it also
-   adds every unit in `BattleState::recruited()` (0705: talked into joining
-   or "joins you if defeated") to the roster at full HP
+   adds every unit in `BattleState::recruited()` (0705: "joins you if
+   defeated") to the roster at full HP
    (`docs/design/battle-scenes-and-recruitment.md`: recruits join only after
    the battle). The battle file's `triggers` go into `BattleSetup` and the
    loader runs `trpg_content::check_triggers` on them.

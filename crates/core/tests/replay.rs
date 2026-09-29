@@ -344,15 +344,7 @@ fn triggers() -> Vec<Trigger> {
             "fall_3",
             true,
         ),
-        t(
-            TriggerWhen::Talk {
-                a: c(1),
-                b: c(2),
-                recruit: false,
-            },
-            "talk",
-            true,
-        ),
+        t(TriggerWhen::Talk { a: c(1), b: c(2) }, "talk", true),
     ]
 }
 
@@ -370,7 +362,7 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
 }
 
 /// Three turns of both sides trading blows, then equips (a weapon, then a
-/// spell), potions, a talk, an enemy spell (countered with the equipped
+/// spell), potions, a talk and a wait, an enemy spell (countered with the equipped
 /// spell), a player spell out of the target's reach, then a forest burnt
 /// (it burns out a round later), water frozen, and an attack with a combat
 /// active whose stance lasts through the enemy phase.
@@ -403,10 +395,15 @@ fn script() -> Vec<Command> {
                 target: UnitId(2),
             },
         },
+        Command::Talk {
+            unit: UnitId(1),
+            dest: Pos::new(1, 1),
+            target: UnitId(2),
+        },
         Command::Act {
             unit: UnitId(1),
             dest: Pos::new(1, 1),
-            action: UnitAction::Talk { target: UnitId(2) },
+            action: UnitAction::Wait,
         },
         Command::EndPhase,
         Command::Act {

@@ -59,7 +59,7 @@ pub fn check_triggers(
                     ));
                 }
             }
-            TriggerWhen::Talk { a, b, .. } if a == b => {
+            TriggerWhen::Talk { a, b } if a == b => {
                 error(format!("\"{}\" talks to itself", a.0));
             }
             TriggerWhen::CombatStart {
@@ -78,9 +78,6 @@ pub fn check_triggers(
 /// The character a trigger recruits, if any.
 fn recruit(when: &TriggerWhen) -> Option<&CharacterId> {
     match when {
-        TriggerWhen::Talk {
-            b, recruit: true, ..
-        } => Some(b),
         TriggerWhen::UnitFell {
             unit,
             recruit: true,
@@ -102,7 +99,7 @@ fn characters(when: &TriggerWhen) -> Vec<&CharacterId> {
             std::iter::once(unit).chain(against).collect()
         }
         TriggerWhen::UnitFell { unit, .. } | TriggerWhen::HalfHp { unit } => vec![unit],
-        TriggerWhen::Talk { a, b, .. } => vec![a, b],
+        TriggerWhen::Talk { a, b } => vec![a, b],
     }
 }
 
@@ -223,7 +220,6 @@ mod tests {
                 TriggerWhen::Talk {
                     a: c("ana"),
                     b: c("rook"),
-                    recruit: true,
                 },
                 "hi",
             ),
@@ -261,7 +257,6 @@ mod tests {
                 TriggerWhen::Talk {
                     a: c("ana"),
                     b: c("ana"),
-                    recruit: false,
                 },
                 "hi",
             ),
@@ -280,14 +275,15 @@ mod tests {
                 "hi",
             ),
             trigger(
-                TriggerWhen::Talk {
-                    a: c("rook"),
-                    b: c("ana"),
+                TriggerWhen::UnitFell {
+                    unit: c("ana"),
+                    mode: None,
                     recruit: true,
                 },
                 "hi",
             ),
             trigger(TriggerWhen::HalfHp { unit: c("nemo") }, "hi"),
+            trigger(enters(area(0, 0, 1, 0)), "hi"),
         ];
         assert_eq!(
             check(&bad),
@@ -303,6 +299,7 @@ mod tests {
                 "b.ron: trigger 7: no unit of character \"zed\" in the battle",
                 "b.ron: trigger 8: \"ana\" is recruited but already a player unit",
                 "b.ron: trigger 9: no unit of character \"nemo\" in the battle",
+                "b.ron: trigger 10: area (0, 0) 1×0 isn't on the 6×4 map",
             ]
         );
     }

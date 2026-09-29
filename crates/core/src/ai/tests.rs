@@ -392,6 +392,9 @@ fn play_phase(state: &mut BattleState) -> Vec<Command> {
         if end {
             break;
         }
+        // A phase is a command or two per unit: fail, don't hang, if the
+        // battle stops changing.
+        assert!(commands.len() < 1000, "the phase never ends");
     }
     commands
 }

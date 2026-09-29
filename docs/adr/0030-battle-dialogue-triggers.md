@@ -31,34 +31,39 @@ Forces:
    TriggerWhen, scene, once }` (serde), with `TriggerWhen` = `TurnStart`,
    `UnitEntersArea`, `CombatStart` (with `against`), `HalfHp`, `UnitFell`
    (with a `GameMode` filter and `recruit`) and `Talk` (either character may
-   start it; with `recruit`). `BattleSetup` carries `triggers` and the
+   start it). `BattleSetup` carries `triggers` and the
    campaign's `mode`; `BattleState` saves both, the fired `once` triggers
    and the recruited units. Triggers name characters (`CharacterId`), never
    `UnitId`s, which battle files don't know.
-2. **Recruits leave the battle; the campaign adds them.** A recruit (by
-   talk: removed from the map at once; by defeat: as it falls) goes into
+2. **Recruits join after the battle; the campaign adds them.** A fallen
+   unit whose `UnitFell` trigger recruits goes into
    `BattleState::recruited` with `Event::UnitRecruited`. Nobody changes
-   faction in a battle. 0801's `Campaign::apply_result` adds the recruits
-   to the roster after a victory.
+   faction in a battle, and talking never recruits (Nick). 0801's
+   `Campaign::apply_result` adds the recruits to the roster after a
+   victory.
 3. **Scenes are events placed at their moment.** After every command (and
    at the battle's start) `BattleState` walks the command's events and
    inserts `Event::SceneTriggered { scene }` where it belongs: after a
    `PhaseStarted`, `UnitMoved` or (half HP) `CombatResolved`, before a
-   `CombatResolved` or `UnitFell`.
-   Several at once go in trigger-list order. A talk emits its own scene,
-   then `UnitRecruited`. Core never looks at the scene's content.
-4. **The battle screen plays scenes as `DialogueScreen` overlays.** With a
+   `CombatResolved` or `UnitFell`. Several at once go in trigger-list
+   order, except a combat start: one scene per fight (a pair's written
+   scene first). Core never looks at the scene's content.
+4. **Talking is its own free command**, `Command::Talk { unit, dest,
+   target }`, like `Equip`: it validates the unit's move to `dest` without
+   making it, emits only the scene, and leaves the unit ready. The screen
+   reopens the action menu after it.
+5. **The battle screen plays scenes as `DialogueScreen` overlays.** With a
    combat, the playback holds them as zero-length `Beat::Scene`s before the
    bout or fall they precede; its clock stops there until the screen takes
    the scene and pushes the overlay (a skip stops at each scene too). Without
    a combat, scenes join the banners in one queue (`Queued`), in event
    order, and play when they reach its front.
-5. **`CharacterId` serialises as a bare string** (`#[serde(transparent)]`),
+6. **`CharacterId` serialises as a bare string** (`#[serde(transparent)]`),
    so battle files write `unit: "harl"`. No save format existed yet.
-6. **Content checks triggers** with `trpg_content::check_triggers`: scenes
+7. **Content checks triggers** with `trpg_content::check_triggers`: scenes
    exist, named characters are units of the battle (arrivals included),
-   areas lie on the map, recruits aren't already player units. The battle-file loader (0801) calls it; the debug
-   Quick Battle does today.
+   areas lie on the map, recruits aren't already player units. The
+   battle-file loader (0801) calls it; the debug Quick Battle does today.
 
 ## Consequences
 
@@ -73,8 +78,6 @@ Forces:
   turn-start scene of an AI phase plays after that phase has already ended
   in `core`.
 - `BattleSetup` literals gained two fields (`triggers`, `mode`).
-- A recruited unit is out of the battle like a fallen one: commands naming
-  it fail with `CommandError::UnitLeft`.
 
 ## Alternatives considered
 
@@ -86,6 +89,8 @@ Forces:
   and duplicates rules outside `core` (ADR-0004).
 - **Recruits switch to the player's side at once** (as in Fire Emblem):
   Nick ruled it out; recruits join after the battle.
+- **Talk as a `UnitAction`** (ending the unit's action, as in Fire
+  Emblem): Nick wants talking not to use the turn.
 - **Triggers keyed by `UnitId`**: battle files would need to know generated
   ids; characters are what authors name.
 - **A raw RON mirror type in `content`, converted to core's `Trigger`**: two
