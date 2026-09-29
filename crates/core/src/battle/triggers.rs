@@ -1,9 +1,12 @@
-//! Battle dialogue triggers (ticket 0705): the story moments of a map, as
-//! data. A battle's [`Trigger`]s name a scene (a dialogue scene id, checked
-//! by `trpg-content`) and the moment it plays. After every command (and at
-//! the battle's start) the battle inserts an [`Event::SceneTriggered`] into
-//! the events, right where its moment is, so the UI plays it in order. The
-//! rules are in the parent module's docs.
+//! Battle dialogue triggers (ticket 0705,
+//! `docs/design/battle-scenes-and-recruitment.md`): the story moments of a
+//! map, as data. A battle's [`Trigger`]s name a scene (a dialogue scene id,
+//! checked by `trpg-content`) and the moment it plays. After every command
+//! (and at the battle's start) the battle inserts an
+//! [`Event::SceneTriggered`] into the events, right where its moment is, so
+//! the UI plays it in order. Some triggers also recruit a character, who
+//! leaves the battlefield and joins the army after a won battle
+//! ([`BattleState::recruited`]). The rules are in the parent module's docs.
 //!
 //! In a battle file (RON, 0801) a trigger reads:
 //!
@@ -12,8 +15,10 @@
 //! (when: UnitEntersArea(who: Faction(Player), area: (x: 10, y: 5, w: 2, h: 2)), scene: "ch01_fort", once: true)
 //! (when: CombatStart(unit: "harl", against: Some("ana")), scene: "ch01_harl_ana", once: true)
 //! (when: CombatStart(unit: "harl"), scene: "ch01_harl", once: true)
+//! (when: HalfHp(unit: "harl"), scene: "ch01_harl_half", once: true)
 //! (when: UnitFell(unit: "harl"), scene: "ch01_harl_death", once: true)
 //! (when: UnitFell(unit: "tamsin", mode: Some(Casual)), scene: "ch01_tamsin_retreat", once: true)
+//! (when: UnitFell(unit: "brom", recruit: true), scene: "ch02_brom_yields", once: true)
 //! (when: Talk(a: "ana", b: "rook", recruit: true), scene: "ch02_rook_joins", once: true)
 //! ```
 
@@ -23,6 +28,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{BattleState, CommandError, Event, Phase, Step, Turn};
 use crate::geom::Pos;
+use crate::stats::StatValue;
 use crate::unit::{CharacterId, Faction, Unit, UnitId};
 
 /// How fallen player units are treated (`docs/design/death-and-difficulty.md`),
@@ -104,28 +110,37 @@ pub enum TriggerWhen {
         /// Only against this character.
         #[serde(default)]
         against: Option<CharacterId>,
-        /// With `once`: once per opponent instead of once in all.
-        #[serde(default)]
-        per_opponent: bool,
+    },
+    /// When a combat leaves `unit` standing at half its max HP or less,
+    /// just after that combat (a boss's "halfway" line).
+    HalfHp {
+        /// The character.
+        unit: CharacterId,
     },
     /// When `unit` falls, before it leaves the map (a death quote). With
     /// `mode`, only in that [`GameMode`] (a Classic death quote and a
-    /// Casual retreat line).
+    /// Casual retreat line). With `recruit`, the fallen unit joins the
+    /// army after a won battle ("joins you if defeated").
     UnitFell {
         /// The character.
         unit: CharacterId,
         /// Only in this mode.
         #[serde(default)]
         mode: Option<GameMode>,
+        /// Whether it joins after the battle.
+        #[serde(default)]
+        recruit: bool,
     },
-    /// When `a` chooses [`UnitAction::Talk`](super::UnitAction::Talk) next
-    /// to `b`. With `recruit`, `b` joins the player.
+    /// When `a` and `b` talk: either chooses
+    /// [`UnitAction::Talk`](super::UnitAction::Talk) next to the other (the
+    /// scene decides who speaks first). With `recruit`, `b` leaves the
+    /// battlefield and joins the army after a won battle.
     Talk {
-        /// Who talks (chooses the action).
+        /// One of the two.
         a: CharacterId,
-        /// Who is talked to.
+        /// The other; the one recruited.
         b: CharacterId,
-        /// Whether `b` joins the player's side.
+        /// Whether `b` joins after the battle.
         #[serde(default)]
         recruit: bool,
     },
@@ -142,16 +157,8 @@ pub struct Trigger {
     pub once: bool,
 }
 
-/// A trigger that has fired: its index, and the opponent for a
-/// [`TriggerWhen::CombatStart`] that fires once per opponent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub(super) struct Fired {
-    trigger: usize,
-    with: Option<UnitId>,
-}
-
-/// The fired-once record of a battle's triggers.
-pub(super) type FiredSet = BTreeSet<Fired>;
+/// The indices of the `once` triggers that have fired.
+pub(super) type FiredSet = BTreeSet<usize>;
 
 impl BattleState {
     /// The battle's triggers.
@@ -164,16 +171,21 @@ impl BattleState {
         self.mode
     }
 
-    /// Whether trigger `index` has fired (with any opponent) and was
-    /// marked once.
+    /// Whether trigger `index` is a `once` trigger that has fired.
     pub fn has_fired(&self, index: usize) -> bool {
-        self.fired.iter().any(|f| f.trigger == index)
+        self.fired.contains(&index)
+    }
+
+    /// The units recruited so far, in order, as they were when they left
+    /// the map: they join the army if the battle is won (0801).
+    pub fn recruited(&self) -> &[Unit] {
+        &self.recruited
     }
 
     /// The units unit `id` could talk to from `dest`: on the map, next to
-    /// `dest`, with a [`TriggerWhen::Talk`] for the pair that hasn't fired
-    /// (the action menu offers `Talk` only then). In unit order. Doesn't
-    /// check that the unit can reach `dest` or still act.
+    /// `dest`, with a [`TriggerWhen::Talk`] for the pair (either way round)
+    /// that hasn't fired (the action menu offers `Talk` only then). In unit
+    /// order. Doesn't check that the unit can reach `dest` or still act.
     pub fn talk_targets(&self, id: UnitId, dest: Pos) -> Vec<UnitId> {
         let Some(unit) = self.unit(id) else {
             return Vec::new();
@@ -202,65 +214,58 @@ impl BattleState {
         if distance != 1 {
             return Err(CommandError::OutOfRange { target, distance });
         }
-        Ok(Step::Talk {
-            trigger: index,
-            target,
-        })
+        Ok(Step::Talk { trigger: index })
     }
 
-    /// Carries out a validated talk to `target` with trigger `index`: the
-    /// scene, then, if the trigger recruits, `target` joins the player's
-    /// side, done until the next player phase.
-    pub(super) fn talk(&mut self, index: usize, target: UnitId, events: &mut Vec<Event>) {
+    /// Carries out a validated talk with trigger `index`: the scene, then,
+    /// if the trigger recruits, its `b` leaves the map for the recruits.
+    pub(super) fn talk(&mut self, index: usize, events: &mut Vec<Event>) {
         let Some(trigger) = self.triggers.get(index).cloned() else {
             return;
         };
-        self.fire(index, None, &trigger, events);
-        if !matches!(trigger.when, TriggerWhen::Talk { recruit: true, .. }) {
+        self.fire(index, &trigger, events);
+        let TriggerWhen::Talk {
+            b, recruit: true, ..
+        } = &trigger.when
+        else {
             return;
-        }
-        if let Some(t) = self.unit_mut(target) {
-            t.faction = Faction::Player;
-            t.acted = true;
-            events.push(Event::UnitRecruited { unit: target });
+        };
+        let at = self
+            .units
+            .iter()
+            .position(|u| u.character.as_ref() == Some(b));
+        if let Some(i) = at {
+            let unit = self.units.remove(i);
+            events.push(Event::UnitRecruited { unit: unit.id });
+            self.recruited.push(unit);
         }
     }
 
-    /// The first unfired [`TriggerWhen::Talk`] for `unit` talking to
-    /// `target`.
+    /// The first unfired [`TriggerWhen::Talk`] between `unit` and `target`,
+    /// either way round.
     fn talk_trigger(&self, unit: &Unit, target: &Unit) -> Option<usize> {
-        let (Some(a), Some(b)) = (&unit.character, &target.character) else {
+        let (Some(me), Some(them)) = (&unit.character, &target.character) else {
             return None;
         };
         (0..self.triggers.len()).find(|&i| {
             let t = &self.triggers[i];
-            matches!(&t.when, TriggerWhen::Talk { a: ta, b: tb, .. } if ta == a && tb == b)
-                && !self.spent(i, t, None)
+            let pair = match &t.when {
+                TriggerWhen::Talk { a, b, .. } => (a == me && b == them) || (a == them && b == me),
+                _ => false,
+            };
+            pair && !self.spent(i, t)
         })
     }
 
-    /// Whether trigger `index` may not fire again (with opponent `with`).
-    fn spent(&self, index: usize, trigger: &Trigger, with: Option<UnitId>) -> bool {
-        trigger.once
-            && self.fired.contains(&Fired {
-                trigger: index,
-                with,
-            })
+    /// Whether trigger `index` may not fire again.
+    fn spent(&self, index: usize, trigger: &Trigger) -> bool {
+        trigger.once && self.fired.contains(&index)
     }
 
     /// Records trigger `index` as fired (if once) and emits its scene.
-    fn fire(
-        &mut self,
-        index: usize,
-        with: Option<UnitId>,
-        trigger: &Trigger,
-        events: &mut Vec<Event>,
-    ) {
+    fn fire(&mut self, index: usize, trigger: &Trigger, events: &mut Vec<Event>) {
         if trigger.once {
-            self.fired.insert(Fired {
-                trigger: index,
-                with,
-            });
+            self.fired.insert(index);
         }
         events.push(Event::SceneTriggered {
             scene: trigger.scene.clone(),
@@ -270,8 +275,9 @@ impl BattleState {
     /// Inserts the scenes the triggers fire into `events` (one command's,
     /// or the battle's start), each at its moment: before a combat
     /// ([`Event::CombatResolved`]) or a fall ([`Event::UnitFell`]), after
-    /// a phase start ([`Event::PhaseStarted`]) or a move
-    /// ([`Event::UnitMoved`]). A [`TriggerWhen::Talk`]'s scene is already
+    /// a combat (half HP), a phase start ([`Event::PhaseStarted`]) or a
+    /// move ([`Event::UnitMoved`]). A fall that recruits is followed by
+    /// [`Event::UnitRecruited`]. A [`TriggerWhen::Talk`]'s scene is already
     /// in them.
     pub(super) fn fire_triggers(&mut self, events: Vec<Event>) -> Vec<Event> {
         if self.triggers.is_empty() {
@@ -281,16 +287,28 @@ impl BattleState {
         for event in events {
             match &event {
                 Event::CombatResolved {
-                    attacker, defender, ..
+                    attacker,
+                    defender,
+                    outcome,
+                    ..
                 } => {
-                    self.combat_scenes(*attacker, *defender, &mut out);
-                    self.combat_scenes(*defender, *attacker, &mut out);
+                    let (a, d) = (*attacker, *defender);
+                    let left = [(a, outcome.attacker_hp), (d, outcome.defender_hp)];
+                    self.combat_scenes(a, d, &mut out);
+                    self.combat_scenes(d, a, &mut out);
                     out.push(event);
+                    for (id, hp) in left {
+                        self.half_hp_scenes(id, hp, &mut out);
+                    }
                 }
                 Event::UnitFell { unit } => {
                     let unit = *unit;
-                    self.fall_scenes(unit, &mut out);
+                    let recruit = self.fall_scenes(unit, &mut out);
                     out.push(event);
+                    if recruit && let Some(u) = self.any_unit(unit).cloned() {
+                        self.recruited.push(u);
+                        out.push(Event::UnitRecruited { unit });
+                    }
                 }
                 Event::PhaseStarted { turn, phase } => {
                     let (turn, phase) = (*turn, *phase);
@@ -310,27 +328,55 @@ impl BattleState {
         out
     }
 
-    /// Fires, in list order, every trigger not spent (with no opponent)
-    /// for which `test` holds.
-    fn fire_matching(&mut self, events: &mut Vec<Event>, test: impl Fn(&TriggerWhen) -> bool) {
+    /// Fires, in list order, every trigger not spent for which `test`
+    /// holds. Returns whether one of them recruits.
+    fn fire_matching(
+        &mut self,
+        events: &mut Vec<Event>,
+        test: impl Fn(&TriggerWhen) -> bool,
+    ) -> bool {
+        let mut recruits = false;
         for i in 0..self.triggers.len() {
             let trigger = self.triggers[i].clone();
-            if test(&trigger.when) && !self.spent(i, &trigger, None) {
-                self.fire(i, None, &trigger, events);
+            if test(&trigger.when) && !self.spent(i, &trigger) {
+                self.fire(i, &trigger, events);
+                recruits |= matches!(trigger.when, TriggerWhen::UnitFell { recruit: true, .. });
             }
         }
+        recruits
     }
 
-    /// The scenes of unit `id` falling.
-    fn fall_scenes(&mut self, id: UnitId, events: &mut Vec<Event>) {
-        let Some(character) = self.any_unit(id).and_then(|u| u.character.clone()) else {
-            return;
+    /// The character of unit `id`, on the map or not.
+    fn character_of(&self, id: UnitId) -> Option<CharacterId> {
+        self.any_unit(id).and_then(|u| u.character.clone())
+    }
+
+    /// The scenes of unit `id` falling. Returns whether one recruits it.
+    fn fall_scenes(&mut self, id: UnitId, events: &mut Vec<Event>) -> bool {
+        let Some(character) = self.character_of(id) else {
+            return false;
         };
         let mode = self.mode;
         self.fire_matching(events, |when| {
-            matches!(when, TriggerWhen::UnitFell { unit, mode: m }
+            matches!(when, TriggerWhen::UnitFell { unit, mode: m, .. }
                 if *unit == character && m.is_none_or(|m| m == mode))
-        });
+        })
+    }
+
+    /// The scenes of unit `id` left with `hp` HP by a combat: its
+    /// [`TriggerWhen::HalfHp`]s, if it stands at half its max HP or less.
+    fn half_hp_scenes(&mut self, id: UnitId, hp: StatValue, events: &mut Vec<Event>) {
+        let Some(unit) = self.any_unit(id) else {
+            return;
+        };
+        let (max, character) = (unit.stats.hp, unit.character.clone());
+        let Some(character) = character.filter(|_| hp > 0 && hp * 2 <= max) else {
+            return;
+        };
+        self.fire_matching(
+            events,
+            |when| matches!(when, TriggerWhen::HalfHp { unit } if *unit == character),
+        );
     }
 
     /// The scenes of unit `id` ending a move on `end`.
@@ -348,38 +394,22 @@ impl BattleState {
     /// [`TriggerWhen::CombatStart`]s against `other`'s character, or, if
     /// it has none for that pair, its ones against anyone.
     fn combat_scenes(&mut self, id: UnitId, other: UnitId, events: &mut Vec<Event>) {
-        let Some(me) = self.any_unit(id).and_then(|u| u.character.clone()) else {
+        let Some(me) = self.character_of(id) else {
             return;
         };
-        let foe = self.any_unit(other).and_then(|u| u.character.clone());
-        let for_me = |t: &Trigger| match &t.when {
-            TriggerWhen::CombatStart { unit, against, .. } if *unit == me => Some(against.clone()),
+        let foe = self.character_of(other);
+        let for_me = |when: &TriggerWhen| match when {
+            TriggerWhen::CombatStart { unit, against } if *unit == me => Some(against.clone()),
             _ => None,
         };
         let paired = self
             .triggers
             .iter()
-            .any(|t| for_me(t).is_some_and(|a| a.is_some() && a == foe));
-        for i in 0..self.triggers.len() {
-            let trigger = self.triggers[i].clone();
-            let Some(against) = for_me(&trigger) else {
-                continue;
-            };
-            let fits = match &against {
-                Some(_) => against == foe,
-                None => !paired,
-            };
-            let per_opponent = matches!(
-                trigger.when,
-                TriggerWhen::CombatStart {
-                    per_opponent: true,
-                    ..
-                }
-            );
-            let with = per_opponent.then_some(other);
-            if fits && !self.spent(i, &trigger, with) {
-                self.fire(i, with, &trigger, events);
-            }
-        }
+            .any(|t| for_me(&t.when).is_some_and(|a| a.is_some() && a == foe));
+        self.fire_matching(events, |when| match for_me(when) {
+            Some(Some(against)) => Some(against) == foe,
+            Some(None) => !paired,
+            None => false,
+        });
     }
 }

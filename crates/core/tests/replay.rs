@@ -287,8 +287,8 @@ fn setup(seed: u64) -> BattleSetup {
 }
 
 /// One trigger of each kind: turn 2's player phase; a player unit ending a
-/// move on row 1; unit 3 in a combat (once per opponent) and unit 4 (every
-/// time); unit 3 falling (it never does); unit 1 talking to unit 2.
+/// move on row 1; unit 3 in a combat (once) and unit 4 (every time); unit 4
+/// at half HP; unit 3 falling (it never does); units 1 and 2 talking.
 fn triggers() -> Vec<Trigger> {
     let c = |id: u32| CharacterId(format!("c{id}"));
     let t = |when, scene: &str, once| Trigger {
@@ -322,7 +322,6 @@ fn triggers() -> Vec<Trigger> {
             TriggerWhen::CombatStart {
                 unit: c(3),
                 against: None,
-                per_opponent: true,
             },
             "engage_3",
             true,
@@ -331,15 +330,16 @@ fn triggers() -> Vec<Trigger> {
             TriggerWhen::CombatStart {
                 unit: c(4),
                 against: None,
-                per_opponent: false,
             },
             "engage_4",
             false,
         ),
+        t(TriggerWhen::HalfHp { unit: c(4) }, "half_4", true),
         t(
             TriggerWhen::UnitFell {
                 unit: c(3),
                 mode: None,
+                recruit: true,
             },
             "fall_3",
             true,
@@ -530,10 +530,10 @@ fn same_seed_and_commands_give_identical_events() {
     assert!(count(|e| matches!(e, Event::LeveledUp { .. })) > 0);
     assert!(count(|e| matches!(e, Event::ClassLeveledUp { .. })) > 0);
     assert!(state_a.units().iter().any(|u| u.level > 1));
-    // The triggers fired: turn 2's start; unit 3's engage line once, as it
-    // only ever fights unit 1 (once per opponent); unit 4's before each of
-    // its 8 combats (6 trades, its cast, the active attack); the talk; and
-    // row 1 once, though two moves end there.
+    // The triggers fired: turn 2's start; unit 3's engage line once; unit
+    // 4's before each of its 8 combats (6 trades, its cast, the active
+    // attack); the talk; row 1 once, though two moves end there; and
+    // unit 4's half-HP line once.
     let scenes: Vec<&str> = a
         .iter()
         .filter_map(|e| match e {
@@ -550,8 +550,9 @@ fn same_seed_and_commands_give_identical_events() {
             seen("row_1"),
             seen("talk"),
             seen("fall_3"),
+            seen("half_4"),
         ],
-        [1, 1, 8, 1, 1, 0],
+        [1, 1, 8, 1, 1, 0, 1],
         "{scenes:?}"
     );
     // …so another seed plays out differently.

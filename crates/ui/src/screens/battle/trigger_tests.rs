@@ -218,7 +218,7 @@ fn talk_cycles_between_several_targets() {
 }
 
 #[test]
-fn talking_plays_the_scene_and_the_rogue_joins() {
+fn talking_plays_the_scene_and_the_rogue_leaves_to_join_later() {
     let mut c = ctx();
     let mut s = BattleScreen::new(rogue_battle(&c, 22));
     s.cursor.jump(Pos::new(3, 5));
@@ -237,8 +237,10 @@ fn talking_plays_the_scene_and_the_rogue_joins() {
         frame(&mut s, &mut c, &[Action::Confirm], 0.0),
         "Push(dialogue)"
     );
-    let rogue = s.state().unit(UnitId(7)).unwrap();
-    assert_eq!((rogue.faction, rogue.acted), (Faction::Player, true));
+    // The rogue has left the battlefield, to join after the battle.
+    assert!(s.state().unit(UnitId(7)).is_none());
+    let recruits: Vec<UnitId> = s.state().recruited().iter().map(|u| u.id).collect();
+    assert_eq!(recruits, [UnitId(7)]);
     assert!(s.state().unit(UnitId(1)).unwrap().acted);
     assert_eq!(s.history().len(), 1);
 }
@@ -280,6 +282,7 @@ fn close_line(h: &mut Harness) {
 
 #[test]
 fn engaging_the_rogue_plays_its_line_over_the_map_then_the_combat() {
+    // At full HP (22): the lord's attack leaves it standing at half or less.
     let mut h = lord_attacks_rogue(22);
     assert_eq!(h.screens(), ["battle", "dialogue"]);
     h.wait(1.0);
@@ -290,9 +293,14 @@ fn engaging_the_rogue_plays_its_line_over_the_map_then_the_combat() {
     assert_eq!(h.screens(), ["battle"]);
     assert!(shows(&h, "d skip · hold f fast"), "{}", h.snapshot());
     assert!(shows(&h, "Test Lord"));
+    // After the strikes: its half-HP line, then the end of the combat.
     h.wait(10.0);
+    assert_eq!(h.screens(), ["battle", "dialogue"]);
+    h.wait(1.0);
+    assert!(shows(&h, "That all you've got?"), "{}", h.snapshot());
+    close_line(&mut h);
+    h.wait(2.0);
     assert!(shows(&h, "d menu · Space end turn"));
-    // Once: attacking again (next turn) plays no line.
     assert_eq!(h.screens(), ["battle"]);
 }
 

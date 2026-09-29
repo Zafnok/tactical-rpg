@@ -249,7 +249,8 @@
 //!   the others of its wave still arrive. Earlier entries go first. A
 //!   reinforcement arrives on a burning tile anyway, and takes the fire's
 //!   damage when it burns out (Nick).
-//! - **Dialogue triggers** ([`Trigger`], ticket 0705): a battle's story
+//! - **Dialogue triggers** ([`Trigger`], ticket 0705,
+//!   `docs/design/battle-scenes-and-recruitment.md`): a battle's story
 //!   moments. Each names a scene and a moment ([`TriggerWhen`]), and plays
 //!   only the first time if `once` (fired-once state is part of the battle,
 //!   so saves, rewinds and replays keep it). The battle inserts an
@@ -259,27 +260,36 @@
 //!     (the battle's first phase included).
 //!   - **Entering an area**: right after an [`Event::UnitMoved`] (an `Act`'s
 //!     move or a move after an attack) that ends inside the area, for a
-//!     unit that matches. Pushes and arrivals don't count.
+//!     unit that matches. Pushes and arrivals don't count (Nick).
 //!   - **Combat start**: right before each [`Event::CombatResolved`] with
 //!     the character in it, attacking or attacked (a Line Pierce strike is
-//!     a combat too); the attacker's scenes first. A trigger `against` a
-//!     character fires only against that one, and a unit with such a
-//!     trigger for the pair gets none of its triggers against anyone in
-//!     that combat (*Claude's starting rule*: a boss with its own lines for
-//!     the lord never also says its default line to the lord).
-//!     `per_opponent` makes `once` count per opposing unit.
+//!     a combat too); the attacker's scenes first (*Claude's starting
+//!     rule*). A trigger `against` a character fires only against that one,
+//!     and a unit with such a trigger for the pair gets none of its
+//!     triggers against anyone in that combat, even once it has played
+//!     (Nick: a boss's special line for the lord replaces its general one).
+//!   - **Half HP**: right after a combat that leaves the character standing
+//!     at half its max HP or less (a boss's "halfway" line).
 //!   - **Falling**: right before the character's [`Event::UnitFell`] (a
 //!     death quote plays before the unit leaves the map), if the trigger's
 //!     `mode` is none or the battle's [`GameMode`] (Classic death quote,
-//!     Casual retreat line; `death-and-difficulty.md`).
-//!   - **Talk** ([`UnitAction::Talk`]): a unit whose character is a
-//!     trigger's `a` talks to the unit of its `b`, adjacent to `dest`, while
-//!     the trigger hasn't fired ([`BattleState::talk_targets`]). Events:
+//!     Casual retreat line; `death-and-difficulty.md`). A trigger that
+//!     recruits ("joins you if defeated") adds the fallen unit to
+//!     [`BattleState::recruited`] ([`Event::UnitRecruited`], right after
+//!     the fall).
+//!   - **Talk** ([`UnitAction::Talk`]): the units of a trigger's two
+//!     characters, either one acting, adjacent to `dest`, while the trigger
+//!     hasn't fired ([`BattleState::talk_targets`]). Events:
 //!     [`Event::SceneTriggered`], then, if it recruits,
-//!     [`Event::UnitRecruited`]: the target joins the `Player` faction,
-//!     already done, and acts from the next player phase (*Claude's
-//!     starting rule*, as in the ticket). Talking ends the action and
-//!     gives no EXP.
+//!     [`Event::UnitRecruited`]: the trigger's `b` leaves the map at once
+//!     (it no longer counts as an enemy) for [`BattleState::recruited`].
+//!     Talking ends the action and gives no EXP (*Claude's starting rule*).
+//!
+//!   Nobody changes sides in a battle: recruits join the army after a won
+//!   battle (0801, Nick). A recruited unit can't be commanded or targeted
+//!   ([`CommandError::UnitLeft`]); recruiting the unit of a
+//!   [`Objective::DefeatUnit`] meets the objective (*Claude's starting
+//!   rule*).
 //! - **Errors change nothing.** [`BattleState::apply`] validates the whole
 //!   command before touching the state, so on `Err` the state is unchanged.
 //!
@@ -300,7 +310,7 @@
 //! learned skills, timed effects, role, EXP and class records), fallen units,
 //! the EXP pool,
 //! pending reinforcements, objective, turn, triggers and which have fired,
-//! the game mode,
+//! recruits, the game mode,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
 //! **terrain, class, item, spell, skill and art tables are not**: they are shared content, held by `Arc` and skipped. A
@@ -970,8 +980,8 @@ pub enum Event {
         /// The scene's id.
         scene: String,
     },
-    /// A unit joined the player's side (a [`UnitAction::Talk`] that
-    /// recruits), done until the next player phase.
+    /// A unit was recruited: it left the map (a talk) or fell (a defeat),
+    /// and joins the army after a won battle ([`BattleState::recruited`]).
     UnitRecruited {
         /// The unit.
         unit: UnitId,
@@ -1169,6 +1179,8 @@ pub enum CommandError {
     /// The unit has nothing to say to this one: no
     /// [`TriggerWhen::Talk`] for the pair that hasn't fired.
     CannotTalk(UnitId),
+    /// The unit was recruited and left the battlefield.
+    UnitLeft(UnitId),
 }
 
 impl From<MoveError> for CommandError {
@@ -1300,6 +1312,7 @@ impl CommandError {
             }
             CommandError::NotAnAttack => f.write_str("the action isn't an attack"),
             CommandError::CannotTalk(id) => write!(f, "nothing to say to unit {}", id.0),
+            CommandError::UnitLeft(id) => write!(f, "unit {} has left the battle", id.0),
             other => write!(f, "{other:?}"),
         }
     }
@@ -1348,6 +1361,9 @@ pub struct BattleState {
     /// The `once` triggers that have fired.
     #[serde(default)]
     fired: FiredSet,
+    /// Units recruited, joining after a won battle.
+    #[serde(default)]
+    recruited: Vec<Unit>,
     /// The campaign's mode.
     #[serde(default)]
     mode: GameMode,
@@ -1391,7 +1407,6 @@ enum Step {
     /// A talk, with this trigger.
     Talk {
         trigger: usize,
-        target: UnitId,
     },
 }
 
@@ -1612,6 +1627,7 @@ impl BattleState {
             exp_pool: 0,
             triggers: setup.triggers,
             fired: FiredSet::new(),
+            recruited: Vec::new(),
             mode: setup.mode,
         };
         let mut events = Vec::new();
@@ -2264,6 +2280,8 @@ impl BattleState {
             Ok(unit)
         } else if self.fallen.iter().any(|u| u.id == id) {
             Err(CommandError::UnitFallen(id))
+        } else if self.recruited.iter().any(|u| u.id == id) {
+            Err(CommandError::UnitLeft(id))
         } else {
             Err(CommandError::UnknownUnit(id))
         }
@@ -2349,7 +2367,7 @@ impl BattleState {
                 events.extend(till.events);
             }
             Step::Open { pos, loot } => self.open(id, pos, loot, events),
-            Step::Talk { trigger, target } => self.talk(trigger, target, events),
+            Step::Talk { trigger } => self.talk(trigger, events),
         }
         let outcome = if seized {
             Some(Outcome::Victory)
@@ -2786,7 +2804,11 @@ impl BattleState {
         }
         let won = match self.objective {
             Objective::Rout { .. } => !side_left(Faction::Enemy),
-            Objective::DefeatUnit { unit, .. } => self.fallen.iter().any(|u| u.id == unit),
+            Objective::DefeatUnit { unit, .. } => self
+                .fallen
+                .iter()
+                .chain(&self.recruited)
+                .any(|u| u.id == unit),
             Objective::Seize { .. } | Objective::Survive { .. } => false,
         };
         won.then_some(Outcome::Victory)
@@ -2881,10 +2903,11 @@ impl BattleState {
         self.award(id, exp, progression::ACTION_CP + kill_cp, events);
     }
 
-    /// The unit `id`, on the map or fallen.
+    /// The unit `id`, on the map, fallen or recruited.
     fn any_unit(&self, id: UnitId) -> Option<&Unit> {
         self.unit(id)
             .or_else(|| self.fallen.iter().find(|u| u.id == id))
+            .or_else(|| self.recruited.iter().find(|u| u.id == id))
     }
 
     /// Shares the EXP pool out among the player units on the map below the

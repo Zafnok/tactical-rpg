@@ -15,11 +15,16 @@ test_lord: The old fort. Someone was here not long ago.
 test_rogue: You picked the wrong fort to storm.
 @end
 
+@scene test_rogue_half
+@right test_rogue angry
+test_rogue: That all you've got? I've had worse from my own crew.
+@end
+
 @scene test_talk
 @left  test_lord neutral
 @right test_rogue surprised
 test_lord: Put the axe down. You aren't one of them.
-test_rogue[happy]: ...Fine. I was never paid anyway.
+test_rogue[happy]: ...Fine. I was never paid anyway. Find me when this is over.
 @end
 
 @scene test_rogue_falls

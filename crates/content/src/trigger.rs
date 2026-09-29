@@ -2,7 +2,7 @@
 //! the battle and the dialogue: the battle-file loader (0801) runs it on
 //! every battle, and the debug Quick Battle on its own.
 
-use trpg_core::{BattleMap, CharacterId, Trigger, TriggerWhen, Unit, Who};
+use trpg_core::{BattleMap, CharacterId, Faction, Trigger, TriggerWhen, Unit, Who};
 
 use crate::dialogue::DialogueTable;
 use crate::error::ContentError;
@@ -11,7 +11,8 @@ use crate::error::ContentError;
 /// the errors), one error each: a scene that isn't in `dialogue`, a
 /// character that isn't one of `units` (the battle's units, those that
 /// arrive later included), an area that is empty or not all on `map`, a
-/// talk of a character to itself and a line against its own speaker.
+/// talk of a character to itself, a line against its own speaker and a
+/// recruit who is already a player unit.
 pub fn check_triggers(
     battle: &str,
     triggers: &[Trigger],
@@ -31,6 +32,16 @@ pub fn check_triggers(
             if !units.iter().any(|u| u.character.as_ref() == Some(c)) {
                 error(format!("no unit of character \"{}\" in the battle", c.0));
             }
+        }
+        if let Some(c) = recruit(&t.when)
+            && units
+                .iter()
+                .any(|u| u.character.as_ref() == Some(c) && u.faction == Faction::Player)
+        {
+            error(format!(
+                "\"{}\" is recruited but already a player unit",
+                c.0
+            ));
         }
         match &t.when {
             TriggerWhen::UnitEntersArea { area, .. } => {
@@ -64,6 +75,21 @@ pub fn check_triggers(
     errors
 }
 
+/// The character a trigger recruits, if any.
+fn recruit(when: &TriggerWhen) -> Option<&CharacterId> {
+    match when {
+        TriggerWhen::Talk {
+            b, recruit: true, ..
+        } => Some(b),
+        TriggerWhen::UnitFell {
+            unit,
+            recruit: true,
+            ..
+        } => Some(unit),
+        _ => None,
+    }
+}
+
 /// The characters a trigger names.
 fn characters(when: &TriggerWhen) -> Vec<&CharacterId> {
     match when {
@@ -75,7 +101,7 @@ fn characters(when: &TriggerWhen) -> Vec<&CharacterId> {
         TriggerWhen::CombatStart { unit, against, .. } => {
             std::iter::once(unit).chain(against).collect()
         }
-        TriggerWhen::UnitFell { unit, .. } => vec![unit],
+        TriggerWhen::UnitFell { unit, .. } | TriggerWhen::HalfHp { unit } => vec![unit],
         TriggerWhen::Talk { a, b, .. } => vec![a, b],
     }
 }
@@ -91,8 +117,8 @@ mod tests {
         CharacterId(id.into())
     }
 
-    /// Units of the placeholder knight, as characters `ana` and `rook`, and
-    /// one with no character.
+    /// Units of the placeholder knight: `ana` (a player unit), `rook` (an
+    /// enemy) and an enemy with no character.
     fn units() -> Vec<Unit> {
         let content = crate::load_embedded().unwrap_or_else(|e| panic!("{e}"));
         let def = &content.characters.characters[&c("test_knight")];
@@ -101,7 +127,12 @@ mod tests {
             .zip(1..)
             .map(|(character, id)| {
                 let at = Pos::new(0, 0);
-                let u = Unit::from_character(UnitId(id), def, &content.classes, Faction::Enemy, at)
+                let faction = if id == 1 {
+                    Faction::Player
+                } else {
+                    Faction::Enemy
+                };
+                let u = Unit::from_character(UnitId(id), def, &content.classes, faction, at)
                     .unwrap_or_else(|e| panic!("{e}"));
                 Unit {
                     character: character.map(c),
@@ -176,7 +207,6 @@ mod tests {
                 TriggerWhen::CombatStart {
                     unit: c("rook"),
                     against: Some(c("ana")),
-                    per_opponent: false,
                 },
                 "bye",
             ),
@@ -184,9 +214,11 @@ mod tests {
                 TriggerWhen::UnitFell {
                     unit: c("rook"),
                     mode: Some(GameMode::Casual),
+                    recruit: true,
                 },
                 "bye",
             ),
+            trigger(TriggerWhen::HalfHp { unit: c("rook") }, "bye"),
             trigger(
                 TriggerWhen::Talk {
                     a: c("ana"),
@@ -211,6 +243,7 @@ mod tests {
                 TriggerWhen::UnitFell {
                     unit: c("ghost"),
                     mode: None,
+                    recruit: false,
                 },
                 "missing",
             ),
@@ -218,7 +251,6 @@ mod tests {
                 TriggerWhen::CombatStart {
                     unit: c("ana"),
                     against: Some(c("nobody")),
-                    per_opponent: true,
                 },
                 "hi",
             ),
@@ -237,7 +269,6 @@ mod tests {
                 TriggerWhen::CombatStart {
                     unit: c("rook"),
                     against: Some(c("rook")),
-                    per_opponent: false,
                 },
                 "hi",
             ),
@@ -248,6 +279,15 @@ mod tests {
                 },
                 "hi",
             ),
+            trigger(
+                TriggerWhen::Talk {
+                    a: c("rook"),
+                    b: c("ana"),
+                    recruit: true,
+                },
+                "hi",
+            ),
+            trigger(TriggerWhen::HalfHp { unit: c("nemo") }, "hi"),
         ];
         assert_eq!(
             check(&bad),
@@ -261,6 +301,8 @@ mod tests {
                 "b.ron: trigger 5: \"ana\" talks to itself",
                 "b.ron: trigger 6: \"rook\" has a line against itself",
                 "b.ron: trigger 7: no unit of character \"zed\" in the battle",
+                "b.ron: trigger 8: \"ana\" is recruited but already a player unit",
+                "b.ron: trigger 9: no unit of character \"nemo\" in the battle",
             ]
         );
     }

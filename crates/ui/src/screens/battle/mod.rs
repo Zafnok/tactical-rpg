@@ -102,8 +102,9 @@ pub fn quick_battle_screen(content: &Content) -> Result<BattleScreen, String> {
 /// The debug Quick Battle's dialogue triggers (0705), one of each kind, on
 /// the scenes in `assets/dialogue/test_triggers.dlg`: turn 3 starts; a
 /// player unit ends a move in the walled fort (10, 5)–(11, 6); the rogue
-/// fights or falls; the lord or the knight falls (the knight's line
-/// depends on the mode); the lord talks the rogue into joining.
+/// fights, drops to half HP or falls; the lord or the knight falls (the
+/// knight's line depends on the mode); the lord and the rogue talk, and the
+/// rogue leaves to join after the battle.
 pub fn quick_battle_triggers() -> Vec<Trigger> {
     let c = |id: &str| CharacterId(id.into());
     let rogue = c(QUICK_BATTLE_ROGUE);
@@ -115,6 +116,7 @@ pub fn quick_battle_triggers() -> Vec<Trigger> {
     let fell = |unit: &str, mode| TriggerWhen::UnitFell {
         unit: c(unit),
         mode,
+        recruit: false,
     };
     vec![
         once(
@@ -140,9 +142,14 @@ pub fn quick_battle_triggers() -> Vec<Trigger> {
             TriggerWhen::CombatStart {
                 unit: rogue.clone(),
                 against: None,
-                per_opponent: false,
             },
             "test_engage",
+        ),
+        once(
+            TriggerWhen::HalfHp {
+                unit: rogue.clone(),
+            },
+            "test_rogue_half",
         ),
         once(fell(QUICK_BATTLE_ROGUE, None), "test_rogue_falls"),
         once(fell("test_lord", None), "test_lord_falls"),

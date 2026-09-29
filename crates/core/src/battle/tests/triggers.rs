@@ -65,11 +65,10 @@ fn scenes(events: &[Event]) -> Vec<&str> {
         .collect()
 }
 
-fn combat_start(unit: u32, against: Option<u32>, per_opponent: bool) -> TriggerWhen {
+fn combat_start(unit: u32, against: Option<u32>) -> TriggerWhen {
     TriggerWhen::CombatStart {
         unit: c(unit),
         against: against.map(c),
-        per_opponent,
     }
 }
 
@@ -193,10 +192,7 @@ fn a_move_after_an_attack_can_enter_an_area() {
 
 #[test]
 fn a_combat_start_scene_plays_before_the_combat_attacked_or_attacking() {
-    let mut s = triggered(
-        near(),
-        vec![trigger(combat_start(3, None, false), "engage", true)],
-    );
+    let mut s = triggered(near(), vec![trigger(combat_start(3, None), "engage", true)]);
     let events = act(&mut s, 1, p(1, 0), attack(3));
     let at = events
         .iter()
@@ -204,30 +200,16 @@ fn a_combat_start_scene_plays_before_the_combat_attacked_or_attacking() {
         .unwrap();
     assert_eq!(events[at - 1], scene("engage"));
     assert_eq!(scenes(&events), ["engage"]);
-    // Once: not when unit 3 attacks back in its phase, nor against unit 2.
+    // Once per battle: not against unit 2, nor when unit 3 attacks back.
+    assert!(scenes(&act(&mut s, 2, p(2, 1), attack(3))).is_empty());
     end(&mut s);
     let events = act(&mut s, 3, p(2, 0), attack(1));
     assert!(scenes(&events).is_empty());
 }
 
 #[test]
-fn per_opponent_fires_once_against_each_unit() {
-    let mut s = triggered(
-        near(),
-        vec![trigger(combat_start(3, None, true), "engage", true)],
-    );
-    assert_eq!(scenes(&act(&mut s, 1, p(1, 0), attack(3))), ["engage"]);
-    assert_eq!(scenes(&act(&mut s, 2, p(2, 1), attack(3))), ["engage"]);
-    end(&mut s);
-    assert!(scenes(&act(&mut s, 3, p(2, 0), attack(1))).is_empty());
-}
-
-#[test]
 fn a_repeating_combat_start_fires_every_combat() {
-    let mut s = triggered(
-        near(),
-        vec![trigger(combat_start(1, None, false), "again", false)],
-    );
+    let mut s = triggered(near(), vec![trigger(combat_start(1, None), "again", false)]);
     assert_eq!(scenes(&act(&mut s, 1, p(1, 0), attack(3))), ["again"]);
     end(&mut s);
     assert_eq!(scenes(&act(&mut s, 3, p(2, 0), attack(1))), ["again"]);
@@ -238,8 +220,8 @@ fn a_line_for_one_opponent_replaces_the_default_for_that_pair() {
     let mut s = triggered(
         near(),
         vec![
-            trigger(combat_start(3, None, false), "default", true),
-            trigger(combat_start(3, Some(1), false), "vs_lord", true),
+            trigger(combat_start(3, None), "default", true),
+            trigger(combat_start(3, Some(1)), "vs_lord", true),
         ],
     );
     assert_eq!(scenes(&act(&mut s, 1, p(1, 0), attack(3))), ["vs_lord"]);
@@ -250,33 +232,102 @@ fn a_line_for_one_opponent_replaces_the_default_for_that_pair() {
 }
 
 #[test]
+fn the_default_line_never_plays_to_a_character_with_its_own_line() {
+    let mut s = triggered(
+        near(),
+        vec![
+            trigger(combat_start(3, None), "default", true),
+            trigger(combat_start(3, Some(1)), "vs_lord", true),
+        ],
+    );
+    assert_eq!(scenes(&act(&mut s, 1, p(1, 0), attack(3))), ["vs_lord"]);
+    end(&mut s);
+    // The lord again: its line has played, and the default stays unplayed.
+    assert!(scenes(&act(&mut s, 3, p(2, 0), attack(1))).is_empty());
+    assert!(!s.has_fired(0));
+}
+
+#[test]
 fn both_sides_lines_play_the_attackers_first() {
     let mut s = triggered(
         near(),
         vec![
-            trigger(combat_start(3, None, false), "enemy_line", true),
-            trigger(combat_start(1, None, false), "lord_line", true),
+            trigger(combat_start(3, None), "enemy_line", true),
+            trigger(combat_start(1, None), "lord_line", true),
         ],
     );
     let events = act(&mut s, 1, p(1, 0), attack(3));
     assert_eq!(scenes(&events), ["lord_line", "enemy_line"]);
 }
 
-// ---- Falling -----------------------------------------------------------------
+// ---- Half HP -------------------------------------------------------------------
 
 #[test]
-fn a_death_quote_plays_just_before_the_fall() {
+fn the_half_hp_line_plays_after_the_combat_that_brings_it_to_half() {
+    // Unit 3 has 10 HP; the lord deals 3 a strike, it strikes back for 3.
+    let half = |unit| TriggerWhen::HalfHp { unit: c(unit) };
+    let mut s = triggered(
+        near(),
+        vec![
+            trigger(half(3), "half", true),
+            trigger(half(1), "lord_half", true),
+        ],
+    );
+    // 10 → 7: nothing.
+    assert!(scenes(&act(&mut s, 1, p(1, 0), attack(3))).is_empty());
+    // 7 → 4: right after the combat.
+    let events = act(&mut s, 2, p(2, 1), attack(3));
+    let at = events
+        .iter()
+        .position(|e| matches!(e, Event::CombatResolved { .. }))
+        .unwrap();
+    assert_eq!(events[at + 1], scene("half"));
+    assert_eq!(scenes(&events), ["half"]);
+    // Once: 4 → 1 plays nothing; the lord (10 → 4 by now) gets its own.
+    end(&mut s);
+    let events = act(&mut s, 3, p(2, 0), attack(1));
+    assert_eq!(scenes(&events), ["lord_half"]);
+}
+
+#[test]
+fn a_blow_that_defeats_plays_no_half_hp_line() {
     let units = vec![
+        armed(named(lord(1, p(0, 0))), 10),
+        named(unit(3, Faction::Enemy, p(2, 0))),
+        named(unit(4, Faction::Enemy, p(7, 2))),
+    ];
+    let half = TriggerWhen::HalfHp { unit: c(3) };
+    let mut s = triggered(units, vec![trigger(half, "half", true)]);
+    assert!(scenes(&act(&mut s, 1, p(1, 0), attack(3))).is_empty());
+}
+
+// ---- Falling -----------------------------------------------------------------
+
+fn fell(unit: u32, mode: Option<GameMode>, recruit: bool) -> TriggerWhen {
+    TriggerWhen::UnitFell {
+        unit: c(unit),
+        mode,
+        recruit,
+    }
+}
+
+/// The lord (might 10: fells in one blow) at (0,0), unit 2 at (0,2),
+/// enemies 3 at (2,0) and 4 at (7,2).
+fn strong() -> Vec<Unit> {
+    vec![
         armed(named(lord(1, p(0, 0))), 10),
         named(unit(2, Faction::Player, p(0, 2))),
         named(unit(3, Faction::Enemy, p(2, 0))),
         named(unit(4, Faction::Enemy, p(7, 2))),
-    ];
-    let fell = |unit| TriggerWhen::UnitFell {
-        unit: c(unit),
-        mode: None,
-    };
-    let mut s = triggered(units, vec![trigger(fell(3), "last_words", true)]);
+    ]
+}
+
+#[test]
+fn a_death_quote_plays_just_before_the_fall() {
+    let mut s = triggered(
+        strong(),
+        vec![trigger(fell(3, None, false), "last_words", true)],
+    );
     let events = act(&mut s, 1, p(1, 0), attack(3));
     let at = events
         .iter()
@@ -284,6 +335,24 @@ fn a_death_quote_plays_just_before_the_fall() {
         .unwrap();
     assert_eq!(events[at - 1], scene("last_words"));
     assert_eq!(scenes(&events), ["last_words"]);
+    assert!(s.recruited().is_empty());
+}
+
+#[test]
+fn an_enemy_that_joins_if_defeated_is_recruited_as_it_falls() {
+    let mut s = triggered(strong(), vec![trigger(fell(3, None, true), "yields", true)]);
+    let events = act(&mut s, 1, p(1, 0), attack(3));
+    let at = events
+        .iter()
+        .position(|e| *e == Event::UnitFell { unit: UnitId(3) })
+        .unwrap();
+    assert_eq!(events[at - 1], scene("yields"));
+    assert_eq!(events[at + 1], Event::UnitRecruited { unit: UnitId(3) });
+    let ids: Vec<UnitId> = s.recruited().iter().map(|u| u.id).collect();
+    assert_eq!(ids, [UnitId(3)]);
+    // It fell: off the map, among the fallen too.
+    assert!(s.unit(UnitId(3)).is_none());
+    assert!(s.fallen().iter().any(|u| u.id == UnitId(3)));
 }
 
 #[test]
@@ -294,14 +363,10 @@ fn a_fallen_player_unit_plays_its_line_for_the_mode() {
             named(unit(2, Faction::Player, p(0, 2))),
             armed(named(unit(3, Faction::Enemy, p(7, 0))), 10),
         ];
-        let fell = |m| TriggerWhen::UnitFell {
-            unit: c(1),
-            mode: Some(m),
-        };
         let mut s = start(BattleSetup {
             triggers: vec![
-                trigger(fell(GameMode::Classic), "death", true),
-                trigger(fell(GameMode::Casual), "retreat", true),
+                trigger(fell(1, Some(GameMode::Classic), false), "death", true),
+                trigger(fell(1, Some(GameMode::Casual), false), "retreat", true),
             ],
             mode,
             ..setup(units)
@@ -326,7 +391,8 @@ fn a_fallen_player_unit_plays_its_line_for_the_mode() {
 // ---- Talk ----------------------------------------------------------------------
 
 /// Lord 1 at (0,0), unit 2 at (0,2); enemy 3 at (2,0) (in reach), enemy 4
-/// at (7,2). The lord can recruit unit 3; unit 2 can talk to the lord.
+/// at (7,2). The lord and unit 3 can talk (3 joins); units 1 and 2 can
+/// chat (listed as 2 and 1).
 fn talkers() -> BattleState {
     let mut units = cast_named();
     units[2].pos = p(2, 0);
@@ -346,14 +412,16 @@ fn talk_to(target: u32) -> UnitAction {
 }
 
 #[test]
-fn talk_targets_are_adjacent_units_with_an_unfired_talk() {
+fn talk_targets_are_adjacent_units_with_an_unfired_talk_either_way() {
     let s = talkers();
     assert_eq!(s.talk_targets(UnitId(1), p(1, 0)), [UnitId(3)]);
     assert_eq!(s.talk_targets(UnitId(1), p(2, 1)), [UnitId(3)]);
-    // Too far, or the other way round.
-    assert!(s.talk_targets(UnitId(1), p(0, 1)).is_empty());
-    assert!(s.talk_targets(UnitId(3), p(1, 0)).is_empty());
+    // Either one may start it.
+    assert_eq!(s.talk_targets(UnitId(3), p(1, 0)), [UnitId(1)]);
     assert_eq!(s.talk_targets(UnitId(2), p(0, 1)), [UnitId(1)]);
+    assert_eq!(s.talk_targets(UnitId(1), p(0, 1)), [UnitId(2)]);
+    // Too far, or nobody.
+    assert!(s.talk_targets(UnitId(4), p(6, 2)).is_empty());
     assert!(s.talk_targets(UnitId(9), p(0, 1)).is_empty());
 }
 
@@ -362,10 +430,10 @@ fn talk_is_refused_without_a_trigger_or_out_of_reach() {
     let mut s = talkers();
     refused_act(
         &mut s,
-        1,
-        p(0, 1),
-        talk_to(2),
-        CommandError::CannotTalk(UnitId(2)),
+        2,
+        p(1, 2),
+        talk_to(4),
+        CommandError::CannotTalk(UnitId(4)),
     );
     refused_act(
         &mut s,
@@ -398,7 +466,7 @@ fn talk_is_refused_without_a_trigger_or_out_of_reach() {
 }
 
 #[test]
-fn talk_recruits_and_the_recruit_acts_next_player_phase() {
+fn a_recruit_leaves_the_battlefield_to_join_after_the_battle() {
     let mut s = talkers();
     let events = act(&mut s, 1, p(1, 0), talk_to(3));
     assert_eq!(
@@ -413,25 +481,37 @@ fn talk_recruits_and_the_recruit_acts_next_player_phase() {
             Event::UnitActed { unit: UnitId(1) },
         ]
     );
-    let recruit = s.unit(UnitId(3)).unwrap();
-    assert_eq!((recruit.faction, recruit.acted), (Faction::Player, true));
+    // Off the map, as it was (still an enemy: it joins after the battle).
+    assert!(s.unit(UnitId(3)).is_none());
+    let recruit = &s.recruited()[0];
+    assert_eq!((recruit.id, recruit.faction), (UnitId(3), Faction::Enemy));
     assert!(s.has_fired(0));
-    // Once: nothing more to say.
-    assert!(s.talk_targets(UnitId(1), p(1, 0)).is_empty());
-    // Not this phase…
+    // Once: nobody left to talk to; it can't be commanded or targeted.
+    assert!(s.talk_targets(UnitId(2), p(2, 1)).is_empty());
+    end(&mut s);
     refused_act(
         &mut s,
         3,
         p(3, 0),
         UnitAction::Wait,
-        CommandError::AlreadyActed(UnitId(3)),
+        CommandError::UnitLeft(UnitId(3)),
     );
-    // …but the next player phase, as a player unit.
-    end(&mut s);
-    let events = end(&mut s);
-    assert_eq!(events, [started(2, Phase::Player)]);
-    act(&mut s, 3, p(3, 0), UnitAction::Wait);
+    assert_eq!(
+        CommandError::UnitLeft(UnitId(3)).to_string(),
+        "unit 3 has left the battle"
+    );
     assert_eq!(s.outcome(), None, "enemy 4 is still there");
+}
+
+#[test]
+fn the_other_one_can_start_the_talk() {
+    let mut units = cast_named();
+    units[2].pos = p(2, 0);
+    units[2].faction = Faction::Ally;
+    let mut s = triggered(units, vec![trigger(talk(3, 1, false), "chat", true)]);
+    // The lord starts a talk listed as unit 3's.
+    let events = act(&mut s, 1, p(1, 0), talk_to(3));
+    assert_eq!(scenes(&events), ["chat"]);
 }
 
 #[test]
@@ -439,7 +519,7 @@ fn talk_without_recruiting_ends_the_action_and_may_repeat() {
     let mut s = talkers();
     let events = act(&mut s, 2, p(0, 1), talk_to(1));
     assert_eq!(scenes(&events), ["chat"]);
-    assert_eq!(s.unit(UnitId(1)).unwrap().faction, Faction::Player);
+    assert!(s.unit(UnitId(1)).is_some());
     assert!(s.unit(UnitId(2)).unwrap().acted);
     assert!(
         !events
@@ -447,6 +527,7 @@ fn talk_without_recruiting_ends_the_action_and_may_repeat() {
             .any(|e| matches!(e, Event::UnitRecruited { .. } | Event::ExpGained { .. }))
     );
     assert!(!s.has_fired(1));
+    assert!(s.recruited().is_empty());
     end(&mut s);
     end(&mut s);
     assert_eq!(scenes(&act(&mut s, 2, p(0, 1), talk_to(1))), ["chat"]);
@@ -463,10 +544,26 @@ fn recruiting_the_last_enemy_wins_a_rout() {
     assert_eq!(events.last(), Some(&ended(Outcome::Victory)));
 }
 
+#[test]
+fn recruiting_the_unit_to_defeat_meets_the_objective() {
+    let mut units = cast_named();
+    units[2].pos = p(2, 0);
+    let mut s = start(BattleSetup {
+        triggers: vec![trigger(talk(1, 3, true), "recruit", true)],
+        objective: Objective::DefeatUnit {
+            unit: UnitId(3),
+            turn_limit: None,
+        },
+        ..setup(units)
+    });
+    let events = act(&mut s, 1, p(1, 0), talk_to(3));
+    assert_eq!(events.last(), Some(&ended(Outcome::Victory)));
+}
+
 // ---- Saving ----------------------------------------------------------------------
 
 #[test]
-fn fired_triggers_survive_a_save_and_load() {
+fn fired_triggers_and_recruits_survive_a_save_and_load() {
     let mut s = talkers();
     act(&mut s, 1, p(1, 0), talk_to(3));
     let text = ron::to_string(&s).unwrap();
@@ -484,10 +581,7 @@ fn fired_triggers_survive_a_save_and_load() {
     assert_eq!(loaded, s);
     assert!(loaded.has_fired(0));
     assert_eq!(loaded.triggers(), s.triggers());
-    // Once fired, still fired: the lord has nothing more to say.
-    end(&mut loaded);
-    end(&mut loaded);
-    assert!(loaded.talk_targets(UnitId(1), p(1, 0)).is_empty());
+    assert_eq!(loaded.recruited(), s.recruited());
 }
 
 #[test]
@@ -497,21 +591,23 @@ fn triggers_read_from_ron_as_the_module_docs_write_them() {
         (when: UnitEntersArea(who: Faction(Player), area: (x: 10, y: 5, w: 2, h: 2)), scene: "ch01_fort", once: true),
         (when: CombatStart(unit: "harl", against: Some("ana")), scene: "ch01_harl_ana", once: true),
         (when: CombatStart(unit: "harl"), scene: "ch01_harl", once: true),
+        (when: HalfHp(unit: "harl"), scene: "ch01_harl_half", once: true),
         (when: UnitFell(unit: "harl"), scene: "ch01_harl_death", once: true),
         (when: UnitFell(unit: "tamsin", mode: Some(Casual)), scene: "ch01_tamsin_retreat", once: true),
+        (when: UnitFell(unit: "brom", recruit: true), scene: "ch02_brom_yields", once: true),
         (when: Talk(a: "ana", b: "rook", recruit: true), scene: "ch02_rook_joins", once: true),
     ]"#;
     let triggers: Vec<Trigger> = ron::from_str(text).unwrap();
     let ch = |s: &str| CharacterId(s.into());
-    assert_eq!(triggers.len(), 7);
+    assert_eq!(triggers.len(), 9);
     assert_eq!(
         triggers[3].when,
         TriggerWhen::CombatStart {
             unit: ch("harl"),
             against: None,
-            per_opponent: false,
         }
     );
+    assert_eq!(triggers[4].when, TriggerWhen::HalfHp { unit: ch("harl") });
     assert_eq!(
         triggers[1].when,
         TriggerWhen::UnitEntersArea {
@@ -525,7 +621,23 @@ fn triggers_read_from_ron_as_the_module_docs_write_them() {
         }
     );
     assert_eq!(
-        triggers[6],
+        triggers[5].when,
+        TriggerWhen::UnitFell {
+            unit: ch("harl"),
+            mode: None,
+            recruit: false,
+        }
+    );
+    assert_eq!(
+        triggers[7].when,
+        TriggerWhen::UnitFell {
+            unit: ch("brom"),
+            mode: None,
+            recruit: true,
+        }
+    );
+    assert_eq!(
+        triggers[8],
         trigger(talk_between(ch("ana"), ch("rook")), "ch02_rook_joins", true)
     );
 }

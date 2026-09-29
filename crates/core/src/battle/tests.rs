@@ -2978,6 +2978,7 @@ fn spell_uses(s: &BattleState) -> BTreeMap<(UnitId, SpellId), u8> {
     s.units()
         .iter()
         .chain(s.fallen())
+        .chain(s.recruited())
         .flat_map(|u| {
             u.spells
                 .uses_left
@@ -2987,11 +2988,13 @@ fn spell_uses(s: &BattleState) -> BTreeMap<(UnitId, SpellId), u8> {
         .collect()
 }
 
-/// Durability left of unit `id`'s weapon in `slot` (on the map or fallen).
+/// Durability left of unit `id`'s weapon in `slot` (on the map, fallen or
+/// recruited).
 fn durability(s: &BattleState, id: UnitId, slot: usize) -> Option<u32> {
     s.units()
         .iter()
         .chain(s.fallen())
+        .chain(s.recruited())
         .find(|u| u.id == id)
         .and_then(|u| u.loadout.weapon(slot))
         .map(|w| w.durability_left)
@@ -3108,7 +3111,7 @@ prop_compose! {
     /// A trigger of any kind, about characters `c1` to `c11` (the ids of
     /// [`arb_setup`]'s units), with no scene yet.
     fn arb_trigger()(
-        kind in 0usize..5,
+        kind in 0usize..6,
         a in 1u32..=11,
         b in 1u32..=11,
         x in 0i32..8,
@@ -3127,8 +3130,13 @@ prop_compose! {
                 },
                 area: TileRect { x, y, w: 3, h: 2 },
             },
-            2 => TriggerWhen::CombatStart { unit: c(a), against: flag.then(|| c(b)), per_opponent: once && b % 2 == 0 },
-            3 => TriggerWhen::UnitFell { unit: c(a), mode: flag.then_some(GameMode::Casual) },
+            2 => TriggerWhen::CombatStart { unit: c(a), against: flag.then(|| c(b)) },
+            3 => TriggerWhen::UnitFell {
+                unit: c(a),
+                mode: (b % 3 == 0).then_some(GameMode::Casual),
+                recruit: flag,
+            },
+            4 => TriggerWhen::HalfHp { unit: c(a) },
             _ => TriggerWhen::Talk { a: c(a), b: c(b), recruit: flag },
         };
         Trigger { when, scene: String::new(), once }
@@ -3398,22 +3406,19 @@ proptest! {
                 prop_assert!(u.loadout.weapon_count() <= slots.min(WEAPON_SLOTS));
             }
             // Each scene is where its moment is; a `once` trigger fires
-            // once (per opponent, for one that says so); a recruited unit
-            // joins the player, done.
+            // once; a recruit leaves the map, for the recruits.
             scenes.extend(scenes_placed(&events)?);
             for (i, t) in s.triggers().iter().enumerate() {
                 let fired = scenes.iter().filter(|&&n| n == i).count();
-                let per_opponent =
-                    matches!(t.when, TriggerWhen::CombatStart { per_opponent: true, .. });
-                if t.once && !per_opponent {
+                if t.once {
                     prop_assert!(fired <= 1, "{:?} fired {} times", t, fired);
                 }
                 prop_assert_eq!(s.has_fired(i), t.once && fired > 0, "{:?}", t);
             }
             for e in &events {
                 if let Event::UnitRecruited { unit } = e {
-                    let u = s.unit(*unit).unwrap();
-                    prop_assert!(u.faction == Faction::Player && u.acted);
+                    prop_assert!(s.unit(*unit).is_none());
+                    prop_assert!(s.recruited().iter().any(|u| u.id == *unit));
                 }
             }
             // The outcome, once set, never changes.
@@ -3428,7 +3433,7 @@ proptest! {
 /// The trigger index (from its `s<i>` id) of each scene in `events`,
 /// checking each is at its moment: after a run of scenes comes a combat, a
 /// fall, a recruit or the end of a talk (a unit's action), or before it a
-/// phase start or a move.
+/// phase start, a move or a combat (half HP).
 fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
     let mut out = Vec::new();
     for (i, e) in events.iter().enumerate() {
@@ -3441,7 +3446,9 @@ fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
         let after = events[i + 1..].iter().find(not_scene);
         let placed = matches!(
             before,
-            Some(Event::PhaseStarted { .. } | Event::UnitMoved { .. })
+            Some(
+                Event::PhaseStarted { .. } | Event::UnitMoved { .. } | Event::CombatResolved { .. }
+            )
         ) || matches!(
             after,
             Some(

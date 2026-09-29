@@ -84,7 +84,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
    chapter data). Two named units of one faction on a map must not share a
    two-letter label (ADR-0018; fix with a `map_label` override in
    `characters.ron`). Generic units may share labels.
-3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual */, lead: LeadProfile /* 0708 */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
+3. `core::campaign::Campaign { mode: GameMode /* Classic | Casual, `trpg_core::GameMode` from 0705 */, lead: LeadProfile /* 0708 */, chapter: String, roster: Vec<Unit>, stock: Stock, gold: u32, flags: BTreeMap<String, bool>, playtime_s: u64 }`
    (serde). `Campaign::new_game()` with the starting roster;
    `Campaign::battle_setup(&BattleDef) -> BattleSetup`;
    `Campaign::apply_result(&BattleState)` updates roster (levels, loadouts,
@@ -94,8 +94,13 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
    player unit (standing or retreated) 7% of one level's EXP per unused
    rewind charge (per the design; express it as a percentage of the
    EXP-per-level constant, not a fixed number), returns
-   unused pack items to the stock and adds gold. `Campaign::downgrade_mode()`
-   allows Classic → Casual only.
+   unused pack items to the stock and adds gold. On a **victory** it also
+   adds every unit in `BattleState::recruited()` (0705: talked into joining
+   or "joins you if defeated") to the roster at full HP
+   (`docs/design/battle-scenes-and-recruitment.md`: recruits join only after
+   the battle). The battle file's `triggers` go into `BattleSetup` and the
+   loader runs `trpg_content::check_triggers` on them.
+   `Campaign::downgrade_mode()` allows Classic → Casual only.
 4. `ui::flow`: `New Game` → `ModeSelectScreen` (Classic / Casual, one line
    explaining each) → `LeadSelectScreen` (pick the lead's gender, showing the
    `lead_m`/`lead_f` portraits, plus a first-name entry: Nick wants renaming
@@ -123,6 +128,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 - [ ] Map-menu `Restart battle` → confirm → same result as Retry.
 - [ ] `apply_result`: a fallen unit is removed (gear to stock) in Classic and kept in Casual (tests).
 - [ ] `apply_result`: unused-charge EXP goes to every deployed unit, including Casual retreats, and not to undeployed units (tests).
+- [ ] `apply_result`: recruits join the roster after a victory, not after a defeat (tests).
 - [ ] Chapter `difficulty` maps to 2 / 3 / 5 / 8 charges (test).
 - [ ] Validator errors tested.
 - [ ] Harness: New Game → pick the female lead → the test chapter's intro renders her name and pronouns (0708 tokens).
