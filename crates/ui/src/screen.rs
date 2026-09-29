@@ -11,6 +11,7 @@ use std::fmt;
 
 use trpg_content::{Content, ContentErrors};
 
+use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Keymap, Layout};
@@ -128,6 +129,9 @@ pub struct Ctx {
     /// How fast dialogue text is revealed, in characters per second. Lives
     /// here until the Options menu (0805) moves it into the saved settings.
     pub text_speed: f32,
+    /// Sounds and music screens ask for this frame (ADR-0026), e.g.
+    /// `ctx.audio.play_sound("menu_move")`. `Game` passes them to `app`.
+    pub audio: AudioQueue,
 }
 
 impl Ctx {
@@ -146,6 +150,7 @@ impl Ctx {
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
             text_speed: DEFAULT_TEXT_SPEED,
+            audio: AudioQueue::default(),
         })
     }
 
@@ -310,6 +315,33 @@ pub(crate) mod tests {
     pub(crate) fn ctx() -> Ctx {
         let mut ctx = Ctx::embedded().unwrap().with_layout(Layout::RightHanded);
         ctx.debug_tools = true;
+        ctx
+    }
+
+    /// [`ctx`] with a manifest holding these sound and music cues (the
+    /// real one is empty until tickets 0213/0214).
+    pub(crate) fn ctx_with_cues(sounds: &[&str], music: &[&str]) -> Ctx {
+        use trpg_content::{CreditRef, MusicCue, SoundCue};
+        let mut ctx = ctx();
+        let audio = &mut ctx.content.audio;
+        for &cue in sounds {
+            let files = vec![format!("sfx/{cue}.wav")];
+            let sound = SoundCue {
+                files,
+                volume: 100,
+                credit: CreditRef::Own,
+            };
+            audio.sounds.insert(cue.to_owned(), sound);
+        }
+        for &cue in music {
+            let track = MusicCue {
+                file: format!("{cue}.ogg"),
+                volume: 100,
+                looped: true,
+                credit: CreditRef::Own,
+            };
+            audio.music.insert(cue.to_owned(), track);
+        }
         ctx
     }
 

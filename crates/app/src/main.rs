@@ -1,5 +1,6 @@
 //! Window, main loop and platform glue. See ADR-0004.
 
+mod audio;
 mod keys;
 mod render;
 mod storage;
@@ -8,6 +9,8 @@ use macroquad::prelude::*;
 use trpg_content::font::ATLAS_PNG_PATH;
 use trpg_ui::{Ctx, Game, UiColor};
 
+use crate::audio::Audio;
+use crate::audio::device::Macroquad;
 use crate::render::Renderer;
 
 fn window_conf() -> Conf {
@@ -41,14 +44,28 @@ async fn main() {
         Ok(renderer) => renderer,
         Err(e) => return show_content_errors(&e).await,
     };
+    let mut speaker = Macroquad;
+    let mut audio = Audio::load(
+        &mut speaker,
+        ctx.content.audio.clone(),
+        trpg_content::bundle::bytes,
+        audio::platform_music_dir(),
+        miniquad::date::now().to_bits(),
+    )
+    .await;
     let mut game = Game::start(ctx);
     let mut running = true;
     loop {
         let events = keys::poll();
         if running {
             let out = game.frame(&events, get_frame_time());
+            audio.play(&mut speaker, out.audio, out.music);
+            for warning in audio.take_warnings() {
+                warn!("audio: {}", warning);
+            }
             renderer.draw(out.buffer);
             if out.quit {
+                audio.stop_all(&mut speaker);
                 // Native: leaving main closes the window. The web page can't
                 // be closed, so it stops updating and keeps the last frame.
                 if cfg!(target_arch = "wasm32") {

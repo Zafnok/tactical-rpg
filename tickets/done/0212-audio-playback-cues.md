@@ -5,10 +5,10 @@ type: infra
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-28
 ---
 
 # 0212 — Audio playback: sound and music cues
@@ -110,22 +110,22 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `cargo deny check` passes with the `audio` feature on.
-- [ ] Manifest validation unit tests: a duplicate id, a missing file, an
+- [x] `cargo deny check` passes with the `audio` feature on.
+- [x] Manifest validation unit tests: a duplicate id, a missing file, an
       unknown license and a pool naming a sound each fail with a clear
       message; the empty manifest passes.
-- [ ] Music state machine unit tests: same cue doesn't restart; switch fades
+- [x] Music state machine unit tests: same cue doesn't restart; switch fades
       then starts; `StopMusic` fades out; a new request during a fade wins.
-- [ ] A Harness test shows a screen's request arriving in `FrameOutput` and
+- [x] A Harness test shows a screen's request arriving in `FrameOutput` and
       in `audio_requests()`.
-- [ ] A test-only WAV (generated in the test, not shipped) plays through the
+- [x] A test-only WAV (generated in the test, not shipped) plays through the
       `app` path without panicking (at least a smoke run of `app::audio`
       logic that doesn't need a sound device, if the device part can't run
       in CI).
-- [ ] The web build and the release package include the music folder (even
+- [x] The web build and the release package include the music folder (even
       if empty) and still start.
-- [ ] ADR-0026 written and indexed.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] ADR-0026 written and indexed.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -135,4 +135,65 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+**Done.** The audio plumbing is in; nothing plays yet because the manifest
+is empty until 0213/0214 add files and 0424/0425/0710/0807 wire cues into
+screens. Decisions are in ADR-0026.
+
+- `assets/audio/audio.ron` (empty, valid) + `trpg_content::audio`: schema,
+  loader and validator, documented in `assets/audio/README.md`. Loaded into
+  `Content::audio`. Volumes are whole percents (keeps `Content` `Eq`); the
+  fade length is data too (`music_fade_ms: 500`).
+- `trpg_ui::audio`: `AudioRequest`, `AudioQueue` on `Ctx` (`ctx.audio`),
+  the pure `MusicState` and its `MusicCommand`s (`Load`, `Start`, `Gain`,
+  `Stop`). `FrameOutput` gained `audio` and `music`. An unknown cue panics
+  in debug builds. `Harness`: `audio_requests()`, `last_frame_audio()`,
+  `music_commands()`, `clear_audio()`.
+- `trpg_app::audio`: `Audio` executes requests through a `Backend` trait
+  (macroquad in the game, a recording fake in tests). Sounds are decoded at
+  start-up; music loads with a macroquad coroutine when the fade starts and
+  is freed when it stops. Variant picking uses a `SplitMix64` in `app`,
+  seeded from the clock (not core's RNG).
+- Music lives in a top-level `music/` folder, not embedded. `cargo xtask
+  web` copies `music/*.ogg` to `dist/web/music/` (so CI, Pages and the web
+  release package get it); `release.yml` copies it into the Windows, Linux
+  and macOS packages.
+- **Deviation (extra safety):** native quad-snd `unwrap`s the decode (a bad
+  file crashes the game), asserts mono/stereo, and resamples anything not at
+  44.1 kHz nearest-neighbour; on the web a file that fails to decode never
+  finishes loading. So the validator also reads each file's header: the
+  content must match the extension (OGG Vorbis / PCM or float WAV), with 1–2
+  channels at 44.1 kHz. I added the 44.1 kHz rule, the license texts in the
+  release packages and a hitch measurement to ticket 0214's scope.
+- **Checked by hand (not in CI):** a temporary build played a generated WAV
+  and loaded a "track" through the real macroquad backend on Windows
+  (WASAPI) and in the browser; a missing track came back as an error on
+  both (no hang, no crash). In the browser, decoding and loading worked
+  before any keypress. quad-snd's `audio.js` shows a `play` before the first
+  keypress is queued (it starts when the context unlocks), so title music
+  starts on the first keypress at the latest. That temporary code isn't
+  committed.
+- **Size:** Windows exe (local GNU release) 2,906,624 → 3,292,160 bytes
+  (+377 KiB); WASM (release, before `wasm-opt`) 2,351,300 → 2,489,590 bytes
+  (+135 KiB).
+- **Acceptance criteria:** all met, except that the release packages'
+  `music/` step is proven only by a `release.yml` dry run (see the PR); the
+  web build was run locally.
+- No new follow-up tickets. The two console errors on the web page
+  (`register_plugin`, quad_storage version) are the known ones from
+  0206/0207.
+
+**Claude's starting rules** (the design docs don't cover these; Nick can
+veto any of them):
+
+1. When the music is switching and the game asks for the old track again
+   during the 0.5 s fade, the old track snaps back to full volume
+   and keeps playing (no restart, no fade back in).
+2. If a third track is asked for during a fade, the fade carries on from
+   where it was (it doesn't restart), then the newest track starts.
+3. A new track starts at full volume straight away (no fade-in), as
+   `audio.md` describes.
+4. Music loops unless a cue says otherwise (for future stings).
+5. On the web, if the next track hasn't finished downloading when the fade
+   ends, there is silence until it has.
+6. When the player quits from the title screen on the web page, the music
+   stops.

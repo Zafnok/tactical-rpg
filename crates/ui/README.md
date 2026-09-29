@@ -10,7 +10,8 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console, palette colours, the text snapshot format |
 | `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
-| `game` | `Game`: owns the stack, input state, `Ctx` and buffer; `frame(events, dt)` |
+| `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
+| `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
 | `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
@@ -31,8 +32,12 @@ the buffer it returns; tests drive the same `Game` headlessly with the
    `is_overlay()` is `false`, up through every overlay above it.
 5. If the screen switched layout (`ctx.choose_layout`), `Game` gives
    `InputState` the new keymap.
-6. `FrameOutput { buffer, quit }` goes back to `app`. After a quit, frames do
-   nothing.
+6. The audio requests screens pushed to `ctx.audio` are drained; music
+   requests go through `MusicState`, which turns them into `MusicCommand`s
+   (load, start, gain, stop) and runs the fade.
+7. `FrameOutput { buffer, quit, audio, music }` goes back to `app`, which
+   plays the sounds and executes the music commands. After a quit, frames
+   do nothing.
 
 `Game::start` loads the saved layout from `ctx.storage` (key `layout`); on
 first launch there is none, so it opens the layout picker over the title.
@@ -84,6 +89,11 @@ debug menu (unless a debug screen is already on top).
      to different keys.
    - Never compute game rules here; send `core` commands and animate events.
    - Shared state that several screens need goes in `Ctx` (a plain struct).
+   - Sounds and music: `ctx.audio.play_sound("menu_move")`,
+     `play_sound_at(cue, 0.6)`, `play_music("title")`, `stop_music()`. Cue
+     ids come from `assets/audio/audio.ron`; an unknown one panics in debug
+     builds. Asking for the music already playing does nothing, so a screen
+     may ask every time it's shown.
 4. Ship at least one snapshot test and one Harness test (ADR-0007).
 
 ## Writing a Harness test
@@ -115,6 +125,11 @@ fn select_opens_the_placeholder() {
   repeats), then releases it. `wait(0.2)`: time passes with no input. One
   call runs at most `MAX_FRAMES` (2 000, ~33 s); longer ones panic.
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
+- Audio: `audio_requests()` (every request of the run), `last_frame_audio()`
+  (the last frame's; a `keys` press is the frame *before* the last),
+  `music_commands()`, `clear_audio()`. The real manifest has no cues until
+  tickets 0213/0214; a test of a made-up cue adds it to
+  `ctx.content.audio` and builds the Harness with `Harness::from_game`.
 - `Harness::new()` is a first launch (empty storage: the layout picker is on
   top). `Harness::with_layout(layout)` is a later launch with that layout
   saved. `into_storage()` + `Harness::with_storage(..)` restart with the same

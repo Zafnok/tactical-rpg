@@ -36,6 +36,8 @@ quad-storage = "0.1"
 # Turns on `harness` for `trpg-ui::storage::conformance_suite` in tests.
 trpg-ui = { path = "../ui", features = ["harness"] }
 tempfile = "3"
+# Variant picking property test (audio.rs, ticket 0212).
+proptest.workspace = true
 
 [package.metadata.cargo-machete]
 # Crate-boundary scaffolding (ADR-0004): wired up by later tickets, not yet
