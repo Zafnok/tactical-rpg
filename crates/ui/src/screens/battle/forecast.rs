@@ -12,6 +12,7 @@ use trpg_core::{
 use super::attack::{Targeting, weapon_name};
 use super::layout::SIDE_PANEL;
 use super::panel::TEXT_X;
+use super::skills::skill_name;
 use super::units::{faction_color, hp_fill};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::console::{CELL_H_PX, CELL_W_PX};
@@ -28,6 +29,13 @@ pub const RIGHT_X: i32 = SIDE_PANEL.x + 16;
 
 /// Widest text in a column.
 pub const COLUMN_W: usize = 13;
+
+/// Row of the combat active's name and durability change (`Keen Edge (20 →
+/// 17)`), under the title, when one is chosen (0412).
+pub const SKILL_ROW: i32 = SIDE_PANEL.y + 1;
+
+/// Widest text of the skill line, inside the panel's border.
+const SKILL_W: usize = 26;
 
 /// Row of the names; weapons, a broken marker, HP, hit and crit follow.
 pub const NAME_ROW: i32 = SIDE_PANEL.y + 2;
@@ -140,7 +148,29 @@ pub fn draw_forecast(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleSta
     for (x, unit, weapon, numbers, after) in sides {
         draw_side(buf, palette, x, unit, &weapon, numbers, after);
     }
+    draw_skill(buf, palette, state, t);
     draw_strikes(buf, palette, p);
+}
+
+/// The chosen combat active's line: its name and the weapon's durability
+/// before and after (`Keen Edge (20 → 17)`).
+fn draw_skill(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, t: &Targeting) {
+    let Some(id) = &t.preview.active else {
+        return;
+    };
+    let cost = t
+        .preview
+        .durability
+        .map_or_else(String::new, |(from, to)| format!(" ({from} → {to})"));
+    let text = format!("{}{cost}", skill_name(state, id));
+    put(
+        buf,
+        LEFT_X,
+        SKILL_ROW,
+        &text,
+        palette.get(UiColor::TextHighlight),
+        SKILL_W,
+    );
 }
 
 /// One side's block: name, weapon, `(broken)`, HP with its bar, hit, crit.

@@ -24,6 +24,7 @@ pub mod panel;
 pub mod path;
 pub mod playback;
 pub mod rewind;
+pub mod skills;
 pub mod tips;
 pub mod units;
 
@@ -39,6 +40,7 @@ use trpg_core::{
 
 use self::banner::{Banner, BannerKind};
 
+use self::attack::Targeting;
 use self::camera::{Camera, tile_to_cell};
 use self::cursor::{Cursor, draw_cursor};
 use self::layout::{
@@ -643,7 +645,6 @@ impl BattleScreen {
             };
             return help_line(&[confirm(label)]);
         }
-        let end = (key_name(km, Action::EndTurn), "end turn");
         match &self.mode {
             Mode::Idle { threat } => {
                 let back = cancel(if threat.is_some() {
@@ -651,20 +652,7 @@ impl BattleScreen {
                 } else {
                     "menu"
                 });
-                let rewind = (
-                    key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
-                    "rewind",
-                );
-                match self.hovered() {
-                    Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                        help_line(&[confirm("select"), info, next, rewind, back, end])
-                    }
-                    Some(u) if u.faction != Faction::Player => {
-                        help_line(&[moves, confirm("range"), info, next, rewind, back, end])
-                    }
-                    Some(_) => help_line(&[moves, info, next, rewind, back, end]),
-                    None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
-                }
+                self.help_idle(ctx, info, back)
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::EndTurnPrompt { .. } => {
@@ -685,6 +673,7 @@ impl BattleScreen {
             Mode::Moving { .. } => help_line(&[confirm("skip")]),
             Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::SkillMenu { .. }
             | Mode::ItemMenu { .. }
             | Mode::MapMenu { .. }
             | Mode::UnitList { .. } => {
@@ -693,12 +682,10 @@ impl BattleScreen {
             Mode::EquipMenu { .. } => {
                 help_line(&[(keys, "choose"), confirm("equip"), cancel("back")])
             }
-            Mode::ItemTarget(_) => {
+            Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
                 help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
             }
-            Mode::Targeting(_) => {
-                help_line(&[(keys, "next target"), confirm("attack"), cancel("back")])
-            }
+            Mode::Targeting(t) => self.help_targeting(ctx, t),
             Mode::Combat(_) => {
                 let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
                 help_line(&[cancel("skip"), (hold, "fast")])
@@ -713,6 +700,52 @@ impl BattleScreen {
                     help_line(&[moves])
                 }
             }
+        }
+    }
+
+    /// The help line while picking an attack's target: left/right pick the
+    /// target and up/down the combat active, if the unit has any.
+    fn help_targeting(&self, ctx: &Ctx, t: &Targeting) -> String {
+        let km = &ctx.keymap;
+        let confirm = (key_name(km, Action::Confirm), "attack");
+        let cancel = (key_name(km, Action::Cancel), "back");
+        if t.actives(&self.state).is_empty() {
+            return help_line(&[(cursor_keys_name(km), "next target"), confirm, cancel]);
+        }
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a)?, key_name(km, b)?));
+        help_line(&[
+            (pair(Action::CursorLeft, Action::CursorRight), "target"),
+            (pair(Action::CursorUp, Action::CursorDown), "skill"),
+            confirm,
+            cancel,
+        ])
+    }
+
+    /// The help line while browsing, over what is under the cursor.
+    fn help_idle(
+        &self,
+        ctx: &Ctx,
+        info: (Option<String>, &str),
+        back: (Option<String>, &str),
+    ) -> String {
+        let km = &ctx.keymap;
+        let confirm = |label| (key_name(km, Action::Confirm), label);
+        let next = (key_name(km, Action::NextUnit), "next unit");
+        let moves = (cursor_keys_name(km), "move");
+        let end = (key_name(km, Action::EndTurn), "end turn");
+        let rewind = (
+            key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
+            "rewind",
+        );
+        match self.hovered() {
+            Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
+                help_line(&[confirm("select"), info, next, rewind, back, end])
+            }
+            Some(u) if u.faction != Faction::Player => {
+                help_line(&[moves, confirm("range"), info, next, rewind, back, end])
+            }
+            Some(_) => help_line(&[moves, info, next, rewind, back, end]),
+            None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
         }
     }
 
@@ -781,6 +814,10 @@ impl BattleScreen {
                 let at = t.targets.iter().filter_map(|&id| self.state.unit(id));
                 tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
             }
+            Mode::SkillTarget(t) => {
+                let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
+                tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
+            }
             Mode::ItemTarget(t) => {
                 let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
                 let dest = t.sel.dest();
@@ -819,6 +856,7 @@ impl BattleScreen {
             Mode::Moving { .. }
             | Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::SkillMenu { .. }
             | Mode::ItemMenu { .. }
             | Mode::EquipMenu { .. }
             | Mode::Combat(_)
@@ -838,6 +876,7 @@ impl BattleScreen {
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Targeting(_)
+            | Mode::SkillTarget(_)
             | Mode::ItemTarget(_)
             | Mode::MapMenu { .. } => {}
         }
@@ -852,6 +891,7 @@ impl BattleScreen {
         let (tile, menu) = match &self.mode {
             Mode::ActionMenu { sel, menu, .. }
             | Mode::WeaponMenu { sel, menu, .. }
+            | Mode::SkillMenu { sel, menu, .. }
             | Mode::ItemMenu { sel, menu, .. }
             | Mode::EquipMenu { sel, menu, .. } => (sel.dest(), menu),
             Mode::MapMenu { menu, .. } => (self.cursor.pos, menu),
@@ -1136,6 +1176,14 @@ impl Screen for BattleScreen {
             && let Some(message) = pb.message()
         {
             buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
+        } else if let Mode::SkillTarget(t) = &self.mode {
+            buf.print(
+                1,
+                HELP_BAR.y,
+                &t.preview(&self.state),
+                c(UiColor::Text),
+                black,
+            );
         } else if let Mode::ItemTarget(t) = &self.mode {
             buf.print(
                 1,
@@ -1295,6 +1343,9 @@ mod item_tests;
 
 #[cfg(test)]
 mod rewind_tests;
+
+#[cfg(test)]
+mod skill_tests;
 
 #[cfg(test)]
 mod tip_tests;
@@ -2034,16 +2085,17 @@ mod tests {
         // The lord at (5, 5), cells 30..32; its old tile shows its terrain.
         assert_eq!(row(16, 26, 6), "....Lo");
         // The menu one cell right of the tile: `Attack` and `Item` (dim),
-        // `Equip`, `Wait`.
+        // `Skill`, `Equip`, `Wait`.
         assert_eq!(row(16, 33, 10), "│ Attack │");
-        assert_eq!(row(17, 33, 10), "│ Item   │");
-        assert_eq!(row(18, 33, 10), "│ Equip  │");
-        assert_eq!(row(19, 33, 10), "│ Wait   │");
+        assert_eq!(row(17, 33, 10), "│ Skill  │");
+        assert_eq!(row(18, 33, 10), "│ Item   │");
+        assert_eq!(row(19, 33, 10), "│ Equip  │");
+        assert_eq!(row(20, 33, 10), "│ Wait   │");
         let p = &c.palette;
         assert_eq!(buf.get(35, 16).unwrap().fg, p.get(UiColor::TextDim));
-        assert_eq!(buf.get(35, 17).unwrap().fg, p.get(UiColor::TextDim));
+        assert_eq!(buf.get(35, 18).unwrap().fg, p.get(UiColor::TextDim));
         assert_eq!(
-            buf.get(35, 19).unwrap().bg,
+            buf.get(35, 20).unwrap().bg,
             p.get(UiColor::PanelBorderFocus)
         );
         // No cursor, no ranges, the panel shows the lord.

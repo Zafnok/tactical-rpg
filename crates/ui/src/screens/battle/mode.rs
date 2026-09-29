@@ -29,6 +29,9 @@ use super::items::{
 use super::map_menu::{MapEntry, map_menu, ready_players, unit_list};
 use super::path::steer;
 use super::playback::Playback;
+use super::skills::{
+    SkillChoice, SkillTargeting, can_use_skill, has_skill_menu, skill_choices, skill_menu,
+};
 use crate::input::Action;
 use crate::widgets::menu::{Menu, MenuEvent, MenuItem};
 
@@ -121,6 +124,8 @@ pub enum MenuEntry {
     Attack,
     /// Seize the objective tile, when legal there.
     Seize,
+    /// Use a non-combat active skill (0412): shown when the unit knows one.
+    Skill,
     /// Use a consumable from the battle pack (0407).
     Item,
     /// Change the equipped weapon (0407).
@@ -135,6 +140,7 @@ impl MenuEntry {
         match self {
             MenuEntry::Attack => "Attack",
             MenuEntry::Seize => "Seize",
+            MenuEntry::Skill => "Skill",
             MenuEntry::Item => "Item",
             MenuEntry::Equip => "Equip",
             MenuEntry::Wait => "Wait",
@@ -156,6 +162,7 @@ impl MenuEntry {
     fn enabled(self, sel: &Selection, weapons: &[WeaponChoice], state: &BattleState) -> bool {
         match self {
             MenuEntry::Attack => !weapons.is_empty(),
+            MenuEntry::Skill => can_use_skill(&skill_choices(state, sel)),
             MenuEntry::Item => can_use_item(&pack_groups(state, sel.unit, sel.dest())),
             MenuEntry::Equip => can_equip(&equip_choices(state, sel.unit)),
             MenuEntry::Seize | MenuEntry::Wait => true,
@@ -164,12 +171,16 @@ impl MenuEntry {
 }
 
 /// The action menu for `sel`'s unit at its path's end: `Attack` (enabled if
-/// some weapon can attack someone there), `Seize` if legal there, `Item`
-/// and `Equip` (enabled when they can do something), `Wait`.
+/// some weapon can attack someone there), `Seize` if legal there, `Skill`
+/// if the unit knows a non-combat active, `Item` and `Equip` (enabled when
+/// they can do something), `Wait`.
 pub fn menu_entries(sel: &Selection, state: &BattleState) -> Vec<MenuEntry> {
     let mut entries = vec![MenuEntry::Attack];
     if state.can_seize(sel.unit, sel.dest()) {
         entries.push(MenuEntry::Seize);
+    }
+    if has_skill_menu(state, sel.unit) {
+        entries.push(MenuEntry::Skill);
     }
     entries.extend([MenuEntry::Item, MenuEntry::Equip, MenuEntry::Wait]);
     entries
@@ -226,6 +237,17 @@ pub enum Mode {
     },
     /// The player picks a target and reads the forecast.
     Targeting(Box<Targeting>),
+    /// The unit's non-combat active skills (0412).
+    SkillMenu {
+        /// The selection.
+        sel: Selection,
+        /// The skill list.
+        menu: Menu,
+        /// What each line is.
+        choices: Vec<SkillChoice>,
+    },
+    /// The player picks who a skill (Shove) is used on.
+    SkillTarget(Box<SkillTargeting>),
     /// The battle pack's items, grouped (0407).
     ItemMenu {
         /// The selection.
@@ -343,9 +365,11 @@ impl Mode {
             | Mode::Moving { sel, .. }
             | Mode::ActionMenu { sel, .. }
             | Mode::WeaponMenu { sel, .. }
+            | Mode::SkillMenu { sel, .. }
             | Mode::ItemMenu { sel, .. }
             | Mode::EquipMenu { sel, .. } => Some(sel),
             Mode::Targeting(t) => Some(&t.sel),
+            Mode::SkillTarget(t) => Some(&t.sel),
             Mode::ItemTarget(t) => Some(&t.sel),
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
@@ -366,6 +390,7 @@ impl Mode {
             Mode::Moving { sel, t, .. } if sel.unit == id => Some(walk_pos(sel, *t)),
             Mode::ActionMenu { sel, .. }
             | Mode::WeaponMenu { sel, .. }
+            | Mode::SkillMenu { sel, .. }
             | Mode::ItemMenu { sel, .. }
             | Mode::EquipMenu { sel, .. }
                 if sel.unit == id =>
@@ -373,6 +398,7 @@ impl Mode {
                 Some(sel.dest())
             }
             Mode::Targeting(t) if t.sel.unit == id => Some(t.sel.dest()),
+            Mode::SkillTarget(t) if t.sel.unit == id => Some(t.sel.dest()),
             Mode::ItemTarget(t) if t.sel.unit == id => Some(t.sel.dest()),
             _ => None,
         }
@@ -560,6 +586,7 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
                     Some(MenuEntry::Wait) => UnitAction::Wait,
                     Some(MenuEntry::Seize) => UnitAction::Seize,
                     Some(MenuEntry::Attack) => return choose_attack(sel, weapons, state),
+                    Some(MenuEntry::Skill) => return open_skills(sel, state),
                     Some(MenuEntry::Item) => return open_pack(sel, state),
                     Some(MenuEntry::Equip) => return open_equip(sel, state),
                     None => {
@@ -594,6 +621,8 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             step_weapon_menu(sel, menu, weapons, action, state)
         }
         Mode::Targeting(t) => step_targeting(*t, action, state),
+        Mode::SkillMenu { sel, menu, choices } => step_skills(sel, menu, choices, action, state),
+        Mode::SkillTarget(t) => step_skill_target(*t, action, state),
         Mode::ItemMenu { sel, menu, groups } => step_pack(sel, menu, groups, action, state),
         Mode::ItemTarget(t) => step_item_target(*t, action, state),
         Mode::EquipMenu { sel, menu, choices } => step_equip(sel, menu, choices, action, state),
@@ -603,24 +632,34 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             }
             (Mode::Combat(playback), Effect::None)
         }
-        Mode::MoveAfter { unit, tiles } => {
-            let here = state.unit(unit).map(|u| u.pos);
-            let to = if Some(cursor) == here {
-                Some(None)
-            } else if tiles.contains(&cursor) {
-                Some(Some(cursor))
-            } else {
-                None
-            };
-            match to {
-                Some(to) if action == Action::Confirm => (
-                    Mode::default(),
-                    Effect::Apply(Command::MoveAfter { unit, to }),
-                ),
-                _ => (Mode::MoveAfter { unit, tiles }, Effect::None),
-            }
-        }
+        Mode::MoveAfter { unit, tiles } => step_move_after(unit, tiles, action, cursor, state),
         other => step_around(other, action, state),
+    }
+}
+
+/// [`step`] while a unit waits to move after its attack: Confirm on one of
+/// `tiles` moves it there, Confirm on the unit stays.
+fn step_move_after(
+    unit: UnitId,
+    tiles: Vec<Pos>,
+    action: Action,
+    cursor: Pos,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    let here = state.unit(unit).map(|u| u.pos);
+    let to = if Some(cursor) == here {
+        Some(None)
+    } else if tiles.contains(&cursor) {
+        Some(Some(cursor))
+    } else {
+        None
+    };
+    match to {
+        Some(to) if action == Action::Confirm => (
+            Mode::default(),
+            Effect::Apply(Command::MoveAfter { unit, to }),
+        ),
+        _ => (Mode::MoveAfter { unit, tiles }, Effect::None),
     }
 }
 
@@ -775,6 +814,86 @@ fn step_weapon_menu(
     }
 }
 
+/// `Skill` chosen: the list of non-combat actives (the action menu again if
+/// none can be used, which the enabled entry rules out).
+fn open_skills(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    let choices = skill_choices(state, &sel);
+    if !can_use_skill(&choices) {
+        return (back_to_entry(sel, state, MenuEntry::Skill), Effect::None);
+    }
+    let menu = skill_menu(state, sel.unit, &choices);
+    (Mode::SkillMenu { sel, menu, choices }, Effect::None)
+}
+
+/// [`step`] in the skill list: Confirm uses a skill that needs no target
+/// at once and picks who to use Shove on otherwise, Cancel goes back to the
+/// action menu.
+fn step_skills(
+    sel: Selection,
+    mut menu: Menu,
+    choices: Vec<SkillChoice>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => {
+            let Some(choice) = choices.get(i).filter(|c| c.usable) else {
+                return (Mode::SkillMenu { sel, menu, choices }, Effect::None);
+            };
+            if !choice.needs_target {
+                let cmd = Command::Act {
+                    unit: sel.unit,
+                    dest: sel.dest(),
+                    action: UnitAction::UseSkill {
+                        skill: choice.skill.clone(),
+                        target: None,
+                    },
+                };
+                return (Mode::default(), Effect::Apply(cmd));
+            }
+            match SkillTargeting::new(sel.clone(), menu.clone(), choices.clone(), i) {
+                Some(t) => {
+                    let at = state.unit(t.target()).map(|u| u.pos);
+                    (
+                        Mode::SkillTarget(Box::new(t)),
+                        at.map_or(Effect::None, Effect::Cursor),
+                    )
+                }
+                None => (Mode::SkillMenu { sel, menu, choices }, Effect::None),
+            }
+        }
+        Some(MenuEvent::Cancelled) => (back_to_entry(sel, state, MenuEntry::Skill), Effect::None),
+        None => (Mode::SkillMenu { sel, menu, choices }, Effect::None),
+    }
+}
+
+/// [`step`] while picking a skill's target: the cursor keys and
+/// `NextUnit`/`PrevUnit` cycle the targets, Confirm uses the skill, Cancel
+/// goes back to the skill list with the cursor on the unit.
+fn step_skill_target(mut t: SkillTargeting, action: Action, state: &BattleState) -> (Mode, Effect) {
+    let forward = match action {
+        Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
+        Action::CursorLeft | Action::CursorUp | Action::PrevUnit => false,
+        Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
+        Action::Cancel => {
+            let dest = t.sel.dest();
+            let back = Mode::SkillMenu {
+                sel: t.sel,
+                menu: t.menu,
+                choices: t.choices,
+            };
+            return (back, Effect::Cursor(dest));
+        }
+        _ => return (Mode::SkillTarget(Box::new(t)), Effect::None),
+    };
+    t.cycle(forward);
+    let at = state.unit(t.target()).map(|u| u.pos);
+    (
+        Mode::SkillTarget(Box::new(t)),
+        at.map_or(Effect::None, Effect::Cursor),
+    )
+}
+
 /// `Item` chosen: the pack list (the action menu again if it has nothing
 /// usable, which the enabled entry rules out).
 fn open_pack(sel: Selection, state: &BattleState) -> (Mode, Effect) {
@@ -884,12 +1003,20 @@ fn step_equip(
     }
 }
 
-/// [`step`] while targeting: the cursor keys and `NextUnit`/`PrevUnit`
-/// cycle the targets (right, down and next go forward; left, up and
-/// previous go back), Confirm attacks, Cancel goes back to the weapon list
-/// or the action menu with the cursor on the unit.
+/// [`step`] while targeting: left, right and `NextUnit`/`PrevUnit` cycle the
+/// targets (right and next go forward, left and previous go back); up and
+/// down cycle the combat actives (0412) when there are any, else the
+/// targets too; Confirm attacks, Cancel goes back to the weapon list or the
+/// action menu with the cursor on the unit.
 fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mode, Effect) {
+    // Up and Down move a menu-style cursor over the skills, when the unit
+    // has any to choose from; else they cycle the targets like Left/Right.
+    let skills = !t.actives(state).is_empty();
     let forward = match action {
+        Action::CursorUp | Action::CursorDown if skills => {
+            t.cycle_skill(action == Action::CursorDown, state);
+            return (Mode::Targeting(Box::new(t)), Effect::None);
+        }
         Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
         Action::CursorLeft | Action::CursorUp | Action::PrevUnit => false,
         Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
@@ -1185,6 +1312,7 @@ mod tests {
             entries,
             &[
                 MenuEntry::Attack,
+                MenuEntry::Skill,
                 MenuEntry::Item,
                 MenuEntry::Equip,
                 MenuEntry::Wait
@@ -1195,9 +1323,11 @@ mod tests {
             .iter()
             .map(|i| (i.label.as_str(), i.enabled))
             .collect();
-        // Nobody is hurt (no item to use) but the lord has two weapons.
+        // Nobody is hurt (no item to use) but the lord has two weapons and
+        // its Inspire has allies near to inspire.
         let want = [
             ("Attack", false),
+            ("Skill", true),
             ("Item", false),
             ("Equip", true),
             ("Wait", true),
@@ -1247,6 +1377,7 @@ mod tests {
         let all = [
             MenuEntry::Attack,
             MenuEntry::Seize,
+            MenuEntry::Skill,
             MenuEntry::Item,
             MenuEntry::Equip,
             MenuEntry::Wait,
@@ -1266,6 +1397,7 @@ mod tests {
         let sel = selected(&s, &[p(4, 5)]);
         let plain = [
             MenuEntry::Attack,
+            MenuEntry::Skill,
             MenuEntry::Item,
             MenuEntry::Equip,
             MenuEntry::Wait,
@@ -1279,7 +1411,7 @@ mod tests {
         assert_eq!(menu_entries(&knight, &s), all);
         assert_eq!(
             all.map(MenuEntry::label),
-            ["Attack", "Seize", "Item", "Equip", "Wait"]
+            ["Attack", "Seize", "Skill", "Item", "Equip", "Wait"]
         );
     }
 

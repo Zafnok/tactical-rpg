@@ -4,18 +4,24 @@
 //! [`BattleState::preview_attack`], the same validation the attack command
 //! gets, so the UI never decides what is legal itself (ADR-0004).
 
-use trpg_core::{AttackPreview, BattleState, Pos, UnitAction, UnitId, WEAPON_SLOTS};
+use trpg_core::{AttackPreview, BattleState, Pos, SkillId, UnitAction, UnitId, WEAPON_SLOTS};
 
 use super::mode::Selection;
+use super::skills::combat_actives;
 use crate::widgets::menu::{Menu, MenuItem};
 
-/// The weapon attack of `unit` from `dest` with the weapon in `slot` on
-/// `target`: no art, no active (those come with 0412/0414).
+/// The weapon attack with the weapon in `slot` on `target`: no art, no
+/// active (arts come with 0414).
 pub fn attack(target: UnitId, slot: usize) -> UnitAction {
+    attack_with(target, slot, None)
+}
+
+/// [`attack`] with the combat active `active` (0412).
+pub fn attack_with(target: UnitId, slot: usize, active: Option<SkillId>) -> UnitAction {
     UnitAction::Attack {
         target,
         slot,
-        active: None,
+        active,
         art: None,
     }
 }
@@ -119,7 +125,9 @@ pub struct Targeting {
     pub targets: Vec<UnitId>,
     /// The target under the cursor.
     pub index: usize,
-    /// The forecast against it.
+    /// The combat active chosen for this attack, if any (0412).
+    pub active: Option<SkillId>,
+    /// The forecast against it, with the active applied.
     pub preview: AttackPreview,
     /// The weapon list it was opened from (Cancel goes back to it), if the
     /// unit had several weapons to choose from.
@@ -144,6 +152,7 @@ impl Targeting {
             slot: choice.slot,
             targets: choice.targets.clone(),
             index: 0,
+            active: None,
             preview,
             weapons,
         })
@@ -167,11 +176,50 @@ impl Targeting {
         } else {
             (self.index + n - 1) % n
         };
-        if let Ok(p) = state.preview_attack(
+        // The active stays if the core still accepts it against the new
+        // target, else the attack is plain.
+        let with = |active: Option<SkillId>| {
+            let action = attack_with(self.target(), self.slot, active);
+            state
+                .preview_attack(self.sel.unit, self.sel.dest(), &action)
+                .ok()
+        };
+        if let Some(p) = with(self.active.clone()) {
+            self.preview = p;
+        } else if let Some(p) = with(None) {
+            self.active = None;
+            self.preview = p;
+        }
+    }
+
+    /// The combat actives usable against the target under the cursor.
+    pub fn actives(&self, state: &BattleState) -> Vec<SkillId> {
+        combat_actives(
+            state,
             self.sel.unit,
             self.sel.dest(),
-            &attack(self.target(), self.slot),
-        ) {
+            self.slot,
+            self.target(),
+        )
+    }
+
+    /// Moves to the next combat active (or the previous one) in the ring
+    /// `none → Keen Edge → … → none` and updates the forecast. Actives that
+    /// can't be paid for are skipped.
+    pub fn cycle_skill(&mut self, forward: bool, state: &BattleState) {
+        let mut ring: Vec<Option<SkillId>> = vec![None];
+        ring.extend(self.actives(state).into_iter().map(Some));
+        let n = ring.len();
+        let at = ring.iter().position(|a| *a == self.active).unwrap_or(0);
+        let next = ring[if forward {
+            (at + 1) % n
+        } else {
+            (at + n - 1) % n
+        }]
+        .clone();
+        let action = attack_with(self.target(), self.slot, next.clone());
+        if let Ok(p) = state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
+            self.active = next;
             self.preview = p;
         }
     }
@@ -181,7 +229,7 @@ impl Targeting {
         trpg_core::Command::Act {
             unit: self.sel.unit,
             dest: self.sel.dest(),
-            action: attack(self.target(), self.slot),
+            action: attack_with(self.target(), self.slot, self.active.clone()),
         }
     }
 }
