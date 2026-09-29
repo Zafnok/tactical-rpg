@@ -107,8 +107,6 @@ pub struct ClassDef {
     /// Stats of a level-1 generic unit; also used for the promotion bonus.
     /// `base.mov == move_points`.
     pub base: Stats,
-    /// Per-stat caps. `caps.mov == move_points`.
-    pub caps: Stats,
     /// Growth rates in percent.
     pub growths: Growths,
     /// Weapon kinds this class can use.
@@ -235,7 +233,6 @@ mod tests {
             movement_type: MovementTypeId(1),
             move_points: 7,
             base: Stats::default(),
-            caps: Stats::default(),
             growths: Growths::default(),
             weapons: vec![prof(WeaponKind::Sword), prof(WeaponKind::Spear)],
             armour: vec![],

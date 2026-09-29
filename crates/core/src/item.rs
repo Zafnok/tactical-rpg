@@ -22,8 +22,8 @@
 //!   that kind is at least the weapon's rank. A unit with no rank recorded in
 //!   a kind counts as rank E.
 //! - **Gear-adjusted stats** ([`Unit::effective_stats`]): permanent stats plus
-//!   the armour and accessory bonuses. Gear may push a stat above its class
-//!   cap but never above the hard ceiling (a stat already above the ceiling
+//!   the armour and accessory bonuses. Gear may push a stat up but never above
+//!   the hard ceiling (a stat already above the ceiling
 //!   isn't lowered). Max HP stays the permanent `stats.hp` (no gear gives HP).
 //! - **Durability**: normal attacks cost none. [`WeaponInstance::spend_durability`]
 //!   (Combat Arts and active skills) lowers it, never below 0. At 0 the weapon is broken:

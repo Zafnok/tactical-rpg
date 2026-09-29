@@ -11,7 +11,7 @@
 //!   no EXP (shown as `--`) and has 0 EXP; an award that reaches the cap is
 //!   cut to what reaching it takes.
 //! - **Level up** ([`level_up`]): the exact procedure of `progression.md`.
-//!   The growths, caps and tier are the unit's **current class**'s; the
+//!   The growths and tier are the unit's **current class**'s; the
 //!   talent stat gets +20% ([`growth`]). Every level up makes exactly 7
 //!   [`roll_percent`](RandomSource::roll_percent) calls (one per stat, in stat
 //!   order, eligible or not), then one
@@ -35,7 +35,7 @@ use crate::battle::Event;
 use crate::class::{ClassDef, ClassLevel, ClassPoints, ClassTable, Tier};
 use crate::rng::RandomSource;
 use crate::skill::SkillTable;
-use crate::stats::{GrowthValue, StatKind, StatValue};
+use crate::stats::{GrowthValue, StatKind, StatValue, Stats};
 use crate::unit::{ClassRecord, Level, Unit};
 
 /// EXP for one character level.
@@ -185,15 +185,16 @@ pub fn cp_per_class_level(classes: &ClassTable, tier: Tier) -> ClassPoints {
 /// least `min_gains` stats gaining when that many can (the exact procedure
 /// of `progression.md`). Doesn't change the unit: see [`apply_gains`].
 ///
-/// A stat is eligible when it is below its cap and its [`growth`] is above 0.
+/// A stat is eligible when it is below its hard ceiling ([`ClassTable::hard_ceilings`]; classes have no caps) and its [`growth`] is above 0.
 /// Every stat, eligible or not, takes one `roll()` `r`; an eligible one gains
-/// `growth / 100 + (r < growth % 100 ? 1 : 0)`, never past its cap. Then,
+/// `growth / 100 + (r < growth % 100 ? 1 : 0)`, never past its ceiling. Then,
 /// while fewer than `min(min_gains, eligible)` stats have gained, one of
 /// the eligible stats that haven't gains 1, picked with
 /// `roll_below(sum of their growths)` weighted by growth.
 pub fn level_up(
     unit: &Unit,
     class: &ClassDef,
+    ceilings: &Stats,
     min_gains: u8,
     rng: &mut impl RandomSource,
 ) -> StatGains {
@@ -203,7 +204,7 @@ pub fn level_up(
     for (i, &kind) in StatKind::GROWABLE.iter().enumerate() {
         let r = GrowthValue::from(rng.roll_percent());
         let g = growth(unit, class, kind);
-        let room = class.caps.get(kind) - unit.stats.get(kind);
+        let room = ceilings.get(kind) - unit.stats.get(kind);
         if g == 0 || room <= 0 {
             continue;
         }
@@ -273,7 +274,7 @@ pub fn grant_exp(
     let levels = unit.exp / EXP_PER_LEVEL;
     unit.exp %= EXP_PER_LEVEL;
     for _ in 0..levels {
-        let gains = level_up(unit, class, floor, rng);
+        let gains = level_up(unit, class, &classes.hard_ceilings, floor, rng);
         apply_gains(unit, &gains);
         unit.level += 1;
         events.push(Event::LeveledUp {

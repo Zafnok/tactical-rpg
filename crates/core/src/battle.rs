@@ -111,7 +111,7 @@
 //!     **ally auras** of other allied units (green ones too) in reach feed
 //!     each combat: [`CombatMods`](crate::combat::CombatMods) and stat
 //!     bonuses on its [`CombatantInput`], so the forecast shows them. Stat
-//!     bonuses from skills count in combat only and may pass caps. "Moved"
+//!     bonuses from skills count in combat only and may pass the hard ceilings. "Moved"
 //!     conditions count the tiles of the attacker's path; a unit attacked
 //!     has moved 0.
 //!   - **Combat actives** are an option of an attack

@@ -56,7 +56,6 @@ fn classes() -> Arc<ClassTable> {
         move_points: 3,
         base: Stats::default(),
         // Only HP and Res grow: sturdier units, same weapon damage.
-        caps: Stats::from_growable([60, 0, 0, 0, 0, 0, 20], 3),
         growths: Growths([80, 0, 0, 0, 0, 0, 30]),
         weapons: vec![WeaponProficiency {
             kind: WeaponKind::Sword,
