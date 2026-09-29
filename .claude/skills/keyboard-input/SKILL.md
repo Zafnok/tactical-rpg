@@ -38,7 +38,7 @@ once it exists, it runs in CI and `run-gates`.
 1. **React to `Action`s, not keys.** Match on `Action::Confirm`, never on
    `Key::F`. Need a new kind of input? Add an `Action` (below); don't read
    raw keys. The one exception is the Key bindings screen's capture mode
-   (0814), which reads `FrameInput::pressed_chords` and asks `input.rs`
+   (0815), which reads `FrameInput::pressed_chords` and asks `input.rs`
    helpers (`is_capture_abort`, `is_clear_slot`) instead of naming keys.
 2. **Name keys in text through the keymap.** Help bars:
    `widgets::help::{key_name, all_key_names, cursor_keys_name, help_line}`.
@@ -71,7 +71,7 @@ once it exists, it runs in CI and `run-gates`.
    match (after 0217).
 3. `assets/data/keymap.ron`: add it to **every** layout (`[]` if it has no
    default key), at most 3 chords, keys from `controls.md`.
-4. The Key bindings screen (after 0814): add its player-facing label to the
+4. The Key bindings screen (after 0815): add its player-facing label to the
    screen's label table.
 5. Screens: react to the action; help bars/tips name it via rule 2.
 6. Tests: the keymap-matches-design test, a screen test driven by the

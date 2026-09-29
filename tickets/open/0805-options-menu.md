@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0405", "0207", "0801", "0208", "0212", "0814"]
+blocked_by: ["0405", "0207", "0801", "0208", "0212", "0815"]
 nick_input: none
 completed:
 ---
@@ -26,9 +26,9 @@ None.
 ## Scope
 
 **In:** `Settings` struct persisted via `Storage` key `settings`, Options
-screen reachable from title and map menu, a "Key bindings" row that opens 0814's screen.
+screen reachable from title and map menu, a "Key bindings" row that opens 0815's screen.
 
-**Out:** controller bindings; the key-binding screen itself (0814).
+**Out:** controller bindings; the key-binding screen itself (0815).
 
 **Audio (added by 0020):** music and sound volume settings, played through the
 0212 audio plumbing ([`docs/design/audio.md`](../../docs/design/audio.md)).
@@ -47,12 +47,12 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0814's
    picking saves the layout and switches keys immediately, loading **that
    layout's own custom keys** if the player has any (each layout keeps its
    own, `docs/design/controls.md` *Rebinding keys*; 0217's saved
-   `keybindings` config); Confirm on "Key bindings" opens 0814's
+   `keybindings` config); Confirm on "Key bindings" opens 0815's
    `KeyBindingsScreen`; "Reset tips"; "Restore defaults" (all settings;
    custom keys are reset from the Key bindings screen, not here).
 4. **Key bindings:** no rebinding UI in this ticket. Key bindings are saved
    by 0217 under their own `Storage` key (`keybindings`), not in
-   `Settings`, and edited on 0814's screen.
+   `Settings`, and edited on 0815's screen.
 5. **Game mode** (only when a campaign is loaded, per
    `docs/design/death-and-difficulty.md`): shows `Classic` or `Casual`; in
    Classic, `Switch to Casual` asks for confirmation ("This can't be undone")
@@ -64,7 +64,7 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0814's
 - [ ] Every setting changes behaviour (Harness test per setting where observable).
 - [ ] Classic → Casual switch works with a confirm; Casual never offers Classic (Harness test).
 - [ ] Layout can be switched from Options (both directions, repeatedly); the new keys work at once and persist across restart (Harness test).
-- [ ] "Key bindings" opens 0814's screen; switching layout loads that layout's own custom keys (Harness test).
+- [ ] "Key bindings" opens 0815's screen; switching layout loads that layout's own custom keys (Harness test).
 - [ ] Music and sound volume change what `app` plays (Harness test on the requests or the mixer multiplier), 0 silences, and they persist across restart.
 - [ ] Snapshots of both screens.
 

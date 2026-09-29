@@ -47,7 +47,7 @@ needed). Key choices are Nick's; the defaults below are his.
 - **First launch:** before anything else, a one-screen **"Pick your layout"**
   menu shows both layouts (with a small key diagram) and asks the player to
   choose. The choice is saved and can be changed later in Options.
-- Individual keys stay rebindable in Options (tickets 0805, 0814), on top of
+- Individual keys stay rebindable in Options (tickets 0805, 0815), on top of
   the chosen layout: see *Rebinding keys* below.
 
 ### Bindings
@@ -185,7 +185,7 @@ exactly as before:
 **Help bar and tips** show the player's current keys. An action with no key
 shows as `! not mapped` there too.
 
-*Claude's starting rules (Nick to veto at sign-off of 0814):*
+*Claude's starting rules (Nick to veto at sign-off of 0815):*
 
 - `Esc` doesn't count as Cancel's required key: Cancel still needs one of
   its own slots filled, so it stays on the acting hand.

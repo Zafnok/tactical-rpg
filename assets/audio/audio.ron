@@ -8,6 +8,13 @@
     // audio.md "Starting values").
     music_fade_ms: 500,
     sounds: [
+        // Made in-house by `cargo xtask sfx` (ticket 0213) from the recipes
+        // in assets-src/audio/sound-audition.html.
+        (id: "menu_move", files: ["sfx/menu_move.wav"], volume: 100, credit: Own),
+        (id: "menu_select", files: ["sfx/menu_select.wav"], volume: 100, credit: Own),
+        (id: "menu_cancel", files: ["sfx/menu_cancel.wav"], volume: 100, credit: Own),
+        (id: "miss", files: ["sfx/miss.wav"], volume: 100, credit: Own),
+        (id: "heal", files: ["sfx/heal.wav"], volume: 100, credit: Own),
         (id: "hit_sword", files: ["sfx/sword_sound_1.ogg"], volume: 100, credit: Credit("sword_sound_1")),
         // audio.md: the axe shares the spear's sound "for now".
         (id: "hit_spear", files: ["sfx/knife_stab.ogg"], volume: 100, credit: Credit("knife_stab")),
