@@ -248,8 +248,8 @@ fn after_the_playback_the_defenders_hp_is_the_battles() {
     );
     let hp = format!("HP {}/{}", brigand.hp, brigand.stats.hp);
     assert!(panel(&h, 7).starts_with(&hp), "{}", panel(&h, 7));
-    // The lord has acted: lowercase at (7, 2).
-    assert_eq!(text(&h, 34, 13, 2), "lo");
+    // The lord has acted: dimmed at (7, 2).
+    assert_eq!(text(&h, 34, 13, 2), "Lo");
     assert_eq!(message(&h), "");
 }
 

@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108"]
+blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0215", "0809", "0810"]
 nick_input: sign-off
 completed:
 ---
@@ -18,6 +18,14 @@ completed:
 The first milestone Nick plays. He said he'll judge the game by playing and
 will report comments, concerns and bugs. This ticket packages a build, gets
 his feedback, and turns it into tickets. **No code changes in this ticket.**
+
+**Blockers added 2026-09-29**, so Nick's first impression includes what's
+already designed: Combat Arts in the attack flow (0414), boss arts (0503, via
+0803), his uppercase-label request (0417), battle and menu sounds (0424,
+0425), scene and battle music (0710, 0807), no freeze when music loads
+(0215), victory/defeat/game-over music (0809) and the battle results screen
+(0810), without which step 4's question about the rewind EXP bonus can't be
+answered because the bonus is never shown.
 
 ## Nick input
 
