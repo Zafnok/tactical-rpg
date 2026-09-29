@@ -56,6 +56,8 @@ Set `status: in-progress` in the ticket frontmatter.
   be wrong, deviate minimally and explain it in the Completion notes.
 - Respect crate boundaries (ADR-0004): no I/O, clock or macroquad outside `app`;
   rules only in `core`; state changes only via `Command`s.
+- Touching input, controls, help bars, tips or any text that names a key:
+  follow the `keyboard-input` skill (never hard-code a key).
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
 - **Scope creep rule:** if you notice something else worth doing (a bug,

@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0405", "0207", "0801", "0208", "0212"]
+blocked_by: ["0405", "0207", "0801", "0208", "0212", "0809"]
 nick_input: none
 completed:
 ---
@@ -26,16 +26,16 @@ None.
 ## Scope
 
 **In:** `Settings` struct persisted via `Storage` key `settings`, Options
-screen reachable from title and map menu, key rebinding UI.
+screen reachable from title and map menu, a "Key bindings" row that opens 0809's screen.
 
-**Out:** controller bindings.
+**Out:** controller bindings; the key-binding screen itself (0809).
 
 **Audio (added by 0020):** music and sound volume settings, played through the
 0212 audio plumbing ([`docs/design/audio.md`](../../docs/design/audio.md)).
 
 ## Implementation steps
 
-1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default false, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), key_overrides: BTreeMap<Action, Vec<Chord>>, reset_tips, cursor_style: CursorStyle (Corners (default) | LargeCorners | TileGlow, ticket 0416; move it out of `Ctx::cursor_style`), music_volume: u8, sound_volume: u8 (both 0–10, default 8, *tunable*; 0 = silent; applied by 0212's `app` audio as a multiplier on every cue's own volume) }`.
+1. `Settings { version, text_speed: Slow|Normal|Fast|Instant, anim_speed: Normal|Fast, combat_animations: On|Off, enemy_phase_speed: Normal|Fast, auto_end_turn: bool (default false, per `docs/design/turn-structure.md`; also toggled by the `ToggleAutoEnd` key in battle, and that toggle is saved too), fullscreen: bool, layout (right/left-handed; 0208 stores it until now, move it into `Settings`), reset_tips, cursor_style: CursorStyle (Corners (default) | LargeCorners | TileGlow, ticket 0416; move it out of `Ctx::cursor_style`), music_volume: u8, sound_volume: u8 (both 0–10, default 8, *tunable*; 0 = silent; applied by 0212's `app` audio as a multiplier on every cue's own volume) }`.
    Defaults match current behaviour. Loaded at startup into `Ctx`; saved on change.
 2. Wire each setting into its consumer (0704 typewriter, 0404 playback, 0502
    pacing, `app` fullscreen via a `FrameOutput` request flag).
@@ -44,12 +44,15 @@ screen reachable from title and map menu, key rebinding UI.
    `LayoutPickerScreen` as first launch (0208), with the current layout
    focused and Cancel allowed there (it backs out without changing anything);
    a "Cursor" row (Corners / Large corners / Tile glow, `docs/design/look-and-feel.md`);
-   picking saves the layout and switches keys immediately; `f` on "Key
-   bindings" opens the rebinding screen; "Reset tips"; "Restore defaults".
-4. **Rebinding:** list actions with current chords; `f` → "Press a key…" →
-   captures next chord (Esc cancels capture); conflicts: show which action has
-   it and ask to swap; "Reset to defaults". The effective keymap = the chosen layout (0208) +
-   overrides, validated by the same code as 0204.
+   picking saves the layout and switches keys immediately, loading **that
+   layout's own custom keys** if the player has any (each layout keeps its
+   own, `docs/design/controls.md` *Rebinding keys*; 0217's saved
+   `keybindings` config); Confirm on "Key bindings" opens 0809's
+   `KeyBindingsScreen`; "Reset tips"; "Restore defaults" (all settings;
+   custom keys are reset from the Key bindings screen, not here).
+4. **Key bindings:** no rebinding UI in this ticket. Key bindings are saved
+   by 0217 under their own `Storage` key (`keybindings`), not in
+   `Settings`, and edited on 0809's screen.
 5. **Game mode** (only when a campaign is loaded, per
    `docs/design/death-and-difficulty.md`): shows `Classic` or `Casual`; in
    Classic, `Switch to Casual` asks for confirmation ("This can't be undone")
@@ -61,7 +64,7 @@ screen reachable from title and map menu, key rebinding UI.
 - [ ] Every setting changes behaviour (Harness test per setting where observable).
 - [ ] Classic → Casual switch works with a confirm; Casual never offers Classic (Harness test).
 - [ ] Layout can be switched from Options (both directions, repeatedly); the new keys work at once and persist across restart (Harness test).
-- [ ] Rebinding works, persists across restart (MemoryStorage round-trip test), conflicts handled.
+- [ ] "Key bindings" opens 0809's screen; switching layout loads that layout's own custom keys (Harness test).
 - [ ] Music and sound volume change what `app` plays (Harness test on the requests or the mixer multiplier), 0 silences, and they persist across restart.
 - [ ] Snapshots of both screens.
 
