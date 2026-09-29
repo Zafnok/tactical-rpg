@@ -129,6 +129,10 @@ jobs:
           cp "target/x86_64-pc-windows-msvc/release/$BIN_NAME.exe" "$pkg/"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
           cp assets/fonts/*LICENSE* "$pkg/"
+          # Audio credits and the CC license texts (ADR-0013, 0214).
+          cp THIRD_PARTY_ASSETS.md "$pkg/"
+          mkdir -p "$pkg/audio-licenses"
+          cp assets/audio/licenses/*.txt "$pkg/audio-licenses/"
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
@@ -141,7 +145,8 @@ jobs:
           LICENSE is the game's own license (proprietary; see it for what you
           may and may not do with this copy). THIRD_PARTY_LICENSES.html and
           the other *LICENSE* files cover open-source components used to
-          build the game.
+          build the game. THIRD_PARTY_ASSETS.md credits the music, sounds
+          and font; their licenses are in audio-licenses/.
           EOF
           7z a "$pkg.zip" "$pkg"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -175,6 +180,10 @@ jobs:
           chmod +x "$pkg/$BIN_NAME"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
           cp assets/fonts/*LICENSE* "$pkg/"
+          # Audio credits and the CC license texts (ADR-0013, 0214).
+          cp THIRD_PARTY_ASSETS.md "$pkg/"
+          mkdir -p "$pkg/audio-licenses"
+          cp assets/audio/licenses/*.txt "$pkg/audio-licenses/"
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
@@ -188,7 +197,8 @@ jobs:
           LICENSE is the game's own license (proprietary; see it for what you
           may and may not do with this copy). THIRD_PARTY_LICENSES.html and
           the other *LICENSE* files cover open-source components used to
-          build the game.
+          build the game. THIRD_PARTY_ASSETS.md credits the music, sounds
+          and font; their licenses are in audio-licenses/.
           EOF
           tar czf "$pkg.tar.gz" "$pkg"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -224,6 +234,10 @@ jobs:
           chmod +x "$pkg/$BIN_NAME"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
           cp assets/fonts/*LICENSE* "$pkg/"
+          # Audio credits and the CC license texts (ADR-0013, 0214).
+          cp THIRD_PARTY_ASSETS.md "$pkg/"
+          mkdir -p "$pkg/audio-licenses"
+          cp assets/audio/licenses/*.txt "$pkg/audio-licenses/"
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
@@ -240,7 +254,8 @@ jobs:
           LICENSE is the game's own license (proprietary; see it for what you
           may and may not do with this copy). THIRD_PARTY_LICENSES.html and
           the other *LICENSE* files cover open-source components used to
-          build the game.
+          build the game. THIRD_PARTY_ASSETS.md credits the music, sounds
+          and font; their licenses are in audio-licenses/.
           EOF
           ditto -c -k --sequesterRsrc "$pkg" "$pkg.zip"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -271,6 +286,10 @@ jobs:
           cp -r dist/web/. "$pkg/"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
           cp assets/fonts/*LICENSE* "$pkg/"
+          # Audio credits and the CC license texts (ADR-0013, 0214).
+          cp THIRD_PARTY_ASSETS.md "$pkg/"
+          mkdir -p "$pkg/audio-licenses"
+          cp assets/audio/licenses/*.txt "$pkg/audio-licenses/"
           cp web/mq_js_bundle-LICENSE-MIT.txt "$pkg/"
           cat > "$pkg/README.txt" <<EOF
           tactical-rpg $VERSION (web)
@@ -281,7 +300,8 @@ jobs:
           LICENSE is the game's own license (proprietary; see it for what you
           may and may not do with this copy). THIRD_PARTY_LICENSES.html and
           the other *LICENSE* files cover open-source components used to
-          build the game.
+          build the game. THIRD_PARTY_ASSETS.md credits the music, sounds
+          and font; their licenses are in audio-licenses/.
           EOF
           zip -r "$pkg.zip" "$pkg"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

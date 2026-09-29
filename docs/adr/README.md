@@ -21,7 +21,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0010](0010-ticket-workflow-and-model-routing.md) | Ticket workflow and model routing | Accepted |
 | [0011](0011-story-authoring-pipeline.md) | Story authoring pipeline with LLMs | Accepted |
 | [0012](0012-visual-style.md) | Visual style: cells, tiles, color, portraits | Superseded by ADR-0018 |
-| [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted |
+| [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted; art/audio licenses amended by ADR-0027 |
 | [0014](0014-ci-gates-skip-docs-only-prs.md) | CI quality gates, skipping heavy jobs on docs-only PRs | Accepted |
 | [0015](0015-input-actions-and-keymap-layouts.md) | Input actions, keymap layouts, virtual cursor | Accepted |
 | [0016](0016-font-atlas-and-glyph-blitting.md) | Font atlas format and glyph blitting | Accepted |
@@ -34,6 +34,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0023](0023-debug-tools-feature-for-pages-build.md) | A `debug-tools` cargo feature for the Pages build | Accepted |
 | [0024](0024-cursor-as-pixel-overlays.md) | Draw the battle cursor as pixel overlays, with selectable styles | Accepted |
 | [0025](0025-battle-event-playback-in-the-battle-screen.md) | Event playback runs inside the battle screen, as a mode | Accepted; playback keys changed in 0418 |
-| [0026](0026-audio-cues-and-music-files.md) | Audio cues as data, played by `app`; music files beside the game | Accepted |
+| [0026](0026-audio-cues-and-music-files.md) | Audio cues as data, played by `app`; music files beside the game | Accepted; licenses and credits amended by ADR-0027 |
+| [0027](0027-audio-import-and-cc-by-3.md) | Importing third-party audio; CC BY 3.0 allowed | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).
