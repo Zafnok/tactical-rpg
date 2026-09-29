@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0016", "0410", "0411", "0412", "0501", "0706", "0707", "0801"]
+blocked_by: ["0009", "0016", "0410", "0412", "0501", "0503", "0706", "0707", "0801"]
 nick_input: sign-off
 completed:
 ---
@@ -18,6 +18,11 @@ completed:
 Builds the actual first chapter from `docs/design/chapter-1.md` (0009), the
 cast in `docs/story/characters/` (0701), the script (0707) and portraits (0706).
 Proves the chapter is winnable with an automated replay.
+
+**Blockers changed 2026-09-29:** 0411 (battle notes) was dropped, since
+Chapter 1 has no battle notes (`chapter-1.md`, *Extras*). 0503 (bosses use
+Combat Arts and actives) was added, so the boss behaves as designed before the
+difficulty sim in step 7 is run and recorded.
 
 ## Nick input
 
