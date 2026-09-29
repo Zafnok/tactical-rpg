@@ -21,6 +21,7 @@ pub mod ron_loader;
 pub mod skill;
 pub mod spell;
 pub mod terrain;
+pub mod tip;
 
 use std::collections::BTreeMap;
 
@@ -36,6 +37,7 @@ pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
+pub use tip::{Tip, TipTable, TipTrigger};
 
 /// All validated game content.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +70,8 @@ pub struct Content {
     pub dialogue: DialogueTable,
     /// The AI's numbers.
     pub ai: AiWeights,
+    /// One-time contextual tips.
+    pub tips: TipTable,
     /// Sound and music cues, pools and credits (ADR-0026).
     pub audio: AudioManifest,
 }
@@ -120,6 +124,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             portraits,
             dialogue,
             ai: ai::load(),
+            tips: tip::load(),
             audio: audio::load(),
         },
     )
@@ -218,6 +223,7 @@ struct Loaded {
     portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
     ai: Result<AiWeights, Vec<ContentError>>,
+    tips: Result<TipTable, Vec<ContentError>>,
     audio: Result<AudioManifest, Vec<ContentError>>,
 }
 
@@ -256,6 +262,7 @@ fn assemble(
         portraits: take(units.portraits, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
         ai: take(units.ai, &mut errors),
+        tips: take(units.tips, &mut errors),
         audio: take(units.audio, &mut errors),
     };
     if errors.is_empty() {
@@ -312,6 +319,7 @@ mod tests {
             portraits: ok_portraits(),
             dialogue: ok_dialogue(),
             ai: ai::load(),
+            tips: tip::load(),
             audio: audio::load(),
         }
     }
@@ -390,8 +398,8 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 15] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "v",
+    const NAMES: [&str; 16] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "y", "v",
     ];
 
     #[test]
@@ -414,6 +422,7 @@ mod tests {
                     portraits: Err(e("o")),
                     dialogue: Err(e("d")),
                     ai: Err(e("w")),
+                    tips: Err(e("y")),
                     audio: Err(e("v")),
                 },
             ),
@@ -452,7 +461,8 @@ mod tests {
                     portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
                     dialogue: if i == 12 { Err(e("d")) } else { ok_dialogue() },
                     ai: if i == 13 { Err(e("w")) } else { ai::load() },
-                    audio: if i == 14 { Err(e("v")) } else { audio::load() },
+                    tips: if i == 14 { Err(e("y")) } else { tip::load() },
+                    audio: if i == 15 { Err(e("v")) } else { audio::load() },
                 },
             )
         };
