@@ -45,7 +45,7 @@ holding a key down. Does the tick get tiring? Is the cursor volume right?
   rule*: list it in the PR for Nick.
 
 **Out (do not do):**
-- Battle event sounds (0424), music (0807).
+- Battle event sounds (0424), music (0807, 0814).
 - New sounds or cues.
 
 ## Implementation steps

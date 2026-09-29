@@ -92,6 +92,30 @@ impl AudioQueue {
     }
 }
 
+/// The music cue pool `pool` yields for `seed`: the same seed always gives
+/// the same cue. `None` if the manifest has no such pool or it is empty.
+/// This is not core's simulation RNG (ADR-0019), so a pick never changes a
+/// battle or its replay.
+pub fn pick_from_pool<'a>(
+    manifest: &'a trpg_content::AudioManifest,
+    pool: &str,
+    seed: u64,
+) -> Option<&'a str> {
+    let cues = manifest.pools.get(pool)?;
+    let len = u64::try_from(cues.len()).ok().filter(|&n| n > 0)?;
+    let index = usize::try_from(splitmix64(seed) % len).ok()?;
+    cues.get(index).map(String::as_str)
+}
+
+/// One step of splitmix64: spreads nearby seeds (e.g. a counter) over the
+/// whole range.
+fn splitmix64(seed: u64) -> u64 {
+    let mut z = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 /// What `app` must do to the music this frame. A track is loaded, started,
 /// has its volume changed and is stopped, which also unloads it.
 #[derive(Debug, Clone, PartialEq)]
@@ -464,5 +488,45 @@ mod tests {
             expected.map(|r| r.cue().map(str::to_owned))[4..],
             [Some("e".to_owned()), Some("m".to_owned()), None]
         );
+    }
+
+    /// The embedded audio manifest (with the real `skirmish` pool).
+    fn manifest() -> trpg_content::AudioManifest {
+        trpg_content::load_embedded().unwrap().audio
+    }
+
+    #[test]
+    fn a_pool_pick_is_a_cue_of_that_pool_and_fixed_by_the_seed() {
+        let m = manifest();
+        let pool = &m.pools["skirmish"];
+        for seed in [0, 1, 2, u64::MAX] {
+            let cue = pick_from_pool(&m, "skirmish", seed).unwrap();
+            assert!(pool.iter().any(|c| c == cue), "{cue}");
+            assert_eq!(pick_from_pool(&m, "skirmish", seed), Some(cue));
+        }
+    }
+
+    #[test]
+    fn an_unknown_or_empty_pool_picks_nothing() {
+        let mut m = manifest();
+        assert_eq!(pick_from_pool(&m, "no_such_pool", 1), None);
+        m.pools.insert("empty".into(), Vec::new());
+        assert_eq!(pick_from_pool(&m, "empty", 1), None);
+    }
+
+    proptest::proptest! {
+        // Each case loads the embedded content; a few dozen are plenty.
+        #![proptest_config(proptest::prelude::ProptestConfig::with_cases(32))]
+
+        /// Over enough seeds, every track in the pool comes up.
+        #[test]
+        fn every_track_in_a_pool_can_be_picked(start in proptest::prelude::any::<u64>()) {
+            let m = manifest();
+            let pool = &m.pools["skirmish"];
+            let picked: std::collections::BTreeSet<&str> = (0..200)
+                .filter_map(|i| pick_from_pool(&m, "skirmish", start.wrapping_add(i)))
+                .collect();
+            proptest::prop_assert_eq!(picked.len(), pool.len());
+        }
     }
 }

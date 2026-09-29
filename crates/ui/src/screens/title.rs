@@ -2,6 +2,7 @@
 
 use super::battle::{BattleScreen, quick_battle};
 use super::{centre_x, draw_debug_hint, print_centred};
+use crate::audio::pick_from_pool;
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
@@ -28,6 +29,12 @@ const QUICK_BATTLE: &str = "Quick Battle";
 /// Menu item that quits.
 const QUIT: &str = "Quit";
 
+/// The title screen's music cue (`audio.md`).
+pub const TITLE_MUSIC: &str = "title";
+/// The music pool Quick Battle picks its track from: it is a test
+/// skirmish, and skirmishes pick at random from this pool (`audio.md`).
+pub const QUICK_BATTLE_MUSIC_POOL: &str = "skirmish";
+
 /// Fills `buf` with blank `text`-on-`black` cells.
 fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
     let p = &ctx.palette;
@@ -44,6 +51,13 @@ pub struct TitleScreen {
     menu: Menu,
     /// Menu item labels, in menu order.
     items: Vec<&'static str>,
+    /// Whether the title music was asked for since this screen was last
+    /// shown. The screen has no "shown" hook, so a screen that changes the
+    /// music clears it and the next update asks again.
+    music_on: bool,
+    /// Quick Battles started, mixed into the music seed so each one can
+    /// pick a different track.
+    battles_started: u64,
 }
 
 impl TitleScreen {
@@ -62,6 +76,21 @@ impl TitleScreen {
         Self {
             menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()),
             items,
+            music_on: false,
+            battles_started: 0,
+        }
+    }
+
+    /// Plays a Quick Battle track: one from [`QUICK_BATTLE_MUSIC_POOL`],
+    /// kept for the whole battle (the battle screen asks for no music).
+    /// Ticket 0807 moves this to where battles start once battle files name
+    /// their music.
+    fn start_quick_battle_music(&mut self, ctx: &mut Ctx) {
+        let seed = ctx.music_seed ^ self.battles_started;
+        self.battles_started = self.battles_started.wrapping_add(1);
+        if let Some(cue) = pick_from_pool(&ctx.content.audio, QUICK_BATTLE_MUSIC_POOL, seed) {
+            ctx.audio.play_music(cue);
+            self.music_on = false;
         }
     }
 
@@ -88,6 +117,11 @@ impl Screen for TitleScreen {
     }
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        if !self.music_on {
+            // The music state ignores a request for the track already on.
+            ctx.audio.play_music(TITLE_MUSIC);
+            self.music_on = true;
+        }
         for &action in &input.actions {
             let chosen = match self.menu.handle(action) {
                 Some(MenuEvent::Chosen(i)) => self.items.get(i).copied(),
@@ -100,6 +134,7 @@ impl Screen for TitleScreen {
                 // ever not, the item does nothing.
                 Some(QUICK_BATTLE) => {
                     if let Ok(state) = quick_battle(&ctx.content) {
+                        self.start_quick_battle_music(ctx);
                         return Transition::Push(Box::new(BattleScreen::new(state)));
                     }
                 }
@@ -214,6 +249,48 @@ mod tests {
         let input = FrameInput::new(vec![CursorDown, Confirm], 0.0, vec![]);
         assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
         assert_eq!(TitleScreen::new().items, [NEW_GAME, QUIT]);
+    }
+
+    /// The music each update asks for, as cue names (`-` for a stop).
+    fn music_of(t: &mut TitleScreen, c: &mut Ctx, actions: &[Action]) -> Vec<String> {
+        t.update(c, &input(actions));
+        c.audio
+            .take()
+            .iter()
+            .map(|r| r.cue().unwrap_or("-").to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn title_music_plays_on_show_and_again_after_a_quick_battle() {
+        use Action::{Confirm, CursorDown};
+        let mut c = ctx();
+        let mut t = TitleScreen::with_quick_battle();
+        assert_eq!(music_of(&mut t, &mut c, &[]), [TITLE_MUSIC]);
+        assert!(music_of(&mut t, &mut c, &[CursorDown]).is_empty());
+        let pool = c.content.audio.pools[QUICK_BATTLE_MUSIC_POOL].clone();
+        let first = music_of(&mut t, &mut c, &[Confirm]);
+        assert_eq!(first.len(), 1);
+        assert!(pool.contains(&first[0]), "{first:?}");
+        // Back on top after the battle: the title music again, once.
+        assert_eq!(music_of(&mut t, &mut c, &[]), [TITLE_MUSIC]);
+        assert!(music_of(&mut t, &mut c, &[]).is_empty());
+    }
+
+    #[test]
+    fn each_quick_battle_rolls_its_track_afresh() {
+        let mut c = ctx();
+        let mut t = TitleScreen::with_quick_battle();
+        let pool = c.content.audio.pools[QUICK_BATTLE_MUSIC_POOL].clone();
+        let mut picked = std::collections::BTreeSet::new();
+        for _ in 0..100 {
+            // Down from New Game, then Confirm: Quick Battle.
+            let cues = music_of(&mut t, &mut c, &[Action::CursorDown, Action::Confirm]);
+            picked.extend(cues.into_iter().filter(|cue| cue != TITLE_MUSIC));
+            t.menu = TitleScreen::with_quick_battle().menu;
+        }
+        // Same seed every time, yet the counter varies the pick.
+        assert_eq!(picked.len(), pool.len(), "{picked:?}");
     }
 
     #[test]

@@ -49,7 +49,7 @@ None.
 **Out (do not do):**
 - Picking moods for actual scenes. That's story work (0707 script,
   `story-writing` skill) using the cue list in `audio.md`.
-- Battle or title music (0807).
+- Battle or title music (0807, 0814).
 
 ## Implementation steps
 
