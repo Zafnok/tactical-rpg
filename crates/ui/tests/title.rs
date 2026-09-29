@@ -4,6 +4,7 @@
 
 use insta::assert_snapshot;
 use trpg_content::FontAtlasDef;
+use trpg_ui::audio::AudioRequest;
 use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
 
@@ -101,4 +102,30 @@ fn every_glyph_drawn_is_in_the_font() {
             assert!(font.glyph_rect(g).is_some(), "{g:?} missing from the font");
         }
     }
+}
+
+/// The music cues the run asked for, in order.
+fn music(h: &Harness) -> Vec<String> {
+    h.audio_requests()
+        .into_iter()
+        .filter_map(|r| match r {
+            AudioRequest::PlayMusic { cue } => Some(cue),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn the_title_asks_for_its_music_once() {
+    let mut h = title();
+    h.wait(0.1);
+    assert_eq!(
+        h.audio_requests(),
+        [AudioRequest::PlayMusic {
+            cue: "title".into()
+        }]
+    );
+    // Moving around the menu doesn't ask again.
+    h.keys("Down Up f d");
+    assert_eq!(music(&h), ["title"]);
 }

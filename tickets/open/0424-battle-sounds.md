@@ -52,7 +52,7 @@ each sound lands: timing, volume, and whether anything gets annoying.
   It doesn't cut off a sound already playing.
 
 **Out (do not do):**
-- Music (0807). Menu and cursor sounds (0425).
+- Music (0807, 0814). Menu and cursor sounds (0425).
 - Sounds for events `audio.md` doesn't list (level up, EXP, weapon rank up,
   terrain burning out, death). Don't invent them. If one feels badly missing,
   write a `00xx` follow-up question.
