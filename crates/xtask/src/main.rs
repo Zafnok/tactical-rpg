@@ -4,6 +4,7 @@
 #![allow(clippy::print_stdout)]
 
 mod font_atlas;
+mod sfx;
 mod tickets;
 mod web;
 
@@ -15,6 +16,7 @@ const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
 font-atlas <font.bdf> <out-dir>    build the font atlas from a BDF font\n  \
+sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -28,6 +30,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
+        Some("sfx") => sfx(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -78,6 +81,32 @@ fn font_atlas(args: &[String]) -> u8 {
             eprintln!("font-atlas: {e}");
             1
         }
+    }
+}
+
+fn sfx(args: &[String]) -> u8 {
+    let Some(check) = parse_sfx_check(args) else {
+        eprintln!("usage: cargo xtask sfx [--check]");
+        return 2;
+    };
+    match sfx::run(&repo_root(), check) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("sfx: {e}");
+            1
+        }
+    }
+}
+
+/// `sfx`'s arguments: `Some(check)`, or `None` if they're wrong.
+fn parse_sfx_check(args: &[String]) -> Option<bool> {
+    match args {
+        [] => Some(false),
+        [flag] if flag == "--check" => Some(true),
+        _ => None,
     }
 }
 
@@ -216,6 +245,24 @@ mod tests {
         // manually, not here.
         assert_eq!(web(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["web", "--bogus"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn parse_sfx_check_reads_the_flag() {
+        assert_eq!(parse_sfx_check(&[]), Some(false));
+        assert_eq!(parse_sfx_check(&args(&["--check"])), Some(true));
+        assert_eq!(parse_sfx_check(&args(&["--bogus"])), None);
+    }
+
+    #[test]
+    fn sfx_rejects_unknown_args() {
+        assert_eq!(sfx(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["sfx", "--check", "x"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn sfx_check_passes_on_the_committed_files() {
+        assert_eq!(sfx(&args(&["--check"])), 0);
     }
 
     #[test]

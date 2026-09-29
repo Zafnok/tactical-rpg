@@ -713,14 +713,17 @@ mod tests {
             })
             .collect();
         assert_eq!(missing, Vec::<&str>::new());
-        // Every third-party cue has a credit.
+        // Every third-party cue has a credit (ours are `Own`).
         for (id, credit) in m
             .sounds
             .iter()
             .map(|(id, s)| (id, &s.credit))
             .chain(m.music.iter().map(|(id, t)| (id, &t.credit)))
         {
-            assert!(!credit.ids().is_empty(), "{id} has no credit");
+            assert!(
+                *credit == CreditRef::Own || !credit.ids().is_empty(),
+                "{id} has no credit"
+            );
         }
         for (id, c) in &m.credits {
             assert!(
