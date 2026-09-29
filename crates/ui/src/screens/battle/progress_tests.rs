@@ -6,21 +6,23 @@
 
 use insta::assert_snapshot;
 use trpg_core::{
-    BattleState, CastTarget, ClassRecord, Command, Event, Pos, SpellId, StatKind, UnitAction,
-    UnitId,
+    BattleState, CastTarget, ClassRecord, Command, Event, Phase, Pos, SpellId, StatKind,
+    UnitAction, UnitId,
 };
 
 use super::BattleScreen;
+use super::banner::Banner;
 use super::layout::HELP_ROW;
 use super::mode::Mode;
 use super::progress::{
     EXP_BOX, LEVEL_BANNER_ROW, LEVEL_TEXT_X, PROGRESS_TIMINGS, Page, STAT_ROW, stat_row,
 };
-use super::testing::{battle, quick_units};
+use super::testing::{battle, quick_units, wait};
 use crate::harness::{FRAME_DT, Harness};
 use crate::input::Action;
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, FrameInput, Screen};
+use trpg_content::TipTrigger;
 
 /// Seconds the EXP bar is up.
 const EXP_S: f32 = PROGRESS_TIMINGS.exp_fill + PROGRESS_TIMINGS.exp_hold;
@@ -185,10 +187,104 @@ fn the_screen_waits_for_the_level_up_and_leaves_the_battle_cores() {
     // Rewind and the map keys wait too.
     press(&mut s, &mut c, &[Action::Rewind, Action::CursorLeft], 0.0);
     assert!(s.rewind().is_none());
+    // So do tips and banners.
+    c.tips_enabled = true;
+    s.tips.fire(TipTrigger::FirstLevelUp);
+    press(&mut s, &mut c, &[], 0.0);
+    assert_eq!(s.shown_tip(), None);
+    let banner = Event::PhaseStarted {
+        turn: 2,
+        phase: Phase::Player,
+    };
+    s.banners.extend(Banner::for_event(&banner));
+    assert!(s.banner().is_none());
     // Cancel closes it, like Confirm.
     press(&mut s, &mut c, &[Cancel], 0.0);
     assert!(s.progress().is_none());
+    assert!(s.banner().is_some());
     assert_eq!(s.state(), &after);
+}
+
+#[test]
+fn auto_end_waits_for_the_playback_and_the_exp_bar() {
+    use Action::{Cancel, Confirm, CursorRight, ToggleAutoEnd};
+    let mut c = ctx();
+    // The knight and the archer have acted: the lord is the last one.
+    let mut state = skirmish(&c, 0, None);
+    wait(&mut state, 1);
+    wait(&mut state, 2);
+    let mut s = BattleScreen::new(state);
+    press(&mut s, &mut c, &[ToggleAutoEnd], 0.0);
+    press(&mut s, &mut c, &[Confirm, CursorRight, Confirm], 0.5);
+    press(
+        &mut s,
+        &mut c,
+        &[Confirm, Confirm, CursorRight, Confirm],
+        0.1,
+    );
+    assert!(matches!(s.mode(), Mode::Combat(_)));
+    assert_eq!(s.state().phase(), Phase::Player, "not during the playback");
+    press(&mut s, &mut c, &[Cancel], 0.1);
+    assert!(s.progress().is_some());
+    assert_eq!(s.state().phase(), Phase::Player, "not during the EXP bar");
+    press(&mut s, &mut c, &[], EXP_S);
+    assert!(s.progress().is_none());
+    assert_ne!(s.state().phase(), Phase::Player);
+}
+
+#[test]
+fn auto_end_waits_for_a_playback_with_no_exp_bar_after_it() {
+    use Action::{Confirm, CursorRight, ToggleAutoEnd};
+    let mut c = ctx();
+    // The lord is at the level cap with its class mastered: it gains
+    // nothing, so no EXP bar follows the combat.
+    let mastered = ClassRecord {
+        class_level: 10,
+        class_points: 90,
+    };
+    let mut state = skirmish(&c, 0, Some(mastered));
+    let cap = state.classes().level_cap;
+    let (map, mut units) = (state.map().clone(), state.units().to_vec());
+    units[0].level = cap;
+    state = battle(&c, map, units);
+    wait(&mut state, 1);
+    wait(&mut state, 2);
+    let (_, events) = expected(&state);
+    assert!(!events.iter().any(|e| matches!(e, Event::ExpGained { .. })));
+    let mut s = BattleScreen::new(state);
+    press(&mut s, &mut c, &[ToggleAutoEnd], 0.0);
+    press(&mut s, &mut c, &[Confirm, CursorRight, Confirm], 0.5);
+    press(
+        &mut s,
+        &mut c,
+        &[Confirm, Confirm, CursorRight, Confirm],
+        0.1,
+    );
+    assert!(matches!(s.mode(), Mode::Combat(_)));
+    assert!(s.progress.is_none());
+    assert_eq!(s.state().phase(), Phase::Player, "not during the playback");
+}
+
+#[test]
+fn switching_auto_end_on_later_doesnt_end_the_phase() {
+    let mut c = ctx();
+    let mut state = skirmish(&c, 0, None);
+    wait(&mut state, 1);
+    wait(&mut state, 2);
+    let mut s = BattleScreen::new(state);
+    // The last unit waits with auto-end off; turning it on afterwards
+    // leaves the phase to the player.
+    let lord = &s.state().units()[0];
+    let cmd = Command::Act {
+        unit: lord.id,
+        dest: lord.pos,
+        action: UnitAction::Wait,
+    };
+    s.apply(&cmd);
+    press(&mut s, &mut c, &[], 0.1);
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd], 0.1);
+    assert!(s.auto_end());
+    assert_eq!(s.state().phase(), Phase::Player);
 }
 
 #[test]

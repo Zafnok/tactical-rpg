@@ -692,6 +692,13 @@ mod tests {
         };
         assert_eq!(class_line(cl), "Exile  CL 9 → 10");
         assert!(cl.mastered);
+        // Mastery alone is worth stopping for.
+        let mastery = Page::Class(ClassPage {
+            learned: vec![],
+            ..cl.clone()
+        });
+        assert!(mastery.waits());
+        assert!(mastery.len(&T).abs() < f32::EPSILON);
         assert_eq!(cl.learned.len(), 1);
     }
 
@@ -751,6 +758,8 @@ mod tests {
         // A spell learned on its own: the class's name, no level.
         assert_eq!((class_line(cl), cl.mastered), ("Exile".to_owned(), false));
         assert_eq!(cl.learned, ["Fire"]);
+        // So is something learned.
+        assert!(pb.pages()[3].waits());
     }
 
     #[test]
@@ -834,13 +843,38 @@ mod tests {
         }];
         let mut pb = Progress::new(&events, &before, &s, T).unwrap();
         assert!(!pb.pages()[0].waits());
-        pb.tick(T.class_hold + 0.01, false);
+        pb.tick(T.class_hold / 2.0, false);
+        assert!(!pb.done(), "it stays up a moment");
+        pb.tick(T.class_hold / 2.0 + 0.01, false);
         assert!(pb.done());
         // Bad frame times count as nothing.
         let mut pb = Progress::new(&events, &before, &s, T).unwrap();
         pb.tick(f32::NAN, false);
         pb.tick(-1.0, false);
         assert!(pb.time().abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn a_unit_without_a_portrait_gets_the_placeholder_box() {
+        let c = ctx();
+        let mut pb = progress();
+        pb.confirm();
+        pb.tick(0.0, false);
+        let Some(Page::LevelUp(page)) = pb.page() else {
+            panic!("{:?}", pb.page())
+        };
+        let page = LevelUpPage {
+            character: None,
+            ..page.clone()
+        };
+        let p = &c.palette;
+        let blank = Cell::new(' ', p.get(UiColor::Text), p.get(UiColor::Black));
+        let mut buf = GlyphBuffer::new(100, 32, blank);
+        draw_level_up(&mut buf, p, &page, None, 7);
+        // Centred in the frame at (7, 6), 34 × 18.
+        let label: String = (20..28).map(|x| buf.get(x, 15).unwrap().glyph).collect();
+        assert_eq!(label, "portrait");
+        assert_eq!(buf.get(19, 15).unwrap().glyph, ' ');
     }
 
     #[test]
