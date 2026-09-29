@@ -864,6 +864,25 @@ mod tests {
     }
 
     #[test]
+    fn tones_leave_out_harmonics_at_or_above_nyquist() {
+        // A 10 kHz square: its 3rd harmonic (30 kHz) is above Nyquist, so
+        // the tone is a pure sine at the fundamental's level.
+        let square = Wave::pulse(0.5);
+        let tone = Tone {
+            a: 0.001,
+            hold: 0.1,
+            peak: 1.0,
+            ..Tone::new(&square, 10_000.0, 0.0)
+        };
+        let out = tone.render();
+        let level = square.imag[1] * square.scale;
+        for i in frames(0.01)..frames(0.05) {
+            let want = level * (2.0 * PI * 10_000.0 * time(i)).sin();
+            assert!((out[i] - want).abs() < 1e-6, "{i}: {} vs {want}", out[i]);
+        }
+    }
+
+    #[test]
     fn env_reaches_its_peak_at_t_plus_a() {
         let (t, a, peak, d) = (0.1, 0.02, 0.5, 0.3);
         let e = env(t, a, peak, d, 0.0);
