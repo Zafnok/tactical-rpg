@@ -23,3 +23,6 @@ desktop.ini
 .idea/
 .vscode/
 *.swp
+
+# Downloaded audio originals (ADR-0027: rebuilt by assets-src/audio/import.py)
+/assets-src/audio/originals/

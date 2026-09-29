@@ -27,8 +27,8 @@ pub const SOUND_DIR: &str = "audio";
 /// are relative to. Not embedded (ADR-0026).
 pub const MUSIC_DIR: &str = "music";
 
-/// Licenses a credit may have (ADR-0013). `Own` is work we made.
-pub const LICENSES: [&str; 3] = ["CC0-1.0", "CC-BY-4.0", OWN];
+/// Licenses a credit may have (ADR-0013, ADR-0027). `Own` is work we made.
+pub const LICENSES: [&str; 4] = ["CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", OWN];
 
 /// The license of work we made ourselves.
 pub const OWN: &str = "Own";
@@ -88,6 +88,20 @@ pub enum CreditRef {
     Own,
     /// A third-party work: the id of its entry in `credits`.
     Credit(String),
+    /// Several third-party works, e.g. a sound whose variants come from
+    /// different authors: their ids in `credits`.
+    Credits(Vec<String>),
+}
+
+impl CreditRef {
+    /// The ids in `credits` this names (none for [`CreditRef::Own`]).
+    pub fn ids(&self) -> &[String] {
+        match self {
+            Self::Own => &[],
+            Self::Credit(id) => std::slice::from_ref(id),
+            Self::Credits(ids) => ids,
+        }
+    }
 }
 
 /// One third-party work, for the credits screen (`audio.md` rule 3).
@@ -346,10 +360,13 @@ impl Check<'_> {
     }
 
     fn credit_ref(&mut self, id: &str, credit: &CreditRef) {
-        if let CreditRef::Credit(c) = credit
-            && !self.manifest.credits.contains_key(c)
-        {
-            self.err(id, format!("\"{id}\" names unknown credit \"{c}\""));
+        if matches!(credit, CreditRef::Credits(ids) if ids.is_empty()) {
+            self.err(id, format!("\"{id}\" has an empty credit list"));
+        }
+        for c in credit.ids() {
+            if !self.manifest.credits.contains_key(c) {
+                self.err(id, format!("\"{id}\" names unknown credit \"{c}\""));
+            }
         }
     }
 
@@ -459,7 +476,7 @@ fn credit_problems(c: &Credit) -> Vec<String> {
     let mut problems = Vec::new();
     if !LICENSES.contains(&c.license.as_str()) {
         problems.push(format!(
-            "license \"{}\" is not allowed (ADR-0013: {})",
+            "license \"{}\" is not allowed (ADR-0027: {})",
             c.license,
             LICENSES.join(", ")
         ));
@@ -640,6 +657,79 @@ mod tests {
         assert_eq!(errors_with(source, &files), Vec::<String>::new());
     }
 
+    /// The cue ids in the first column of `docs/design/audio.md`'s "Music
+    /// cues" and "Sound effects" tables, with whether the row is ours
+    /// ("in-house").
+    fn design_cues() -> Vec<(String, bool)> {
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/design/audio.md");
+        let doc = std::fs::read_to_string(path).unwrap_or_default();
+        let mut cues = Vec::new();
+        let mut in_table = false;
+        for line in doc.lines() {
+            if line.starts_with("## ") {
+                in_table = line == "## Music cues" || line == "## Sound effects";
+            } else if in_table && line.starts_with("| `") {
+                let cells: Vec<&str> = line.split('|').collect();
+                let own = cells.iter().any(|c| c.trim() == "in-house");
+                let first = cells.get(1).copied().unwrap_or_default();
+                for (i, id) in first.split('`').enumerate() {
+                    if i % 2 == 1 {
+                        cues.push((id.to_owned(), own));
+                    }
+                }
+            }
+        }
+        cues
+    }
+
+    /// The sounds we make ourselves; ticket 0213 renders them and adds
+    /// their cues. Until then they may be missing from the manifest.
+    const IN_HOUSE: [&str; 6] = [
+        "menu_move",
+        "cursor_move",
+        "menu_select",
+        "menu_cancel",
+        "miss",
+        "heal",
+    ];
+
+    /// Every cue `audio.md` lists is in the manifest (ticket 0214).
+    #[test]
+    fn every_design_cue_is_in_the_manifest() {
+        let m = load().unwrap_or_default();
+        let cues = design_cues();
+        assert!(cues.len() > 30, "audio.md's tables not found: {cues:?}");
+        let own: Vec<&str> = cues.iter().filter(|c| c.1).map(|c| c.0.as_str()).collect();
+        assert_eq!(own, IN_HOUSE, "audio.md's in-house sounds changed");
+        let missing: Vec<&str> = cues
+            .iter()
+            .map(|c| c.0.as_str())
+            .filter(|id| {
+                !(m.sounds.contains_key(*id)
+                    || m.music.contains_key(*id)
+                    || m.pools.contains_key(*id)
+                    || IN_HOUSE.contains(id))
+            })
+            .collect();
+        assert_eq!(missing, Vec::<&str>::new());
+        // Every third-party cue has a credit.
+        for (id, credit) in m
+            .sounds
+            .iter()
+            .map(|(id, s)| (id, &s.credit))
+            .chain(m.music.iter().map(|(id, t)| (id, &t.credit)))
+        {
+            assert!(!credit.ids().is_empty(), "{id} has no credit");
+        }
+        for (id, c) in &m.credits {
+            assert!(
+                !c.tags.is_empty() && !c.note.is_empty(),
+                "credit {id} needs tags and a note"
+            );
+        }
+    }
+
     #[test]
     fn duplicate_ids_are_refused() {
         let dup = FULL.replace(r#"(id: "sting""#, r#"(id: "menu_move""#);
@@ -792,9 +882,12 @@ mod tests {
             errors(&nc),
             [
                 "a.ron:18: credit \"steps\": license \"CC-BY-NC-4.0\" is not allowed \
-                 (ADR-0013: CC0-1.0, CC-BY-4.0, Own)"
+                 (ADR-0027: CC0-1.0, CC-BY-3.0, CC-BY-4.0, Own)"
             ]
         );
+        // CC BY 3.0 is allowed too (Nick, ticket 0214; ADR-0027).
+        let by3 = FULL.replace("\"CC-BY-4.0\"", "\"CC-BY-3.0\"");
+        assert_eq!(errors(&by3), Vec::<String>::new());
     }
 
     #[test]
@@ -827,6 +920,25 @@ mod tests {
         assert_eq!(
             errors(&unknown),
             ["a.ron:8: \"title\" names unknown credit \"dawn\""]
+        );
+    }
+
+    #[test]
+    fn a_cue_may_name_several_credits() {
+        let several = FULL.replace(r#"Credit("steps")"#, r#"Credits(["steps", "sunrise"])"#);
+        let m = from_source("a.ron", &several, &all_files()).unwrap_or_default();
+        let ids = m.sounds.get("step_foot").map(|s| s.credit.ids().to_vec());
+        assert_eq!(ids, Some(vec!["steps".to_owned(), "sunrise".to_owned()]));
+        assert!(CreditRef::Own.ids().is_empty());
+        let unknown = FULL.replace(r#"Credit("steps")"#, r#"Credits(["steps", "stepz"])"#);
+        assert_eq!(
+            errors(&unknown),
+            ["a.ron:5: \"step_foot\" names unknown credit \"stepz\""]
+        );
+        let empty = FULL.replace(r#"Credit("steps")"#, "Credits([])");
+        assert_eq!(
+            errors(&empty),
+            ["a.ron:5: \"step_foot\" has an empty credit list"]
         );
     }
 

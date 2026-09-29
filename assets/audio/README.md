@@ -48,16 +48,28 @@ crashes it, so the checks below read every file's header.
 )
 ```
 
-- `credit` is `Own` (we made it) or `Credit("<credit id>")`.
-- `license` is `"CC0-1.0"`, `"CC-BY-4.0"` or `"Own"` (ADR-0013). A credit
-  that isn't `Own` needs a `title`, an `author` and a `source` link.
+- `credit` is `Own` (we made it), `Credit("<credit id>")`, or
+  `Credits(["<id>", "<id>"])` when a sound's variants come from several
+  works (e.g. `step_foot`).
+- `license` is `"CC0-1.0"`, `"CC-BY-3.0"`, `"CC-BY-4.0"` or `"Own"`
+  (ADR-0013, ADR-0027). A credit that isn't `Own` needs a `title`, an
+  `author` and a `source` link. The license texts are in `licenses/`.
 - Every cue id (sounds, music and pools together) is unique.
+
+## Third-party files
+
+Made by `assets-src/audio/import.py` (converted, trimmed and
+loudness-matched; see [`assets-src/audio/README.md`](../../assets-src/audio/README.md)).
+Don't edit them by hand: change the script and run it again. Add every new
+work to `THIRD_PARTY_ASSETS.md` too.
 
 ## Checks
 
 `cargo test -p trpg-content` refuses: a duplicate id, an unknown or missing
 file, a wrong file format (by extension and by header; wrong sample rate or
-channel count), a volume over 100, a disallowed license, a
-credit without title/author/link, an unknown credit, and a pool that is
-empty or names anything but a music cue. The game checks the embedded
-sounds at start-up; the music folder is checked by the tests only.
+channel count), a volume over 100, a disallowed license, a credit
+without title/author/link, an unknown credit (or an empty `Credits` list),
+and a pool that is empty or names anything but a music cue. The game
+checks the embedded sounds at start-up; the music folder is checked by the
+tests only. Another test checks that every cue in `docs/design/audio.md`'s
+tables is in the manifest.

@@ -12,7 +12,8 @@ His words, round by round, are in the [appendix](#appendix-nicks-words).
 ## The rules
 
 1. **Music is recorded music by other composers.** It's free under CC0 or
-   CC-BY 4.0 (ADR-0013). We make no music ourselves: Nick tried the code-made
+   CC-BY 4.0 (ADR-0013); CC-BY 3.0 is fine too (Nick, on 0214: "idc which
+   CC it is as long as I can freely use it"; ADR-0027). We make no music ourselves: Nick tried the code-made
    sketches and dropped them ("I guess we don't need these anymore").
 2. **We make a few sounds ourselves:** the menu sounds, the dodge and the
    heal. Every other sound effect is a recording (CC0 or CC-BY 4.0).
