@@ -620,6 +620,8 @@ mod tests {
     fn the_embedded_manifest_is_valid() {
         let m = load();
         assert!(m.is_ok(), "{m:?}");
+        // audio.md's starting fade (TUNABLE): 0.5 s.
+        assert_eq!(m.map(|m| m.music_fade_ms), Ok(500));
     }
 
     /// Music files aren't embedded, so the game can't check them; this
@@ -742,6 +744,13 @@ mod tests {
             ok("a.wav", b"RIFF\0\0\0\0AVI ".to_vec()).as_deref(),
             not_wav
         );
+        // A good WAV with one of its two magic words wrong.
+        let mut rifx = wav(2, 44_100, 1);
+        rifx[3] = b'X';
+        assert_eq!(ok("a.wav", rifx).as_deref(), not_wav);
+        let mut avi = wav(2, 44_100, 1);
+        avi[8..12].copy_from_slice(b"AVI ");
+        assert_eq!(ok("a.wav", avi).as_deref(), not_wav);
         let mut huge = wav(2, 44_100, 1);
         huge[16..20].copy_from_slice(&u32::MAX.to_le_bytes());
         assert_eq!(ok("a.wav", huge).as_deref(), not_wav);
