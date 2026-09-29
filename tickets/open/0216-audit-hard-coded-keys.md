@@ -17,7 +17,7 @@ completed:
 
 Nick (2026-09-29, ticket 0030): "never hardcode keyboard input, draw from
 the config which can be set by user". Players will rebind every key
-(`docs/design/controls.md`, *Rebinding keys*; tickets 0217, 0814), so any
+(`docs/design/controls.md`, *Rebinding keys*; tickets 0217, 0815), so any
 key that game code reads or names directly would break or lie after a
 rebind.
 
@@ -62,7 +62,7 @@ None.
 - The player-editable key config, 3 slots, required/optional actions, fixed
   `Esc`/`Delete` (0217).
 - New actions (Select, Confirm end turn: 0218).
-- The Key bindings screen (0814).
+- The Key bindings screen (0815).
 - Changing any default key. Every key must behave exactly as before.
 
 ## Implementation steps
