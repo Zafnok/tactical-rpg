@@ -1,5 +1,5 @@
 ---
-id: "0022"
+id: "0030"
 title: "Decide: key rebinding rules (slots, required keys, conflicts, per-layout keys)"
 type: design-decision
 milestone: Design decisions
@@ -11,7 +11,7 @@ nick_input: decision
 completed: 2026-09-29
 ---
 
-# 0022 — Decide: key rebinding rules
+# 0030 — Decide: key rebinding rules
 
 ## Context
 
@@ -60,6 +60,6 @@ Asked with the `ask-nick` skill.
   defaults row; which presses count as Select "on the map".
 - New tickets: 0216 (audit hard-coded keys, prerequisite), 0217 (player
   key-bindings config), 0218 (optional Select / Confirm end turn keys),
-  0809 (Key bindings screen). 0805 now opens 0809's screen instead of
+  0814 (Key bindings screen). 0805 now opens 0814's screen instead of
   building its own rebinding UI.
 - New skill: `.claude/skills/keyboard-input` (never hard-code keys).

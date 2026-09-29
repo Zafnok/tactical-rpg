@@ -1,5 +1,5 @@
 ---
-id: "0809"
+id: "0814"
 title: "Key bindings screen: press a key to bind, taken keys move, ! not mapped"
 type: feature
 milestone: M7 Chapter 1 & game flow
@@ -11,12 +11,12 @@ nick_input: sign-off
 completed:
 ---
 
-# 0809 — Key bindings screen
+# 0814 — Key bindings screen
 
 ## Context
 
 Nick's rules: [`docs/design/controls.md`](../../docs/design/controls.md),
-*Rebinding keys* (ticket 0022). In short: each action has 3 slots; pick a
+*Rebinding keys* (ticket 0030). In short: each action has 3 slots; pick a
 slot, press any key, and it goes there; a key already used elsewhere moves
 and the action that lost it shows `! not mapped` if it has no key left;
 `Esc` backs out and is never bindable; `Delete` empties a slot; leaving is

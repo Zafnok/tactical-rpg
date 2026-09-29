@@ -5,14 +5,14 @@ description: Rules for anything that reads keyboard input or shows a key to the 
 
 # Keyboard input: never hard-code a key
 
-Nick (ticket 0022): "never hardcode keyboard input, draw from the config
+Nick (ticket 0030): "never hardcode keyboard input, draw from the config
 which can be set by user". Players rebind every key
 ([`docs/design/controls.md`](../../../docs/design/controls.md), *Rebinding
 keys*), so a key written into game code or text is a bug: it stops working
 or lies after a rebind, and the two layouts already use different keys.
 
 Background: [ADR-0015](../../../docs/adr/0015-input-actions-and-keymap-layouts.md)
-(actions, layouts), and ADR-0028 once ticket 0217 writes it (player
+(actions, layouts), and the ADR ticket 0217 writes (player
 bindings, slots, fixed keys).
 
 ## The pipeline (only these places know about keys)
@@ -38,7 +38,7 @@ once it exists, it runs in CI and `run-gates`.
 1. **React to `Action`s, not keys.** Match on `Action::Confirm`, never on
    `Key::F`. Need a new kind of input? Add an `Action` (below); don't read
    raw keys. The one exception is the Key bindings screen's capture mode
-   (0809), which reads `FrameInput::pressed_chords` and asks `input.rs`
+   (0814), which reads `FrameInput::pressed_chords` and asks `input.rs`
    helpers (`is_capture_abort`, `is_clear_slot`) instead of naming keys.
 2. **Name keys in text through the keymap.** Help bars:
    `widgets::help::{key_name, all_key_names, cursor_keys_name, help_line}`.
@@ -71,7 +71,7 @@ once it exists, it runs in CI and `run-gates`.
    match (after 0217).
 3. `assets/data/keymap.ron`: add it to **every** layout (`[]` if it has no
    default key), at most 3 chords, keys from `controls.md`.
-4. The Key bindings screen (after 0809): add its player-facing label to the
+4. The Key bindings screen (after 0814): add its player-facing label to the
    screen's label table.
 5. Screens: react to the action; help bars/tips name it via rule 2.
 6. Tests: the keymap-matches-design test, a screen test driven by the
