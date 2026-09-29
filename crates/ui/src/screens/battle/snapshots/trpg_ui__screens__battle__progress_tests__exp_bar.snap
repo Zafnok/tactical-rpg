@@ -1,0 +1,115 @@
+---
+source: crates/ui/src/screens/battle/progress_tests.rs
+expression: h.snapshot()
+---
+                                                                      ┌────────────────────────────┐
+             ╔══════════════════════════════════════════╗             │ Plain                      │
+             ║ Test Lord    EXP ███░░░░░░░░░░░░░░░░░ 19 ║             │ DEF +0  AVO +0             │
+             ╚══════════════════════════════════════════╝             │                            │
+                                                                      │                            │
+                                                                      │ Brigand                    │
+                                                                      │ Brigand  Lv 1              │
+                                                                      │ HP 3/20    ██░░░░░░░░      │
+                                                                      │ Enemy                      │
+                                                                      │                            │
+                                                                      │                            │
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
+                    ≈≈≈≈≈≈====····loBr..♣♣♣♣....                      │                            │
+                    ..≈≈≈≈..··..............╦╦..                      │                            │
+                    ....······....BrAr▓▓▓▓▓▓▓▓..                      │                            │
+                    ..♣♣··....╦╦......▓▓░░╦╦▓▓..                      │                            │
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      └────────────────────────────┘
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ f skip · hold f fast                                                                      F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaabdeeeeeddddddddddddddddddddddb
+aaaaaaaaaaaaacdfffffffffddddgggdhhhgggggggggggggggggddddcaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdiiiiiiiddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddjjggggggggddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdgggggddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakkkkkkllllmmmmnnnnooooppppqqaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakkkkllllmmmmrrssrrnnnnppppppaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakkllllttttrrrruuvvmmnnnnmmmmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammllllmmrrmmmmmmmmmmmmmmwwmmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammmmrrrrrrmmmmvvxxyyyyyyyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammnnrrmmmmwwmmmmmmyyzzwwyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaannnnrrmmxxmmmmmmmmyyzzzzyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaannoorrmmmmmmmmmmmmyyyyAAyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBa
+aBBBBBBBBBBBBBBBBBBBBaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:panel_border_focus bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:text_highlight bg:panel_bg
+f = fg:player bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:exp_bar bg:panel_bg
+i = fg:enemy bg:panel_bg
+j = fg:hp_low bg:panel_bg
+k = fg:water bg:sea
+l = fg:water bg:water_bg
+m = fg:grass bg:grass_bg
+n = fg:forest bg:forest_bg
+o = fg:thicket bg:thicket_bg
+p = fg:mountain bg:mountain_bg
+q = fg:peak bg:peak_bg
+r = fg:road bg:road_bg
+s = fg:enemy bg:road_bg
+t = fg:wood bg:water_bg
+u = fg:#54657a bg:road_bg
+v = fg:enemy bg:grass_bg
+w = fg:fort bg:fort_bg
+x = fg:player bg:grass_bg
+y = fg:stone bg:stone_bg
+z = fg:floor bg:floor_bg
+A = fg:wood bg:stone_bg
+B = fg:text_dim bg:black
+--- overlays ---
+over  272,222 9x2  hp_mid
+over  281,222 7x2  black
+over  224,286 16x2  hp_high
+over  288,254 16x2  hp_high
+over  288,222 2x2  hp_low
+over  290,222 14x2  black
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  287,208 3x1  #ae9f74
+over  287,208 1x3  #ae9f74
+over  301,208 3x1  #ae9f74
+over  303,208 1x3  #ae9f74
+over  287,221 3x1  #ae9f74
+over  287,219 1x3  #ae9f74
+over  301,221 3x1  #ae9f74
+over  303,219 1x3  #ae9f74

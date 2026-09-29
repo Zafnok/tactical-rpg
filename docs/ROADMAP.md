@@ -16,7 +16,7 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills, Combat Arts — pure and heavily tested | 0301–0312 |
 | `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus, combat scene art, arts menu | 0401–0414 |
 | `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase, boss arts | 0501–0503 |
-| `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass | 0601–0603 |
+| `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass, level-up sounds | 0601–0605 |
 | `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script, lead reply choices | 0701–0708 |
 | `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options, colour themes | 0801–0806 |
 | `09xx` | M8 Release | itch.io, Windows polish, Steam readiness | 0901–0903 |
@@ -25,7 +25,7 @@ folders: `tickets/open/` vs `tickets/done/`.
 across the blocks: **0212** playback plumbing → **0213** our own sounds and
 **0214** the imported music and sounds → **0424** battle sounds, **0425** menu and
 cursor sounds, **0710** `@music` in scenes, **0807** title and battle music,
-**0808** credits screen; **0904** checks the music for Content ID claims before
+**0808** credits screen, **0022** → **0605** EXP bar and level-up sounds; **0904** checks the music for Content ID claims before
 release. 0212–0214 have no game dependencies and can start any time.
 
 ## Nick's queue (answer these first; any order within a row)

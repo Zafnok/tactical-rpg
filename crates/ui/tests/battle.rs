@@ -368,6 +368,10 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     h.keys("f");
     assert_eq!(help(&h), "d skip · hold f fast");
     h.keys("d");
+    // The lord's EXP bar; Confirm finishes it and it closes.
+    assert_eq!(help(&h), "f skip · hold f fast");
+    assert!(shows(&h, "EXP"));
+    h.keys("f");
     // The lord has acted, lowercase at (6, 4) (cells 32..34, row 15).
     assert_eq!(tile(&h, 32, 15), "lo");
     assert!(

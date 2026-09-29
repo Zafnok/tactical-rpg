@@ -11,6 +11,7 @@ use super::BattleScreen;
 use super::forecast::{HP_ROW, LEFT_X, RIGHT_X, STRIKE_ROW};
 use super::layout::{HELP_BAR, HELP_ROW};
 use super::playback::{Beat, Playback, TIMINGS};
+use super::progress::PROGRESS_TIMINGS;
 use super::testing::skirmish;
 use crate::harness::{FRAME_DT, Harness};
 use crate::screen::tests::ctx;
@@ -96,6 +97,9 @@ fn expected_playback(brigand_hp: StatValue) -> Playback {
     let (before, after, events) = expected(brigand_hp);
     Playback::new(&events, before.units(), after.fallen(), TIMINGS).expect("a combat")
 }
+
+/// Seconds the EXP bar is up after a combat.
+const EXP_S: f32 = PROGRESS_TIMINGS.exp_fill + PROGRESS_TIMINGS.exp_hold;
 
 /// Seconds of playback the `f` that confirms an attack plays: its press
 /// frame (Confirm held: fast) and its release frame.
@@ -241,7 +245,10 @@ fn after_the_playback_the_defenders_hp_is_the_battles() {
     let mut h = lord_on_brigand(20);
     h.keys("f");
     h.wait(expected_playback(20).total());
-    // Browsing again, the cursor on the brigand.
+    // The lord's EXP bar, then browsing again, the cursor on the brigand.
+    assert_eq!(help(&h), "f skip · hold f fast");
+    assert!(row(&h, 2).contains("Test Lord    EXP"), "{}", row(&h, 2));
+    h.wait(EXP_S);
     assert_eq!(
         help(&h),
         "arrows move · f range · e info · s next unit · r rewind · d menu · Space end turn"
@@ -295,6 +302,12 @@ fn cancel_skips_the_playback_and_the_next_keys_work() {
     h.keys("f f");
     assert_eq!(help(&h), "d skip · hold f fast");
     h.keys("d");
+    // The EXP bar: Cancel does nothing, Confirm finishes it (and it
+    // closes by itself).
+    assert_eq!(help(&h), "f skip · hold f fast");
+    h.keys("d");
+    assert_eq!(help(&h), "f skip · hold f fast");
+    h.keys("f");
     // Browsing already: the keys after the skip move the cursor.
     assert_eq!(
         help(&h),
@@ -311,7 +324,7 @@ fn cancel_skips_the_playback_and_the_next_keys_work() {
 #[test]
 fn holding_confirm_plays_four_times_as_fast() {
     let total = expected_playback(20).total();
-    let quarter = total / TIMINGS.fast + 0.1;
+    let quarter = (total + EXP_S) / TIMINGS.fast + 0.1;
     let mut slow = lord_on_brigand(20);
     slow.keys("f").wait(quarter);
     assert_eq!(help(&slow), "d skip · hold f fast");
@@ -322,6 +335,6 @@ fn holding_confirm_plays_four_times_as_fast() {
         "arrows move · f range · e info · s next unit · r rewind · d menu · Space end turn"
     );
     // The same battle either way: the brigand's HP matches.
-    slow.wait(total);
+    slow.wait(total + EXP_S);
     assert_eq!(panel(&slow, 7), panel(&fast, 7));
 }
