@@ -7,6 +7,9 @@
 //! memory. The device calls sit behind [`Backend`], so everything else here
 //! is tested without a sound card.
 
+#[cfg(not(target_arch = "wasm32"))]
+mod native_music;
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -293,27 +296,54 @@ impl VariantRng {
     }
 }
 
-/// The real backend: macroquad's audio (quad-snd).
+/// The real backend: macroquad's audio (quad-snd). On native, music is
+/// decoded on a worker thread into its own quad-snd context
+/// ([`native_music`], ADR-0028); on the web the browser decodes it
+/// asynchronously, so it goes through macroquad like the sounds.
 pub(crate) mod device {
     use macroquad::audio::{
         PlaySoundParams, Sound, load_sound_from_bytes, play_sound, set_sound_volume, stop_sound,
     };
+    #[cfg(target_arch = "wasm32")]
     use macroquad::experimental::coroutines::{Coroutine, start_coroutine};
+    #[cfg(target_arch = "wasm32")]
     use macroquad::file::load_file;
 
+    #[cfg(not(target_arch = "wasm32"))]
+    use super::native_music::{Contexts, Music, Pending};
+
     /// Plays through macroquad. Only usable inside its main loop.
-    pub(crate) struct Macroquad;
+    #[derive(Default)]
+    pub(crate) struct Macroquad {
+        /// Spare music contexts.
+        #[cfg(not(target_arch = "wasm32"))]
+        contexts: Contexts,
+    }
+
+    /// A decoded sound or track.
+    pub(crate) enum Clip {
+        /// In macroquad's own context: every sound, and music on the web.
+        Shared(Sound),
+        /// A native music track in a context of its own.
+        #[cfg(not(target_arch = "wasm32"))]
+        Music(Music),
+    }
 
     impl super::Backend for Macroquad {
-        type Sound = Sound;
+        type Sound = Clip;
+        #[cfg(target_arch = "wasm32")]
         type Loading = Coroutine<Result<Sound, String>>;
+        #[cfg(not(target_arch = "wasm32"))]
+        type Loading = Pending<Result<Music, String>>;
 
-        async fn load_sound(&mut self, bytes: &[u8]) -> Result<Sound, String> {
+        async fn load_sound(&mut self, bytes: &[u8]) -> Result<Clip, String> {
             load_sound_from_bytes(bytes)
                 .await
+                .map(Clip::Shared)
                 .map_err(|e| e.to_string())
         }
 
+        #[cfg(target_arch = "wasm32")]
         fn load_music(&mut self, path: &str) -> Self::Loading {
             let path = path.to_owned();
             start_coroutine(async move {
@@ -324,20 +354,45 @@ pub(crate) mod device {
             })
         }
 
-        fn poll_music(&mut self, loading: &mut Self::Loading) -> Option<Result<Sound, String>> {
-            loading.retrieve()
+        #[cfg(not(target_arch = "wasm32"))]
+        fn load_music(&mut self, path: &str) -> Self::Loading {
+            let path = path.to_owned();
+            let contexts = self.contexts.clone();
+            Pending::spawn("music-load", move || Music::load(&path, contexts))
         }
 
-        fn play(&mut self, sound: &Sound, volume: f32, looped: bool) {
-            play_sound(sound, PlaySoundParams { looped, volume });
+        #[cfg(target_arch = "wasm32")]
+        fn poll_music(&mut self, loading: &mut Self::Loading) -> Option<Result<Clip, String>> {
+            loading.retrieve().map(|r| r.map(Clip::Shared))
         }
 
-        fn set_volume(&mut self, sound: &Sound, volume: f32) {
-            set_sound_volume(sound, volume);
+        #[cfg(not(target_arch = "wasm32"))]
+        fn poll_music(&mut self, loading: &mut Self::Loading) -> Option<Result<Clip, String>> {
+            loading.poll().map(|r| r.flatten().map(Clip::Music))
         }
 
-        fn stop(&mut self, sound: &Sound) {
-            stop_sound(sound);
+        fn play(&mut self, sound: &Clip, volume: f32, looped: bool) {
+            match sound {
+                Clip::Shared(s) => play_sound(s, PlaySoundParams { looped, volume }),
+                #[cfg(not(target_arch = "wasm32"))]
+                Clip::Music(m) => m.play(volume, looped),
+            }
+        }
+
+        fn set_volume(&mut self, sound: &Clip, volume: f32) {
+            match sound {
+                Clip::Shared(s) => set_sound_volume(s, volume),
+                #[cfg(not(target_arch = "wasm32"))]
+                Clip::Music(m) => m.set_volume(volume),
+            }
+        }
+
+        fn stop(&mut self, sound: &Clip) {
+            match sound {
+                Clip::Shared(s) => stop_sound(s),
+                #[cfg(not(target_arch = "wasm32"))]
+                Clip::Music(m) => m.stop(),
+            }
         }
     }
 }
