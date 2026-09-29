@@ -94,6 +94,5 @@ rules; Nick may veto any):
 - EXP shared from green units at the battle's end shows each unit's bar
   before the victory banner.
 
-**Follow-ups:** 0022 (Nick picks the EXP bar and level-up sounds) and 0605
-(play them); `audio.md` lists "level up" as never asked.
-
+**Follow-ups:** 0605 plays the EXP bar and level-up sounds once Nick has
+made them (they're his own work, per tickets 0022/0809).

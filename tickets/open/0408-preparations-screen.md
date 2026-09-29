@@ -33,6 +33,10 @@ and pack), `Loadouts` and `Pack` tabs, `Fight!` to start.
 
 **Out:** shops (0409), choosing/swapping start positions, chapter flow wiring
 (0801 pushes this screen when the chapter has `preparations: true`).
+**Exception (2026-09-29):** 0801 no longer waits for this ticket. If 0801 is
+already done, this ticket also pushes `PreparationsScreen` from `ui::flow`
+for battles with `preparations: true`, and removes 0801's validator check
+that rejects `preparations: true` until this screen exists.
 
 ## Implementation steps
 

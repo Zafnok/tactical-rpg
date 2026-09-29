@@ -60,7 +60,8 @@ keeps playing across phases and combat.
 **Out (do not do):**
 - Place music on the world map and in towns (1007), and skirmish battles
   themselves (1008, which uses this `Pool` field).
-- Victory or defeat stings (not decided; `audio.md` open sub-questions).
+- Victory and defeat stings and Game Over music (decided in 0022–0024,
+  played by 0809, which replaces this ticket's Game Over `stop_music`).
 
 ## Implementation steps
 
