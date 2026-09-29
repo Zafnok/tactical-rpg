@@ -63,7 +63,6 @@ fn classes() -> ClassTable {
         movement_type: MovementTypeId(0),
         move_points: 4,
         base: Stats::default(),
-        caps: Stats::default(),
         growths: crate::stats::Growths::default(),
         weapons: [WeaponKind::Sword, WeaponKind::Bow]
             .map(|kind| WeaponProficiency {

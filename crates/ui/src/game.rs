@@ -2,6 +2,7 @@
 //! events and the frame time and blits the buffer it returns; the test
 //! `Harness` drives it the same way without a window.
 
+use crate::audio::{AudioRequest, MusicCommand, MusicState};
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
@@ -26,6 +27,13 @@ pub struct FrameOutput<'a> {
     pub buffer: &'a GlyphBuffer,
     /// Whether the game has asked to quit (it then ignores further input).
     pub quit: bool,
+    /// Every audio request screens made this frame, in order. `app` plays
+    /// the sounds; the music requests are already turned into [`music`].
+    ///
+    /// [`music`]: Self::music
+    pub audio: &'a [AudioRequest],
+    /// What to do to the music this frame (ADR-0026).
+    pub music: &'a [MusicCommand],
 }
 
 /// Owns the screens, input state, shared context and the console buffer.
@@ -38,6 +46,10 @@ pub struct Game {
     ctx: Ctx,
     buffer: GlyphBuffer,
     quit: bool,
+    music: MusicState,
+    /// This frame's audio requests and music commands.
+    audio_out: Vec<AudioRequest>,
+    music_out: Vec<MusicCommand>,
 }
 
 impl Game {
@@ -75,6 +87,8 @@ impl Game {
             ctx.palette.get(UiColor::Text),
             ctx.palette.get(UiColor::Black),
         );
+        #[allow(clippy::cast_precision_loss)] // A fade is well under 2^24 ms.
+        let fade_secs = ctx.content.audio.music_fade_ms as f32 / 1000.0;
         let mut game = Self {
             stack,
             input,
@@ -82,6 +96,9 @@ impl Game {
             ctx,
             buffer: GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank),
             quit: false,
+            music: MusicState::new(fade_secs),
+            audio_out: Vec::new(),
+            music_out: Vec::new(),
         };
         game.redraw();
         game
@@ -96,16 +113,36 @@ impl Game {
     }
 
     /// Runs one frame: applies `events` (in order), advances input by `dt`
-    /// seconds, updates the top screen with the resulting actions and
-    /// redraws. After a quit, frames do nothing.
+    /// seconds, updates the top screen with the resulting actions, collects
+    /// its audio requests and redraws. After a quit, frames do nothing.
     pub fn frame(&mut self, events: &[RawKeyEvent], dt: f32) -> FrameOutput<'_> {
+        self.audio_out.clear();
+        self.music_out.clear();
         if !self.quit {
             self.step(events, dt);
+            self.collect_audio(dt);
         }
         FrameOutput {
             buffer: &self.buffer,
             quit: self.quit,
+            audio: &self.audio_out,
+            music: &self.music_out,
         }
+    }
+
+    /// Moves the screens' audio requests into this frame's output and runs
+    /// the music state machine. In debug builds, a cue the manifest lacks
+    /// is a bug in the screen and panics.
+    fn collect_audio(&mut self, dt: f32) {
+        self.audio_out = self.ctx.audio.take();
+        for request in &self.audio_out {
+            debug_assert!(
+                is_known(&self.ctx.content.audio, request),
+                "audio request for a cue not in assets/audio/audio.ron: {request:?}"
+            );
+            self.music.request(request, &mut self.music_out);
+        }
+        self.music.update(dt, &mut self.music_out);
     }
 
     fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
@@ -150,6 +187,11 @@ impl Game {
         self.stack.draw(&self.ctx, &mut self.buffer);
     }
 
+    /// The music state machine (which track plays).
+    pub fn music(&self) -> &MusicState {
+        &self.music
+    }
+
     /// The last frame drawn.
     pub fn buffer(&self) -> &GlyphBuffer {
         &self.buffer
@@ -187,10 +229,19 @@ impl Game {
     }
 }
 
+/// Whether `request` names a cue of the right kind in `manifest`.
+fn is_known(manifest: &trpg_content::AudioManifest, request: &AudioRequest) -> bool {
+    match request {
+        AudioRequest::PlaySound { cue, .. } => manifest.sounds.contains_key(cue),
+        AudioRequest::PlayMusic { cue } => manifest.music.contains_key(cue),
+        AudioRequest::StopMusic => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::screen::tests::ctx;
+    use crate::screen::tests::{ctx, ctx_with_cues};
 
     fn down(key: Key) -> RawKeyEvent {
         RawKeyEvent::Down(Chord::plain(key))
@@ -378,5 +429,145 @@ mod tests {
         assert!(seen[1].actions.is_empty());
         assert!(seen[1].is_held(Action::CursorRight));
         assert!(!seen[1].is_held(Action::Confirm));
+    }
+
+    /// Plays `beep` on Confirm, switches to music `battle` on Cancel, quits
+    /// (with a quieter beep) on Up and asks for an unknown cue otherwise.
+    struct Noisy;
+
+    impl Screen for Noisy {
+        fn name(&self) -> &'static str {
+            "noisy"
+        }
+        fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> crate::screen::Transition {
+            for action in &input.actions {
+                match action {
+                    Action::Confirm => ctx.audio.play_sound("beep"),
+                    Action::Cancel => ctx.audio.play_music("battle"),
+                    Action::CursorUp => {
+                        ctx.audio.play_sound_at("beep", 0.5);
+                        return crate::screen::Transition::Quit;
+                    }
+                    _ => ctx.audio.play_sound("nope"),
+                }
+            }
+            crate::screen::Transition::None
+        }
+        fn draw(&self, _: &Ctx, _: &mut GlyphBuffer) {}
+    }
+
+    /// A game on [`Noisy`] with a 0.5 s fade, `title` asked for already.
+    fn noisy() -> Game {
+        let mut ctx = ctx_with_cues(&["beep"], &["title", "battle"]);
+        ctx.content.audio.music_fade_ms = 500;
+        ctx.audio.play_music("title");
+        Game::new(ctx, Box::new(Noisy))
+    }
+
+    fn beep(volume: f32) -> AudioRequest {
+        AudioRequest::PlaySound {
+            cue: "beep".into(),
+            volume,
+        }
+    }
+
+    fn music(cue: &str, command: fn(String) -> MusicCommand) -> MusicCommand {
+        command(cue.into())
+    }
+
+    fn load(cue: String) -> MusicCommand {
+        MusicCommand::Load { cue }
+    }
+
+    fn start(cue: String) -> MusicCommand {
+        MusicCommand::Start { cue }
+    }
+
+    fn stop(cue: String) -> MusicCommand {
+        MusicCommand::Stop { cue }
+    }
+
+    #[test]
+    fn frames_carry_the_audio_screens_asked_for() {
+        let mut game = noisy();
+        // A request made before the first frame goes out with it.
+        let out = game.frame(&[], 0.0);
+        let title = AudioRequest::PlayMusic {
+            cue: "title".into(),
+        };
+        assert_eq!(out.audio, [title]);
+        assert_eq!(out.music, [music("title", load), music("title", start)]);
+        let out = game.frame(&[down(Key::F)], 0.0);
+        assert_eq!(out.audio, [beep(1.0)]);
+        assert!(out.music.is_empty());
+        // Each frame holds only its own requests.
+        let out = game.frame(&[RawKeyEvent::Up(Key::F)], 0.0);
+        assert!(out.audio.is_empty());
+        assert!(game.ctx().audio.pending().is_empty());
+    }
+
+    #[test]
+    fn frames_carry_the_music_fade() {
+        let mut game = noisy();
+        game.frame(&[], 0.0);
+        let out = game.frame(&[down(Key::D)], 0.25);
+        let half = MusicCommand::Gain {
+            cue: "title".into(),
+            gain: 0.5,
+        };
+        assert_eq!(out.music, [music("battle", load), half]);
+        assert_eq!(game.music().target(), Some("battle"));
+        let out = game.frame(&[RawKeyEvent::Up(Key::D)], 0.25);
+        assert_eq!(out.music, [music("title", stop), music("battle", start)]);
+        assert_eq!(game.music().current(), Some("battle"));
+    }
+
+    #[test]
+    fn the_quitting_frame_still_sounds_and_later_ones_are_silent() {
+        let mut game = noisy();
+        let out = game.frame(&[down(Key::Up)], 0.0);
+        assert!(out.quit);
+        assert_eq!(out.audio[1..], [beep(0.5)]);
+        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        assert!(out.audio.is_empty());
+        assert!(out.music.is_empty());
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "audio request for a cue not in assets/audio/audio.ron")]
+    fn an_unknown_cue_panics_in_debug_builds() {
+        let mut game = noisy();
+        game.frame(&[down(Key::Right)], 0.0);
+    }
+
+    #[test]
+    fn the_fade_length_comes_from_the_manifest() {
+        let mut ctx = ctx_with_cues(&[], &["title", "battle"]);
+        ctx.content.audio.music_fade_ms = 1000;
+        ctx.audio.play_music("title");
+        let mut game = Game::new(ctx, Box::new(Noisy));
+        game.frame(&[], 0.0);
+        let out = game.frame(&[down(Key::D)], 0.25);
+        let gain = MusicCommand::Gain {
+            cue: "title".into(),
+            gain: 0.75,
+        };
+        assert_eq!(out.music[1..], [gain]);
+    }
+
+    #[test]
+    fn cues_must_be_of_the_right_kind() {
+        let audio = &ctx_with_cues(&["beep"], &["title"]).content.audio;
+        let sound = |cue: &str| AudioRequest::PlaySound {
+            cue: cue.into(),
+            volume: 1.0,
+        };
+        let play = |cue: &str| AudioRequest::PlayMusic { cue: cue.into() };
+        assert!(is_known(audio, &sound("beep")));
+        assert!(!is_known(audio, &sound("title")));
+        assert!(is_known(audio, &play("title")));
+        assert!(!is_known(audio, &play("beep")));
+        assert!(is_known(audio, &AudioRequest::StopMusic));
     }
 }

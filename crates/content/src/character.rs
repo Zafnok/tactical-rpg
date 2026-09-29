@@ -334,8 +334,8 @@ impl<'a> Validator<'a> {
             map_label: c.map_label.clone(),
             loadout: c.loadout.to_def(),
         };
-        if let Some(class) = class {
-            self.against_class(&def, &what, class);
+        if let (Some(class), Some(classes)) = (class, self.classes) {
+            self.against_class(&def, &what, class, &classes.hard_ceilings);
         }
         if let (Some(classes), Some(items)) = (self.classes, self.items)
             && let Err(UnitError::Loadout(e)) = character_unit(
@@ -353,7 +353,13 @@ impl<'a> Validator<'a> {
     }
 
     /// Checks the character fits its starting class.
-    fn against_class(&mut self, def: &CharacterDef, what: &str, class: &ClassDef) {
+    fn against_class(
+        &mut self,
+        def: &CharacterDef,
+        what: &str,
+        class: &ClassDef,
+        ceilings: &Stats,
+    ) {
         let id = &def.id.0;
         if class.lord_only && !def.is_lord {
             self.err(
@@ -365,17 +371,14 @@ impl<'a> Validator<'a> {
             );
         }
         for kind in StatKind::GROWABLE {
-            let (b, cap) = (def.base.get(kind), class.caps.get(kind));
+            let (b, cap) = (def.base.get(kind), ceilings.get(kind));
             if b < 0 {
                 self.err(id, format!("{what}: base {kind:?} {b} is negative"));
             }
             if b > cap {
                 self.err(
                     id,
-                    format!(
-                        "{what}: base {kind:?} {b} is over the \"{}\" cap {cap}",
-                        class.id.0
-                    ),
+                    format!("{what}: base {kind:?} {b} is over the hard ceiling {cap}"),
                 );
             }
         }
@@ -604,15 +607,16 @@ mod tests {
     }
 
     #[test]
-    fn base_within_class_caps() {
+    fn base_within_hard_ceilings() {
         let src = file(
-            &[character("a", "swordsman", "").replace("base: (18, 5, 0,", "base: (41, 20, -1,")],
+            &[character("a", "swordsman", "").replace("base: (18, 5, 0,", "base: (81, 51, -1,")],
             "",
         );
         assert_eq!(
             errors(&src),
             [
-                "ch.ron:4: character \"a\": base Hp 41 is over the \"swordsman\" cap 40",
+                "ch.ron:4: character \"a\": base Hp 81 is over the hard ceiling 80",
+                "ch.ron:4: character \"a\": base Str 51 is over the hard ceiling 50",
                 "ch.ron:4: character \"a\": base Mag -1 is negative",
             ]
         );

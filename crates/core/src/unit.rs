@@ -107,7 +107,7 @@ pub struct CharacterDef {
     pub is_lord: bool,
     /// The personal +20% growth stat (never Mov).
     pub talent: StatKind,
-    /// Starting stats (≤ the class caps). Mov comes from the class.
+    /// Starting stats (≤ the hard ceilings). Mov comes from the class.
     pub base: Stats,
     /// Starting weapon ranks.
     pub weapon_ranks: BTreeMap<WeaponKind, WeaponRank>,
@@ -136,8 +136,7 @@ pub struct Unit {
     pub exp: u32,
     /// Progress in every unlocked class.
     pub class_records: BTreeMap<ClassId, ClassRecord>,
-    /// Current permanent stats. ≤ the class caps, except stats kept above a
-    /// new class's caps after a reclass.
+    /// Current permanent stats. ≤ the hard ceilings.
     pub stats: Stats,
     /// Current HP, `0..=stats.hp`.
     pub hp: StatValue,
@@ -248,7 +247,10 @@ impl Unit {
         let mut stats = def.base;
         stats.mov = class.move_points;
         for kind in StatKind::GROWABLE {
-            stats.set(kind, stats.get(kind).min(class.caps.get(kind)).max(0));
+            stats.set(
+                kind,
+                stats.get(kind).min(classes.hard_ceilings.get(kind)).max(0),
+            );
         }
         let mut weapon_ranks = def.weapon_ranks.clone();
         raise_to_start_ranks(&mut weapon_ranks, class);
@@ -271,7 +273,7 @@ impl Unit {
 
     /// Creates a generic unit of class `class` at character level `level`,
     /// with the fixed average stats of `progression.md`:
-    /// `stat = min(cap, base + growth × (level − 1) / 100)`, knowing its
+    /// `stat = min(hard ceiling, base + growth × (level − 1) / 100)`, knowing its
     /// class's class-level-1 spells.
     pub fn generic(
         id: UnitId,
@@ -288,7 +290,7 @@ impl Unit {
         for kind in StatKind::GROWABLE {
             let gain = StatValue::from(class.growths.get(kind)).saturating_mul(levels) / 100;
             let value = class.base.get(kind).saturating_add(gain);
-            stats.set(kind, value.min(class.caps.get(kind)));
+            stats.set(kind, value.min(classes.hard_ceilings.get(kind)));
         }
         let mut weapon_ranks = BTreeMap::new();
         raise_to_start_ranks(&mut weapon_ranks, class);
@@ -378,7 +380,6 @@ mod tests {
             movement_type: MovementTypeId(0),
             move_points: 5,
             base: Stats::from_growable([20, 6, 0, 2, 4, 3, 0], 5),
-            caps: Stats::from_growable([45, 24, 8, 16, 18, 18, 10], 5),
             growths: Growths([80, 50, 0, 30, 30, 25, 5]),
             weapons: vec![
                 WeaponProficiency {
@@ -408,6 +409,7 @@ mod tests {
     fn table(classes: Vec<ClassDef>) -> ClassTable {
         ClassTable {
             classes: classes.into_iter().map(|c| (c.id.clone(), c)).collect(),
+            hard_ceilings: Stats::from_growable([45, 24, 8, 16, 18, 18, 10], 5),
             ..ClassTable::default()
         }
     }
@@ -559,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    fn from_character_clamps_stats_to_caps() {
+    fn from_character_clamps_stats_to_the_hard_ceilings() {
         let classes = table(vec![class("brigand")]);
         let mut def = character("brigand");
         def.base = Stats::from_growable([99, 7, -3, 17, 6, 4, 2], 12);
@@ -641,7 +643,7 @@ mod tests {
     }
 
     #[test]
-    fn generic_level_one_is_base_and_high_levels_cap() {
+    fn generic_level_one_is_base_and_high_levels_are_clamped_to_the_hard_ceilings() {
         let classes = table(vec![class("brigand")]);
         let id = ClassId("brigand".into());
         let at = |level| {
@@ -702,23 +704,23 @@ mod tests {
 
     proptest! {
         #[test]
-        fn from_character_respects_caps(
+        fn from_character_respects_the_hard_ceilings(
             base in arb_stats(-10),
-            caps in arb_stats(0),
+            ceilings in arb_stats(0),
             mov in 0..15,
         ) {
             let mut c = class("c");
             c.move_points = mov;
-            let caps = Stats { mov, ..caps };
-            c.caps = caps;
-            let classes = table(vec![c]);
+            let ceilings = Stats { mov, ..ceilings };
+            let mut classes = table(vec![c]);
+            classes.hard_ceilings = ceilings;
             let mut def = character("c");
             def.base = base;
             let unit = Unit::from_character(UnitId(0), &def, &classes, Faction::Player, POS);
             prop_assert!(unit.is_ok());
             if let Ok(u) = unit {
                 for kind in StatKind::ALL {
-                    prop_assert!(u.stats.get(kind) <= caps.get(kind), "{:?}", kind);
+                    prop_assert!(u.stats.get(kind) <= ceilings.get(kind), "{:?}", kind);
                     prop_assert!(u.stats.get(kind) >= 0, "{:?}", kind);
                 }
                 prop_assert_eq!(u.stats.mov, mov);

@@ -51,7 +51,6 @@ struct RawClass {
     armour: Vec<RawArmourWeight>,
     weapon_slots: u8,
     base: [StatValue; 7],
-    caps: [StatValue; 7],
     growths: [GrowthValue; 7],
     #[serde(default)]
     spells: Vec<(u8, String)>,
@@ -169,8 +168,7 @@ impl Validator<'_> {
             );
         }
         let base = Stats::from_growable(c.base, c.mov);
-        let caps = Stats::from_growable(c.caps, c.mov);
-        self.stats(&c.id, &what, &base, &caps, ceilings);
+        self.stats(&c.id, &what, &base, ceilings);
         for (kind, g) in StatKind::GROWABLE.iter().zip(c.growths) {
             if g > MAX_GROWTH {
                 self.err(
@@ -197,7 +195,6 @@ impl Validator<'_> {
             movement_type,
             move_points: c.mov,
             base,
-            caps,
             growths: Growths(c.growths),
             weapons,
             armour: c.armour.iter().map(|&a| a.into()).collect(),
@@ -244,20 +241,17 @@ impl Validator<'_> {
         MovementTypeId(0)
     }
 
-    /// Checks `0 ≤ base ≤ caps ≤ hard ceilings` for every growable stat.
-    fn stats(&mut self, id: &str, what: &str, base: &Stats, caps: &Stats, ceilings: &Stats) {
+    /// Checks `0 ≤ base ≤ hard ceilings` for every growable stat.
+    fn stats(&mut self, id: &str, what: &str, base: &Stats, ceilings: &Stats) {
         for kind in StatKind::GROWABLE {
-            let (b, c, h) = (base.get(kind), caps.get(kind), ceilings.get(kind));
+            let (b, h) = (base.get(kind), ceilings.get(kind));
             if b < 0 {
                 self.err(id, format!("{what}: base {kind:?} {b} is negative"));
             }
-            if b > c {
-                self.err(id, format!("{what}: base {kind:?} {b} is over its cap {c}"));
-            }
-            if c > h {
+            if b > h {
                 self.err(
                     id,
-                    format!("{what}: cap {kind:?} {c} is over the hard ceiling {h}"),
+                    format!("{what}: base {kind:?} {b} is over the hard ceiling {h}"),
                 );
             }
         }
@@ -420,7 +414,7 @@ mod tests {
     fn class(id: &str, tier: u8, promotes_to: &[&str], extra: &str) -> String {
         let targets: Vec<String> = promotes_to.iter().map(|t| format!("\"{t}\"")).collect();
         format!(
-            "        (\n            id: \"{id}\", name: \"N\", tier: {tier}, movement_type: \"foot\", mov: 5,\n            weapons: [(Sword, D, C)], armour: [Light], weapon_slots: 3,\n            base: (18, 5, 0, 7, 8, 3, 1), caps: (40, 20, 10, 24, 25, 18, 15),\n            growths: (70, 40, 10, 55, 60, 25, 20), promotes_to: [{}], {extra}\n        ),\n",
+            "        (\n            id: \"{id}\", name: \"N\", tier: {tier}, movement_type: \"foot\", mov: 5,\n            weapons: [(Sword, D, C)], armour: [Light], weapon_slots: 3,\n            base: (18, 5, 0, 7, 8, 3, 1),\n            growths: (70, 40, 10, 55, 60, 25, 20), promotes_to: [{}], {extra}\n        ),\n",
             targets.join(", ")
         )
     }
@@ -489,7 +483,6 @@ mod tests {
             movement_type: MovementTypeId(2),
             move_points: 5,
             base: Stats::from_growable([18, 5, 0, 7, 8, 3, 1], 5),
-            caps: Stats::from_growable([40, 20, 10, 24, 25, 18, 15], 5),
             growths: Growths([70, 40, 10, 55, 60, 25, 20]),
             weapons: vec![
                 WeaponProficiency {
@@ -616,27 +609,18 @@ mod tests {
     }
 
     #[test]
-    fn stats_base_caps_and_ceilings() {
-        let src = file(&tree(""))
-            .replacen("base: (18, 5, 0,", "base: (18, 21, -1,", 1)
-            .replacen(
-                "caps: (40, 20, 10, 24, 25, 18, 15)",
-                "caps: (81, 20, 10, 24, 25, 18, 51)",
-                1,
-            );
+    fn stats_base_within_hard_ceilings() {
+        let src = file(&tree("")).replacen("base: (18, 5, 0,", "base: (81, 51, -1,", 1);
         assert_eq!(
             errors(&src),
             [
-                "c.ron:10: class \"a\": cap Hp 81 is over the hard ceiling 80",
-                "c.ron:10: class \"a\": base Str 21 is over its cap 20",
+                "c.ron:10: class \"a\": base Hp 81 is over the hard ceiling 80",
+                "c.ron:10: class \"a\": base Str 51 is over the hard ceiling 50",
                 "c.ron:10: class \"a\": base Mag -1 is negative",
-                "c.ron:10: class \"a\": cap Res 51 is over the hard ceiling 50",
             ]
         );
         // Equal values are fine.
-        let src = file(&tree(""))
-            .replacen("base: (18, 5,", "base: (18, 20,", 1)
-            .replacen("caps: (40,", "caps: (80,", 1);
+        let src = file(&tree("")).replacen("base: (18, 5,", "base: (80, 50,", 1);
         assert!(load_src(&src).is_ok());
     }
 
@@ -889,7 +873,6 @@ mod tests {
             movement_type: MovementTypeId(1),
             move_points: 6,
             base: Stats::from_growable([27, 10, 0, 6, 6, 11, 2], 6),
-            caps: Stats::from_growable([56, 30, 10, 24, 22, 32, 14], 6),
             growths: Growths([85, 50, 5, 40, 35, 50, 10]),
             weapons: vec![
                 sp(WeaponKind::Spear, WeaponRank::C, WeaponRank::A),
@@ -915,7 +898,6 @@ mod tests {
             movement_type: MovementTypeId(0),
             move_points: 4,
             base: Stats::from_growable([30, 0, 8, 4, 5, 8, 4], 4),
-            caps: Stats::from_growable([60, 10, 30, 24, 20, 30, 30], 4),
             growths: Growths([80, 0, 50, 35, 30, 40, 40]),
             weapons: vec![],
             armour: vec![],

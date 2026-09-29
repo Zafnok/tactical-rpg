@@ -4,7 +4,7 @@
 //
 // characters: named characters.
 //   base is in stat order (HP, Str, Mag, Dex, Spd, Def, Res) (Mov comes from
-//   the class) and must be <= the starting class's caps.
+//   the class) and must be <= the hard ceilings (classes.ron).
 //   talent: the +20% growth stat (not Mov).
 //   weapon_ranks: (kind, rank); raised to the class's start ranks on entry.
 //   personal_spells: (character level, spell id), at most 2; none for the lord.

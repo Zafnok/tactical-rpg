@@ -41,6 +41,8 @@ pub struct Timings {
     pub fast: f32,
     /// Half-period of the striker's name flashing.
     pub blink: f32,
+    /// A heal's `+10` popup over the healed unit (0407).
+    pub heal_popup: f32,
 }
 
 /// The game's timings (ticket 0404: ~30 HP/s drain, 0.25 s between
@@ -55,6 +57,7 @@ pub const TIMINGS: Timings = Timings {
     outro: 0.4,
     fast: 4.0,
     blink: 0.075,
+    heal_popup: 0.6,
 };
 
 /// One side of a combat, as the box shows it.

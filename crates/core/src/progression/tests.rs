@@ -26,7 +26,6 @@ fn swordsman() -> ClassDef {
         movement_type: MovementTypeId(0),
         move_points: 5,
         base: Stats::from_growable([18, 5, 0, 7, 8, 3, 1], 5),
-        caps: Stats::from_growable([40, 20, 10, 24, 25, 18, 15], 5),
         growths: Growths([70, 40, 10, 55, 60, 25, 20]),
         weapons: vec![],
         armour: vec![],
@@ -42,13 +41,12 @@ fn swordsman() -> ClassDef {
     }
 }
 
-/// A class like the Swordsman, of `tier`, with these growths and caps.
-fn custom(id: &str, tier: Tier, growths: [GrowthValue; 7], caps: [StatValue; 7]) -> ClassDef {
+/// A class like the Swordsman, of `tier`, with these growths.
+fn custom(id: &str, tier: Tier, growths: [GrowthValue; 7]) -> ClassDef {
     ClassDef {
         id: ClassId(id.into()),
         tier,
         growths: Growths(growths),
-        caps: Stats::from_growable(caps, 5),
         spells: vec![],
         ..swordsman()
     }
@@ -141,8 +139,14 @@ impl RandomSource for Recorder {
     }
 }
 
-/// Levels `unit` up in `class` with `min` and the scripted draws; checks
-/// every roll and draw was used, and returns the gains and the totals.
+/// Low hard ceilings, to test stats stopping at them.
+fn tight() -> Stats {
+    Stats::from_growable([40, 20, 10, 24, 25, 18, 15], 5)
+}
+
+/// Levels `unit` up in `class` with `min` and the scripted draws under the
+/// table's hard ceilings; checks every roll and draw was used, and returns
+/// the gains and the totals.
 fn roll(
     unit: &Unit,
     class: &ClassDef,
@@ -150,8 +154,20 @@ fn roll(
     rolls: [u8; 7],
     below: &[u32],
 ) -> (StatGains, Vec<u32>) {
+    roll_under(&table().hard_ceilings, unit, class, min, rolls, below)
+}
+
+/// [`roll`] under the given hard ceilings.
+fn roll_under(
+    ceilings: &Stats,
+    unit: &Unit,
+    class: &ClassDef,
+    min: u8,
+    rolls: [u8; 7],
+    below: &[u32],
+) -> (StatGains, Vec<u32>) {
     let mut rng = Recorder::new(rolls, below);
-    let gains = level_up(unit, class, min, &mut rng);
+    let gains = level_up(unit, class, ceilings, min, &mut rng);
     assert_eq!(rng.inner.consumed(), 7, "always 7 rolls");
     assert_eq!(rng.inner.consumed_below(), below.len(), "net draws");
     (gains, rng.totals)
@@ -276,41 +292,44 @@ fn net_walk_picks_the_first_stat_whose_running_sum_passes_the_draw() {
 }
 
 #[test]
-fn capped_and_zero_growth_stats_never_gain_and_are_not_net_candidates() {
-    // Str at its cap (20), Mag growth 0, everything else rolls 99.
-    let class = custom(
-        "c",
-        1,
-        [70, 40, 0, 55, 60, 25, 20],
-        [40, 20, 10, 24, 25, 18, 15],
-    );
+fn stats_at_the_ceiling_and_zero_growth_never_gain_and_are_not_net_candidates() {
+    // Str at its ceiling (20), Mag growth 0, everything else rolls 99.
+    let class = custom("c", 1, [70, 40, 0, 55, 60, 25, 20]);
+    let ceilings = tight();
     let u = unit_in("swordsman", [18, 20, 0, 7, 8, 3, 1]);
-    let (gains, totals) = roll(&u, &class, 0, [0, 0, 0, 99, 99, 99, 99], &[]);
+    let (gains, totals) = roll_under(&ceilings, &u, &class, 0, [0, 0, 0, 99, 99, 99, 99], &[]);
     assert_eq!(gains, StatGains([1, 0, 0, 0, 0, 0, 0]));
     assert!(totals.is_empty());
     // With the net, Str and Mag are left out of the total: 280 − 40 − 10.
     // 70 → Dex (70 HP, then Dex's 55 brings it to 125); then HP.
-    let (gains, totals) = roll(&u, &class, 2, [99; 7], &[70, 0]);
+    let (gains, totals) = roll_under(&ceilings, &u, &class, 2, [99; 7], &[70, 0]);
     assert_eq!(totals, [230, 175]);
     assert_eq!(gains, StatGains([1, 0, 0, 1, 0, 0, 0]));
 }
 
 #[test]
-fn a_stat_above_its_cap_after_a_reclass_never_grows() {
+fn a_stat_past_its_old_class_cap_still_gains() {
+    // The Swordsman's old Spd cap was 25; classes have no caps now.
+    let u = unit_in("swordsman", [18, 5, 0, 7, 25, 3, 1]);
+    let (gains, _) = roll(&u, &swordsman(), 0, [99, 99, 99, 99, 59, 99, 99], &[]);
+    assert_eq!(gains, StatGains([0, 0, 0, 0, 1, 0, 0]));
+    // Only its hard ceiling (50) stops it.
+    let u = unit_in("swordsman", [18, 5, 0, 7, 50, 3, 1]);
+    let (gains, _) = roll(&u, &swordsman(), 0, [99, 99, 99, 99, 0, 99, 99], &[]);
+    assert_eq!(gains, StatGains::default());
+}
+
+#[test]
+fn a_stat_above_its_ceiling_never_grows() {
     let u = unit_in("swordsman", [50, 5, 0, 7, 8, 3, 1]);
-    let (gains, totals) = roll(&u, &swordsman(), 2, [0; 7], &[]);
+    let (gains, totals) = roll_under(&tight(), &u, &swordsman(), 2, [0; 7], &[]);
     assert_eq!(gains, StatGains([0, 1, 1, 1, 1, 1, 1]));
     assert!(totals.is_empty());
 }
 
 #[test]
 fn talent_makes_a_zero_growth_stat_grow() {
-    let class = custom(
-        "c",
-        1,
-        [70, 40, 0, 55, 60, 25, 20],
-        [40, 20, 10, 24, 25, 18, 15],
-    );
+    let class = custom("c", 1, [70, 40, 0, 55, 60, 25, 20]);
     let mut u = fresh();
     let (gains, _) = roll(&u, &class, 0, [99, 99, 19, 99, 99, 99, 99], &[]);
     assert_eq!(gains, StatGains::default());
@@ -325,20 +344,16 @@ fn talent_makes_a_zero_growth_stat_grow() {
 
 #[test]
 fn growths_above_100_give_a_sure_point_and_a_chance_of_another() {
-    // HP 120, Str 200, Mag 150 (one below its cap).
-    let class = custom(
-        "c",
-        1,
-        [120, 200, 150, 0, 0, 0, 0],
-        [60, 40, 10, 24, 25, 18, 15],
-    );
+    // HP 120, Str 200, Mag 150 (one below its ceiling).
+    let class = custom("c", 1, [120, 200, 150, 0, 0, 0, 0]);
+    let ceilings = Stats::from_growable([60, 40, 10, 24, 25, 18, 15], 5);
     let u = unit_in("swordsman", [18, 5, 9, 7, 8, 3, 1]);
     // HP: r 19 < 20 → +2; Str: 200 % 100 = 0 → +2 whatever the roll; Mag:
-    // r 0 < 50 → +2, clamped to +1 by the cap.
-    let (gains, _) = roll(&u, &class, 0, [19, 99, 0, 0, 0, 0, 0], &[]);
+    // r 0 < 50 → +2, clamped to +1 by the ceiling.
+    let (gains, _) = roll_under(&ceilings, &u, &class, 0, [19, 99, 0, 0, 0, 0, 0], &[]);
     assert_eq!(gains, StatGains([2, 2, 1, 0, 0, 0, 0]));
     // HP: r 20 → +1 only; Str: +2 even with roll 0.
-    let (gains, _) = roll(&u, &class, 0, [20, 0, 50, 0, 0, 0, 0], &[]);
+    let (gains, _) = roll_under(&ceilings, &u, &class, 0, [20, 0, 50, 0, 0, 0, 0], &[]);
     assert_eq!(gains, StatGains([1, 2, 1, 0, 0, 0, 0]));
 }
 
@@ -367,14 +382,14 @@ fn net_with_no_natural_gains_at_tier_3_picks_three() {
 #[test]
 fn net_is_limited_by_the_eligible_stats() {
     // Only Res can grow: the net wants 3 but gives 1.
-    let class = custom("c", 3, [0, 0, 0, 0, 0, 0, 20], [40, 20, 10, 24, 25, 18, 15]);
+    let class = custom("c", 3, [0, 0, 0, 0, 0, 0, 20]);
     let u = fresh();
     let (gains, totals) = roll(&u, &class, 3, [99; 7], &[5]);
     assert_eq!(gains, StatGains([0, 0, 0, 0, 0, 0, 1]));
     assert_eq!(totals, [20]);
     // Nothing can grow: no gains, no draws.
     let capped = unit_in("swordsman", [40, 20, 10, 24, 25, 18, 15]);
-    let (gains, totals) = roll(&capped, &swordsman(), 3, [0; 7], &[]);
+    let (gains, totals) = roll_under(&tight(), &capped, &swordsman(), 3, [0; 7], &[]);
     assert_eq!(gains, StatGains::default());
     assert!(totals.is_empty());
 }
@@ -685,18 +700,15 @@ fn class_points_with_nothing_to_give() {
 // ---- Properties and statistics ---------------------------------------------------
 
 fn arb_class() -> impl Strategy<Value = ClassDef> {
-    (
-        1..=4u8,
-        prop::array::uniform7(0..=250u16),
-        prop::array::uniform7(1..=60i32),
-    )
-        .prop_map(|(tier, growths, caps)| custom("c", tier, growths, caps))
+    (1..=4u8, prop::array::uniform7(0..=250u16))
+        .prop_map(|(tier, growths)| custom("c", tier, growths))
 }
 
 proptest! {
     #[test]
-    fn level_ups_respect_caps_growths_and_the_net(
+    fn level_ups_respect_ceilings_growths_and_the_net(
         class in arb_class(),
+        ceilings in prop::array::uniform7(1..=60i32),
         start in prop::array::uniform7(0..=70i32),
         talent in prop::option::of(0..7usize),
         seed in any::<u64>(),
@@ -705,6 +717,7 @@ proptest! {
         let mut t = table();
         t.classes = BTreeMap::from([(class.id.clone(), class.clone())]);
         t.level_cap = 30;
+        t.hard_ceilings = Stats::from_growable(ceilings, 15);
         let mut u = unit_in("swordsman", start);
         u.class = class.id.clone();
         u.talent = talent.map(|i| StatKind::GROWABLE[i]);
@@ -725,7 +738,7 @@ proptest! {
             let mut eligible = 0;
             for (i, &kind) in StatKind::GROWABLE.iter().enumerate() {
                 let g = growth(&u, &class, kind);
-                let cap = class.caps.get(kind);
+                let cap = t.hard_ceilings.get(kind);
                 let (old, new) = (before.get(kind), u.stats.get(kind));
                 prop_assert_eq!(new - old, gains.0[i]);
                 prop_assert!(gains.0[i] >= 0);
@@ -733,7 +746,7 @@ proptest! {
                     prop_assert_eq!(new, old, "{:?} can't grow", kind);
                 } else {
                     eligible += 1;
-                    prop_assert!(new <= cap, "{:?} past its cap", kind);
+                    prop_assert!(new <= cap, "{:?} past its ceiling", kind);
                     prop_assert!(gains.0[i] <= StatValue::from(g.div_ceil(100)));
                 }
             }
@@ -764,12 +777,12 @@ proptest! {
 }
 
 /// Average gain per stat over `n` level ups of `unit` in `class` (never
-/// applied, so caps don't interfere).
+/// applied, so ceilings don't interfere).
 fn average_gains(unit: &Unit, class: &ClassDef, min: u8, n: u32) -> [f64; 7] {
     let mut rng = SimRng::new(20_260_928);
     let mut totals: [StatValue; 7] = [0; 7];
     for _ in 0..n {
-        let gains = level_up(unit, class, min, &mut rng);
+        let gains = level_up(unit, class, &table().hard_ceilings, min, &mut rng);
         for (t, g) in totals.iter_mut().zip(gains.0) {
             *t += g;
         }
@@ -779,7 +792,7 @@ fn average_gains(unit: &Unit, class: &ClassDef, min: u8, n: u32) -> [f64; 7] {
 
 #[test]
 fn without_a_net_average_gains_match_the_growths() {
-    let class = custom("c", 1, [70, 40, 10, 55, 130, 25, 0], [99; 7]);
+    let class = custom("c", 1, [70, 40, 10, 55, 130, 25, 0]);
     let u = unit_in("swordsman", [1; 7]);
     let avg = average_gains(&u, &class, 0, 10_000);
     for (i, &kind) in StatKind::GROWABLE.iter().enumerate() {

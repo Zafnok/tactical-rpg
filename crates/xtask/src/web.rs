@@ -4,7 +4,9 @@
 //! and `web/sapp_jsutils.js` + `web/quad-storage.js` for `localStorage`,
 //! ticket 0207) into `dist/web/` (ticket 0206). `--debug-tools` turns on the
 //! app's `debug-tools` feature (Quick Battle, glyph sampler) for the Pages
-//! build (ADR-0023); shipped builds never pass it.
+//! build (ADR-0023); shipped builds never pass it. The game's music tracks
+//! (`music/*.ogg`, not embedded: ADR-0026) are copied to `dist/web/music/`,
+//! which exists even when there are none.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,6 +22,9 @@ const SHELL_FILES: &[&str] = &[
     "sapp_jsutils.js",
     "quad-storage.js",
 ];
+
+/// The music folder, at the repo root and in `dist/web/` (ADR-0026).
+const MUSIC_DIR: &str = "music";
 
 /// Parsed `cargo xtask web` arguments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -128,6 +133,8 @@ fn package(opt: &impl WasmOpt, repo_root: &Path, options: Options) -> Result<Str
         })?;
     }
 
+    copy_music(&repo_root.join(MUSIC_DIR), &dist.join(MUSIC_DIR))?;
+
     if options.release {
         run_wasm_opt(opt, &wasm_dst);
     }
@@ -136,6 +143,28 @@ fn package(opt: &impl WasmOpt, repo_root: &Path, options: Options) -> Result<Str
         .map_err(|e| format!("stat {}: {e}", wasm_dst.display()))?
         .len();
     Ok(format!("{} ({size} bytes)", dist.display()))
+}
+
+/// Replaces `dst` with a folder holding every `.ogg` file in `src` (none
+/// if `src` is missing), so the web build fetches tracks from `music/`.
+fn copy_music(src: &Path, dst: &Path) -> Result<(), String> {
+    if dst.exists() {
+        fs::remove_dir_all(dst).map_err(|e| format!("clear {}: {e}", dst.display()))?;
+    }
+    fs::create_dir_all(dst).map_err(|e| format!("create {}: {e}", dst.display()))?;
+    let Ok(entries) = fs::read_dir(src) else {
+        return Ok(());
+    };
+    for entry in entries {
+        let path = entry
+            .map_err(|e| format!("read {}: {e}", src.display()))?
+            .path();
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "ogg") {
+            let name = path.file_name().unwrap_or_default();
+            fs::copy(&path, dst.join(name)).map_err(|e| format!("copy {}: {e}", path.display()))?;
+        }
+    }
+    Ok(())
 }
 
 /// Runs `wasm-opt -Oz` on a wasm binary, abstracted so tests can substitute a
@@ -382,6 +411,36 @@ mod tests {
             fs::read_to_string(root.join("dist/web/quad-storage.js")).unwrap(),
             "// quad-storage"
         );
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn package_copies_the_music_tracks_only() {
+        let root = fixture("package-music");
+        let debug = Options {
+            release: false,
+            debug_tools: false,
+        };
+        write_wasm(&root, debug, b"w");
+        let opt = FakeWasmOpt(|_: &Path, _: &Path| Ok(false));
+        // No music folder: an empty one is still made.
+        package(&opt, &root, debug).unwrap();
+        let music = root.join("dist/web/music");
+        assert!(music.is_dir());
+        assert_eq!(fs::read_dir(&music).unwrap().count(), 0);
+        fs::create_dir_all(root.join("music/sub")).unwrap();
+        fs::write(root.join("music/title.ogg"), "ogg").unwrap();
+        fs::write(root.join("music/README.md"), "doc").unwrap();
+        fs::write(root.join("music/sub/x.ogg"), "nested").unwrap();
+        fs::write(music.join("stale.ogg"), "old").unwrap();
+        package(&opt, &root, debug).unwrap();
+        let mut names: Vec<_> = fs::read_dir(&music)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["title.ogg"]);
+        assert_eq!(fs::read_to_string(music.join("title.ogg")).unwrap(), "ogg");
         fs::remove_dir_all(&root).unwrap();
     }
 

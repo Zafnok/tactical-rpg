@@ -34,5 +34,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0023](0023-debug-tools-feature-for-pages-build.md) | A `debug-tools` cargo feature for the Pages build | Accepted |
 | [0024](0024-cursor-as-pixel-overlays.md) | Draw the battle cursor as pixel overlays, with selectable styles | Accepted |
 | [0025](0025-battle-event-playback-in-the-battle-screen.md) | Event playback runs inside the battle screen, as a mode | Accepted; playback keys changed in 0418 |
+| [0026](0026-audio-cues-and-music-files.md) | Audio cues as data, played by `app`; music files beside the game | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

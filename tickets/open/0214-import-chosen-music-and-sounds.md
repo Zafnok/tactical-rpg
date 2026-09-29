@@ -58,7 +58,11 @@ sound's page (links in `audio.md`), click **Download**, and put the files in
      the game file into the music folder chosen by ADR-0026, or into
      `assets/audio/sfx/`.
 - **Prepare the files:**
-  - Convert to OGG Vorbis: music 44.1 kHz stereo, around q5; sounds mono.
+  - Convert to OGG Vorbis: music 44.1 kHz stereo, around q5; sounds mono,
+    also **44.1 kHz** (ADR-0026: the validator refuses any other rate,
+    because the native player resamples badly).
+  - Keep each track at or under about 4 minutes (ADR-0026 memory budget:
+    a decoded track is about 21 MB per minute).
   - Loudness-match everything: music to one target, sounds to another.
   - Trim leading silence from sounds.
   - For `step_mounted`, cut a short gallop segment or single hoof beats from
@@ -75,10 +79,13 @@ sound's page (links in `audio.md`), click **Download**, and put the files in
     page says them.
   - Wire each sound and music cue to its credit.
 - License texts: `assets/audio/licenses/CC0-1.0.txt` and `CC-BY-4.0.txt`
-  (the official legal code).
+  (the official legal code). Ship them in every release package too
+  (`release.yml` copies only `assets/fonts/*LICENSE*` today; ADR-0026).
 - A `THIRD_PARTY_ASSETS.md` row per work.
 - A size report in the Completion notes: total music size, total sound size,
   and the WASM download size before and after.
+- Measure the frame hitch when a track starts loading on native (quad-snd
+  decodes the whole OGG in one frame, ADR-0026). If it's bad, write a ticket.
 
 **Out (do not do):**
 - Playing any cue in the game (0424, 0425, 0710, 0807).

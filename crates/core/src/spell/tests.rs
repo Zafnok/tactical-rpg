@@ -74,7 +74,6 @@ fn class(id: &str, spells: &[(u8, &str)]) -> ClassDef {
         movement_type: MovementTypeId(0),
         move_points: 5,
         base: Stats::default(),
-        caps: Stats::default(),
         growths: Growths::default(),
         weapons: vec![],
         armour: vec![],

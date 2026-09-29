@@ -1,5 +1,5 @@
 //! Unit EXP, class points and the ally EXP pool in battle (ticket 0601).
-//! The test classes have caps of 0, so a level up rolls 7 times and gains
+//! The test classes have growths of 0, so a level up rolls 7 times and gains
 //! nothing: the events are exact.
 
 use super::*;

@@ -22,6 +22,10 @@ use trpg_core::{
 };
 
 use super::attack::{Targeting, WeaponChoice, weapon_choices, weapon_menu};
+use super::items::{
+    EquipChoice, ItemTargeting, PackGroup, can_equip, can_use_item, equip_choices, equip_command,
+    equip_menu, pack_groups, pack_menu,
+};
 use super::map_menu::{MapEntry, map_menu, ready_players, unit_list};
 use super::path::steer;
 use super::playback::Playback;
@@ -117,6 +121,10 @@ pub enum MenuEntry {
     Attack,
     /// Seize the objective tile, when legal there.
     Seize,
+    /// Use a consumable from the battle pack (0407).
+    Item,
+    /// Change the equipped weapon (0407).
+    Equip,
     /// End the unit's action.
     Wait,
 }
@@ -127,27 +135,43 @@ impl MenuEntry {
         match self {
             MenuEntry::Attack => "Attack",
             MenuEntry::Seize => "Seize",
+            MenuEntry::Item => "Item",
+            MenuEntry::Equip => "Equip",
             MenuEntry::Wait => "Wait",
         }
     }
 
-    /// The menu item: `Attack` is enabled only if `can_attack`.
-    fn item(self, can_attack: bool) -> MenuItem {
+    /// The menu item, disabled if not `enabled`.
+    fn item(self, enabled: bool) -> MenuItem {
+        if enabled {
+            MenuItem::new(self.label())
+        } else {
+            MenuItem::disabled(self.label())
+        }
+    }
+
+    /// Whether the entry can be chosen for `sel`'s unit: `Attack` if a
+    /// weapon reaches someone, `Item` if the pack has an item usable on
+    /// someone, `Equip` with two usable weapons.
+    fn enabled(self, sel: &Selection, weapons: &[WeaponChoice], state: &BattleState) -> bool {
         match self {
-            MenuEntry::Attack if !can_attack => MenuItem::disabled(self.label()),
-            _ => MenuItem::new(self.label()),
+            MenuEntry::Attack => !weapons.is_empty(),
+            MenuEntry::Item => can_use_item(&pack_groups(state, sel.unit, sel.dest())),
+            MenuEntry::Equip => can_equip(&equip_choices(state, sel.unit)),
+            MenuEntry::Seize | MenuEntry::Wait => true,
         }
     }
 }
 
 /// The action menu for `sel`'s unit at its path's end: `Attack` (enabled if
-/// some weapon can attack someone there), `Seize` if legal there, `Wait`.
+/// some weapon can attack someone there), `Seize` if legal there, `Item`
+/// and `Equip` (enabled when they can do something), `Wait`.
 pub fn menu_entries(sel: &Selection, state: &BattleState) -> Vec<MenuEntry> {
     let mut entries = vec![MenuEntry::Attack];
     if state.can_seize(sel.unit, sel.dest()) {
         entries.push(MenuEntry::Seize);
     }
-    entries.push(MenuEntry::Wait);
+    entries.extend([MenuEntry::Item, MenuEntry::Equip, MenuEntry::Wait]);
     entries
 }
 
@@ -202,6 +226,26 @@ pub enum Mode {
     },
     /// The player picks a target and reads the forecast.
     Targeting(Box<Targeting>),
+    /// The battle pack's items, grouped (0407).
+    ItemMenu {
+        /// The selection.
+        sel: Selection,
+        /// The pack list.
+        menu: Menu,
+        /// What each line is.
+        groups: Vec<PackGroup>,
+    },
+    /// The player picks who an item is used on.
+    ItemTarget(Box<ItemTargeting>),
+    /// The unit's weapons, to equip one (0407).
+    EquipMenu {
+        /// The selection.
+        sel: Selection,
+        /// The weapon list.
+        menu: Menu,
+        /// What each line is.
+        choices: Vec<EquipChoice>,
+    },
     /// An attack's combat plays out.
     Combat(Box<Playback>),
     /// A unit waits to move after its attack ([`BattleState::pending_move`]):
@@ -255,6 +299,10 @@ pub enum Effect {
     /// Apply this command to the battle, then continue from
     /// [`Mode::after_command`].
     Apply(Command),
+    /// Apply this command, which doesn't end the unit's action (`Equip`),
+    /// then reopen the action menu for the unit, still at the end of the
+    /// path.
+    ApplyStay(Command, Box<Selection>),
     /// Put the cursor on this tile.
     Cursor(Pos),
 }
@@ -294,8 +342,11 @@ impl Mode {
             Mode::Selected(sel)
             | Mode::Moving { sel, .. }
             | Mode::ActionMenu { sel, .. }
-            | Mode::WeaponMenu { sel, .. } => Some(sel),
+            | Mode::WeaponMenu { sel, .. }
+            | Mode::ItemMenu { sel, .. }
+            | Mode::EquipMenu { sel, .. } => Some(sel),
             Mode::Targeting(t) => Some(&t.sel),
+            Mode::ItemTarget(t) => Some(&t.sel),
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Combat(_)
@@ -313,10 +364,16 @@ impl Mode {
     pub fn drawn_pos(&self, id: UnitId) -> Option<Pos> {
         match self {
             Mode::Moving { sel, t, .. } if sel.unit == id => Some(walk_pos(sel, *t)),
-            Mode::ActionMenu { sel, .. } | Mode::WeaponMenu { sel, .. } if sel.unit == id => {
+            Mode::ActionMenu { sel, .. }
+            | Mode::WeaponMenu { sel, .. }
+            | Mode::ItemMenu { sel, .. }
+            | Mode::EquipMenu { sel, .. }
+                if sel.unit == id =>
+            {
                 Some(sel.dest())
             }
             Mode::Targeting(t) if t.sel.unit == id => Some(t.sel.dest()),
+            Mode::ItemTarget(t) if t.sel.unit == id => Some(t.sel.dest()),
             _ => None,
         }
     }
@@ -372,11 +429,22 @@ fn walk_pos(sel: &Selection, t: f32) -> Pos {
 }
 
 /// The action menu for `sel`.
-fn open_menu(sel: Selection, state: &BattleState) -> Mode {
+pub(super) fn open_menu(sel: Selection, state: &BattleState) -> Mode {
     let entries = menu_entries(&sel, state);
     let weapons = weapon_choices(state, &sel);
-    let can_attack = !weapons.is_empty();
-    let menu = Menu::new(entries.iter().map(|e| e.item(can_attack)).collect());
+    let items: Vec<MenuItem> = entries
+        .iter()
+        .map(|e| e.item(e.enabled(&sel, &weapons, state)))
+        .collect();
+    // It opens on the first of Attack and Seize that is enabled, else Wait:
+    // Item and Equip are never the default.
+    let first = entries
+        .iter()
+        .position(|e| {
+            matches!(e, MenuEntry::Attack | MenuEntry::Seize) && e.enabled(&sel, &weapons, state)
+        })
+        .or_else(|| entries.iter().position(|&e| e == MenuEntry::Wait));
+    let menu = Menu::new(items).focused(first.unwrap_or(0));
     Mode::ActionMenu {
         sel,
         menu,
@@ -388,6 +456,11 @@ fn open_menu(sel: Selection, state: &BattleState) -> Mode {
 /// The action menu for `sel`, focused on `Attack` (back from choosing an
 /// attack).
 fn back_to_menu(sel: Selection, state: &BattleState) -> Mode {
+    back_to_entry(sel, state, MenuEntry::Attack)
+}
+
+/// The action menu for `sel`, focused on `entry` (back from what it opened).
+pub(super) fn back_to_entry(sel: Selection, state: &BattleState, entry: MenuEntry) -> Mode {
     let mode = open_menu(sel, state);
     let Mode::ActionMenu {
         sel,
@@ -398,10 +471,10 @@ fn back_to_menu(sel: Selection, state: &BattleState) -> Mode {
     else {
         return mode;
     };
-    let attack = entries.iter().position(|&e| e == MenuEntry::Attack);
+    let at = entries.iter().position(|&e| e == entry);
     Mode::ActionMenu {
         sel,
-        menu: attack.map_or(menu.clone(), |i| menu.focused(i)),
+        menu: at.map_or(menu.clone(), |i| menu.focused(i)),
         entries,
         weapons,
     }
@@ -487,6 +560,8 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
                     Some(MenuEntry::Wait) => UnitAction::Wait,
                     Some(MenuEntry::Seize) => UnitAction::Seize,
                     Some(MenuEntry::Attack) => return choose_attack(sel, weapons, state),
+                    Some(MenuEntry::Item) => return open_pack(sel, state),
+                    Some(MenuEntry::Equip) => return open_equip(sel, state),
                     None => {
                         let menu = Mode::ActionMenu {
                             sel,
@@ -519,6 +594,9 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             step_weapon_menu(sel, menu, weapons, action, state)
         }
         Mode::Targeting(t) => step_targeting(*t, action, state),
+        Mode::ItemMenu { sel, menu, groups } => step_pack(sel, menu, groups, action, state),
+        Mode::ItemTarget(t) => step_item_target(*t, action, state),
+        Mode::EquipMenu { sel, menu, choices } => step_equip(sel, menu, choices, action, state),
         Mode::Combat(mut playback) => {
             if action == Action::Cancel {
                 playback.skip();
@@ -694,6 +772,115 @@ fn step_weapon_menu(
         },
         Some(MenuEvent::Cancelled) => (back_to_menu(sel, state), Effect::None),
         None => (Mode::WeaponMenu { sel, menu, weapons }, Effect::None),
+    }
+}
+
+/// `Item` chosen: the pack list (the action menu again if it has nothing
+/// usable, which the enabled entry rules out).
+fn open_pack(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    let groups = pack_groups(state, sel.unit, sel.dest());
+    if !can_use_item(&groups) {
+        return (back_to_entry(sel, state, MenuEntry::Item), Effect::None);
+    }
+    let menu = pack_menu(state, &groups);
+    (Mode::ItemMenu { sel, menu, groups }, Effect::None)
+}
+
+/// `Equip` chosen: the weapon list.
+fn open_equip(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    let choices = equip_choices(state, sel.unit);
+    if !can_equip(&choices) {
+        return (back_to_entry(sel, state, MenuEntry::Equip), Effect::None);
+    }
+    let menu = equip_menu(state, sel.unit, &choices);
+    (Mode::EquipMenu { sel, menu, choices }, Effect::None)
+}
+
+/// Where the cursor goes to show `target`, the user of an item at `sel`'s
+/// path end or another unit.
+fn target_tile(state: &BattleState, sel: &Selection, target: UnitId) -> Option<Pos> {
+    if target == sel.unit {
+        Some(sel.dest())
+    } else {
+        state.unit(target).map(|u| u.pos)
+    }
+}
+
+/// [`step`] in the pack list: Confirm picks who to use the item on, Cancel
+/// goes back to the action menu.
+fn step_pack(
+    sel: Selection,
+    mut menu: Menu,
+    groups: Vec<PackGroup>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => {
+            match ItemTargeting::new(sel.clone(), menu.clone(), groups.clone(), i) {
+                Some(t) => {
+                    let at = target_tile(state, &sel, t.target());
+                    (
+                        Mode::ItemTarget(Box::new(t)),
+                        at.map_or(Effect::None, Effect::Cursor),
+                    )
+                }
+                None => (Mode::ItemMenu { sel, menu, groups }, Effect::None),
+            }
+        }
+        Some(MenuEvent::Cancelled) => (back_to_entry(sel, state, MenuEntry::Item), Effect::None),
+        None => (Mode::ItemMenu { sel, menu, groups }, Effect::None),
+    }
+}
+
+/// [`step`] while picking an item's target: the cursor keys and
+/// `NextUnit`/`PrevUnit` cycle the targets, Confirm uses the item, Cancel
+/// goes back to the pack list with the cursor on the unit.
+fn step_item_target(mut t: ItemTargeting, action: Action, state: &BattleState) -> (Mode, Effect) {
+    let forward = match action {
+        Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
+        Action::CursorLeft | Action::CursorUp | Action::PrevUnit => false,
+        Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
+        Action::Cancel => {
+            let dest = t.sel.dest();
+            let back = Mode::ItemMenu {
+                sel: t.sel,
+                menu: t.menu,
+                groups: t.groups,
+            };
+            return (back, Effect::Cursor(dest));
+        }
+        _ => return (Mode::ItemTarget(Box::new(t)), Effect::None),
+    };
+    t.cycle(forward);
+    let at = target_tile(state, &t.sel, t.target());
+    (
+        Mode::ItemTarget(Box::new(t)),
+        at.map_or(Effect::None, Effect::Cursor),
+    )
+}
+
+/// [`step`] in the weapon list: Confirm equips the weapon and reopens the
+/// action menu (the unit hasn't acted), Cancel goes back without changing
+/// anything.
+fn step_equip(
+    sel: Selection,
+    mut menu: Menu,
+    choices: Vec<EquipChoice>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => match choices.get(i) {
+            // (The menu never chooses a dimmed, unusable weapon.)
+            Some(c) => {
+                let cmd = equip_command(sel.unit, c.slot);
+                (Mode::default(), Effect::ApplyStay(cmd, Box::new(sel)))
+            }
+            None => (Mode::EquipMenu { sel, menu, choices }, Effect::None),
+        },
+        Some(MenuEvent::Cancelled) => (back_to_entry(sel, state, MenuEntry::Equip), Effect::None),
+        None => (Mode::EquipMenu { sel, menu, choices }, Effect::None),
     }
 }
 
@@ -994,13 +1181,28 @@ mod tests {
         let Mode::ActionMenu { menu, entries, .. } = &mode else {
             panic!("{mode:?}");
         };
-        assert_eq!(entries, &[MenuEntry::Attack, MenuEntry::Wait]);
+        assert_eq!(
+            entries,
+            &[
+                MenuEntry::Attack,
+                MenuEntry::Item,
+                MenuEntry::Equip,
+                MenuEntry::Wait
+            ]
+        );
         let labels: Vec<(&str, bool)> = menu
             .items()
             .iter()
             .map(|i| (i.label.as_str(), i.enabled))
             .collect();
-        assert_eq!(labels, [("Attack", false), ("Wait", true)]);
+        // Nobody is hurt (no item to use) but the lord has two weapons.
+        let want = [
+            ("Attack", false),
+            ("Item", false),
+            ("Equip", true),
+            ("Wait", true),
+        ];
+        assert_eq!(labels, want);
         // Up and Down stay on Wait; Confirm sends the move and the wait.
         let (mode, effect) = run(
             mode,
@@ -1042,7 +1244,13 @@ mod tests {
         let Mode::ActionMenu { entries, menu, .. } = lord_menu(&s) else {
             panic!("no menu");
         };
-        let all = [MenuEntry::Attack, MenuEntry::Seize, MenuEntry::Wait];
+        let all = [
+            MenuEntry::Attack,
+            MenuEntry::Seize,
+            MenuEntry::Item,
+            MenuEntry::Equip,
+            MenuEntry::Wait,
+        ];
         assert_eq!(entries, all);
         assert_eq!(menu.focus(), 1, "focus on Seize");
         let (_, effect) = run(lord_menu(&s), &[Action::Confirm], p(5, 5), &s);
@@ -1056,17 +1264,23 @@ mod tests {
         );
         // Elsewhere, or by a non-lord where the lord must seize: no Seize.
         let sel = selected(&s, &[p(4, 5)]);
-        assert_eq!(menu_entries(&sel, &s), [MenuEntry::Attack, MenuEntry::Wait]);
+        let plain = [
+            MenuEntry::Attack,
+            MenuEntry::Item,
+            MenuEntry::Equip,
+            MenuEntry::Wait,
+        ];
+        assert_eq!(menu_entries(&sel, &s), plain);
         let mut knight = sel;
         knight.unit = UnitId(2);
         knight.path = vec![p(5, 5)];
-        assert_eq!(
-            menu_entries(&knight, &s),
-            [MenuEntry::Attack, MenuEntry::Wait]
-        );
+        assert_eq!(menu_entries(&knight, &s), plain);
         let s = with_objective(seize(false));
         assert_eq!(menu_entries(&knight, &s), all);
-        assert_eq!(all.map(MenuEntry::label), ["Attack", "Seize", "Wait"]);
+        assert_eq!(
+            all.map(MenuEntry::label),
+            ["Attack", "Seize", "Item", "Equip", "Wait"]
+        );
     }
 
     /// The unit whose threat area `mode` shows, if any.

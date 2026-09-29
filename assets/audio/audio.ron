@@ -1,0 +1,12 @@
+// The audio manifest: every sound and music cue, music pools and credits.
+// Format: assets/audio/README.md. Decisions: docs/design/audio.md (0020),
+// ADR-0026. Loaded and validated by trpg_content::audio.
+(
+    // How long a track fades out before the next one starts (TUNABLE,
+    // audio.md "Starting values").
+    music_fade_ms: 500,
+    sounds: [],
+    music: [],
+    pools: [],
+    credits: [],
+)

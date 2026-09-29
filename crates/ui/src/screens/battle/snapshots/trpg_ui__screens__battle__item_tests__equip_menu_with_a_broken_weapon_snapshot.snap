@@ -1,10 +1,10 @@
 ---
-source: crates/ui/tests/battle.rs
-expression: h.snapshot()
+source: crates/ui/src/screens/battle/item_tests.rs
+expression: buf.to_snapshot(&c.palette)
 ---
                                                                       ╔════════════════════════════╗
-                                                                      ║ Fort                       ║
-                                                                      ║ DEF +2  AVO +20            ║
+                                                                      ║ Plain                      ║
+                                                                      ║ DEF +0  AVO +0             ║
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║ Test Lord                  ║
@@ -17,12 +17,12 @@ expression: h.snapshot()
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║                            ║
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      ║                            ║
                     ..≈≈≈≈..··..............╦╦..                      ║                            ║
-                    ....Ar····...┌────────┐▓▓▓..                      ║                            ║
-                    ..♣♣··....Lo.│ Attack │╦▓▓..                      ║                            ║
-                    ♣♣♣♣··..Kn...│ Item   │░▓▓..                      ║                            ║
-                    ♣♣♠♠··.......│ Equip  │▌▓▓..                      ║                            ║
-                                 │ Wait   │                           ║                            ║
-                                 └────────┘                           ║                            ║
+┌────────────────────────────────────────────────────────────┐        ║                            ║
+│ * Iron Sword   Mt 5 Hit 90 Crit 0 Wt 2 Rng1 12/20          │        ║                            ║
+│   Steel Sword  Mt 8 Hit 75 Crit 0 Wt 4 Rng1  0/25 (broken) │        ║                            ║
+└────────────────────────────────────────────────────────────┘        ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
@@ -33,10 +33,10 @@ expression: h.snapshot()
                                                                       ║                            ║
                                                                       ╚════════════════════════════╝
                                                      w danger zone: OFF · Shift+Space auto-end: OFF 
- arrows choose · f confirm · d back                                                        F2 debug 
+ arrows choose · f equip · d back                                                          F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcddddcccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdddddccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -50,12 +50,12 @@ aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooppookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooorrjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjjjttoooojjjbbbbbbbbbbuuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjkkoojjjjvvjbggggggggbsuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkkkoojjwwjjjbggggggggbxuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakklloojjjjjjjbccccccccbyuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabzzzzzzzzbaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaabccccccccccccccccccccccccccccb
+bttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttbaaaaaaaabccccccccccccccccccccccccccccb
+bcccccccccccccccccccccccccccccccccccccccccccccccccccuuuuuuuucbaaaaaaaabccccccccccccccccccccccccccccb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -65,8 +65,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa
-aAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaavvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvva
+avvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaavvvvvvvva
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -87,17 +87,9 @@ p = fg:enemy bg:road_bg
 q = fg:wood bg:water_bg
 r = fg:enemy bg:grass_bg
 s = fg:fort bg:fort_bg
-t = fg:player bg:road_bg
-u = fg:stone bg:stone_bg
-v = fg:player bg:fort_bg
-w = fg:player bg:grass_bg
-x = fg:floor bg:floor_bg
-y = fg:wood bg:stone_bg
-z = fg:panel_bg bg:panel_border_focus
-A = fg:text_dim bg:black
+t = fg:panel_bg bg:panel_border_focus
+u = fg:hp_low bg:panel_bg
+v = fg:text_dim bg:black
 --- overlays ---
-over  240,270 16x2  hp_high
-over  224,286 16x2  hp_high
-over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
 over  272,206 16x2  hp_high

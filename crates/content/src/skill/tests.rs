@@ -356,7 +356,6 @@ fn class(id: &str, active: Option<&str>, passives: &[&str]) -> ClassDef {
         movement_type: trpg_core::MovementTypeId(0),
         move_points: 5,
         base: trpg_core::Stats::default(),
-        caps: trpg_core::Stats::default(),
         growths: trpg_core::Growths::default(),
         weapons: vec![],
         armour: vec![],

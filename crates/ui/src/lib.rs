@@ -1,6 +1,7 @@
 //! Glyph buffer, screens and input handling, independent of macroquad. See
 //! ADR-0004, and `crates/ui/README.md` for how screens fit together.
 
+pub mod audio;
 pub mod color;
 pub mod console;
 pub mod debug;
@@ -18,6 +19,7 @@ pub mod storage;
 pub mod tips;
 pub mod widgets;
 
+pub use audio::{AudioQueue, AudioRequest, MusicCommand, MusicState};
 pub use color::{Palette, Rgb, UiColor};
 pub use game::{FrameOutput, Game, RawKeyEvent};
 pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Layer, Overlay, PxRect, Rect};
