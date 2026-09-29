@@ -85,13 +85,9 @@ fn font_atlas(args: &[String]) -> u8 {
 }
 
 fn sfx(args: &[String]) -> u8 {
-    let check = match args {
-        [] => false,
-        [flag] if flag == "--check" => true,
-        _ => {
-            eprintln!("usage: cargo xtask sfx [--check]");
-            return 2;
-        }
+    let Some(check) = parse_sfx_check(args) else {
+        eprintln!("usage: cargo xtask sfx [--check]");
+        return 2;
     };
     match sfx::run(&repo_root(), check) {
         Ok(summary) => {
@@ -102,6 +98,15 @@ fn sfx(args: &[String]) -> u8 {
             eprintln!("sfx: {e}");
             1
         }
+    }
+}
+
+/// `sfx`'s arguments: `Some(check)`, or `None` if they're wrong.
+fn parse_sfx_check(args: &[String]) -> Option<bool> {
+    match args {
+        [] => Some(false),
+        [flag] if flag == "--check" => Some(true),
+        _ => None,
     }
 }
 
@@ -240,6 +245,13 @@ mod tests {
         // manually, not here.
         assert_eq!(web(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["web", "--bogus"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn parse_sfx_check_reads_the_flag() {
+        assert_eq!(parse_sfx_check(&[]), Some(false));
+        assert_eq!(parse_sfx_check(&args(&["--check"])), Some(true));
+        assert_eq!(parse_sfx_check(&args(&["--bogus"])), None);
     }
 
     #[test]

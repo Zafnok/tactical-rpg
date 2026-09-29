@@ -56,7 +56,7 @@ const SOUNDS: [(&str, Recipe); 5] = [
 fn menu_move() -> Mix {
     let mut mix = Mix::new();
     let p25 = Wave::pulse(0.25);
-    mix.add(&chip(&p25, "D4", 0.0, 0.05, 0.015, 0.07, 1400.0), 0.0);
+    mix.add(&chip(&p25, "D4", 0.0, 0.05, 0.015, 0.07, 1400.0));
     mix
 }
 
@@ -64,8 +64,8 @@ fn menu_move() -> Mix {
 fn menu_select() -> Mix {
     let mut mix = Mix::new();
     let p25 = Wave::pulse(0.25);
-    mix.add(&chip(&p25, "D4", 0.0, 0.04, 0.02, 0.1, 1600.0), 0.0);
-    mix.add(&chip(&p25, "G4", 0.06, 0.14, 0.04, 0.12, 1700.0), 0.0);
+    mix.add(&chip(&p25, "D4", 0.0, 0.04, 0.02, 0.1, 1600.0));
+    mix.add(&chip(&p25, "G4", 0.06, 0.14, 0.04, 0.12, 1700.0));
     mix
 }
 
@@ -73,8 +73,8 @@ fn menu_select() -> Mix {
 fn menu_cancel() -> Mix {
     let mut mix = Mix::new();
     let p50 = Wave::pulse(0.5);
-    mix.add(&chip(&p50, "D4", 0.0, 0.05, 0.03, 0.1, 1300.0), 0.0);
-    mix.add(&chip(&p50, "A3", 0.07, 0.1, 0.03, 0.1, 1300.0), 0.0);
+    mix.add(&chip(&p50, "D4", 0.0, 0.05, 0.03, 0.1, 1300.0));
+    mix.add(&chip(&p50, "A3", 0.07, 0.1, 0.03, 0.1, 1300.0));
     mix
 }
 
@@ -91,7 +91,7 @@ fn miss() -> Mix {
         f2: Some(2600.0),
         q: 1.6,
     };
-    mix.add(&whoosh.render(&mut Noise::new(NOISE_SEED)), 0.0);
+    mix.add(&whoosh.render(&mut Noise::new(NOISE_SEED)));
     mix
 }
 
@@ -114,7 +114,7 @@ fn heal() -> Mix {
                 filter: Some(1200.0),
                 ..Tone::new(&triangle, f, 0.0)
             };
-            mix.add(&tone.render(), 0.5);
+            mix.add_wet(&tone.render(), 0.5);
         }
     }
     for detune in [-5.0, 5.0] {
@@ -126,7 +126,7 @@ fn heal() -> Mix {
             filter: Some(900.0),
             ..Tone::new(&triangle, nf("G3"), 0.0)
         };
-        mix.add(&tone.render(), 0.5);
+        mix.add_wet(&tone.render(), 0.5);
     }
     mix
 }
@@ -191,9 +191,8 @@ impl Param {
     /// The value at time `t` (seconds).
     fn at(&self, t: f64) -> f64 {
         let mut prev = self.0[0];
-        if t < prev.1 {
-            return prev.2;
-        }
+        // Before the first event, its value.
+        let t = t.max(prev.1);
         for &next in &self.0[1..] {
             if t < next.1 {
                 let x = (t - prev.1) / (next.1 - prev.1);
@@ -212,12 +211,14 @@ impl Param {
 /// The page's `env(g, t, a, peak, d, hold)`: a gain rising linearly from
 /// silence to `peak` over `a`, holding, then falling exponentially over `d`.
 fn env(t: f64, a: f64, peak: f64, d: f64, hold: f64) -> Param {
-    let mut events = vec![(Ramp::Set, t, 0.0001), (Ramp::Linear, t + a, peak)];
-    if hold > 0.0 {
-        events.push((Ramp::Set, t + a + hold, peak));
-    }
-    events.push((Ramp::Exp, t + a + hold + d, 0.0001));
-    Param(events)
+    // The page only sets the hold's end when `hold > 0`; with no hold that
+    // event lands on the ramp's end with the same value, so it's harmless.
+    Param(vec![
+        (Ramp::Set, t, 0.0001),
+        (Ramp::Linear, t + a, peak),
+        (Ramp::Set, t + a + hold, peak),
+        (Ramp::Exp, t + a + hold + d, 0.0001),
+    ])
 }
 
 /// A periodic waveform as a Fourier series, like Web Audio's
@@ -250,15 +251,18 @@ impl Wave {
         wave
     }
 
-    /// Web Audio's built-in triangle: odd sine harmonics 8/(πk)², alternating
-    /// in sign, 2048 of them (Chrome's).
+    /// Web Audio's built-in triangle: odd sine harmonics falling as 1/k²,
+    /// alternating in sign (its 8/π² factor cancels in normalisation). 64
+    /// terms, like `pulse`: Chrome's go on to 2048, but past the 63rd they
+    /// are below −74 dB, and every triangle here is lowpassed far below
+    /// them.
     fn triangle() -> Self {
-        let n = 2048;
+        let n = 64;
         let mut imag = vec![0.0; n];
         for (k, b) in imag.iter_mut().enumerate().skip(1).step_by(2) {
-            let sign = if (k - 1) / 2 % 2 == 0 { 1.0 } else { -1.0 };
+            let sign = if k % 4 == 1 { 1.0 } else { -1.0 };
             let kf = to_f64(k);
-            *b = sign * 8.0 / (PI * PI * kf * kf);
+            *b = sign / (kf * kf);
         }
         Self::new(vec![0.0; n], imag)
     }
@@ -383,7 +387,7 @@ impl<'w> Tone<'w> {
         }
         let freq = Param(freq);
         let ratio = 2f64.powf(self.detune / 1200.0);
-        let stop = self.t + self.a + self.hold + self.d + 0.05;
+        let stop = stop_time(self.t, self.a, self.hold, self.d);
         let mut out = vec![0.0; frames(RENDER_SECS)];
         let mut phase = 0.0;
         let (start, stop) = (frames(self.t), frames(stop));
@@ -400,18 +404,27 @@ impl<'w> Tone<'w> {
     }
 }
 
+/// When the page stops a source: 50 ms after its envelope ends.
+fn stop_time(t: f64, a: f64, hold: f64, d: f64) -> f64 {
+    t + a + hold + d + 0.05
+}
+
 /// A seeded random source (`SplitMix64`) standing in for `Math.random()`.
 #[derive(Debug, Clone)]
 struct Rng(u64);
 
 impl Rng {
-    /// Uniform in `[0, 1)`.
-    fn next(&mut self) -> f64 {
+    fn next_u64(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
         z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        z ^= z >> 31;
+        z ^ (z >> 31)
+    }
+
+    /// Uniform in `[0, 1)`.
+    fn next(&mut self) -> f64 {
+        let z = self.next_u64();
         #[allow(clippy::cast_precision_loss)] // 53 bits and 2^53: exact in an f64
         let unit = (z >> 11) as f64 / (1u64 << 53) as f64;
         unit
@@ -467,7 +480,7 @@ struct Burst {
 
 impl Burst {
     fn render(&self, noise: &mut Noise) -> Vec<f64> {
-        let source = noise.play(self.t, self.t + self.a + self.d + 0.05);
+        let source = noise.play(self.t, stop_time(self.t, self.a, 0.0, self.d));
         let mut freq = vec![(Ramp::Set, self.t, self.f)];
         if let Some(f2) = self.f2 {
             freq.push((Ramp::Exp, self.t + self.a + self.d, f2));
@@ -496,17 +509,20 @@ impl Mix {
         }
     }
 
-    /// Plays `signal` into `sfxBus`, and `wet(signal, amount)` if
-    /// `amount > 0`.
-    fn add(&mut self, signal: &[f64], amount: f64) {
+    /// Plays `signal` into `sfxBus`.
+    fn add(&mut self, signal: &[f64]) {
         for (bus, s) in self.sfx.iter_mut().zip(signal) {
             *bus += s;
         }
-        if amount > 0.0 {
-            self.wet = true;
-            for (bus, s) in self.send.iter_mut().zip(signal) {
-                *bus += s * amount;
-            }
+    }
+
+    /// The page's `wet(signal, amount)`: plays `signal` into `sfxBus` and
+    /// sends it to the reverb at `amount`.
+    fn add_wet(&mut self, signal: &[f64], amount: f64) {
+        self.add(signal);
+        self.wet = true;
+        for (bus, s) in self.send.iter_mut().zip(signal) {
+            *bus += s * amount;
         }
     }
 
@@ -563,24 +579,22 @@ fn convolve(signal: &[f64], ir: &[f64]) -> Vec<f64> {
         .map(|(&(ar, ai), &(br, bi))| (ar * br - ai * bi, ar * bi + ai * br))
         .collect();
     fft(&mut product, true);
-    product.iter().take(signal.len()).map(|c| c.0).collect()
+    let scale = 1.0 / to_f64(n);
+    product
+        .iter()
+        .take(signal.len())
+        .map(|c| c.0 * scale)
+        .collect()
 }
 
-/// In-place radix-2 FFT (`buf.len()` a power of two). `inverse` also
-/// divides by the length.
+/// In-place radix-2 FFT (`buf.len()` a power of two, at least 2), without
+/// the inverse's 1/n scaling.
 fn fft(buf: &mut [(f64, f64)], inverse: bool) {
     let n = buf.len();
-    let mut j = 0;
-    for i in 1..n {
-        let mut bit = n >> 1;
-        while j & bit != 0 {
-            j ^= bit;
-            bit >>= 1;
-        }
-        j |= bit;
-        if i < j {
-            buf.swap(i, j);
-        }
+    let shift = usize::BITS - n.trailing_zeros();
+    let input = buf.to_vec();
+    for (i, c) in buf.iter_mut().enumerate() {
+        *c = input[i.reverse_bits() >> shift];
     }
     let sign = if inverse { 1.0 } else { -1.0 };
     let mut len = 2;
@@ -597,12 +611,6 @@ fn fft(buf: &mut [(f64, f64)], inverse: bool) {
             }
         }
         len <<= 1;
-    }
-    if inverse {
-        let scale = 1.0 / to_f64(n);
-        for c in buf.iter_mut() {
-            *c = (c.0 * scale, c.1 * scale);
-        }
     }
 }
 
@@ -622,7 +630,11 @@ fn compress(input: &[f64]) -> Vec<f64> {
         .iter()
         .map(|&x| {
             let target = gain_reduction(20.0 * x.abs().max(1e-12).log10(), THRESHOLD, KNEE, RATIO);
-            let coeff = if target < reduction { attack } else { release };
+            let coeff = if target.total_cmp(&reduction).is_lt() {
+                attack
+            } else {
+                release
+            };
             reduction = target + (reduction - target) * coeff;
             x * 10f64.powf(reduction / 20.0)
         })
@@ -632,15 +644,12 @@ fn compress(input: &[f64]) -> Vec<f64> {
 /// The compressor's static curve: dB of gain change (≤ 0) at input level
 /// `level` dB.
 fn gain_reduction(level: f64, threshold: f64, knee: f64, ratio: f64) -> f64 {
-    let over = level - threshold;
+    // Quadratic over the knee, then a straight line of slope 1/ratio − 1;
+    // both are 0 below the threshold.
+    let over = (level - threshold).max(0.0);
     let slope = 1.0 / ratio - 1.0;
-    if over <= 0.0 {
-        0.0
-    } else if over < knee {
-        slope * over * over / (2.0 * knee)
-    } else {
-        slope * (over - knee / 2.0)
-    }
+    let in_knee = over.min(knee);
+    slope * in_knee * in_knee / (2.0 * knee) + slope * (over - knee).max(0.0)
 }
 
 // ---------- rendering and files ----------
@@ -803,6 +812,9 @@ mod tests {
         assert!((nf("G3") - 195.997_717_9).abs() < 1e-6);
         assert!((nf("C#4") - nf("Db4")).abs() < 1e-9);
         assert!((nf("B3") * 2.0 - nf("B4")).abs() < 1e-9);
+        assert!((nf("F4") - 349.228_231_4).abs() < 1e-6);
+        assert!((nf("E4") - 329.627_556_9).abs() < 1e-6);
+        assert!((nf("C4") - 261.625_565_3).abs() < 1e-6);
     }
 
     #[test]
@@ -893,6 +905,9 @@ mod tests {
         assert!((p.at(2.5) - 200.0).abs() < 1e-9);
         assert!((p.at(3.5) - 0.0).abs() < 1e-9);
         assert!((p.at(4.5) - 7.0).abs() < 1e-9);
+        // An event's own time already has its value.
+        assert!((p.at(4.0) - 7.0).abs() < 1e-9);
+        assert!((p.at(2.0) - 400.0).abs() < 1e-9);
     }
 
     #[test]
@@ -998,6 +1013,39 @@ mod tests {
     }
 
     #[test]
+    fn rng_is_splitmix64() {
+        // The reference sequence for seed 0.
+        let mut rng = Rng(0);
+        assert_eq!(rng.next_u64(), 0xE220_A839_7B1D_CDAF);
+        assert_eq!(rng.next_u64(), 0x6E78_9E6A_A1B9_65F4);
+        let mut rng = Rng(0);
+        let unit = rng.next();
+        // The top 53 bits of that first output, as a fraction.
+        assert!((unit - 0.883_310_808_213_642_6).abs() < 1e-15, "{unit}");
+    }
+
+    #[test]
+    fn sources_stop_50_ms_after_their_envelope() {
+        assert!((stop_time(0.5, 0.07, 0.02, 0.16) - 0.8).abs() < 1e-12);
+        assert!((stop_time(0.0, 0.07, 0.0, 0.16) - 0.28).abs() < 1e-12);
+    }
+
+    #[test]
+    fn only_wet_signals_reach_the_reverb() {
+        let signal = vec![0.5; 10];
+        let mut mix = Mix::new();
+        mix.add(&signal);
+        assert!(!mix.wet);
+        assert!(mix.send.iter().all(|x| *x == 0.0));
+        assert!((mix.sfx[9] - 0.5).abs() < 1e-12);
+        mix.add_wet(&signal, 0.25);
+        assert!(mix.wet);
+        assert!((mix.sfx[9] - 1.0).abs() < 1e-12);
+        assert!((mix.send[9] - 0.125).abs() < 1e-12);
+        assert!(mix.send[10].abs() < 1e-12);
+    }
+
+    #[test]
     fn noise_is_seeded_and_loops() {
         let mut a = Noise::new(1);
         let b = Noise::new(1);
@@ -1029,6 +1077,31 @@ mod tests {
         assert!(gain_reduction(-14.0, -14.0, 30.0, 4.0).abs() < 1e-12);
         assert!((gain_reduction(26.0, -14.0, 30.0, 4.0) + 0.75 * 25.0).abs() < 1e-9);
         assert!((gain_reduction(1.0, -14.0, 30.0, 4.0) + 0.75 * 225.0 / 60.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compressor_attacks_in_3_ms_and_releases_in_250_ms() {
+        // +20 dB for 0.1 s, then quiet.
+        let loud = 0.1;
+        let signal: Vec<f64> = (0..frames(1.0))
+            .map(|i| if i < frames(loud) { 10.0 } else { 0.001 })
+            .collect();
+        let out = compress(&signal);
+        let target = gain_reduction(20.0, -14.0, 30.0, 4.0);
+        let db = |i: usize| 20.0 * (out[i] / signal[i]).log10();
+        // One time constant into the attack: 1 − 1/e of the way there.
+        let attack = frames(0.003) - 1;
+        let want = target * (1.0 - (-to_f64(attack + 1) / (0.003 * SR)).exp());
+        assert!((db(attack) - want).abs() < 0.01, "{} vs {want}", db(attack));
+        assert!((db(frames(loud) - 1) - target).abs() < 1e-6);
+        // One time constant into the release: 1/e of the reduction left.
+        let release = frames(loud) + frames(0.25) - 1;
+        let want = target * (-to_f64(frames(0.25)) / (0.25 * SR)).exp();
+        assert!(
+            (db(release) - want).abs() < 0.01,
+            "{} vs {want}",
+            db(release)
+        );
     }
 
     #[test]

@@ -145,6 +145,10 @@ the PR, or a small HTML page with `<audio>` tags sent with SendUserFile).
 - The page's reverb impulse length and scale follow the device's sample
   rate (often 48 kHz); here it's 44.1 kHz. That's a 0.4 dB difference in
   reverb level at most.
+- The triangle stops at 64 harmonics, like the page's pulse; Chrome's goes
+  to 2048, but past the 63rd they're below −74 dB and filtered out anyway.
+  (Changed after sign-off for the mutation gate: the heal is unchanged, the
+  other four are 0.05 dB quieter.)
 - Not built because no chosen sound uses them: sawtooth, highpass and the
   page's vibrato. They are one match arm each if a later sound needs them.
 - The WAV writer is 20 lines in `sfx.rs` instead of the `hound` crate (no
