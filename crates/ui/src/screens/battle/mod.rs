@@ -23,6 +23,7 @@ pub mod mode;
 pub mod panel;
 pub mod path;
 pub mod playback;
+pub mod progress;
 pub mod rewind;
 pub mod skills;
 pub mod tips;
@@ -49,6 +50,7 @@ use self::layout::{
 use self::mode::{Effect, MenuEntry, Mode, Selection};
 use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
+use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
 use super::draw_debug_hint;
@@ -218,6 +220,9 @@ pub struct BattleScreen {
     tips: TipState,
     /// Heal numbers floating over units.
     popups: Vec<HealPopup>,
+    /// The EXP bar and level-up pages of the last command (0602), shown
+    /// once its combat has played.
+    progress: Option<Progress>,
 }
 
 impl BattleScreen {
@@ -253,6 +258,7 @@ impl BattleScreen {
             banners: VecDeque::new(),
             tips: TipState::default(),
             popups: vec![],
+            progress: None,
         }
     }
 
@@ -271,10 +277,51 @@ impl BattleScreen {
         self.danger.as_ref()
     }
 
-    /// The banner on screen, if any: the first waiting, once no combat is
-    /// playing.
-    pub fn banner(&self) -> Option<&Banner> {
+    /// The EXP bar or level-up page on screen, if any: once the command's
+    /// combat has played.
+    pub fn progress(&self) -> Option<&Progress> {
         if matches!(self.mode, Mode::Combat(_)) {
+            return None;
+        }
+        self.progress.as_ref()
+    }
+
+    /// Gives `action` to the EXP bar or level-up page on screen, if any
+    /// (Confirm or Cancel finishes or closes a page; other keys wait). Returns
+    /// whether it took it.
+    fn progress_key(&mut self, action: Action) -> bool {
+        if matches!(self.mode, Mode::Combat(_)) {
+            return false;
+        }
+        let Some(progress) = self.progress.as_mut() else {
+            return false;
+        };
+        if matches!(action, Action::Confirm | Action::Cancel) {
+            progress.confirm();
+        }
+        if progress.done() {
+            self.progress = None;
+        }
+        true
+    }
+
+    /// Plays the EXP bar or level-up page on screen for `dt` seconds.
+    fn tick_progress(&mut self, dt: f32, confirm_held: bool) {
+        if matches!(self.mode, Mode::Combat(_)) {
+            return;
+        }
+        if let Some(progress) = self.progress.as_mut() {
+            progress.tick(dt, confirm_held);
+            if progress.done() {
+                self.progress = None;
+            }
+        }
+    }
+
+    /// The banner on screen, if any: the first waiting, once no combat is
+    /// playing and no EXP or level up is shown.
+    pub fn banner(&self) -> Option<&Banner> {
+        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
             return None;
         }
         self.banners.front()
@@ -352,7 +399,8 @@ impl BattleScreen {
     /// enemy-phase tip shows as that phase begins (over its banner), the
     /// others once a player phase is browsing without a banner.
     pub fn shown_tip(&self) -> Option<TipTrigger> {
-        if self.rewind.is_some() || matches!(self.mode, Mode::Combat(_)) {
+        if self.rewind.is_some() || matches!(self.mode, Mode::Combat(_)) || self.progress.is_some()
+        {
             return None;
         }
         self.tips.queued().find(|&t| {
@@ -382,7 +430,11 @@ impl BattleScreen {
     /// With auto-end on, ends the player phase once the screen is back to
     /// browsing after the command that left no player unit ready.
     fn check_auto_end(&mut self) {
-        if !self.end_armed || !matches!(self.mode, Mode::Idle { .. }) || !self.banners.is_empty() {
+        if !self.end_armed
+            || !matches!(self.mode, Mode::Idle { .. })
+            || !self.banners.is_empty()
+            || self.progress.is_some()
+        {
             return;
         }
         self.end_armed = false;
@@ -476,6 +528,7 @@ impl BattleScreen {
             }
             // Checked (phase, units ready) once back to browsing.
             self.end_armed = true;
+            self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
         }
         let playback =
             events.and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
@@ -554,6 +607,7 @@ impl BattleScreen {
                     self.state = state;
                     self.mode = Mode::after_command(&self.state);
                     self.banners.clear();
+                    self.progress = None;
                     self.end_armed = false;
                     if self.danger.is_some() {
                         self.danger = Some(danger_tiles(&self.state));
@@ -613,6 +667,22 @@ impl BattleScreen {
         }
     }
 
+    /// The help line of a tip, EXP or level-up page, or banner on screen.
+    fn overlay_help(&self, km: &crate::input::Keymap) -> Option<String> {
+        let confirm = |label| (key_name(km, Action::Confirm), label);
+        if self.shown_tip().is_some() {
+            return Some(help_line(&[confirm("close")]));
+        }
+        if let Some(p) = self.progress() {
+            return Some(progress_help(p, km));
+        }
+        let label = match self.banner()?.kind {
+            BannerKind::Outcome(_) => "continue",
+            BannerKind::Phase { .. } => "skip",
+        };
+        Some(help_line(&[confirm(label)]))
+    }
+
     /// The help line for the mode and what is under the cursor, e.g. `f
     /// select · e info · s next unit · r rewind · d back` over a ready unit while
     /// browsing. Key names come from the keymap.
@@ -635,15 +705,8 @@ impl BattleScreen {
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
         let moves = (keys.clone(), "move");
-        if self.shown_tip().is_some() {
-            return help_line(&[confirm("close")]);
-        }
-        if let Some(banner) = self.banner() {
-            let label = match banner.kind {
-                BannerKind::Outcome(_) => "continue",
-                BannerKind::Phase { .. } => "skip",
-            };
-            return help_line(&[confirm(label)]);
+        if let Some(line) = self.overlay_help(km) {
+            return line;
         }
         match &self.mode {
             Mode::Idle { threat } => {
@@ -1026,6 +1089,18 @@ fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
     (mx, my)
 }
 
+/// The help line of an EXP bar or level-up page: skip and fast while it
+/// plays, then continue.
+fn progress_help(p: &Progress, km: &crate::input::Keymap) -> String {
+    let confirm = key_name(km, Action::Confirm);
+    if p.page_played() {
+        help_line(&[(confirm, "continue")])
+    } else {
+        let hold = confirm.as_ref().map(|k| format!("hold {k}"));
+        help_line(&[(confirm, "skip"), (hold, "fast")])
+    }
+}
+
 /// `ON` or `OFF`.
 const fn on_off(on: bool) -> &'static str {
     if on { "ON" } else { "OFF" }
@@ -1075,6 +1150,9 @@ impl Screen for BattleScreen {
                 self.toggle_auto_end();
                 continue;
             }
+            if self.progress_key(action) {
+                continue;
+            }
             if self.banner().is_some() {
                 if action == Action::Confirm {
                     let t = self.close_banner();
@@ -1120,6 +1198,7 @@ impl Screen for BattleScreen {
         }
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        self.tick_progress(dt, input.is_held(Action::Confirm));
         let tip_up = self.shown_tip().is_some();
         if let Some(banner) = self.banners.front_mut()
             && !matches!(self.mode, Mode::Combat(_))
@@ -1151,6 +1230,9 @@ impl Screen for BattleScreen {
         self.draw_popups(ctx, buf);
         if let Mode::Combat(pb) = &self.mode {
             playback::draw_box(buf, &ctx.palette, pb);
+        }
+        if let Some(p) = self.progress() {
+            progress::draw(buf, &ctx.palette, &ctx.content.portraits, p);
         }
         self.draw_panel(ctx, buf);
         self.draw_dialogs(ctx, buf);
@@ -1340,6 +1422,9 @@ mod attack_tests;
 
 #[cfg(test)]
 mod item_tests;
+
+#[cfg(test)]
+mod progress_tests;
 
 #[cfg(test)]
 mod rewind_tests;
