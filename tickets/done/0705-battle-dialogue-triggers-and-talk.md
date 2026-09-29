@@ -126,9 +126,7 @@ recruitment, death quotes, boss-battle quotes.
 - **Other tickets:** 0801 now adds `BattleState::recruited()` to the roster
   after a victory (step 3, new acceptance criterion) and runs
   `check_triggers`. New ticket **1009** (design recruitment by quests
-  outside battle). `main` had two tickets numbered 0814 (PRs #90 and #91
-  merged together), which failed ticket-lint on every PR: the archived
-  title-music ticket is renumbered **0815**. An AI test's phase loop got a
+  outside battle). An AI test's phase loop got a
   guard so a broken `apply` fails it instead of hanging (mutation testing
   timed out on it).
 - **For 0502:** until the AI plays its phase, an AI phase ends when its
