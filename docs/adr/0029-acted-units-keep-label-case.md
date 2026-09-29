@@ -1,4 +1,4 @@
-# ADR-0028: Acted units are dimmed only; the label keeps its case
+# ADR-0029: Acted units are dimmed only; the label keeps its case
 
 - **Status:** Accepted
 - **Date:** 2026-09-29

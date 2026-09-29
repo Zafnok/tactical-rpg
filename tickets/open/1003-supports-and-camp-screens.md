@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["1002", "0008", "0408", "0704", "0801"]
+blocked_by: ["1002", "0008", "0408", "0704", "0801", "0027"]
 nick_input: sign-off
 completed:
 ---
@@ -49,6 +49,10 @@ new.
 - The unit info screen lists the unit's support partners and ranks.
 - One placeholder support conversation and one placeholder camp event in the
   data, so the screens can be tested.
+- The Camp screen plays the `camp` music cue chosen in 0027
+  (`docs/design/audio.md`): import it (`assets-src/audio/import.py`), add it to
+  `assets/audio/audio.ron`, `THIRD_PARTY_ASSETS.md` and the credits. If 0027
+  chose to reuse an existing cue or no music, follow that.
 
 **Out (do not do):**
 - Writing real support or camp conversations (story pipeline tickets).

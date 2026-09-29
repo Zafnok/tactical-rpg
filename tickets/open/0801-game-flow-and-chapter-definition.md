@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0405", "0408", "0502", "0705", "0307", "0708"]
+blocked_by: ["0405", "0502", "0705", "0307", "0708"]
 nick_input: none
 completed:
 ---
@@ -28,6 +28,13 @@ None.
 **In:** `assets/battles/*.ron` and `assets/chapters/*.ron` formats + loaders/validators, `core::campaign::Campaign`,
 `ui::flow` (chapter sequencing), Classic/Casual mode select, lead gender select, map-menu `Restart battle`, Game Over screen, "To be continued" screen,
 replacing the title's placeholder and debug Quick Battle wiring.
+
+**Not blocked by 0408** (changed 2026-09-29): Chapter 1 has no Preparations
+screen (`chapter-1.md`), so the flow only needs the `preparations` field and
+the default pack. If 0408 isn't done when this lands, the validator rejects
+`preparations: true` with a clear message ("Preparations screen not built
+yet, ticket 0408"), and the flow always uses the default pack. 0408 then
+pushes its screen from the flow and removes that check.
 
 **Out:** saving (0802), Chapter 1 content itself (0803), world map (future),
 chapters with several battles (world map and skirmishes: 1007, 1008 per

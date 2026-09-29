@@ -47,7 +47,7 @@ async fn main() {
         Ok(renderer) => renderer,
         Err(e) => return show_content_errors(&e).await,
     };
-    let mut speaker = Macroquad;
+    let mut speaker = Macroquad::default();
     let mut audio = Audio::load(
         &mut speaker,
         ctx.content.audio.clone(),

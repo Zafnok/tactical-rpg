@@ -93,4 +93,4 @@ doesn't rely on hue alone.
 
 ## Completion notes
 
-Acted units keep their label case and are dimmed only. Removed `shown_label`; updated unit and integration tests (the integration test now checks the dimmed colour); no snapshots changed. Recorded in `look-and-feel.md` and new ADR-0028 (numbered 0028, since 0027 was taken). No gameplay rules decided; no follow-ups. Nick: play Quick Battle, Wait a unit, and check the dimming reads clearly.
+Acted units keep their label case and are dimmed only. Removed `shown_label`; updated unit and integration tests (the integration test now checks the dimmed colour); no snapshots changed. Recorded in `look-and-feel.md` and new ADR-0029 (numbered 0029, since 0027 and 0028 were taken). No gameplay rules decided; no follow-ups. Nick: play Quick Battle, Wait a unit, and check the dimming reads clearly.

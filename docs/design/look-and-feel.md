@@ -109,7 +109,7 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
   "lowercase and dimmed". Nick, after playing 0404: "seems after moving the
   initials for my units goes from i.e. Lo to lo I think it should just stay Lo
   but be shaded different (it already has this aspect so keep it like that)".
-  ADR-0028.)*
+  ADR-0029.)*
 - **HP bar:** a thin bar (2 px of the 16 px tile height) along the bottom of the
   unit's tile, filling left to right by current HP %. It's `hp_high` above 2/3,
   `hp_mid` above 1/3 and `hp_low` at or below 1/3 *(thresholds tunable)*. The
