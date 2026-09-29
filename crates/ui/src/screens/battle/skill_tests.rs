@@ -534,6 +534,12 @@ fn a_cycle_through_two_actives_returns_to_none() {
         t.active.clone().map(|a| a.0)
     };
     assert_eq!(active(&s), None);
+    // Down goes forward: the first active in the unit's skill order first.
+    let Mode::Targeting(t) = s.mode() else {
+        unreachable!()
+    };
+    let order: Vec<String> = t.actives(s.state()).into_iter().map(|a| a.0).collect();
+    assert_eq!(order.len(), 2);
     let mut seen = vec![];
     for _ in 0..3 {
         step(&mut s, &mut c, &[Action::CursorDown]);
@@ -541,7 +547,8 @@ fn a_cycle_through_two_actives_returns_to_none() {
     }
     assert_eq!(seen.len(), 3);
     assert!(seen[0].is_some() && seen[1].is_some() && seen[2].is_none());
-    assert_ne!(seen[0], seen[1]);
+    assert_eq!(seen[0].as_deref(), Some(order[0].as_str()));
+    assert_eq!(seen[1].as_deref(), Some(order[1].as_str()));
     // Up goes back around the ring: none, then the last active.
     step(&mut s, &mut c, &[Action::CursorUp]);
     assert_eq!(active(&s), seen[1]);
