@@ -59,6 +59,28 @@ Final pick, from *Vows / Visions / Veil / Valor / Vestige / Voice of Shuyi*:
 - **The title is mainly a hook.** Shuyi does not have to appear much. Like
   Fire Emblem's emblem, the name can stay in the background.
 
+## Trademark risk (Nick decided 2026-09-30)
+
+Nick asked whether the title could get us in trouble with Square Enix's
+*Visions of Mana* (2024). Titles can't be copyrighted, so the question is
+trademark. The overlap: the same "Visions of ___" pattern, the same genre,
+and Shuyi being "something like mana" in the lore. The risk looks low,
+because shoppers see "Shuyi" as a name, not a word for magic.
+
+Nick considered switching to another word from the shortlist (Vows, Veil or
+Voice of Shuyi, all still "VoS") and **kept Visions of Shuyi**. If a
+cease-and-desist letter ever arrives, we rename promptly; that is the accepted
+worst case.
+
+Precautions:
+
+- **Never call Shuyi "mana" in anything players or shoppers see before
+  playing:** store page, trailer, ads, press text. Use the game's own words
+  ("lifeblood", "Breath"). Inside the story, the idea itself is fine.
+- **The logo must not resemble the Mana series logo:** no similar lettering,
+  and no sword or tree motif built into the title.
+- **Check the name before the Steam page goes up:** ticket 0906.
+
 ## Open sub-questions (for the story tickets, not now)
 
 - **How big Shuyi's role is.** Main or side role: Nick isn't sure yet. Decide
