@@ -69,7 +69,9 @@ needed). Key choices are Nick's; the defaults below are his.
 *Proposed by Claude, approved by Nick:*
 
 - `Esc` also works as Cancel in both layouts (and so opens the map menu when
-  there's nothing to cancel), since players reach for it by habit.
+  there's nothing to cancel), since players reach for it by habit. Since
+  ticket 0217 it is a *fixed* key (no rule change): it isn't one of
+  Cancel's key slots and can't be moved or removed; see *Rebinding keys*.
 - "Mirror" is taken literally, finger for finger, so in the left-handed
   layout *previous* unit is the right-most key (`;`) and *next* is `L`. If
   that feels backwards, swap them.
@@ -148,6 +150,9 @@ The developer Debug key is not on the screen.
 1. Pick an action's slot and press Confirm: the slot shows `Press a key…`.
 2. The next key pressed goes in that slot. Any key the game can read counts,
    with or without `Shift`, except `Esc` and `Delete` (below).
+   `Shift+Esc` and `Shift+Delete` are ordinary keys and can be bound
+   (Nick, 2026-09-30, ticket 0217: only plain `Esc` and `Delete` have a
+   job, so nothing conflicts with their `Shift+` chords).
 3. **If that key is already in another slot, it moves:** the old slot is
    emptied. An action left with no keys at all shows **`! not mapped`**.
    (Same layout only; the other layout's keys are separate.)

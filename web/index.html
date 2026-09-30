@@ -23,6 +23,13 @@
 <body>
 <canvas id="glcanvas" tabindex="1"></canvas>
 <script>
+  // The bundle is strict-mode JS and its last plugin (`quad_net`, unused)
+  // assigns to an undeclared global `register_plugin`, which throws an
+  // uncaught ReferenceError. Declaring the global first lets it succeed
+  // (ticket 0225). Keep this before `mq_js_bundle.js`.
+  var register_plugin;
+</script>
+<script>
   // Browsers keep audio off until a key press or click counts as the
   // player's gesture (Escape and modifier keys don't). The bundle's own
   // unlock gives up after the first key either way, so the music could

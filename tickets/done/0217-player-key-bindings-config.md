@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0216"]
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0217 — Player key bindings config
@@ -134,28 +134,28 @@ None. (Rules already decided in 0030.)
 
 ## Acceptance criteria
 
-- [ ] `keymap.ron` loader rejects 4 chords on one action, and `Escape` or
+- [x] `keymap.ron` loader rejects 4 chords on one action, and `Escape` or
       `Delete` in any list (tests).
-- [ ] `Esc` cancels in both layouts and the layout picker even though it is
+- [x] `Esc` cancels in both layouts and the layout picker even though it is
       in no slot (Harness test); `Esc`/`Delete` can't be bound
       (`BindError::Reserved`, unit test).
-- [ ] Binding a key that another action has moves it and leaves that action
+- [x] Binding a key that another action has moves it and leaves that action
       `is_unmapped` when it was its only key (unit test); binding within the
       same action moves between slots.
-- [ ] Property test: after any sequence of `bind`/`clear` on random actions,
+- [x] Property test: after any sequence of `bind`/`clear` on random actions,
       slots and chords, no chord is in two slots and no reserved chord is in
       any slot.
-- [ ] `unmapped_required` lists exactly the required actions with no key.
-- [ ] Custom keys persist across restart (MemoryStorage round trip) and are
+- [x] `unmapped_required` lists exactly the required actions with no key.
+- [x] Custom keys persist across restart (MemoryStorage round trip) and are
       kept **per layout**: edit right-handed, switch to left-handed and back,
       the right-handed edit is still there (test).
-- [ ] Corrupt, old-version or clashing stored config loads repaired, never
+- [x] Corrupt, old-version or clashing stored config loads repaired, never
       panics (tests for each case).
-- [ ] A help bar and a tip show `! not mapped` for an unbound action (tests).
-- [ ] Every new `Key` round-trips through its chord name; `app` maps each.
-- [ ] The ADR is written; ADR index updated.
-- [ ] `cargo xtask check-keys` (0216) passes.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] A help bar and a tip show `! not mapped` for an unbound action (tests).
+- [x] Every new `Key` round-trips through its chord name; `app` maps each.
+- [x] The ADR is written; ADR index updated.
+- [x] `cargo xtask check-keys` (0216) passes.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -167,3 +167,51 @@ None. (Rules already decided in 0030.)
   the binding.
 
 ## Completion notes
+
+Done as planned; ADR-0031 records the format and rules.
+
+- `keymap.ron`: at most 3 chords per action in a layout; plain
+  `Escape`/`Delete` are loader errors anywhere, including `layout_picker`.
+  `Escape` removed from both layouts' Cancel. The layout picker keeps its 4
+  Confirm keys: it isn't rebindable, so the 3-slot limit applies to layouts
+  only (small deviation from step 3's wording).
+- `KeymapDef.layouts` now keeps each action's chords in file order
+  (`LayoutKeys`), since slots are ordered; `KeymapDef::bindings` derives
+  the chord lookup. `Keymap::chords_for` returns chords in the order given
+  (slot order) instead of sorted; with the default keys nothing visible
+  changes.
+- `Keymap::new` adds the fixed `Escape` → Cancel to every keymap and drops
+  reserved chords; `Keymap::fixed_chords_for` names it.
+  `widgets::help::all_key_names` lists slots then fixed keys, so the layout
+  picker legend still reads `d/Escape back` (no snapshot changed).
+- New `crates/ui/src/input/bindings.rs`: `LayoutBindings`, `BindError`
+  (`Reserved`, plus `NotRebindable` for Debug and `NoSuchSlot`),
+  `PlayerKeys` (saved RON, repair on load with warnings).
+- `Ctx`: `player_keys`, `layout_bindings`, `set_layout_bindings`,
+  `keymap_for`, `take_warnings`; `with_storage` loads the saved keys and
+  `use_layout`/`choose_layout` use them. `Game` now re-syncs its input
+  whenever `ctx.keymap` changes (not only on a layout switch). `app` logs
+  the load warnings. `Harness::ctx_mut` added for tests.
+- `key_name`/`all_key_names`/`cursor_keys_name` return `String` with
+  `NOT_MAPPED`; tips use it too (the old `(unbound)` text is gone).
+  Hints still hidden: Rewind when it can't open, the Debug hint without
+  debug tools or a Debug key.
+- 31 new `Key`s (punctuation, Insert/Delete/Home/End/PageUp/PageDown,
+  numpad); `app` maps each (exhaustive test). On the web, miniquad 0.4
+  doesn't report `'` or `/` and reports the backquote key as `'`; they work on native.
+- `serde` and `ron` are now `trpg-ui` dependencies (already in the
+  workspace; licences allowed).
+
+No follow-up tickets.
+
+Nick's call during review (2026-09-30): only plain `Esc` and `Delete` are
+fixed; `Shift+Esc` and `Shift+Delete` are ordinary keys a player can bind
+(recorded in `controls.md`).
+
+*Claude's starting rules* (small; the design docs didn't say):
+
+- The first-launch layout picker draws each layout with the player's own
+  keys for it (so after Options (0805) lets them come back to it, it shows
+  their keys), and an action with no key reads `! not mapped` there.
+- With Cancel's own key removed, "Coming soon" reads
+  `press ! not mapped to go back` (Esc still works).

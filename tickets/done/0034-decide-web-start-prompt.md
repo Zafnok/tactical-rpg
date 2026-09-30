@@ -15,7 +15,7 @@ completed: 2026-09-30
 
 ## Context
 
-Found by ticket 0223 (web console errors). Browsers block sound until the
+Found by ticket 0225 (web console errors). Browsers block sound until the
 player clicks or presses a key, so on the Pages build the title is silent
 until the first input and the console warns "The AudioContext was not
 allowed to start". The usual fix is a "click to start" step; Nick said a

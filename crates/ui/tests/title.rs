@@ -223,6 +223,7 @@ fn picking_a_layout_first_skips_the_prompt() {
     // First launch on the web: the layout picker takes the first keys, so
     // the title shows its menu (and music) straight away after it.
     let mut h = Harness::on_web();
+    assert_eq!(h.game().ctx().key_prompt, trpg_ui::KeyPrompt::Waiting);
     h.keys("Down f");
     assert_eq!(h.top_screen(), "title");
     h.wait(0.1);

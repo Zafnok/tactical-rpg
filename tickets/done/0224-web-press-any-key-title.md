@@ -16,7 +16,7 @@ completed: 2026-09-30
 ## Context
 
 Browsers block sound until the first key press or click, so the web build's
-title music can't start with the title (found by ticket 0223). Nick decided
+title music can't start with the title (found by ticket 0225). Nick decided
 (ticket 0034, [`docs/design/title-screen.md`](../../docs/design/title-screen.md))
 that on the web build the title shows a `Press any key` line where the menu
 goes; the first key press shows the menu and starts the music. The bundled

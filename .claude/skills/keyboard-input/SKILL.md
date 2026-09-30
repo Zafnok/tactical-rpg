@@ -12,16 +12,16 @@ keys*), so a key written into game code or text is a bug: it stops working
 or lies after a rebind, and the two layouts already use different keys.
 
 Background: [ADR-0015](../../../docs/adr/0015-input-actions-and-keymap-layouts.md)
-(actions, layouts), and the ADR ticket 0217 writes (player
-bindings, slots, fixed keys).
+(actions, layouts), and [ADR-0031](../../../docs/adr/0031-player-key-bindings.md)
+(player bindings, slots, fixed keys, saved config).
 
 ## The pipeline (only these places know about keys)
 
 ```
 app/src/keys.rs        macroquad KeyCode → Key / Chord         (only macroquad key code)
 assets/data/keymap.ron default chords per action, per layout   (Nick's keys, controls.md)
-player config          Storage key `keybindings` (0217)        (per-layout, 3 slots)
-ui/src/input.rs        Keymap + InputState: Chord → Action      (fixed Esc = Cancel, 0217)
+player config          Storage key `keybindings`               (per-layout, 3 slots; input/bindings.rs)
+ui/src/input.rs        Keymap + InputState: Chord → Action      (fixed Esc = Cancel)
 screens                see only `FrameInput.actions` / `is_held(Action)`
 widgets/help.rs, tips  Action → key name for text
 ```
@@ -63,16 +63,20 @@ Even the layout picker's own keys are data: the `layout_picker` section of
    Doc comments name the action ("the End turn key"), not a key.
 3. **Expect any key, or none.** Game code can't assume which key an action
    has, that two actions have different keys in both layouts, or (for
-   optional actions, after 0217) that it has a key at all. Text for an
+   optional actions) that it has a key at all. Text for an
    action with no key shows `NOT_MAPPED` (`! not mapped`), which the help
    helpers do for you.
 4. **Default keys are Nick's.** They live only in `assets/data/keymap.ron`
    and must match the table in `docs/design/controls.md`; a test pins it.
    Changing a default is a design change: ask with the `ask-nick` skill,
    then edit both files. Never pick a default key yourself.
-5. **Reserved keys** (after 0217): `Esc` is always Cancel and backs out of
-   "Press a key…"; `Delete` empties a slot. Neither may appear in
-   `keymap.ron` or in a player's slots. The Debug key is not rebindable.
+5. **Reserved keys**: plain `Esc` is always Cancel and backs out of
+   "Press a key…"; plain `Delete` empties a slot. Neither may appear in
+   `keymap.ron` or in a player's slots (`Chord::is_reserved`,
+   `LayoutBindings::is_reserved`); `Shift+Esc` and `Shift+Delete` are
+   ordinary keys. `Keymap::chords_for(Cancel)` leaves
+   `Esc` out; `Keymap::fixed_chords_for` names it. The Debug key is not
+   rebindable (and reserved in builds with debug tools).
 6. **Held and repeated keys** come from `InputState` (repeat timings in
    `keymap.ron`); don't time key presses in a screen.
 
@@ -83,9 +87,9 @@ Even the layout picker's own keys are data: the `layout_picker` section of
 2. Is it **required** (must always have a key) or **optional**? That's
    Nick's call: the list is in `controls.md` *Rebinding keys*. If the new
    action isn't covered, ask with `ask-nick`. Set `Action::is_required` to
-   match (after 0217).
+   match.
 3. `assets/data/keymap.ron`: add it to **every** layout (`[]` if it has no
-   default key), at most 3 chords, keys from `controls.md`.
+   default key), at most 3 chords (`SLOTS`), keys from `controls.md`.
 4. The Key bindings screen (after 0815): add its player-facing label to the
    screen's label table.
 5. Screens: react to the action; help bars/tips name it via rule 2.
@@ -97,8 +101,8 @@ Even the layout picker's own keys are data: the `layout_picker` section of
 - Unit tests of screens: feed `FrameInput`s of `Action`s.
 - Harness scripts (`h.keys("Down f")`) may use key names: they pin the
   default right-handed layout on purpose. When a test is about the player's
-  own keys, rebind in the test (`Ctx::set_layout_bindings`, 0217) and
-  press the new key.
+  own keys, rebind in the test (`h.ctx_mut().set_layout_bindings(…)`
+  with an edited `ctx.layout_bindings(layout)`) and press the new key.
 
 ## Checklist before pushing input work
 
