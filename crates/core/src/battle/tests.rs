@@ -2572,6 +2572,43 @@ fn commands_and_events_round_trip_through_ron() {
 
 // ---- Property: random legal play -------------------------------------------------
 
+/// Each ready unit's plain attacks from its own tile that `s` accepts: a
+/// cheap check that [`legal_commands`] misses nothing obvious (the
+/// `bots` tests search much wider).
+fn attacks_in_place(s: &BattleState) -> Vec<Command> {
+    let ready = s
+        .units()
+        .iter()
+        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
+    let mut out = Vec::new();
+    for u in ready {
+        let Ok(reach) = reachable(s.map(), s.terrain(), s.classes(), s.units(), u.id) else {
+            continue;
+        };
+        let Some(path) = reach.path_to(u.pos) else {
+            continue;
+        };
+        for t in s.units() {
+            for slot in 0..WEAPON_SLOTS {
+                let action = UnitAction::Attack {
+                    target: t.id,
+                    slot,
+                    active: None,
+                    art: None,
+                };
+                if s.check_action(u, u.pos, &path, &action).is_ok() {
+                    out.push(Command::Act {
+                        unit: u.id,
+                        dest: u.pos,
+                        action,
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
 /// The map of the property test, with a shop of each kind and three chests.
 fn prop_map() -> BattleMap {
     let shop = |kind, stock: &[&str]| {
@@ -2865,6 +2902,11 @@ proptest! {
                 break;
             }
             let legal = legal_commands(&s);
+            if s.pending_move().is_none() {
+                for attack in attacks_in_place(&s) {
+                    prop_assert!(legal.contains(&attack), "{:?} not listed", attack);
+                }
+            }
             let cmd = &legal[usize::from(choice) % legal.len()];
             let turn = s.turn();
             let gold = s.gold();

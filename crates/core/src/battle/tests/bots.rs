@@ -9,7 +9,8 @@ use crate::ai::{AiWeights, next_command};
 
 /// Plays `choices` from `setup`, each picking from the legal commands,
 /// until the battle ends or the choices run out. Before each pick, `each`
-/// sees the state and its legal commands.
+/// sees the state and its legal commands. Every command applied must do
+/// something (have events), so a battle that stops changing fails at once.
 fn random_play(
     setup: BattleSetup,
     choices: &[u16],
@@ -27,6 +28,11 @@ fn random_play(
         prop_assert_eq!(s.check(cmd), Ok(()));
         let applied = s.apply(cmd);
         prop_assert!(applied.is_ok(), "{:?} refused: {:?}", cmd, applied);
+        prop_assert!(
+            applied.is_ok_and(|e| !e.is_empty()),
+            "{:?} did nothing",
+            cmd
+        );
     }
     Ok(s)
 }
@@ -181,8 +187,11 @@ fn single_visits(cmds: &[Command]) -> BTreeSet<String> {
 }
 
 proptest! {
+    // Shrinking replays whole battles: bounded so a failure (or a mutant,
+    // which may make each case slow) is reported in seconds.
     #![proptest_config(ProptestConfig {
-        max_shrink_iters: 256,
+        max_shrink_iters: 32,
+        max_shrink_time: 5_000,
         ..ProptestConfig::with_cases(128)
     })]
 
@@ -198,6 +207,12 @@ proptest! {
             prop_assert_eq!(free, legal.first() == Some(&Command::EndPhase));
             for cmd in legal {
                 prop_assert_eq!(s.check(cmd), Ok(()), "{:?}", cmd);
+            }
+            // And nothing obvious is missing.
+            if free {
+                for cmd in attacks_in_place(s) {
+                    prop_assert!(legal.contains(&cmd), "{:?} not listed", cmd);
+                }
             }
             Ok(())
         })?;
@@ -220,7 +235,8 @@ proptest! {
 proptest! {
     // Each case searches far wider than `legal_commands` does.
     #![proptest_config(ProptestConfig {
-        max_shrink_iters: 64,
+        max_shrink_iters: 32,
+        max_shrink_time: 5_000,
         ..ProptestConfig::with_cases(48)
     })]
 
