@@ -110,7 +110,7 @@ each sound lands: timing, volume, and whether anything gets annoying.
 
 **Rules decided here** (Nick's answers after the first review: 1 vetoed,
 3, 5 and 6 agreed; he'll judge 2 and 4 in the Quick Battle once it has a
-caster, follow-up ticket 0428):
+caster, added to ticket 0410, the spell menu):
 1. An Absorb strike (the target heals from its element) plays `heal`.
    Nick vetoed the starting rule (`hit_magic`): "it should sound like a
    heal". Recorded in `audio.md`.
