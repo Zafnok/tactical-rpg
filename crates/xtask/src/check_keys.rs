@@ -5,8 +5,11 @@
 //! It scans the non-test Rust in `crates/{ui,app,content}/src` for key types
 //! (`Key::`, `Chord::`) and macroquad key reads (`KeyCode`, `is_key_down`,
 //! …) outside the files that make up the key pipeline, and scans string
-//! literals there plus the text in `assets/` for key names shown to the
-//! player (`"f select"`, `"press f"`, `"[F]"`, `"Space"`, `"arrows"`, …).
+//! literals there plus the `.ron` strings in `assets/` for key names shown
+//! to the player (`"f select"`, `"press f"`, `"[F]"`, `"Space"`, `"arrows"`,
+//! …). Dialogue scripts (`.dlg`) are prose, so there only an instruction to
+//! press a key (`press f`, `hold Shift`), a `Shift+` chord, `WASD` or `[F]`
+//! counts; "Escape!" or "arrows" as plain words are fine.
 //!
 //! It is a line-based scanner, not a parser: comments are ignored, and a
 //! `#[cfg(test)]` item (usually `mod tests { … }`) is skipped by bracket
@@ -193,18 +196,66 @@ pub fn scan_ron(rel: &str, source: &str) -> Vec<String> {
     errors
 }
 
-/// Scans one `.dlg` dialogue script: every line but `#` comments.
+/// Scans one `.dlg` dialogue script: every line but `#` comments, with the
+/// narrower [`prose_names_key`] rule, since dialogue is prose where
+/// "Escape!" or "a volley of arrows" are just words.
 pub fn scan_dlg(rel: &str, source: &str) -> Vec<String> {
     let mut errors = Vec::new();
     for (i, line) in source.lines().enumerate() {
         if line.trim_start().starts_with('#') {
             continue;
         }
-        if let Some(why) = names_key(line) {
+        if let Some(why) = prose_names_key(line) {
             errors.push(format!("{rel}:{}: text {why}: {line:?} — {HINT}", i + 1));
         }
     }
     errors
+}
+
+/// Verbs that, followed by a key, tell the player to press it.
+const PRESS_VERBS: [&str; 4] = ["press", "hit", "tap", "hold"];
+
+/// Why prose `text` names a key, if it does: only an instruction to press
+/// one ("press f", "hold Shift", "hit Space."), a `Shift+` chord, `WASD`, or
+/// a bracketed letter (`[F]`). Bare key words are allowed.
+fn prose_names_key(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    for pair in words.windows(2) {
+        let [verb, key] = pair else { continue };
+        let key = key.trim_end_matches(|c: char| c.is_ascii_punctuation() && c != '+');
+        let is_key = key.len() == 1 && key.bytes().all(|b| b.is_ascii_alphabetic())
+            || KEY_WORDS.iter().any(|w| w.eq_ignore_ascii_case(key))
+            || key.starts_with("Shift+")
+            || is_function_key(key);
+        if PRESS_VERBS.iter().any(|v| v.eq_ignore_ascii_case(verb)) && is_key {
+            return Some(format!(
+                "tells the player to {} \"{key}\"",
+                verb.to_lowercase()
+            ));
+        }
+    }
+    if text.contains("Shift+") {
+        return Some("names a Shift+ chord".to_owned());
+    }
+    if contains_word(text, "WASD") || contains_word(text, "wasd") {
+        return Some("names the key \"WASD\"".to_owned());
+    }
+    bracketed_letter(text).then(|| "names a key in brackets".to_owned())
+}
+
+/// Whether `key` is `F1`..`F12` (either case).
+fn is_function_key(key: &str) -> bool {
+    let Some(n) = key.strip_prefix(['F', 'f']) else {
+        return false;
+    };
+    n.parse::<u8>().is_ok_and(|n| (1..=12).contains(&n))
+}
+
+/// Whether `text` has a single letter in brackets, like `[F]`.
+fn bracketed_letter(text: &str) -> bool {
+    text.as_bytes()
+        .windows(3)
+        .any(|w| w[0] == b'[' && w[1].is_ascii_alphabetic() && w[2] == b']')
 }
 
 /// Why `text` names a key to the player, if it does.
@@ -230,14 +281,7 @@ fn names_key(text: &str) -> Option<String> {
         }
     }
     // "[F]", "[f]".
-    let bytes = text.as_bytes();
-    if bytes
-        .windows(3)
-        .any(|w| w[0] == b'[' && w[1].is_ascii_alphabetic() && w[2] == b']')
-    {
-        return Some("names a key in brackets".to_owned());
-    }
-    None
+    bracketed_letter(text).then(|| "names a key in brackets".to_owned())
 }
 
 /// Whether `text` contains `word` with no identifier character either side.
@@ -777,6 +821,56 @@ let d = is_key_down_fast(x);
             "{}",
             errs[0]
         );
+    }
+
+    #[test]
+    fn dialogue_prose_may_use_key_words_as_words() {
+        for line in [
+            "knight: Escape while you can!",
+            "archer: A volley of arrows, then we Enter the keep.",
+            "> The wind began to Shift.",
+            "lord: Space enough for all of us.",
+            "lord: I think so. Hold fast!",
+            "lord: Press on, press forward.",
+            "lord: Plan B, then.",
+            "test_lord[happy]: Better late than never.",
+            "lord: Hit it with an F1 car? No.",
+        ] {
+            assert_eq!(prose_names_key(line), None, "{line}");
+        }
+    }
+
+    #[test]
+    fn dialogue_telling_the_player_to_press_a_key_is_an_error() {
+        for line in [
+            "lord: Press f to attack.",
+            "lord: press F!",
+            "lord: Hit Space to end your turn.",
+            "lord: hold shift, then tap Enter.",
+            "lord: Tap Esc to go back.",
+            "lord: press Shift+Space.",
+            "lord: Shift+Space ends turns for you.",
+            "lord: Move with WASD.",
+            "lord: Use [F] to confirm.",
+            "lord: Press F2 for the debug view.",
+            "lord: Hold arrows to scroll.",
+        ] {
+            assert!(prose_names_key(line).is_some(), "{line}");
+        }
+        assert_eq!(
+            prose_names_key("lord: Hit Space.").as_deref(),
+            Some("tells the player to hit \"Space\"")
+        );
+    }
+
+    #[test]
+    fn function_keys() {
+        assert!(is_function_key("F1"));
+        assert!(is_function_key("f12"));
+        assert!(!is_function_key("F0"));
+        assert!(!is_function_key("F13"));
+        assert!(!is_function_key("Fx"));
+        assert!(!is_function_key("G1"));
     }
 
     #[test]
