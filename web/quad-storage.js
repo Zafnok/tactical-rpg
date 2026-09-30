@@ -37,5 +37,8 @@ miniquad_add_plugin({
     register_plugin: params_register_js_plugin,
     on_init: params_set_mem,
     name: "quad_storage",
-    version: "0.1.2"
+    // Local patch (ticket 0222): upstream says "0.1.2", but the loader compares
+    // this with `quad_storage_crate_version()` from the quad-storage-sys crate,
+    // which returns (major << 24) + (minor << 16) + patch: 0.1.0 -> 65536.
+    version: 65536
 });

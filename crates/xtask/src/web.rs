@@ -568,4 +568,75 @@ mod tests {
         assert!(err.contains("cargo build"), "{err}");
         fs::remove_dir_all(&root).unwrap();
     }
+
+    /// The real repo root (`xtask` lives at `<repo>/crates/xtask`).
+    fn real_repo_root() -> &'static Path {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("xtask is at <repo>/crates/xtask")
+    }
+
+    /// The version `quad_storage_crate_version()` reports for the
+    /// `quad-storage-sys` version pinned in `Cargo.lock`:
+    /// `(major << 24) + (minor << 16) + patch`.
+    fn locked_quad_storage_sys_version(lock: &str) -> u32 {
+        let version = lock
+            .split("[[package]]")
+            .find(|pkg| pkg.contains("name = \"quad-storage-sys\""))
+            .and_then(|pkg| pkg.lines().find_map(|l| l.strip_prefix("version = \"")))
+            .and_then(|v| v.strip_suffix('"'))
+            .expect("quad-storage-sys is in Cargo.lock");
+        let parts: Vec<u32> = version.split('.').map(|p| p.parse().unwrap()).collect();
+        (parts[0] << 24) + (parts[1] << 16) + parts[2]
+    }
+
+    #[test]
+    fn locked_quad_storage_sys_version_encodes_major_minor_patch() {
+        let lock = r#"
+[[package]]
+name = "quad-storage"
+version = "9.9.9"
+
+[[package]]
+name = "quad-storage-sys"
+version = "1.2.3"
+"#;
+        assert_eq!(
+            locked_quad_storage_sys_version(lock),
+            (1 << 24) + (2 << 16) + 3
+        );
+    }
+
+    #[test]
+    fn index_html_declares_register_plugin_before_the_bundle() {
+        // Ticket 0222: the strict-mode bundle assigns to `register_plugin`,
+        // which throws unless the global already exists.
+        let html = fs::read_to_string(real_repo_root().join("web/index.html")).unwrap();
+        let declared = html
+            .find("var register_plugin;")
+            .expect("index.html declares `var register_plugin;`");
+        let bundle = html
+            .find(r#"<script src="mq_js_bundle.js">"#)
+            .expect("index.html loads mq_js_bundle.js");
+        assert!(
+            declared < bundle,
+            "declare register_plugin before the bundle"
+        );
+    }
+
+    #[test]
+    fn quad_storage_js_version_matches_the_locked_crate() {
+        // Ticket 0222: the loader logs a version-mismatch error unless the JS
+        // plugin's `version` equals `quad_storage_crate_version()`.
+        let root = real_repo_root();
+        let lock = fs::read_to_string(root.join("Cargo.lock")).unwrap();
+        let js = fs::read_to_string(root.join("web/quad-storage.js")).unwrap();
+        let expected = format!("version: {}", locked_quad_storage_sys_version(&lock));
+        assert!(
+            js.lines().any(|line| line.trim() == expected),
+            "web/quad-storage.js must declare `{}`",
+            expected.trim_end()
+        );
+    }
 }
