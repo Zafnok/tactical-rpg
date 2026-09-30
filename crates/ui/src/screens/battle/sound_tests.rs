@@ -469,7 +469,7 @@ fn a_weapon_or_spell_equipped_by_the_command_is_what_strikes() {
     };
     let attacks =
         |events: &[Event]| super::event_sounds::combat_attacks(events, state.units(), &state);
-    assert_eq!(attacks(&[combat.clone()]), [[SWORD, AXE]]);
+    assert_eq!(attacks(std::slice::from_ref(&combat)), [[SWORD, AXE]]);
     assert_eq!(attacks(&[equip, combat]), [[FIRE, AXE]]);
 }
 
