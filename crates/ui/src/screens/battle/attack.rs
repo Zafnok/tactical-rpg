@@ -54,6 +54,39 @@ pub fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> V
     found.into_iter().map(|(_, id)| id).collect()
 }
 
+/// Whether some weapon of `unit` can attack `target` from `from`, plainly
+/// or with a line of the arts list (0428; Close Shot reaches an adjacent
+/// enemy).
+pub fn can_hit(state: &BattleState, unit: UnitId, from: Pos, target: UnitId) -> bool {
+    (0..WEAPON_SLOTS).any(|slot| {
+        art_choices(state, unit, from, slot, target)
+            .iter()
+            .any(|c| c.reason.is_none())
+    })
+}
+
+/// The tile `sel`'s unit attacks `target` from when the player points at it
+/// (0428): the path's end if it can already hit from there, else the
+/// stoppable tile that can, cheapest first, then the shortest path, then
+/// lowest `(y, x)`. `None` if no tile can.
+pub fn attack_tile(state: &BattleState, sel: &Selection, target: UnitId) -> Option<Pos> {
+    let end = sel.dest();
+    if sel.reach.is_stoppable(end) && can_hit(state, sel.unit, end, target) {
+        return Some(end);
+    }
+    sel.reach
+        .stoppable()
+        .iter()
+        .filter(|&t| can_hit(state, sel.unit, t, target))
+        .filter_map(|t| {
+            let cost = sel.reach.cost(t)?;
+            let len = sel.reach.path_to(t)?.len();
+            Some((cost, len, t.y, t.x, t))
+        })
+        .min_by_key(|&(cost, len, y, x, _)| (cost, len, y, x))
+        .map(|(.., t)| t)
+}
+
 /// A weapon that can attack someone from the destination.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WeaponChoice {

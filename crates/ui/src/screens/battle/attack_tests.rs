@@ -340,3 +340,24 @@ fn holding_confirm_plays_four_times_as_fast() {
     slow.wait(total + EXP_S);
     assert_eq!(panel(&slow, 7), panel(&fast, 7));
 }
+
+#[test]
+fn pointing_at_an_enemy_walks_there_and_opens_its_forecast() {
+    let mut h = harness(20);
+    // Select the lord, steer to (7, 2), point at the raider above it.
+    h.keys("f Right Up");
+    assert_eq!(help(&h), "arrows move · f attack · d cancel");
+    // Confirm walks, then the weapon list, then the forecast on the raider.
+    h.keys("f").wait(0.5);
+    assert_eq!(help(&h), "arrows choose · f confirm · d back");
+    h.keys("f");
+    assert_eq!(
+        help(&h),
+        "Left/Right target · Up/Down art · f attack · d back"
+    );
+    assert_eq!(panel(&h, 2), "Test Lord     Raider");
+    // Cancel goes back through the list and the menu to the path, the
+    // cursor on the lord's tile.
+    h.keys("d d d");
+    assert_eq!(help(&h), "arrows move · f move here · d cancel");
+}

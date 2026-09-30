@@ -9,6 +9,10 @@
 //! then the unit's new tile is a drawing override ([`Mode::drawn_pos`]) and
 //! the [`BattleState`] is untouched.
 //!
+//! Pointing the cursor at an enemy the selected unit can attack after moving
+//! (0428) aims the path at the tile it will attack from; Confirm walks
+//! there and goes straight to the weapon list / forecast on that enemy.
+//!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
 //! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]) and
 //! the unit info screen ([`Mode::Info`]).
@@ -21,7 +25,7 @@ use trpg_core::{
     path_cost, reachable, threat_area,
 };
 
-use super::attack::{Targeting, WeaponChoice, weapon_choices, weapon_menu};
+use super::attack::{Targeting, WeaponChoice, attack_tile, weapon_choices, weapon_menu};
 use super::items::{
     EquipChoice, ItemTargeting, PackGroup, can_equip, can_use_item, equip_choices, equip_command,
     equip_menu, pack_groups, pack_menu,
@@ -56,6 +60,8 @@ pub struct Selection {
     pub attack: TileSet,
     /// The path arrow: the unit's tile first, never empty.
     pub path: Vec<Pos>,
+    /// The enemy under the cursor the path is aimed at (0428), if any.
+    pub target: Option<UnitId>,
 }
 
 impl Selection {
@@ -87,6 +93,7 @@ impl Selection {
             moves,
             attack,
             path,
+            target: None,
         })
     }
 
@@ -354,7 +361,17 @@ impl Mode {
     /// The cursor moved to `to`: a selected unit's path follows it.
     pub fn cursor_moved(&mut self, to: Pos, state: &BattleState) {
         if let Mode::Selected(sel) = self {
-            sel.steer(to, state);
+            let enemy = state.units().iter().find(|u| u.pos == to).map(|u| u.id);
+            let aim = enemy.and_then(|id| attack_tile(state, sel, id).map(|t| (id, t)));
+            if let Some((id, tile)) = aim {
+                if tile != sel.dest() {
+                    sel.path = sel.reach.path_to(tile).unwrap_or_else(|| sel.path.clone());
+                }
+                sel.target = Some(id);
+            } else {
+                sel.target = None;
+                sel.steer(to, state);
+            }
         }
     }
 
@@ -424,7 +441,7 @@ impl Mode {
         let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
         let (t, held) = (t + dt, if confirm_held { held + dt } else { 0.0 });
         if held >= HOLD_SKIP_S || walk_done(&sel, t) {
-            open_menu(sel, state)
+            walk_ended(sel, state).0
         } else {
             Mode::Moving { sel, t, held }
         }
@@ -452,6 +469,51 @@ fn walk_pos(sel: &Selection, t: f32) -> Pos {
         .get(walk_steps(sel, t))
         .copied()
         .unwrap_or_else(|| sel.origin())
+}
+
+/// The target of `sel`'s aimed path, if the cursor is still on it.
+fn aimed_at(sel: &Selection, cursor: Pos, state: &BattleState) -> Option<UnitId> {
+    let t = sel.target?;
+    (state.unit(t)?.pos == cursor).then_some(t)
+}
+
+/// A walk ended: the attack on the aimed enemy (0428), else the action menu.
+fn walk_ended(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    if sel.target.is_some() {
+        open_attack(sel, state)
+    } else {
+        (open_menu(sel, state), Effect::None)
+    }
+}
+
+/// The unit stands at the path's end, aimed at an enemy (0428): the weapons
+/// that reach it (a list if several, its target first), then the forecast on
+/// it. The action menu if none does.
+fn open_attack(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    let Some(target) = sel.target else {
+        return (open_menu(sel, state), Effect::None);
+    };
+    let mut kept: Vec<WeaponChoice> = weapon_choices(state, &sel)
+        .into_iter()
+        .filter(|c| c.targets.contains(&target))
+        .collect();
+    for c in &mut kept {
+        if let Some(i) = c.targets.iter().position(|&t| t == target) {
+            c.targets.rotate_left(i);
+        }
+    }
+    match kept.as_slice() {
+        [] => (open_menu(sel, state), Effect::None),
+        [only] => {
+            let only = only.clone();
+            target_with(state, sel, &only, None)
+        }
+        _ => {
+            let menu = weapon_menu(state, &sel, &kept);
+            let weapons = kept;
+            (Mode::WeaponMenu { sel, menu, weapons }, Effect::None)
+        }
+    }
 }
 
 /// The action menu for `sel`.
@@ -553,6 +615,18 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
     match mode {
         Mode::Idle { threat } => step_idle(threat, action, cursor, state),
         Mode::Selected(sel) => match action {
+            Action::Confirm if aimed_at(&sel, cursor, state).is_some() => {
+                if sel.path.len() == 1 {
+                    open_attack(sel, state)
+                } else {
+                    let walk = Mode::Moving {
+                        sel,
+                        t: 0.0,
+                        held: 0.0,
+                    };
+                    (walk, Effect::None)
+                }
+            }
             Action::Confirm if cursor == sel.dest() && sel.reach.is_stoppable(cursor) => {
                 if sel.path.len() == 1 {
                     (open_menu(sel, state), Effect::None)
@@ -571,9 +645,7 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             }
             _ => (Mode::Selected(sel), Effect::None),
         },
-        Mode::Moving { sel, .. } if action == Action::Confirm => {
-            (open_menu(sel, state), Effect::None)
-        }
+        Mode::Moving { sel, .. } if action == Action::Confirm => walk_ended(sel, state),
         moving @ Mode::Moving { .. } => (moving, Effect::None),
         Mode::ActionMenu {
             sel,
@@ -606,7 +678,11 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
                 };
                 (Mode::default(), Effect::Apply(cmd))
             }
-            Some(MenuEvent::Cancelled) => (Mode::Selected(sel), Effect::None),
+            Some(MenuEvent::Cancelled) => {
+                let mut sel = sel;
+                sel.target = None;
+                (Mode::Selected(sel), Effect::None)
+            }
             None => {
                 let menu = Mode::ActionMenu {
                     sel,
@@ -1090,6 +1166,7 @@ mod tests {
 
     use super::*;
     use crate::screen::tests::ctx;
+    use crate::screens::battle::attack::can_hit;
     use crate::screens::battle::playback::TIMINGS;
     use crate::screens::battle::quick_battle;
     use crate::screens::battle::testing::{battle_with, skirmish, vaulted, wait};
@@ -1697,5 +1774,153 @@ mod tests {
         let (skipped, effect) = step(combat, Action::Cancel, p(8, 2), &after);
         assert_eq!(effect, Effect::None);
         assert_eq!(skipped.tick(1.0 / 60.0, false, &after), Mode::default());
+    }
+
+    /// The unit at `at` selected, its path at its origin.
+    fn pick(s: &BattleState, at: Pos) -> Selection {
+        let (Mode::Selected(sel), _) = step(Mode::default(), Action::Confirm, at, s) else {
+            panic!("no unit at {at:?}");
+        };
+        sel
+    }
+
+    /// `sel` with the cursor moved onto `at`.
+    fn aim(sel: Selection, at: Pos, s: &BattleState) -> Selection {
+        let mut mode = Mode::Selected(sel);
+        mode.cursor_moved(at, s);
+        let Mode::Selected(sel) = mode else {
+            panic!("not selected");
+        };
+        sel
+    }
+
+    #[test]
+    fn pointing_at_an_enemy_aims_the_path_at_the_cheapest_tile_that_can_hit() {
+        let s = skirmish(&ctx(), 20);
+        // The lord at (6, 2), the raider (unit 6) at (7, 1): not adjacent.
+        let start = pick(&s, p(6, 2));
+        assert!(!can_hit(&s, UnitId(1), p(6, 2), UnitId(6)));
+        let sel = aim(start.clone(), p(7, 1), &s);
+        assert_eq!(sel.target, Some(UnitId(6)));
+        let dest = sel.dest();
+        assert!(start.reach.is_stoppable(dest) && can_hit(&s, UnitId(1), dest, UnitId(6)));
+        for t in start.reach.stoppable().iter() {
+            if can_hit(&s, UnitId(1), t, UnitId(6)) {
+                assert!(start.reach.cost(dest) <= start.reach.cost(t), "{t:?}");
+            }
+        }
+        assert_eq!(Some(sel.path), start.reach.path_to(dest));
+    }
+
+    #[test]
+    fn pointing_at_an_enemy_keeps_a_path_that_already_hits() {
+        let s = skirmish(&ctx(), 20);
+        let mut start = pick(&s, p(6, 2));
+        start.steer(p(7, 2), &s);
+        for enemy in [p(7, 1), p(8, 2)] {
+            let sel = aim(start.clone(), enemy, &s);
+            assert_eq!(sel.path, start.path);
+            assert!(sel.target.is_some());
+        }
+    }
+
+    #[test]
+    fn an_archer_points_from_two_tiles_away() {
+        let s = quick();
+        let enemy = s.unit(UnitId(5)).unwrap().pos;
+        let sel = aim(pick(&s, p(2, 4)), enemy, &s);
+        assert_eq!(sel.target, Some(UnitId(5)));
+        let d = sel.dest();
+        assert_eq!((d.x - enemy.x).abs() + (d.y - enemy.y).abs(), 2);
+    }
+
+    #[test]
+    fn confirm_on_the_aimed_enemy_walks_then_opens_the_forecast_and_cancel_backs_out() {
+        let s = skirmish(&ctx(), 20);
+        let sel = aim(pick(&s, p(6, 2)), p(7, 1), &s);
+        let dest = sel.dest();
+        let (walk, effect) = step(Mode::Selected(sel), Action::Confirm, p(7, 1), &s);
+        assert_eq!(effect, Effect::None);
+        assert!(matches!(walk, Mode::Moving { .. }), "{walk:?}");
+        let mode = walk.tick(1.0, false, &s);
+        // Two swords reach the raider: the weapon list, then the forecast.
+        let Mode::WeaponMenu { weapons, .. } = &mode else {
+            panic!("{mode:?}");
+        };
+        assert!(weapons.iter().all(|c| c.targets[0] == UnitId(6)));
+        let (targeting, effect) = step(mode, Action::Confirm, p(7, 1), &s);
+        assert_eq!(effect, Effect::Cursor(p(7, 1)));
+        let Mode::Targeting(t) = &targeting else {
+            panic!("{targeting:?}");
+        };
+        assert_eq!(t.target(), UnitId(6));
+        // Cancel: the weapon list, the action menu at the tile, the path.
+        let (list, _) = step(targeting, Action::Cancel, p(7, 1), &s);
+        assert!(matches!(list, Mode::WeaponMenu { .. }));
+        let (menu, _) = step(list, Action::Cancel, dest, &s);
+        let Mode::ActionMenu { sel, .. } = &menu else {
+            panic!("{menu:?}");
+        };
+        assert_eq!(sel.dest(), dest);
+        let (back, _) = step(menu, Action::Cancel, dest, &s);
+        let Mode::Selected(sel) = back else {
+            panic!("{back:?}");
+        };
+        assert_eq!((sel.target, sel.dest()), (None, dest));
+    }
+
+    #[test]
+    fn a_single_weapon_goes_straight_to_the_forecast_without_walking() {
+        let s = skirmish(&ctx(), 20);
+        // The archer already hits the brigand from where it stands.
+        let sel = aim(pick(&s, p(8, 4)), p(8, 2), &s);
+        assert_eq!((sel.path.len(), sel.target), (1, Some(UnitId(4))));
+        let (mode, effect) = step(Mode::Selected(sel), Action::Confirm, p(8, 2), &s);
+        assert_eq!(effect, Effect::Cursor(p(8, 2)));
+        assert!(matches!(mode, Mode::Targeting(_)), "{mode:?}");
+    }
+
+    #[test]
+    fn an_enemy_no_tile_can_hit_leaves_the_path_and_confirm_does_nothing() {
+        let s = quick();
+        // The lord at (3, 5) can't reach the raider at (7, 1) this turn.
+        let start = pick(&s, p(3, 5));
+        let far = s.unit(UnitId(6)).unwrap().pos;
+        let sel = aim(start.clone(), far, &s);
+        assert_eq!((sel.target, &sel.path), (None, &start.path));
+        let (mode, effect) = step(Mode::Selected(sel.clone()), Action::Confirm, far, &s);
+        assert_eq!((mode, effect), (Mode::Selected(sel), Effect::None));
+    }
+
+    #[test]
+    fn an_aim_no_weapon_reaches_from_the_path_end_falls_back_to_the_action_menu() {
+        let s = skirmish(&ctx(), 20);
+        // Aimed at the raider but still standing at (6, 2), out of reach.
+        let mut sel = pick(&s, p(6, 2));
+        sel.target = Some(UnitId(6));
+        let (mode, effect) = open_attack(sel, &s);
+        assert_eq!(effect, Effect::None);
+        assert!(matches!(mode, Mode::ActionMenu { .. }), "{mode:?}");
+    }
+
+    #[test]
+    fn the_forecast_opens_on_the_aimed_enemy_even_when_it_is_not_the_first_target() {
+        let s = skirmish(&ctx(), 20);
+        // From (7, 2) the raider (7, 1) comes first in (y, x) order; aim at
+        // the brigand (8, 2) instead.
+        let mut start = pick(&s, p(6, 2));
+        start.steer(p(7, 2), &s);
+        let sel = aim(start, p(8, 2), &s);
+        let (mode, _) = step(Mode::Selected(sel), Action::Confirm, p(8, 2), &s);
+        let walked = mode.tick(1.0, false, &s);
+        let Mode::WeaponMenu { weapons, .. } = &walked else {
+            panic!("{walked:?}");
+        };
+        assert!(weapons.iter().all(|c| c.targets[0] == UnitId(4)));
+        let (targeting, _) = step(walked, Action::Confirm, p(8, 2), &s);
+        let Mode::Targeting(t) = &targeting else {
+            panic!("{targeting:?}");
+        };
+        assert_eq!(t.target(), UnitId(4));
     }
 }
