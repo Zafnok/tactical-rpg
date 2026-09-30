@@ -1,5 +1,5 @@
 ---
-id: "0223"
+id: "0225"
 title: Make the menu select and cancel sounds quieter
 type: tuning
 milestone: M2 Engine
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed: 2026-09-30
 ---
 
-# 0223 — Make the menu select and cancel sounds quieter
+# 0225 — Make the menu select and cancel sounds quieter
 
 ## Context
 
