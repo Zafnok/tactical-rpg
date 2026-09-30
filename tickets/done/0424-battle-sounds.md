@@ -108,9 +108,12 @@ each sound lands: timing, volume, and whether anything gets annoying.
 - `game.rs`'s title-music test now ignores sound requests (the battle it
   plays makes a hit sound now).
 
-**Claude's starting rules (Nick: agree or veto):**
-1. An Absorb strike (the target heals from its element) sounds like any
-   spell landing: `hit_magic`.
+**Rules decided here** (Nick's answers after the first review: 1 vetoed,
+3, 5 and 6 agreed; he'll judge 2 and 4 in the Quick Battle once it has a
+caster, follow-up ticket 0428):
+1. An Absorb strike (the target heals from its element) plays `heal`.
+   Nick vetoed the starting rule (`hit_magic`): "it should sound like a
+   heal". Recorded in `audio.md`.
 2. Every spell strike plays its cast sound as the caster's name flashes,
    including a follow-up and a spell counter, not only the first cast.
 3. A critical that does 0 damage plays `block`, like any 0-damage hit.

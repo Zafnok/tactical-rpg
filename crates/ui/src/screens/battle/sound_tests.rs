@@ -196,12 +196,12 @@ fn a_spell_crit_plays_the_elements_crit_instead_of_hit_magic() {
 }
 
 #[test]
-fn an_absorb_strike_lands_with_hit_magic() {
+fn an_absorb_strike_sounds_like_a_heal() {
     let absorb = vec![Strike {
         healed: true,
         ..strike(Side::Attacker, true, false, 6, 20)
     }];
-    let expected = [(FLASH, "cast_fire"), (RESULT, "hit_magic")];
+    let expected = [(FLASH, "cast_fire"), (RESULT, "heal")];
     assert_sounds(absorb, [FIRE, AXE], &expected);
 }
 

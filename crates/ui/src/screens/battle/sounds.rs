@@ -23,8 +23,8 @@ pub enum Attack {
 /// The sound of `strike`, made with `with` (`None`: unknown):
 ///
 /// - a miss: `miss`;
-/// - an Absorb strike (the target heals): `hit_magic`, like any spell
-///   landing (*Claude's starting rule*);
+/// - an Absorb strike (the target heals from its own element): `heal`
+///   (Nick, 0424 sign-off);
 /// - a hit for 0 damage: `block`;
 /// - a weapon hit: `hit_<kind>`, or `crit_physical` on a crit;
 /// - a spell hit: `hit_magic`, or on a crit `crit_fire` / `crit_ice`
@@ -36,7 +36,7 @@ pub fn sound_for_strike(strike: &Strike, with: Option<Attack>) -> Option<&'stati
         return Some("miss");
     }
     if strike.healed {
-        return Some("hit_magic");
+        return Some("heal");
     }
     if strike.damage == 0 {
         return Some("block");
@@ -260,7 +260,7 @@ mod tests {
                 Some("crit_physical"),
                 Some("block"),
                 Some("block"),
-                Some("hit_magic"),
+                Some("heal"),
             ];
             assert_eq!(all(with), expected, "{kind:?}");
         }
@@ -281,7 +281,7 @@ mod tests {
                 Some(crit),
                 Some("block"),
                 Some("block"),
-                Some("hit_magic"),
+                Some("heal"),
             ];
             assert_eq!(all(with), expected, "{element:?}");
         }
@@ -297,7 +297,7 @@ mod tests {
                 None,
                 Some("block"),
                 Some("block"),
-                Some("hit_magic")
+                Some("heal")
             ]
         );
     }
