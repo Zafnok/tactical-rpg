@@ -399,6 +399,41 @@ fn tips_show_when_switched_on() {
     assert!(!shows(&h, "Your move"));
 }
 
+/// The Quick Battle's dialogue triggers (0705): its rogue arrives on the
+/// fort in turn 2's enemy phase, and turn 3 starts with a scene, once its
+/// banner is closed.
+#[test]
+fn the_rogue_arrives_and_turn_three_opens_with_a_scene() {
+    let mut h = quick_battle();
+    // The fort at (12, 3), empty.
+    assert_eq!(tile(&h, 44, 14), "╦╦");
+    // Turn 1 ends with everyone ready; both banners skipped.
+    h.keys("Space Space f f");
+    assert!(!shows(&h, "PHASE"));
+    // Turn 2's enemy phase (the rogue arrives under its banner).
+    h.keys("Space Space");
+    assert!(shows(&h, "ENEMY PHASE"));
+    h.keys("f");
+    assert!(shows(&h, "PLAYER PHASE"));
+    assert!(shows(&h, "Turn 3"));
+    assert_eq!(h.screens(), ["title", "battle"]);
+    // Closing the banner plays the scene over the map.
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "battle", "dialogue"]);
+    h.wait(2.0);
+    assert!(shows(
+        &h,
+        "Turn 3. A rogue has slipped into the fort to the east."
+    ));
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(
+        help(&h),
+        "f select · e info · s next unit · r rewind · d menu · Space end turn"
+    );
+    assert_eq!(tile(&h, 44, 14), "Ro");
+}
+
 /// The music cues the run asked for, in order.
 fn music(h: &Harness) -> Vec<String> {
     h.audio_requests()

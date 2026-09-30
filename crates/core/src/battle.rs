@@ -249,6 +249,43 @@
 //!   the others of its wave still arrive. Earlier entries go first. A
 //!   reinforcement arrives on a burning tile anyway, and takes the fire's
 //!   damage when it burns out (Nick).
+//! - **Dialogue triggers** ([`Trigger`], ticket 0705,
+//!   `docs/design/battle-scenes-and-recruitment.md`): a battle's story
+//!   moments. Each names a scene (a script) and a moment ([`TriggerWhen`]),
+//!   and plays only the first time if `once` (fired-once state is part of
+//!   the battle, so saves, rewinds and replays keep it). The battle inserts
+//!   an [`Event::SceneTriggered`] at the moment, in trigger-list order when
+//!   several fire together:
+//!   - **Turn start**: right after that phase's [`Event::PhaseStarted`]
+//!     (the battle's first phase included).
+//!   - **Entering an area**: right after an [`Event::UnitMoved`] (an `Act`'s
+//!     move or a move after an attack) that ends inside the area, for a
+//!     unit that matches. Pushes and arrivals don't count (Nick).
+//!   - **Combat start**: right before an [`Event::CombatResolved`], **one
+//!     scene at most** (Nick: a fight plays one script, not lines strung
+//!     together). If the two fighters' characters have a scene written for
+//!     the pair (a trigger `against` the other, either way round), only
+//!     that pair's scenes can play, whoever attacks (Nick); else the first
+//!     unplayed trigger, in list order, of either fighter. A Line Pierce
+//!     strike is a combat too.
+//!   - **Half HP**: right after a combat that leaves the character standing
+//!     at half its max HP or less (a boss's "halfway" line; not if the
+//!     combat felled it).
+//!   - **Falling**: right before the character's [`Event::UnitFell`] (a
+//!     death quote plays before the unit leaves the map), if the trigger's
+//!     `mode` is none or the battle's [`GameMode`] (Classic death quote,
+//!     Casual retreat line; `death-and-difficulty.md`). A trigger that
+//!     recruits ("joins you if defeated") adds the fallen unit to
+//!     [`BattleState::recruited`] ([`Event::UnitRecruited`], right after
+//!     the fall): it joins the army after a won battle (0801). Nobody
+//!     changes sides in a battle (Nick).
+//!   - **Talk** ([`Command::Talk`]): the units of a trigger's two
+//!     characters, either one starting it from a tile it can move to next
+//!     to the other, while the trigger hasn't fired
+//!     ([`BattleState::talk_targets`]). Only [`Event::SceneTriggered`]:
+//!     talking is free, like equipping (Nick): the unit doesn't move, stays
+//!     ready and still chooses its move and action. Talking never
+//!     recruits (Nick).
 //! - **Errors change nothing.** [`BattleState::apply`] validates the whole
 //!   command before touching the state, so on `Err` the state is unchanged.
 //!
@@ -268,7 +305,8 @@
 //! the map (with its current terrain), burning tiles, units (with their
 //! learned skills, timed effects, role, EXP and class records), fallen units,
 //! the EXP pool,
-//! pending reinforcements, objective, turn,
+//! pending reinforcements, objective, turn, triggers and which have fired,
+//! recruits, the game mode,
 //! phase, RNG position, battle pack, gold, stock, opened chests and outcome
 //! are all saved (spell uses left live on the units). The
 //! **terrain, class, item, spell, skill and art tables are not**: they are shared content, held by `Arc` and skipped. A
@@ -301,6 +339,8 @@ use crate::stats::StatValue;
 use crate::terrain::{TerrainId, TerrainTable};
 use crate::unit::{Faction, Level, Role, Unit, UnitId};
 use crate::weapon::{WeaponKind, WeaponRank};
+
+use self::triggers::FiredSet;
 
 /// A turn number, from 1.
 pub type Turn = u32;
@@ -441,6 +481,10 @@ pub struct BattleSetup {
     pub rewind_charges: u8,
     /// Seed of the battle's [`SimRng`].
     pub seed: u64,
+    /// The map's story moments.
+    pub triggers: Vec<Trigger>,
+    /// The campaign's mode (which fall scenes play).
+    pub mode: GameMode,
 }
 
 /// What a unit does after moving. Ends its action.
@@ -590,6 +634,17 @@ pub enum Command {
         unit: UnitId,
         /// Where it moves.
         to: Option<Pos>,
+    },
+    /// `unit` talks to `target`, next to `dest` (a tile it can move to),
+    /// with a [`TriggerWhen::Talk`] for the pair. Free: doesn't move the
+    /// unit or end its action.
+    Talk {
+        /// The unit.
+        unit: UnitId,
+        /// Where it would stand (its move isn't made).
+        dest: Pos,
+        /// Who it talks to.
+        target: UnitId,
     },
     /// End the current phase.
     EndPhase,
@@ -922,6 +977,17 @@ pub enum Event {
         /// How far it may move.
         tiles: u32,
     },
+    /// A trigger's dialogue scene plays here ([`Trigger`]).
+    SceneTriggered {
+        /// The scene's id.
+        scene: String,
+    },
+    /// A fallen unit was recruited ("joins you if defeated"): it joins the
+    /// army after a won battle ([`BattleState::recruited`]).
+    UnitRecruited {
+        /// The unit.
+        unit: UnitId,
+    },
     /// A unit finished its action and is done until its next phase.
     UnitActed {
         /// The unit.
@@ -1112,6 +1178,9 @@ pub enum CommandError {
     ArtsNotAllowed(UnitId),
     /// The action isn't an attack (for [`BattleState::preview_attack`]).
     NotAnAttack,
+    /// The unit has nothing to say to this one: no
+    /// [`TriggerWhen::Talk`] for the pair that hasn't fired.
+    CannotTalk(UnitId),
 }
 
 impl From<MoveError> for CommandError {
@@ -1242,6 +1311,7 @@ impl CommandError {
                 write!(f, "unit {} doesn't use arts or actives", id.0)
             }
             CommandError::NotAnAttack => f.write_str("the action isn't an attack"),
+            CommandError::CannotTalk(id) => write!(f, "nothing to say to unit {}", id.0),
             other => write!(f, "{other:?}"),
         }
     }
@@ -1284,6 +1354,18 @@ pub struct BattleState {
     /// EXP earned by Ally-faction units, shared out on a win.
     #[serde(default)]
     exp_pool: u32,
+    /// The map's story moments.
+    #[serde(default)]
+    triggers: Vec<Trigger>,
+    /// The `once` triggers that have fired.
+    #[serde(default)]
+    fired: FiredSet,
+    /// Fallen units recruited, joining after a won battle.
+    #[serde(default)]
+    recruited: Vec<Unit>,
+    /// The campaign's mode.
+    #[serde(default)]
+    mode: GameMode,
 }
 
 /// A validated action, ready to carry out.
@@ -1538,6 +1620,10 @@ impl BattleState {
             outcome: None,
             pending_move: None,
             exp_pool: 0,
+            triggers: setup.triggers,
+            fired: FiredSet::new(),
+            recruited: Vec::new(),
+            mode: setup.mode,
         };
         let mut events = Vec::new();
         if let Some(outcome) = state.judge() {
@@ -1546,6 +1632,7 @@ impl BattleState {
             // Never skipped: judge() found player units on the map.
             state.start_phase(&mut events);
         }
+        let events = state.fire_triggers(events);
         (state, events)
     }
 
@@ -1710,6 +1797,10 @@ impl BattleState {
         match cmd {
             Command::MoveAfter { unit, to } => self.move_after(*unit, *to, &mut events)?,
             Command::EndPhase => self.end_phase(&mut events),
+            Command::Talk { unit, dest, target } => {
+                let trigger = self.plan_talk(*unit, *dest, *target)?;
+                self.talk(trigger, &mut events);
+            }
             Command::Equip { unit, equipped } => {
                 let u = self.check_ready(*unit)?;
                 match equipped {
@@ -1727,7 +1818,7 @@ impl BattleState {
                 self.act(*unit, path, step, &mut events);
             }
         }
-        Ok(events)
+        Ok(self.fire_triggers(events))
     }
 
     /// Validates an `Act`: the move's path and the action to carry out.
@@ -2903,10 +2994,12 @@ impl Tally {
 
 mod arts;
 mod skills;
+mod triggers;
 
 pub use arts::AttackPreview;
 use arts::{ArtUse, check_arts_allowed};
 use skills::{ActiveUse, AttackPlan, Fight, SkillStep};
+pub use triggers::{GameMode, TileRect, Trigger, TriggerWhen, Who};
 
 #[cfg(test)]
 pub(crate) mod tests;

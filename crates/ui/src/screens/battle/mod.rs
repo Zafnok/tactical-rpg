@@ -8,7 +8,10 @@
 //! auto-end), and the phase and outcome [`banner`]s. Every command sent is
 //! kept in a [`BattleHistory`], and Rewind opens the [`rewind`] screen
 //! (0307). One-time [`tips`] pop up over it the first time something new
-//! happens (0406).
+//! happens (0406). Scenes the battle's triggers fire (0705) play as a
+//! [`DialogueScreen`] overlay over the map, in order with the banners, or
+//! inside a combat's playback (a boss's line before the combat, a death
+//! quote before the fall).
 
 pub mod art_list;
 pub mod attack;
@@ -35,11 +38,12 @@ pub mod units;
 use std::sync::Arc;
 
 use std::collections::VecDeque;
-use trpg_content::{Content, TipTrigger, character_unit, check_map_labels};
+use trpg_content::{Content, TipTrigger, character_unit, check_map_labels, check_triggers};
 
 use trpg_core::{
-    BattleHistory, BattlePack, BattleSetup, BattleState, Command, Event, Faction, ItemId,
-    Objective, Phase, Pos, StatValue, Stock, TileSet, Unit, UnitId, danger_zone,
+    BattleHistory, BattlePack, BattleSetup, BattleState, CharacterId, Command, Event, Faction,
+    GameMode, ItemId, Objective, Phase, Pos, Reinforcement, StatValue, Stock, TileRect, TileSet,
+    Trigger, TriggerWhen, Unit, UnitId, Who, danger_zone,
 };
 
 use self::banner::{Banner, BannerKind};
@@ -57,6 +61,7 @@ use self::playback::{Playback, TIMINGS};
 use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
+use super::dialogue::DialogueScreen;
 use super::draw_debug_hint;
 use crate::audio::{CURSOR_MOVE, MenuSound};
 use crate::color::{Palette, Rgb, UiColor};
@@ -78,12 +83,105 @@ pub const QUICK_BATTLE_POTION: &str = "potion";
 /// How many of them (Chapter 1's default pack, `chapter-1.md`).
 pub const QUICK_BATTLE_POTIONS: usize = 3;
 
+/// The turn the debug Quick Battle's rogue ([`QUICK_BATTLE_ROGUE`]) arrives
+/// on, at the start of the enemy phase.
+pub const QUICK_BATTLE_ROGUE_TURN: trpg_core::Turn = 2;
+
+/// The character of the Quick Battle's rogue: an enemy the lord can talk
+/// to, which joins if defeated.
+pub const QUICK_BATTLE_ROGUE: &str = "test_rogue";
+
 /// The debug Quick Battle: `test_small.map` with the placeholder characters
 /// against generic enemies (rout), at the start of the battle: everyone at
 /// full HP and every player unit ready, one brigand close enough to fight
-/// on turn 1. Fails with a message if the content
-/// lacks something it needs.
+/// on turn 1. Its triggers ([`quick_battle_triggers`]) try out each kind of
+/// dialogue trigger; the rogue they are about arrives on the fort at
+/// (12, 3) in turn [`QUICK_BATTLE_ROGUE_TURN`]'s enemy phase. Fails with a
+/// message if the content lacks something it needs.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
+    Ok(BattleState::new(quick_battle_setup(content)?).0)
+}
+
+/// The screen of a new [`quick_battle`], with any scene its start fires.
+pub fn quick_battle_screen(content: &Content) -> Result<BattleScreen, String> {
+    let (state, events) = BattleState::new(quick_battle_setup(content)?);
+    Ok(BattleScreen::start(state, &events))
+}
+
+/// The debug Quick Battle's dialogue triggers (0705), one of each kind, on
+/// the scenes in `assets/dialogue/test_triggers.dlg`: turn 3 starts; a
+/// player unit ends a move in the walled fort (10, 5)–(11, 6); the rogue
+/// fights, drops to half HP, or falls (and joins after the battle); the
+/// lord or the knight falls (the knight's line depends on the mode); the
+/// lord and the rogue talk.
+pub fn quick_battle_triggers() -> Vec<Trigger> {
+    let c = |id: &str| CharacterId(id.into());
+    let rogue = c(QUICK_BATTLE_ROGUE);
+    let once = |when, scene: &str| Trigger {
+        when,
+        scene: scene.into(),
+        once: true,
+    };
+    let fell = |unit: &str, mode, recruit| TriggerWhen::UnitFell {
+        unit: c(unit),
+        mode,
+        recruit,
+    };
+    vec![
+        once(
+            TriggerWhen::TurnStart {
+                turn: 3,
+                phase: Phase::Player,
+            },
+            "test_turn_3",
+        ),
+        once(
+            TriggerWhen::UnitEntersArea {
+                who: Who::Faction(Faction::Player),
+                area: TileRect {
+                    x: 10,
+                    y: 5,
+                    w: 2,
+                    h: 2,
+                },
+            },
+            "test_fort",
+        ),
+        once(
+            TriggerWhen::CombatStart {
+                unit: rogue.clone(),
+                against: None,
+            },
+            "test_engage",
+        ),
+        once(
+            TriggerWhen::HalfHp {
+                unit: rogue.clone(),
+            },
+            "test_rogue_half",
+        ),
+        once(fell(QUICK_BATTLE_ROGUE, None, true), "test_rogue_falls"),
+        once(fell("test_lord", None, false), "test_lord_falls"),
+        once(
+            fell("test_knight", Some(GameMode::Classic), false),
+            "test_knight_dies",
+        ),
+        once(
+            fell("test_knight", Some(GameMode::Casual), false),
+            "test_knight_retreats",
+        ),
+        once(
+            TriggerWhen::Talk {
+                a: c("test_lord"),
+                b: rogue,
+            },
+            "test_talk",
+        ),
+    ]
+}
+
+/// The [`BattleSetup`] of the [`quick_battle`].
+fn quick_battle_setup(content: &Content) -> Result<BattleSetup, String> {
     let map = content
         .maps
         .get(QUICK_BATTLE_MAP)
@@ -99,19 +197,20 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         next_id += 1;
         UnitId(next_id)
     };
+    let character = |name: &str, id, faction, pos| {
+        let def = chars
+            .characters
+            .get(&CharacterId(name.into()))
+            .ok_or_else(|| format!("no character \"{name}\""))?;
+        character_unit(def, id, classes, items, faction, pos).map_err(|e| e.to_string())
+    };
     let named = [
         ("test_lord", Pos::new(3, 5)),
         ("test_knight", Pos::new(4, 6)),
         ("test_archer", Pos::new(2, 4)),
     ];
     for (name, pos) in named {
-        let def = chars
-            .characters
-            .get(&trpg_core::CharacterId(name.into()))
-            .ok_or_else(|| format!("no character \"{name}\""))?;
-        let unit = character_unit(def, id(), classes, items, Faction::Player, pos)
-            .map_err(|e| e.to_string())?;
-        units.push(unit);
+        units.push(character(name, id(), Faction::Player, pos)?);
     }
     let generics = [
         ("test_brigand", Pos::new(8, 2)),
@@ -129,11 +228,30 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
             .map_err(|e| e.to_string())?;
         units.push(unit);
     }
-    let errors = check_map_labels(QUICK_BATTLE_MAP, &units);
-    if let Some(e) = errors.first() {
+    let rogue = character(QUICK_BATTLE_ROGUE, id(), Faction::Enemy, Pos::new(12, 3))?;
+    let reinforcements = vec![Reinforcement {
+        turn: QUICK_BATTLE_ROGUE_TURN,
+        unit: rogue,
+    }];
+    let everyone: Vec<Unit> = units
+        .iter()
+        .chain(reinforcements.iter().map(|r| &r.unit))
+        .cloned()
+        .collect();
+    let triggers = quick_battle_triggers();
+    let errors = check_map_labels(QUICK_BATTLE_MAP, &everyone)
+        .into_iter()
+        .chain(check_triggers(
+            QUICK_BATTLE_MAP,
+            &triggers,
+            &everyone,
+            &map,
+            &content.dialogue,
+        ));
+    if let Some(e) = errors.into_iter().next() {
         return Err(e.to_string());
     }
-    let (state, _) = BattleState::new(BattleSetup {
+    Ok(BattleSetup {
         map,
         terrain: Arc::new(content.terrain.rules.clone()),
         classes: Arc::new(classes.clone()),
@@ -148,12 +266,13 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         gold: 0,
         stock: Stock::default(),
         units,
-        reinforcements: vec![],
+        reinforcements,
         objective: Objective::Rout { turn_limit: None },
         rewind_charges: 3,
         seed: QUICK_BATTLE_SEED,
-    });
-    Ok(state)
+        triggers,
+        mode: GameMode::Classic,
+    })
 }
 
 /// How far range overlays tint a tile's background toward their colour
@@ -191,6 +310,17 @@ pub fn danger_tiles(state: &BattleState) -> TileSet {
     .unwrap_or_else(|_| TileSet::new(tiles.width(), tiles.height()))
 }
 
+/// Something the battle screen shows once no combat is playing, one at a
+/// time in order.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Queued {
+    /// A phase or outcome banner.
+    Banner(Banner),
+    /// A scene a trigger fired, by id: played as a [`DialogueScreen`]
+    /// overlay.
+    Scene(String),
+}
+
 /// The battle screen: the player browses the map with the cursor, selects
 /// and moves units ([`Mode`]), opens the map menu, ends the turn; phase and
 /// outcome banners show as the battle goes on, and the outcome's closes the
@@ -217,9 +347,9 @@ pub struct BattleScreen {
     end_armed: bool,
     /// A short message and the seconds it has left.
     toast: Option<(String, f32)>,
-    /// Banners waiting to be shown, the first on screen (after a combat's
-    /// playback).
-    banners: VecDeque<Banner>,
+    /// Banners and scenes waiting to be shown, in the order of their
+    /// events, the first on screen (after a combat's playback).
+    queue: VecDeque<Queued>,
     rewind: Option<RewindScreen>,
     /// One-time tips waiting to show (0406).
     tips: TipState,
@@ -266,12 +396,35 @@ impl BattleScreen {
             auto_end: false,
             end_armed: false,
             toast: None,
-            banners: VecDeque::new(),
+            queue: VecDeque::new(),
             tips: TipState::default(),
             popups: vec![],
             progress: None,
             cues: CueQueue::default(),
             walked: None,
+        }
+    }
+
+    /// [`BattleScreen::new`] for a battle just started with `events`: the
+    /// scenes they fire (a turn-1 trigger) play first.
+    pub fn start(state: BattleState, events: &[Event]) -> Self {
+        let mut screen = Self::new(state);
+        screen.queue.extend(events.iter().filter_map(|e| match e {
+            Event::SceneTriggered { scene } => Some(Queued::Scene(scene.clone())),
+            _ => None,
+        }));
+        screen
+    }
+
+    /// The scene waiting to play next, once no combat is playing, no EXP or
+    /// level up is shown and no banner is before it.
+    pub fn queued_scene(&self) -> Option<&str> {
+        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
+            return None;
+        }
+        match self.queue.front() {
+            Some(Queued::Scene(id)) => Some(id),
+            _ => None,
         }
     }
 
@@ -337,7 +490,10 @@ impl BattleScreen {
         if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
             return None;
         }
-        self.banners.front()
+        match self.queue.front() {
+            Some(Queued::Banner(b)) => Some(b),
+            _ => None,
+        }
     }
 
     /// The message shown for a moment, if any.
@@ -408,11 +564,14 @@ impl BattleScreen {
     }
 
     /// The tip on screen, if any: the first queued whose moment has come.
-    /// Tips wait out a combat's playback and the rewind screen; the
-    /// enemy-phase tip shows as that phase begins (over its banner), the
-    /// others once a player phase is browsing without a banner.
+    /// Tips wait out a combat's playback, a scene and the rewind screen;
+    /// the enemy-phase tip shows as that phase begins (over its banner),
+    /// the others once a player phase is browsing without a banner.
     pub fn shown_tip(&self) -> Option<TipTrigger> {
-        if self.rewind.is_some() || matches!(self.mode, Mode::Combat(_)) || self.progress.is_some()
+        if self.rewind.is_some()
+            || matches!(self.mode, Mode::Combat(_))
+            || self.progress.is_some()
+            || self.queued_scene().is_some()
         {
             return None;
         }
@@ -425,9 +584,10 @@ impl BattleScreen {
     /// Closes the banner on screen. An outcome's leaves the battle; an AI
     /// phase's ends that phase (the stub until 0502).
     fn close_banner(&mut self) -> Transition {
-        let Some(banner) = self.banners.pop_front() else {
+        let Some(&banner) = self.banner() else {
             return Transition::None;
         };
+        self.queue.pop_front();
         match banner.kind {
             BannerKind::Outcome(_) => Transition::Pop,
             BannerKind::Phase { phase, .. } => {
@@ -440,12 +600,28 @@ impl BattleScreen {
         }
     }
 
+    /// The scene to play now, taken from the combat's playback where its
+    /// clock has stopped, or from the front of the queue. A scene missing
+    /// from the content (validation rules it out) is dropped.
+    fn next_scene(&mut self, ctx: &Ctx) -> Option<trpg_content::Scene> {
+        let id = if let Mode::Combat(pb) = &mut self.mode {
+            pb.take_scene()?
+        } else {
+            self.queued_scene()?;
+            match self.queue.pop_front() {
+                Some(Queued::Scene(id)) => id,
+                _ => return None,
+            }
+        };
+        ctx.content.dialogue.get(&id).cloned()
+    }
+
     /// With auto-end on, ends the player phase once the screen is back to
     /// browsing after the command that left no player unit ready.
     fn check_auto_end(&mut self) {
         if !self.end_armed
             || !matches!(self.mode, Mode::Idle { .. })
-            || !self.banners.is_empty()
+            || !self.queue.is_empty()
             || self.progress.is_some()
         {
             return;
@@ -514,18 +690,27 @@ impl BattleScreen {
     /// Applies `cmd` (built by [`mode::step`] from legal choices) and
     /// records it in the history, then plays its combat if it had one, and
     /// continues browsing (or with the unit's move after its attack); queues
-    /// the banners of its events and updates the danger zone. A refused
-    /// command changes nothing.
+    /// the banners of its events, and its scenes unless its combat plays
+    /// them, and updates the danger zone. A refused command changes
+    /// nothing.
     fn apply(&mut self, cmd: &Command) {
         let before = self.state.units().to_vec();
         let walked = self.walked.take();
         // Refused: the battle is unchanged and the player browses again.
         let events = self.state.apply(cmd).ok();
+        let playback = events
+            .as_ref()
+            .and_then(|events| Playback::new(events, &before, self.state.fallen(), TIMINGS));
         if let Some(events) = &events {
             self.history.push(cmd.clone());
             self.note_level_ups(events);
-            self.banners
-                .extend(events.iter().filter_map(Banner::for_event));
+            let in_playback = playback.is_some();
+            self.queue.extend(events.iter().filter_map(|e| match e {
+                Event::SceneTriggered { scene } if !in_playback => {
+                    Some(Queued::Scene(scene.clone()))
+                }
+                _ => Banner::for_event(e).map(Queued::Banner),
+            }));
             self.popups.extend(events.iter().filter_map(|e| match *e {
                 Event::Healed { target, amount } if amount > 0 => {
                     let pos = self.state.unit(target)?.pos;
@@ -546,8 +731,7 @@ impl BattleScreen {
         }
         let playback = events.and_then(|events| {
             let banner = art_list::playback_banner(&self.state, &events, &before);
-            let playback = Playback::new(&events, &before, self.state.fallen(), TIMINGS)
-                .map(|p| p.with_banner(banner));
+            let playback = playback.map(|p| p.with_banner(banner));
             let cues = event_sounds::event_cues(&events, walked, playback.is_some(), &self.state);
             self.cues.extend(cues);
             let attacks = event_sounds::combat_attacks(&events, &before, &self.state);
@@ -586,6 +770,11 @@ impl BattleScreen {
     /// reopens the action menu for the unit at the end of its path (its
     /// ranges recomputed: the weapon changed), on `Equip`.
     fn apply_stay(&mut self, cmd: &Command, sel: Selection) {
+        // Back on what was chosen (`Talk` is gone once its talk played).
+        let entry = match cmd {
+            Command::Talk { .. } => MenuEntry::Talk,
+            _ => MenuEntry::Equip,
+        };
         self.apply(cmd);
         let Some(mut fresh) = Selection::new(&self.state, sel.unit) else {
             return;
@@ -594,7 +783,7 @@ impl BattleScreen {
             return;
         }
         fresh.path = sel.path;
-        self.mode = mode::back_to_entry(fresh, &self.state, MenuEntry::Equip);
+        self.mode = mode::back_to_entry(fresh, &self.state, entry);
     }
 
     /// The units as drawn, each with how far it has faded out: the
@@ -665,7 +854,7 @@ impl BattleScreen {
                 if let Ok(state) = self.history.rewind_to(point) {
                     self.state = state;
                     self.mode = Mode::after_command(&self.state);
-                    self.banners.clear();
+                    self.queue.clear();
                     self.progress = None;
                     self.end_armed = false;
                     if self.danger.is_some() {
@@ -775,15 +964,7 @@ impl BattleScreen {
         let confirm = |label| (key_name(km, Action::Confirm), label);
         let cancel = |label| (key_name(km, Action::Cancel), label);
         if let Some(r) = &self.rewind {
-            return if r.is_confirming() {
-                help_line(&[confirm("rewind"), cancel("back")])
-            } else if r.can_rewind() {
-                help_line(&[(keys, "choose"), confirm("rewind here"), cancel("close")])
-            } else if r.entries().is_empty() {
-                help_line(&[cancel("close")])
-            } else {
-                help_line(&[(keys, "choose"), cancel("close")])
-            };
+            return rewind_help(r, ctx);
         }
         let info = (key_name(km, Action::Info), "info");
         let next = (key_name(km, Action::NextUnit), "next unit");
@@ -836,6 +1017,9 @@ impl BattleScreen {
             }
             Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
                 help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
+            }
+            Mode::TalkTarget { .. } => {
+                help_line(&[(keys, "next target"), confirm("talk"), cancel("back")])
             }
             Mode::Targeting(t) => Self::help_targeting(ctx, t),
             Mode::Combat(_) => {
@@ -1030,6 +1214,7 @@ impl BattleScreen {
             | Mode::Targeting(_)
             | Mode::SkillTarget(_)
             | Mode::ItemTarget(_)
+            | Mode::TalkTarget { .. }
             | Mode::MapMenu { .. } => {}
         }
         if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
@@ -1187,6 +1372,23 @@ fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
     (mx, my)
 }
 
+/// The help line on the rewind screen `r`.
+fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
+    let km = &ctx.keymap;
+    let keys = cursor_keys_name(km);
+    let confirm = |label| (key_name(km, Action::Confirm), label);
+    let cancel = |label| (key_name(km, Action::Cancel), label);
+    if r.is_confirming() {
+        help_line(&[confirm("rewind"), cancel("back")])
+    } else if r.can_rewind() {
+        help_line(&[(keys, "choose"), confirm("rewind here"), cancel("close")])
+    } else if r.entries().is_empty() {
+        help_line(&[cancel("close")])
+    } else {
+        help_line(&[(keys, "choose"), cancel("close")])
+    }
+}
+
 /// The help line of an EXP bar or level-up page: skip and fast while it
 /// plays, then continue.
 fn progress_help(p: &Progress, km: &crate::input::Keymap) -> String {
@@ -1302,7 +1504,7 @@ impl Screen for BattleScreen {
         }
         self.tick_progress(dt, input.is_held(Action::Confirm));
         let tip_up = self.shown_tip().is_some();
-        if let Some(banner) = self.banners.front_mut()
+        if let Some(Queued::Banner(banner)) = self.queue.front_mut()
             && !matches!(self.mode, Mode::Combat(_))
             && !tip_up
         {
@@ -1311,6 +1513,9 @@ impl Screen for BattleScreen {
                 // Only phase banners expire, and closing one never leaves.
                 self.close_banner();
             }
+        }
+        if let Some(scene) = self.next_scene(ctx) {
+            return Transition::Push(Box::new(DialogueScreen::overlay(scene)));
         }
         self.check_auto_end();
         Transition::None
@@ -1428,6 +1633,18 @@ pub(crate) mod testing {
         pack: BattlePack,
     ) -> BattleState {
         BattleState::new(BattleSetup {
+            pack,
+            rewind_charges: charges,
+            ..setup(c, map, units, objective)
+        })
+        .0
+    }
+
+    /// The setup of a battle on `map` with `units` and `objective`, using
+    /// the game's tables: no pack, rewind charges or triggers, seed 0,
+    /// Classic.
+    pub fn setup(c: &Ctx, map: BattleMap, units: Vec<Unit>, objective: Objective) -> BattleSetup {
+        BattleSetup {
             map,
             terrain: Arc::new(c.content.terrain.rules.clone()),
             classes: Arc::new(c.content.classes.clone()),
@@ -1435,16 +1652,17 @@ pub(crate) mod testing {
             spells: Arc::new(c.content.spells.clone()),
             skills: Arc::new(c.content.skills.clone()),
             arts: Arc::new(c.content.arts.clone()),
-            pack,
+            pack: BattlePack::default(),
             gold: 0,
             stock: Stock::default(),
             units,
             reinforcements: vec![],
             objective,
-            rewind_charges: charges,
+            rewind_charges: 0,
             seed: 0,
-        })
-        .0
+            triggers: vec![],
+            mode: trpg_core::GameMode::Classic,
+        }
     }
 
     /// The Quick Battle's map and units.
@@ -1544,6 +1762,9 @@ mod tip_tests;
 
 #[cfg(test)]
 mod turn_tests;
+
+#[cfg(test)]
+mod trigger_tests;
 
 #[cfg(test)]
 mod tests {

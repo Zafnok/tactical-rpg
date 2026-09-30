@@ -77,6 +77,8 @@ fn battle(units: Vec<Unit>) -> BattleState {
         objective: Objective::Rout { turn_limit: None },
         rewind_charges: 0,
         seed: 1,
+        triggers: vec![],
+        mode: trpg_core::GameMode::Classic,
     })
     .0
 }

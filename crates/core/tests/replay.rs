@@ -4,19 +4,21 @@
 //! script includes terrain magic, so the changed tiles and the burning
 //! forest are part of what must replay and survive a save, and levels are
 //! on, so unit EXP, level ups (which roll the battle's RNG) and class points
-//! are too.
+//! are too. Dialogue triggers (0705) fire along the way, so which have
+//! fired must replay and survive a save as well.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use trpg_core::{
-    ActiveEffect, BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassDef, ClassId,
-    ClassTable, CombatMods, Command, ConsumableDef, ConsumableEffect, DamageType, EffectDuration,
-    Element, Equipped, Event, Faction, Grid, Growths, ItemDef, ItemId, ItemTable, LoadoutDef,
-    MovementTypeId, Objective, Pos, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, SpellDef,
-    SpellId, SpellKind, SpellState, SpellTable, Stance, StatKind, Stats, Stock, TerrainEffect,
-    TerrainId, TerrainRules, TerrainTable, TimedMods, Unit, UnitAction, UnitId, UnitTags,
-    WeaponDef, WeaponKind, WeaponProficiency, WeaponRank, WeaponReq,
+    ActiveEffect, BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, CharacterId,
+    ClassDef, ClassId, ClassTable, CombatMods, Command, ConsumableDef, ConsumableEffect,
+    DamageType, EffectDuration, Element, Equipped, Event, Faction, Grid, Growths, ItemDef, ItemId,
+    ItemTable, LoadoutDef, MovementTypeId, Objective, Phase, Pos, SkillCost, SkillDef, SkillId,
+    SkillKind, SkillTable, SpellDef, SpellId, SpellKind, SpellState, SpellTable, Stance, StatKind,
+    Stats, Stock, TerrainEffect, TerrainId, TerrainRules, TerrainTable, TileRect, TimedMods,
+    Trigger, TriggerWhen, Unit, UnitAction, UnitId, UnitTags, WeaponDef, WeaponKind,
+    WeaponProficiency, WeaponRank, WeaponReq, Who,
 };
 
 const FOREST: TerrainId = TerrainId(1);
@@ -128,7 +130,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
     };
     Unit {
         id: UnitId(id),
-        character: None,
+        character: Some(CharacterId(format!("c{id}"))),
         name: format!("u{id}"),
         class: ClassId("fighter".into()),
         level: 1,
@@ -279,7 +281,71 @@ fn setup(seed: u64) -> BattleSetup {
         objective: Objective::Survive { turns: 8 },
         rewind_charges: 3,
         seed,
+        triggers: triggers(),
+        mode: trpg_core::GameMode::Classic,
     }
+}
+
+/// One trigger of each kind: turn 2's player phase; a player unit ending a
+/// move on row 1; unit 3 in a combat (once) and unit 4 (every time); unit 4
+/// at half HP; unit 3 falling (it never does); units 1 and 2 talking.
+fn triggers() -> Vec<Trigger> {
+    let c = |id: u32| CharacterId(format!("c{id}"));
+    let t = |when, scene: &str, once| Trigger {
+        when,
+        scene: scene.into(),
+        once,
+    };
+    vec![
+        t(
+            TriggerWhen::TurnStart {
+                turn: 2,
+                phase: Phase::Player,
+            },
+            "turn_2",
+            true,
+        ),
+        t(
+            TriggerWhen::UnitEntersArea {
+                who: Who::Faction(Faction::Player),
+                area: TileRect {
+                    x: 0,
+                    y: 1,
+                    w: 8,
+                    h: 1,
+                },
+            },
+            "row_1",
+            true,
+        ),
+        t(
+            TriggerWhen::CombatStart {
+                unit: c(3),
+                against: None,
+            },
+            "engage_3",
+            true,
+        ),
+        t(
+            TriggerWhen::CombatStart {
+                unit: c(4),
+                against: None,
+            },
+            "engage_4",
+            false,
+        ),
+        t(TriggerWhen::HalfHp { unit: c(4) }, "half_4", true),
+        t(
+            TriggerWhen::UnitFell {
+                unit: c(3),
+                mode: None,
+                recruit: true,
+            },
+            "fall_3",
+            true,
+        ),
+        t(TriggerWhen::Talk { a: c(1), b: c(2) }, "talk", true),
+    ]
 }
 
 fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
@@ -296,7 +362,7 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
 }
 
 /// Three turns of both sides trading blows, then equips (a weapon, then a
-/// spell), potions, a wait, an enemy spell (countered with the equipped
+/// spell), potions, a talk and a wait, an enemy spell (countered with the equipped
 /// spell), a player spell out of the target's reach, then a forest burnt
 /// (it burns out a round later), water frozen, and an attack with a combat
 /// active whose stance lasts through the enemy phase.
@@ -328,6 +394,11 @@ fn script() -> Vec<Command> {
                 pack_index: 0,
                 target: UnitId(2),
             },
+        },
+        Command::Talk {
+            unit: UnitId(1),
+            dest: Pos::new(1, 1),
+            target: UnitId(2),
         },
         Command::Act {
             unit: UnitId(1),
@@ -456,6 +527,31 @@ fn same_seed_and_commands_give_identical_events() {
     assert!(count(|e| matches!(e, Event::LeveledUp { .. })) > 0);
     assert!(count(|e| matches!(e, Event::ClassLeveledUp { .. })) > 0);
     assert!(state_a.units().iter().any(|u| u.level > 1));
+    // The triggers fired: turn 2's start; unit 3's engage line once; unit
+    // 4's before each of its 8 combats (6 trades, its cast, the active
+    // attack); the talk; row 1 once, though two moves end there; and
+    // unit 4's half-HP line once.
+    let scenes: Vec<&str> = a
+        .iter()
+        .filter_map(|e| match e {
+            Event::SceneTriggered { scene } => Some(scene.as_str()),
+            _ => None,
+        })
+        .collect();
+    let seen = |s: &str| scenes.iter().filter(|&&x| x == s).count();
+    assert_eq!(
+        [
+            seen("turn_2"),
+            seen("engage_3"),
+            seen("engage_4"),
+            seen("row_1"),
+            seen("talk"),
+            seen("fall_3"),
+            seen("half_4"),
+        ],
+        [1, 1, 8, 1, 1, 0, 1],
+        "{scenes:?}"
+    );
     // …so another seed plays out differently.
     assert_ne!(play(43).1, a);
 }

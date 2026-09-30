@@ -311,6 +311,8 @@ fn setup(map: BattleMap, units: Vec<Unit>) -> BattleSetup {
         objective: Objective::Survive { turns: 99 },
         rewind_charges: 0,
         seed: 1,
+        triggers: vec![],
+        mode: crate::GameMode::Classic,
     }
 }
 
@@ -390,6 +392,9 @@ fn play_phase(state: &mut BattleState) -> Vec<Command> {
         if end {
             break;
         }
+        // A phase is a command or two per unit: fail, don't hang, if the
+        // battle stops changing.
+        assert!(commands.len() < 1000, "the phase never ends");
     }
     commands
 }

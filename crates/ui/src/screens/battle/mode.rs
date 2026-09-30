@@ -15,7 +15,9 @@
 //!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
 //! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]) and
-//! the unit info screen ([`Mode::Info`]).
+//! the unit info screen ([`Mode::Info`]). Talking (0705): `Talk` in the
+//! action menu picks who to talk to ([`Mode::TalkTarget`]); it's free, so
+//! the menu opens again after the scene.
 //!
 //! Transitions are pure ([`step`], [`Mode::tick`]); the screen owns the
 //! cursor and applies the [`Effect`]s.
@@ -131,6 +133,8 @@ pub enum MenuEntry {
     Attack,
     /// Seize the objective tile, when legal there.
     Seize,
+    /// Talk to an adjacent unit, when a talk trigger allows it (0705).
+    Talk,
     /// Use a non-combat active skill (0412): shown when the unit knows one.
     Skill,
     /// Use a consumable from the battle pack (0407).
@@ -147,6 +151,7 @@ impl MenuEntry {
         match self {
             MenuEntry::Attack => "Attack",
             MenuEntry::Seize => "Seize",
+            MenuEntry::Talk => "Talk",
             MenuEntry::Skill => "Skill",
             MenuEntry::Item => "Item",
             MenuEntry::Equip => "Equip",
@@ -172,19 +177,23 @@ impl MenuEntry {
             MenuEntry::Skill => can_use_skill(&skill_choices(state, sel)),
             MenuEntry::Item => can_use_item(&pack_groups(state, sel.unit, sel.dest())),
             MenuEntry::Equip => can_equip(&equip_choices(state, sel.unit)),
-            MenuEntry::Seize | MenuEntry::Wait => true,
+            MenuEntry::Seize | MenuEntry::Talk | MenuEntry::Wait => true,
         }
     }
 }
 
 /// The action menu for `sel`'s unit at its path's end: `Attack` (enabled if
-/// some weapon can attack someone there), `Seize` if legal there, `Skill`
-/// if the unit knows a non-combat active, `Item` and `Equip` (enabled when
+/// some weapon can attack someone there), `Seize` if legal there, `Talk` if
+/// it has someone next to it to talk to, `Skill` if the unit knows a
+/// non-combat active, `Item` and `Equip` (enabled when
 /// they can do something), `Wait`.
 pub fn menu_entries(sel: &Selection, state: &BattleState) -> Vec<MenuEntry> {
     let mut entries = vec![MenuEntry::Attack];
     if state.can_seize(sel.unit, sel.dest()) {
         entries.push(MenuEntry::Seize);
+    }
+    if !state.talk_targets(sel.unit, sel.dest()).is_empty() {
+        entries.push(MenuEntry::Talk);
     }
     if has_skill_menu(state, sel.unit) {
         entries.push(MenuEntry::Skill);
@@ -266,6 +275,16 @@ pub enum Mode {
     },
     /// The player picks who an item is used on.
     ItemTarget(Box<ItemTargeting>),
+    /// The player picks who to talk to (0705): the cursor keys and
+    /// `NextUnit`/`PrevUnit` cycle `targets`, Confirm talks.
+    TalkTarget {
+        /// The selection.
+        sel: Selection,
+        /// The units it can talk to ([`BattleState::talk_targets`]).
+        targets: Vec<UnitId>,
+        /// The one under the cursor.
+        index: usize,
+    },
     /// The unit's weapons, to equip one (0407).
     EquipMenu {
         /// The selection.
@@ -328,9 +347,9 @@ pub enum Effect {
     /// Apply this command to the battle, then continue from
     /// [`Mode::after_command`].
     Apply(Command),
-    /// Apply this command, which doesn't end the unit's action (`Equip`),
-    /// then reopen the action menu for the unit, still at the end of the
-    /// path.
+    /// Apply this command, which doesn't end the unit's action (`Equip`,
+    /// `Talk`), then reopen the action menu for the unit, still at the end
+    /// of the path.
     ApplyStay(Command, Box<Selection>),
     /// Put the cursor on this tile.
     Cursor(Pos),
@@ -384,7 +403,8 @@ impl Mode {
             | Mode::WeaponMenu { sel, .. }
             | Mode::SkillMenu { sel, .. }
             | Mode::ItemMenu { sel, .. }
-            | Mode::EquipMenu { sel, .. } => Some(sel),
+            | Mode::EquipMenu { sel, .. }
+            | Mode::TalkTarget { sel, .. } => Some(sel),
             Mode::Targeting(t) => Some(&t.sel),
             Mode::SkillTarget(t) => Some(&t.sel),
             Mode::ItemTarget(t) => Some(&t.sel),
@@ -410,6 +430,7 @@ impl Mode {
             | Mode::SkillMenu { sel, .. }
             | Mode::ItemMenu { sel, .. }
             | Mode::EquipMenu { sel, .. }
+            | Mode::TalkTarget { sel, .. }
                 if sel.unit == id =>
             {
                 Some(sel.dest())
@@ -667,50 +688,10 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
         moving @ Mode::Moving { .. } => (moving, Effect::None),
         Mode::ActionMenu {
             sel,
-            mut menu,
+            menu,
             entries,
             weapons,
-        } => match menu.handle(action) {
-            Some(MenuEvent::Chosen(i)) => {
-                let action = match entries.get(i) {
-                    Some(MenuEntry::Wait) => UnitAction::Wait,
-                    Some(MenuEntry::Seize) => UnitAction::Seize,
-                    Some(MenuEntry::Attack) => return choose_attack(sel, weapons, state),
-                    Some(MenuEntry::Skill) => return open_skills(sel, state),
-                    Some(MenuEntry::Item) => return open_pack(sel, state),
-                    Some(MenuEntry::Equip) => return open_equip(sel, state),
-                    None => {
-                        let menu = Mode::ActionMenu {
-                            sel,
-                            menu,
-                            entries,
-                            weapons,
-                        };
-                        return (menu, Effect::None);
-                    }
-                };
-                let cmd = Command::Act {
-                    unit: sel.unit,
-                    dest: sel.dest(),
-                    action,
-                };
-                (Mode::default(), Effect::Apply(cmd))
-            }
-            Some(MenuEvent::Cancelled) => {
-                let mut sel = sel;
-                sel.target = None;
-                (Mode::Selected(sel), Effect::None)
-            }
-            None => {
-                let menu = Mode::ActionMenu {
-                    sel,
-                    menu,
-                    entries,
-                    weapons,
-                };
-                (menu, Effect::None)
-            }
-        },
+        } => step_action_menu(sel, menu, entries, weapons, action, state),
         Mode::WeaponMenu { sel, menu, weapons } => {
             step_weapon_menu(sel, menu, weapons, action, state)
         }
@@ -719,6 +700,11 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
         Mode::SkillTarget(t) => step_skill_target(*t, action, state),
         Mode::ItemMenu { sel, menu, groups } => step_pack(sel, menu, groups, action, state),
         Mode::ItemTarget(t) => step_item_target(*t, action, state),
+        Mode::TalkTarget {
+            sel,
+            targets,
+            index,
+        } => step_talk_target(sel, targets, index, action, state),
         Mode::EquipMenu { sel, menu, choices } => step_equip(sel, menu, choices, action, state),
         Mode::Combat(mut playback) => {
             if action == Action::Cancel {
@@ -800,6 +786,60 @@ fn end_turn(state: &BattleState) -> (Mode, Effect) {
     match ready_players(state) {
         0 => (Mode::default(), Effect::Apply(Command::EndPhase)),
         ready => (Mode::EndTurnPrompt { ready }, Effect::None),
+    }
+}
+
+/// [`step`] in the action menu: an action chosen sends it or opens what
+/// it needs (a target, a list); Cancel goes back to steering the path.
+fn step_action_menu(
+    sel: Selection,
+    mut menu: Menu,
+    entries: Vec<MenuEntry>,
+    weapons: Vec<WeaponChoice>,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    match menu.handle(action) {
+        Some(MenuEvent::Chosen(i)) => {
+            let action = match entries.get(i) {
+                Some(MenuEntry::Wait) => UnitAction::Wait,
+                Some(MenuEntry::Seize) => UnitAction::Seize,
+                Some(MenuEntry::Talk) => return choose_talk(sel, state),
+                Some(MenuEntry::Attack) => return choose_attack(sel, weapons, state),
+                Some(MenuEntry::Skill) => return open_skills(sel, state),
+                Some(MenuEntry::Item) => return open_pack(sel, state),
+                Some(MenuEntry::Equip) => return open_equip(sel, state),
+                None => {
+                    let menu = Mode::ActionMenu {
+                        sel,
+                        menu,
+                        entries,
+                        weapons,
+                    };
+                    return (menu, Effect::None);
+                }
+            };
+            let cmd = Command::Act {
+                unit: sel.unit,
+                dest: sel.dest(),
+                action,
+            };
+            (Mode::default(), Effect::Apply(cmd))
+        }
+        Some(MenuEvent::Cancelled) => {
+            let mut sel = sel;
+            sel.target = None;
+            (Mode::Selected(sel), Effect::None)
+        }
+        None => {
+            let menu = Mode::ActionMenu {
+                sel,
+                menu,
+                entries,
+                weapons,
+            };
+            (menu, Effect::None)
+        }
     }
 }
 
@@ -906,6 +946,72 @@ fn step_weapon_menu(
         Some(MenuEvent::Cancelled) => (back_to_menu(sel, state), Effect::None),
         None => (Mode::WeaponMenu { sel, menu, weapons }, Effect::None),
     }
+}
+
+/// `Talk` chosen: pick who to talk to, the cursor on the first (the action
+/// menu again if nobody is there, which the menu rules out).
+fn choose_talk(sel: Selection, state: &BattleState) -> (Mode, Effect) {
+    let targets = state.talk_targets(sel.unit, sel.dest());
+    let Some(at) = targets
+        .first()
+        .and_then(|&id| state.unit(id))
+        .map(|u| u.pos)
+    else {
+        return (back_to_entry(sel, state, MenuEntry::Talk), Effect::None);
+    };
+    let mode = Mode::TalkTarget {
+        sel,
+        targets,
+        index: 0,
+    };
+    (mode, Effect::Cursor(at))
+}
+
+/// [`step`] while picking who to talk to: the cursor keys and
+/// `NextUnit`/`PrevUnit` cycle the units, Confirm talks (free: the action
+/// menu opens again after the scene), Cancel goes back to the action menu
+/// (on `Talk`) with the cursor on the unit.
+fn step_talk_target(
+    sel: Selection,
+    targets: Vec<UnitId>,
+    index: usize,
+    action: Action,
+    state: &BattleState,
+) -> (Mode, Effect) {
+    let n = targets.len().max(1);
+    let index = match action {
+        Action::CursorRight | Action::CursorDown | Action::NextUnit => (index + 1) % n,
+        Action::CursorLeft | Action::CursorUp | Action::PrevUnit => (index + n - 1) % n,
+        Action::Confirm => {
+            let Some(&target) = targets.get(index) else {
+                return (back_to_entry(sel, state, MenuEntry::Talk), Effect::None);
+            };
+            let cmd = Command::Talk {
+                unit: sel.unit,
+                dest: sel.dest(),
+                target,
+            };
+            return (Mode::default(), Effect::ApplyStay(cmd, Box::new(sel)));
+        }
+        Action::Cancel => {
+            let dest = sel.dest();
+            return (
+                back_to_entry(sel, state, MenuEntry::Talk),
+                Effect::Cursor(dest),
+            );
+        }
+        _ => index,
+    };
+    let at = targets
+        .get(index)
+        .and_then(|&id| state.unit(id))
+        .map(|u| u.pos);
+    let mode = Mode::TalkTarget {
+        sel,
+        targets,
+        index,
+    };
+    (mode, at.map_or(Effect::None, Effect::Cursor))
 }
 
 /// `Skill` chosen: the list of non-combat actives (the action menu again if

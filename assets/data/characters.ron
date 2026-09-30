@@ -44,6 +44,16 @@
             weapon_ranks: [(Bow, D)],
             loadout: (weapons: ["iron_bow"], armour: Some("leather_vest")),
         ),
+        // An enemy the lord can talk into joining: the debug Quick
+        // Battle's trigger fixture (ticket 0705).
+        (
+            id: "test_rogue", name: "Test Rogue", class: "raider", level: 2,
+            map_label: Some("Ro"),
+            talent: Str,
+            base: (22, 7, 0, 3, 4, 4, 0),
+            weapon_ranks: [(Axe, D)],
+            loadout: (weapons: ["iron_axe"]),
+        ),
     ],
     generics: [
         (id: "test_brigand", class: "brigand", level: 1, loadout: (weapons: ["iron_axe"])),

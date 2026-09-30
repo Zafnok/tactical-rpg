@@ -1,0 +1,104 @@
+---
+source: crates/ui/src/screens/battle/trigger_tests.rs
+expression: h.snapshot()
+---
+                                                                      ┌────────────────────────────┐
+             ╔══════════════════════════════════════════╗        ╔════════════════════════════════╗│
+             ║ Test Lord             Test Rogue         ║        ║                                ║│
+             ║ HP 19 ██████████      HP  0 ░░░░░░░░░░   ║        ║                                ║│
+             ║                                          ║        ║                                ║│
+             ╚══════════════════════════════════════════╝        ║                                ║│
+                                                                 ║                                ║│
+                                                                 ║                                ║│
+                                                                 ║                                ║│
+                                                                 ║                                ║│
+                                                                 ║                                ║│
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                 ║                                ║│
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                 ║                                ║│
+                    ≈≈≈≈≈≈====······Br..♣♣♣♣....                 ║                                ║│
+                    ..≈≈≈≈..··..............╦╦..                 ║                                ║│
+                    ....Ar····....Br..▓▓▓▓▓▓▓▓..                 ║                                ║│
+                    ..♣♣··LoRo╦╦......▓▓░░╦╦▓▓..                 ║                                ║│
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                 ║                                ║│
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                 ╚════════════════════════════════╝│
+                                                                             Test Rogue            │
+                                                                      │                            │
+┌── Test Rogue ────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                  │
+│   Should have taken the other job... Fine. You win. I'm yours.                                   │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                             f    │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaccccccccccccccccccccccccccccccccccb
+aaaaaaaaaaaaacdeeeeeeeeedddddddddddddffffffffffdddddddddcaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaacdddddddggggggggggddddddddddddhhhhhhhhhhdddcaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddcaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaiiiiiijjjjkkkkllllmmmmnnnnooaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaiiiijjjjkkkkppqqppllllnnnnnnaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaaiijjjjrrrrppppppsskkllllkkkkaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaakkjjjjkkppkkkkkkkkkkkkkkttkkaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaakkkkuuppppkkkksskkvvvvvvvvkkaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaakkllppwwssttkkkkkkvvxxttvvkkaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaallllppkkwwkkkkkkkkvvxxxxvvkkaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddcb
+aaaaaaaaaaaaaaaaaaaallmmppkkkkkkkkkkkkvvvvyyvvkkaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+bbbzzzzzzzzzzzzbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddb
+bddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddb
+bddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddb
+bddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddb
+bdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddhddddb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:panel_border_focus bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:enemy bg:panel_bg
+g = fg:hp_high bg:panel_bg
+h = fg:text_dim bg:panel_bg
+i = fg:water bg:sea
+j = fg:water bg:water_bg
+k = fg:grass bg:grass_bg
+l = fg:forest bg:forest_bg
+m = fg:thicket bg:thicket_bg
+n = fg:mountain bg:mountain_bg
+o = fg:peak bg:peak_bg
+p = fg:road bg:road_bg
+q = fg:enemy bg:road_bg
+r = fg:wood bg:water_bg
+s = fg:enemy bg:grass_bg
+t = fg:fort bg:fort_bg
+u = fg:player bg:road_bg
+v = fg:stone bg:stone_bg
+w = fg:player bg:grass_bg
+x = fg:floor bg:floor_bg
+y = fg:wood bg:stone_bg
+z = fg:text_highlight bg:panel_bg
+--- overlays ---
+over  208,270 16x2  hp_high
+over  224,286 16x2  hp_high
+over  192,254 16x2  hp_high
+over  288,222 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  224,270 16x2  black

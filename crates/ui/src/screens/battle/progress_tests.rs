@@ -10,7 +10,6 @@ use trpg_core::{
     UnitAction, UnitId,
 };
 
-use super::BattleScreen;
 use super::banner::Banner;
 use super::layout::HELP_ROW;
 use super::mode::Mode;
@@ -18,6 +17,7 @@ use super::progress::{
     EXP_BOX, LEVEL_BANNER_ROW, LEVEL_TEXT_X, PROGRESS_TIMINGS, Page, STAT_ROW, stat_row,
 };
 use super::testing::{battle, quick_units, wait};
+use super::{BattleScreen, Queued};
 use crate::harness::{FRAME_DT, Harness};
 use crate::input::Action;
 use crate::screen::tests::ctx;
@@ -196,7 +196,8 @@ fn the_screen_waits_for_the_level_up_and_leaves_the_battle_cores() {
         turn: 2,
         phase: Phase::Player,
     };
-    s.banners.extend(Banner::for_event(&banner));
+    s.queue
+        .extend(Banner::for_event(&banner).map(Queued::Banner));
     assert!(s.banner().is_none());
     // Cancel closes it, like Confirm.
     press(&mut s, &mut c, &[Cancel], 0.0);

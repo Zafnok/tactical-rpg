@@ -304,6 +304,9 @@ pub fn describe(r: &Replayed) -> String {
                 format!("{who} stayed after attacking")
             }
         }
+        Command::Talk { unit, target, .. } => {
+            format!("{} talked to {}", name(s, *unit), name(s, *target))
+        }
         Command::EndPhase => format!("{} phase ended", phase_name(s.phase())),
     };
     format!("Turn {} · {what}", s.turn())

@@ -53,7 +53,8 @@ fn depth(mode: &Mode) -> u8 {
         Mode::WeaponMenu { .. }
         | Mode::SkillMenu { .. }
         | Mode::ItemMenu { .. }
-        | Mode::EquipMenu { .. } => 3,
+        | Mode::EquipMenu { .. }
+        | Mode::TalkTarget { .. } => 3,
         Mode::Targeting(_) | Mode::SkillTarget(_) | Mode::ItemTarget(_) => 4,
     }
 }
@@ -144,5 +145,15 @@ mod tests {
     fn depths_order_the_screens() {
         assert!(depth(&IDLE) < depth(&INFO));
         assert!(depth(&INFO) < depth(&Mode::Objective));
+        // Picking who to talk to is a step past the action menu.
+        let state = crate::screens::battle::quick_battle(&crate::screen::tests::ctx().content)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let sel = super::super::mode::Selection::new(&state, UnitId(1)).unwrap();
+        let talk = Mode::TalkTarget {
+            sel,
+            targets: vec![UnitId(7)],
+            index: 0,
+        };
+        assert_eq!(depth(&talk), depth(&Mode::Objective) + 1);
     }
 }
