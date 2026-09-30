@@ -2,7 +2,7 @@
 //! [`Keymap`], never string literals, because each layout binds actions to
 //! different keys (ADR-0015).
 
-use crate::input::{Action, Key, Keymap};
+use crate::input::{Action, Keymap};
 
 /// Separator between the parts of a help line.
 pub const SEPARATOR: &str = " · ";
@@ -26,27 +26,9 @@ pub fn all_key_names(keymap: &Keymap, action: Action) -> Option<String> {
 
 /// What moves the cursor: `arrows` when the four cursor actions are on the
 /// arrow keys, otherwise their keys in up-left-down-right order (`wasd`).
-/// `None` if any cursor action is unbound.
+/// `None` if any cursor action is unbound. See [`Keymap::cursor_keys_name`].
 pub fn cursor_keys_name(keymap: &Keymap) -> Option<String> {
-    let order = [
-        (Action::CursorUp, Key::Up),
-        (Action::CursorLeft, Key::Left),
-        (Action::CursorDown, Key::Down),
-        (Action::CursorRight, Key::Right),
-    ];
-    let chords = order
-        .iter()
-        .map(|&(action, _)| keymap.primary(action))
-        .collect::<Option<Vec<_>>>()?;
-    let arrows = chords
-        .iter()
-        .zip(order)
-        .all(|(chord, (_, arrow))| !chord.shift && chord.key == arrow);
-    Some(if arrows {
-        "arrows".to_owned()
-    } else {
-        chords.iter().map(ToString::to_string).collect()
-    })
+    keymap.cursor_keys_name()
 }
 
 /// Joins `key label` hints with [`SEPARATOR`], leaving out hints whose key

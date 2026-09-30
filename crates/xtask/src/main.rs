@@ -3,6 +3,7 @@
 //! A CLI tool prints to stdout by design, so `print_stdout` is allowed here.
 #![allow(clippy::print_stdout)]
 
+mod check_keys;
 mod font_atlas;
 mod sfx;
 mod tickets;
@@ -15,6 +16,7 @@ use std::process::ExitCode;
 const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
+check-keys                         fail on keys hard-coded in game code or text\n  \
 font-atlas <font.bdf> <out-dir>    build the font atlas from a BDF font\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
@@ -28,6 +30,7 @@ fn main() -> ExitCode {
 fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
     match args.next().as_deref() {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
+        Some("check-keys") => check_keys(&args.collect::<Vec<_>>()),
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
@@ -61,6 +64,23 @@ fn ticket_lint(args: &[String]) -> u8 {
     }
 
     eprintln!("ticket-lint: {} error(s)", errors.len());
+    for error in &errors {
+        eprintln!("  {error}");
+    }
+    1
+}
+
+fn check_keys(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask check-keys");
+        return 2;
+    }
+    let errors = check_keys::run(&repo_root());
+    if errors.is_empty() {
+        println!("check-keys: OK");
+        return 0;
+    }
+    eprintln!("check-keys: {} hard-coded key(s)", errors.len());
     for error in &errors {
         eprintln!("  {error}");
     }
@@ -263,6 +283,17 @@ mod tests {
     #[test]
     fn sfx_check_passes_on_the_committed_files() {
         assert_eq!(sfx(&args(&["--check"])), 0);
+    }
+
+    #[test]
+    fn check_keys_passes_on_the_real_repo() {
+        assert_eq!(check_keys(&[]), 0);
+        assert_eq!(dispatch(args(&["check-keys"]).into_iter()), 0);
+    }
+
+    #[test]
+    fn check_keys_rejects_args() {
+        assert_eq!(check_keys(&args(&["--bogus"])), 2);
     }
 
     #[test]

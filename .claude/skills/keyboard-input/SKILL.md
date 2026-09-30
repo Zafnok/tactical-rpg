@@ -26,12 +26,23 @@ screens                see only `FrameInput.actions` / `is_held(Action)`
 widgets/help.rs, tips  Action → key name for text
 ```
 
-Files allowed to name `Key::…`, `Chord::…` or `KeyCode`:
+Files allowed to name `Key::…`, `Chord::…` or key names in strings:
 `crates/app/src/keys.rs`, `crates/content/src/keymap.rs`,
-`crates/ui/src/input.rs` (and its submodules), test code, and the
-keyboard *picture* in `crates/ui/src/screens/layout_picker.rs`. Anywhere
-else is a bug. Ticket 0216 adds `cargo xtask check-keys` to enforce this;
-once it exists, it runs in CI and `run-gates`.
+`crates/ui/src/input.rs` (and its submodules), test code (`#[cfg(test)]`
+items, `tests.rs`, `*_tests.rs`, `tests/`, `crates/ui/src/harness.rs`), and
+the keyboard *picture* in `crates/ui/src/screens/layout_picker.rs`: each
+picture item there sits under a `// check-keys: keyboard picture` comment
+(the marker is an error in any other file). Only `crates/app/src/keys.rs`
+may use `KeyCode` or macroquad's key reads. Anywhere else is a bug.
+
+`cargo xtask check-keys` enforces this (CI `tickets` job and `run-gates`).
+It scans `crates/{ui,app,content}/src` and the text in `assets/` (`.ron`
+strings except `keymap.ron`, `.dlg` lines) for key types, macroquad key
+reads, and player text naming a key (`"f select"`, `"press f"`, `"[F]"`,
+`Space`, `Esc`, `Escape`, `Enter`, `Shift`, `arrows`, `WASD`). Comments are
+not scanned, but doc comments should still name the action, not the key.
+Even the layout picker's own keys are data: the `layout_picker` section of
+`assets/data/keymap.ron`.
 
 ## Rules
 
@@ -91,4 +102,4 @@ once it exists, it runs in CI and `run-gates`.
 - [ ] No key names in player text or data; placeholders/helpers used.
 - [ ] Works in both layouts and with a rebound key (test at least one).
 - [ ] Unbound optional actions don't panic and show `! not mapped`.
-- [ ] `cargo xtask check-keys` passes (after 0216).
+- [ ] `cargo xtask check-keys` passes.

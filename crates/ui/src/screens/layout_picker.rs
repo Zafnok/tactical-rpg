@@ -36,7 +36,9 @@ const LEGEND_KEY_W: usize = 12;
 
 /// Width of one key cap, `[w]`.
 const CAP_W: i32 = 3;
-/// The two letter rows drawn, left to right as on a QWERTY keyboard.
+/// The two letter rows drawn, left to right as on a QWERTY keyboard. Which
+/// keys light up comes from the keymap ([`key_role`]), not from here.
+// check-keys: keyboard picture
 const TOP_ROW: [Key; 10] = [
     Key::Q,
     Key::W,
@@ -49,6 +51,7 @@ const TOP_ROW: [Key; 10] = [
     Key::O,
     Key::P,
 ];
+// check-keys: keyboard picture
 const HOME_ROW: [Key; 10] = [
     Key::A,
     Key::S,
@@ -61,6 +64,14 @@ const HOME_ROW: [Key; 10] = [
     Key::L,
     Key::Semicolon,
 ];
+/// The arrow-key cluster's caps: the top one, then the bottom row.
+// check-keys: keyboard picture
+const UP_CAP: (Key, &str) = (Key::Up, "↑");
+// check-keys: keyboard picture
+const LOWER_ARROW_CAPS: [(Key, &str); 3] = [(Key::Left, "←"), (Key::Down, "↓"), (Key::Right, "→")];
+/// The space bar's key.
+// check-keys: keyboard picture
+const SPACE_BAR: Key = Key::Space;
 /// Left edge of the arrow-key cluster, right of the letter rows.
 const ARROWS_X: i32 = KEYS_X + 10 * CAP_W + 4;
 /// The space bar: left edge (under `d`) and width.
@@ -105,8 +116,9 @@ impl LayoutPickerScreen {
             .unwrap_or(Layout::RightHanded)
     }
 
-    /// The bottom help line. Before any layout is chosen that is
-    /// `w/Up s/Down choose · f/j/Enter/Space pick`.
+    /// The bottom help line: every Cursor up and Cursor down key, then every
+    /// Confirm key, from the active keymap (before any layout is chosen,
+    /// the layout picker's own keys).
     pub fn help(ctx: &Ctx) -> String {
         let km = &ctx.keymap;
         let choose = all_key_names(km, Action::CursorUp)
@@ -183,20 +195,19 @@ impl LayoutPickerScreen {
                 key.name(),
             );
         }
-        cap(x + ARROWS_X + CAP_W, y + TOP_ROW_Y, Key::Up, "↑");
-        for (col, (key, glyph)) in
-            (0..).zip([(Key::Left, "←"), (Key::Down, "↓"), (Key::Right, "→")])
-        {
+        let (up, up_glyph) = UP_CAP;
+        cap(x + ARROWS_X + CAP_W, y + TOP_ROW_Y, up, up_glyph);
+        for (col, (key, glyph)) in (0..).zip(LOWER_ARROW_CAPS) {
             cap(x + ARROWS_X + col * CAP_W, y + HOME_ROW_Y, key, glyph);
         }
-        let space = format!("[{:^w$}]", Key::Space.name(), w = SPACE_W - 2);
+        let space = format!("[{:^w$}]", SPACE_BAR.name(), w = SPACE_W - 2);
         buf.print(x + SPACE_X, y + SPACE_ROW_Y, &space, dim, bg);
         let name_x = x + SPACE_X + (i32::try_from(SPACE_W).unwrap_or(0) - 5) / 2;
         buf.print(
             name_x,
             y + SPACE_ROW_Y,
-            Key::Space.name(),
-            cap_fg(Key::Space),
+            SPACE_BAR.name(),
+            cap_fg(SPACE_BAR),
             bg,
         );
 
@@ -215,6 +226,7 @@ impl LayoutPickerScreen {
 
 /// The colour a key cap's label gets in `km`: movement keys `player`,
 /// other bound keys `text_highlight`, unbound keys `text_dim`.
+// check-keys: keyboard picture
 fn key_role(km: &Keymap, key: Key) -> UiColor {
     match km.action(Chord::plain(key)) {
         Some(action) if action.is_repeatable() => UiColor::Player,

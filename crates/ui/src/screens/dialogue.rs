@@ -46,7 +46,7 @@ pub const FAST_FORWARD: f32 = 6.0;
 const BLINK_S: f32 = 0.5;
 
 /// Plays a scene: Confirm reveals the text at once, or moves on when it's
-/// all shown; holding Confirm reveals faster. The End Turn key (Space) does
+/// all shown; holding Confirm reveals faster. The End turn key does
 /// everything Confirm does. Cancel asks whether to skip
 /// the scene. Pops when the scene ends or is skipped.
 #[derive(Debug, Clone)]
@@ -140,8 +140,8 @@ impl DialogueScreen {
     }
 }
 
-/// The actions that advance the dialogue: Confirm, and End Turn (Space in
-/// every layout), so either key reads through a scene.
+/// The actions that advance the dialogue: Confirm, and End turn, so either
+/// key reads through a scene.
 const ADVANCE_KEYS: [Action; 2] = [Action::Confirm, Action::EndTurn];
 
 /// `action`, with End Turn treated as Confirm.
