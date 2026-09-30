@@ -4,7 +4,8 @@
 //!
 //! Layout (100×32): 32×16-cell portraits in 34×18 frames at `x = 1` and
 //! `x = 65` from row 1, name plates on row 19, the text box on rows 21–27.
-//! The lead's reply choices are a menu centred just above the text box.
+//! While the lead's replies are up, the text box grows upward to list them
+//! under the line being answered (Nick, 0708: like Stardew Valley).
 
 use trpg_content::{Scene, Side};
 use trpg_core::{LEAD_ID, LeadProfile};
@@ -287,11 +288,6 @@ impl Screen for DialogueScreen {
             }
         }
         self.draw_text_box(ctx, buf, &view);
-        if let Some(menu) = &self.menu {
-            let (w, h) = menu.size();
-            let x = TEXT_BOX.x + (TEXT_BOX.w - w) / 2;
-            menu.draw(&ctx.palette, buf, x, TEXT_BOX.y - h);
-        }
     }
 
     fn is_overlay(&self) -> bool {
@@ -366,14 +362,36 @@ fn draw_side(
 }
 
 impl DialogueScreen {
+    /// The text box and its first text row. While the replies are up it
+    /// grows upward (its bottom stays put) to fit the line being answered,
+    /// a blank row and one row per reply.
+    pub fn text_box(&self) -> (Rect, i32) {
+        let Some(menu) = &self.menu else {
+            return (TEXT_BOX, TEXT_Y);
+        };
+        let question = self.page_lines().len();
+        let gap = usize::from(question > 0);
+        let rows = i32::try_from(question + gap + menu.items().len()).unwrap_or(0);
+        // The last content row is the one the ▼ uses, free during a choice.
+        let bottom = TEXT_BOX.y + TEXT_BOX.h - 1;
+        let text_y = (bottom - rows).min(TEXT_Y);
+        let top = text_y - (TEXT_Y - TEXT_BOX.y);
+        (
+            Rect::new(TEXT_BOX.x, top, TEXT_BOX.w, bottom + 1 - top),
+            text_y,
+        )
+    }
+
     /// The text box: speaker name on the border, the revealed text (or the
-    /// skip question) and the blinking `▼` once the page is shown.
+    /// skip question), the replies while a choice is open, and the
+    /// blinking `▼` once the page is shown.
     fn draw_text_box(&self, ctx: &Ctx, buf: &mut GlyphBuffer, view: &View) {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
         let km = &ctx.keymap;
-        buf.fill_rect(TEXT_BOX, Cell::new(' ', c(UiColor::Text), bg));
-        buf.draw_box(TEXT_BOX, BoxStyle::Single, c(UiColor::PanelBorder), bg);
+        let (text_box, text_y) = self.text_box();
+        buf.fill_rect(text_box, Cell::new(' ', c(UiColor::Text), bg));
+        buf.draw_box(text_box, BoxStyle::Single, c(UiColor::PanelBorder), bg);
         let speaker = match view.speaker {
             Some(Side::Left) => view.left,
             Some(Side::Right) => view.right,
@@ -382,8 +400,8 @@ impl DialogueScreen {
         if let Some(speaker) = speaker {
             let name = format!(" {} ", display_name(ctx, self.player.lead(), speaker));
             buf.print(
-                TEXT_BOX.x + 3,
-                TEXT_BOX.y,
+                text_box.x + 3,
+                text_box.y,
                 &name,
                 c(UiColor::TextHighlight),
                 bg,
@@ -408,8 +426,9 @@ impl DialogueScreen {
             (c(UiColor::Text), false)
         };
         // Narration is centred vertically too: one line goes in the middle
-        // of the three rows (two or three fill them from the top).
-        let top = TEXT_Y + i32::from(centred && lines.len() == 1);
+        // of the three rows (two or three fill them from the top). Not
+        // above replies, which follow right after.
+        let top = text_y + i32::from(centred && lines.len() == 1 && self.menu.is_none());
         #[expect(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
@@ -426,6 +445,19 @@ impl DialogueScreen {
             let visible: String = line.chars().take(budget).collect();
             buf.print(x, y, &visible, fg, bg);
             budget = budget.saturating_sub(len);
+        }
+
+        if let Some(menu) = &self.menu {
+            let gap = i32::from(!lines.is_empty());
+            let first = text_y + i32::try_from(lines.len()).unwrap_or(0) + gap;
+            for (y, (i, item)) in (first..).zip(menu.items().iter().enumerate()) {
+                let (marker, fg) = if i == menu.focus() {
+                    ("> ", c(UiColor::TextHighlight))
+                } else {
+                    ("  ", c(UiColor::Text))
+                };
+                buf.print(TEXT_X, y, &format!("{marker}{}", item.label), fg, bg);
+            }
         }
 
         if self.is_revealed() && self.menu.is_none() {

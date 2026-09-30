@@ -426,7 +426,7 @@ fn sounds(c: &mut Ctx) -> Vec<String> {
 }
 
 #[test]
-fn a_choice_shows_its_replies_over_the_text_box() {
+fn a_choice_lists_its_replies_under_the_question() {
     let mut c = ctx();
     let mut s = full(asking());
     press(&mut s, &mut c, Action::Confirm);
@@ -440,13 +440,58 @@ fn a_choice_shows_its_replies_over_the_text_box() {
     assert!(matches!(t, Transition::None));
     assert_eq!(s.menu().map(Menu::focus), Some(0));
     let buf = draw(&s, &c);
-    // A 4-row menu ending just above the text box; the question stays up,
-    // fully shown, without the ▼.
-    assert!(row(&buf, TEXT_BOX.y - 3).contains("│ Yes.      │"));
-    assert!(row(&buf, TEXT_BOX.y - 2).contains("│ He knows. │"));
-    assert!(row(&buf, TEXT_Y).contains("Ready?"));
+    // The question, fully shown, a blank row, then the replies, the
+    // focused one marked; this fits the usual box, so it doesn't grow.
+    assert_eq!(s.text_box(), (TEXT_BOX, TEXT_Y));
     assert!(s.is_revealed());
+    assert!(row(&buf, TEXT_Y).starts_with("│   Ready?  "));
+    assert_eq!(row(&buf, TEXT_Y + 1).trim_matches(['│', ' ']), "");
+    assert!(row(&buf, TEXT_Y + 2).starts_with("│   > Yes.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│     He knows.  "));
+    assert_eq!(
+        buf.get(TEXT_X, TEXT_Y + 2).map(|c| c.fg),
+        Some(c.palette.get(UiColor::TextHighlight))
+    );
+    assert_eq!(
+        buf.get(TEXT_X, TEXT_Y + 3).map(|c| c.fg),
+        Some(c.palette.get(UiColor::Text))
+    );
+    // No ▼ while choosing; the portraits' name plates stay clear.
     assert!(!row(&buf, TEXT_BOX.y + TEXT_BOX.h - 2).contains('▼'));
+    assert!(row(&buf, PLATE_Y).contains("Test Lord"));
+    // The focus marker follows the cursor.
+    press(&mut s, &mut c, Action::CursorDown);
+    let buf = draw(&s, &c);
+    assert!(row(&buf, TEXT_Y + 2).starts_with("│     Yes.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│   > He knows.  "));
+}
+
+/// A long question and three replies: the box grows upward, its bottom
+/// staying put.
+#[test]
+fn the_text_box_grows_to_fit_the_replies() {
+    let mut c = ctx();
+    let long = "word ".repeat(40);
+    let mut s = full(scene(vec![
+        place(Side::Left, "test_lord"),
+        place(Side::Right, "test_knight"),
+        say("test_knight", long.trim()),
+        Step::Choice {
+            options: vec![reply("A.", "a"), reply("B.", "b"), reply("C.", "c")],
+        },
+    ]));
+    press(&mut s, &mut c, Action::Confirm);
+    press(&mut s, &mut c, Action::Confirm);
+    let lines = s.page_lines().len();
+    assert_eq!(lines, 3);
+    // 3 question rows, a blank one and 3 replies: 7 rows from row 20.
+    let (rect, text_y) = s.text_box();
+    assert_eq!(text_y, 20);
+    assert_eq!(rect, Rect::new(0, 18, 100, 10));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, 18).starts_with("┌── Test Knight ─"));
+    assert!(row(&buf, 26).starts_with("│     C.  "));
+    assert!(row(&buf, 27).starts_with("└──"));
 }
 
 #[test]

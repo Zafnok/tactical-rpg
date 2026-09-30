@@ -94,8 +94,10 @@ hard beats.
    scene (Nick, 0708, 2026-09-30: "I think the written script should
    determine reaction transitions"): portraits stay as the reaction left
    them, and the script sets any expression change. While the replies are
-   up, the line being answered stays on screen; the picked reply isn't
-   repeated. Back does nothing at a choice, and skipping a scene stops at
+   up, the line being answered stays on screen with the replies listed under
+   it inside the text box, which grows upward to fit, like Stardew Valley
+   (Nick picked this, "B", over a floating menu and one beside the lead's
+   portrait). The picked reply isn't repeated. Back does nothing at a choice, and skipping a scene stops at
    each choice (Nick agreed, same day).
 3. **The lead's personality is never fixed by the script.** No cruelty, jokes
    or strong opinions that the player didn't pick. Their *situation* (exiled,

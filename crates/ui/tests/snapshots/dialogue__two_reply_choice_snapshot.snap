@@ -19,16 +19,16 @@ expression: h.snapshot()
  │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                              ║       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       ║ 
  │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                              ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║ 
  │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                              ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║ 
- │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │   ┌─────────────────────┐    ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║ 
- └────────────────────────────────┘   │ I will. Stay close. │    ╚════════════════════════════════╝ 
-               Isolde                 │ Someone has to.     │               Test Knight             
-                                      └─────────────────────┘                                       
+ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                              ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║ 
+ └────────────────────────────────┘                              ╚════════════════════════════════╝ 
+               Isolde                                                       Test Knight             
+                                                                                                    
 ┌── Test Knight ───────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                                  │
 │   Isolde, will you lead the charge?                                                              │
 │                                                                                                  │
-│                                                                                                  │
-│                                                                                                  │
+│   > I will. Stay close.                                                                          │
+│     Someone has to.                                                                              │
 └──────────────────────────────────────────────────────────────────────────────────────────────────┘
                                                                                                     
                                                                                                     
@@ -52,16 +52,16 @@ abddddddddddddxZ七七七七七xddddddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddd
 abddddddd丆万万丈三上下IIII下上三丈万万丌dddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddd不与与与丏zzzzzzoz丏与与与丐dddddddca
 abddddd丆丑丒丒丒专且且且且丕丕且且且且专丒丒丒世丌dddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddd不woooo丗丗丗丗丘丘丗丗丗丗oooop丐dddddca
 abddd丆丑丒丒丒丒丒专且且且且丙丙且且且且专丒丒丒丒丒世丌dddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddd不woooooo丗丗丗丗丘丘丗丗丗丗oooooop丐dddca
-abd丆丑丒丒丒丒丒丒丒专且且且且丙丙且且且且专丒丒丒丒丒丒丒世丌dbaaabbbbbbbbbbbbbbbbbbbbbbbaaaacd不woooooooo丗丗丗丗丘丘丗丗丗丗oooooooop丐dca
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaab业业业业业业业业业业业业业业业业业业业业业baaaacccccccccccccccccccccccccccccccccca
-a丛丛丛丛丛丛丛丛丛丛丛丛丛丛东东东东东东丛丛丛丛丛丛丛丛丛丛丛丛丛丛aaab丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛baaaa丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛a
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-bbb丝丝丝丝丝丝丝丝丝丝丝丝丝bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
-b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
-b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
-b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
-b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+abd丆丑丒丒丒丒丒丒丒专且且且且丙丙且且且且专丒丒丒丒丒丒丒世丌dbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacd不woooooooo丗丗丗丗丘丘丗丗丗丗oooooooop丐dca
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccca
+a业业业业业业业业业业业业业业丛丛丛丛丛丛业业业业业业业业业业业业业业aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业a
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+bbb东东东东东东东东东东东东东bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业b
+b业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业b
+b业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业b
+b业业业东东东东东东东东东东东东东东东东东东东东东业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业b
+b业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业业b
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -156,7 +156,6 @@ Z = fg:#8b6d54 bg:#724d3a
 丗 = fg:cloth_red bg:cloth_red
 丘 = fg:cloth_red_dark bg:cloth_red_dark
 丙 = fg:#471c15 bg:#471c15
-业 = fg:panel_bg bg:panel_border_focus
-丛 = fg:text bg:panel_bg
-东 = fg:text_dim bg:panel_bg
-丝 = fg:text_highlight bg:panel_bg
+业 = fg:text bg:panel_bg
+丛 = fg:text_dim bg:panel_bg
+东 = fg:text_highlight bg:panel_bg

@@ -136,8 +136,9 @@ None.
 - `DialoguePlayer`: takes a `LeadProfile`; `View` gains `choices` (text,
   caption and replies are `Cow<str>` with tokens filled in; the stored scene is
   unchanged); `choose(i)`, `is_choosing()`, `skip_to_choice()`.
-- `DialogueScreen`: replies menu centred above the text box (reuses the
-  `Menu` widget), picked with the layout's cursor up/down and Confirm (or End
+- `DialogueScreen`: the replies are listed in the text box under the line
+  being answered, and the box grows upward to fit (Nick's pick B; the `Menu`
+  widget handles focus and sounds), picked with the layout's cursor up/down and Confirm (or End
   turn); skipping stops at a choice. The lead's name plate shows the
   player's name and the gendered portrait. `Ctx.lead` holds a placeholder
   profile until 0801.
@@ -172,9 +173,9 @@ None.
    the picked reply is not repeated as a text box (Nick: "sure").
 3. Back does nothing while the replies are up, and "Skip scene" stops at each
    choice (Nick: "sure").
-4. The replies menu sits centred just above the text box; long replies
-   overlap the lower edge of the portrait frames. Asked Nick with mockups;
-   *Claude's starting rule* until he answers.
+4. The replies are listed inside the text box, under the line being
+   answered, like Stardew Valley; the box grows upward when they don't fit
+   (Nick picked option B from three mockups).
 5. The lead's default first name is **Ellery** (Nick turned down Rowan:
    "lame name, pick something better"; still renameable). Until New Game asks
    the player (0801), the lead is Ellery, male (*Claude's starting rule*).

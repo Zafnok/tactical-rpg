@@ -18,17 +18,17 @@ expression: h.snapshot()
  │            ▀▀▀▀▀▀▀▀            │                              ║                                ║ 
  │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                              ║                                ║ 
  │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                              ║                                ║ 
- │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄┌───────────────────────────────────┐                              ║ 
- │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀│ I said I would. I keep my word.   │                              ║ 
- └─────────────────────────────│ Someone has to carry your arrows. │══════════════════════════════╝ 
-               Ellery          │ Get moving. We're not safe here.  │        Test Archer             
-                               └───────────────────────────────────┘                                
+ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                              ║                                ║ 
+ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                              ║                                ║ 
+ └────────────────────────────────┘                              ╚════════════════════════════════╝ 
+               Ellery                                                       Test Archer             
 ┌── Test Archer ───────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                                  │
 │   Ellery! You came back for us.                                                                  │
 │                                                                                                  │
-│                                                                                                  │
-│                                                                                                  │
+│   > I said I would. I keep my word.                                                              │
+│     Someone has to carry your arrows.                                                            │
+│     Get moving. We're not safe here.                                                             │
 └──────────────────────────────────────────────────────────────────────────────────────────────────┘
                                                                                                     
                                                                                                     
@@ -51,15 +51,15 @@ aceeeeeeeeeefFsssGGspvHfeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadgggggggggggggg
 aceeeeeeeeeeeenDIIIIIneeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
 aceeeeeeeJKKLMNOvvvvONMLKKPeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
 aceeeeeJQRRRSTTTTUUTTTTSRRRVPeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeJQRRRRRSTTTTWWTTTTSRRRRRVPcccccccccccccccccccccccccccccccccccccggggggggggggggggggggggggggggggda
-aceJQRRRRRRRSTTTTWWTTTTSRRRRRRRcXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXcggggggggggggggggggggggggggggggda
-acccccccccccccccccccccccccccccccgggggggggggggggggggggggggggggggggggcddddddddddddddddddddddddddddddda
-aggggggggggggggYYYYYYggggggggggcgggggggggggggggggggggggggggggggggggcggggggggggggggggggggggggggggggga
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-cccZZZZZZZZZZZZZcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aceeeJQRRRRRSTTTTWWTTTTSRRRRRVPeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
+aceJQRRRRRRRSTTTTWWTTTTSRRRRRRRVPecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
+accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadddddddddddddddddddddddddddddddddda
+aggggggggggggggXXXXXXggggggggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagggggggggggggggggggggggggggggggggga
+cccYYYYYYYYYYYYYcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
 cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
 cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
+cgggYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
 cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
 cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -117,6 +117,5 @@ T = fg:#692a23 bg:#692a23
 U = fg:#7f672b bg:#471c15
 V = fg:#3e3e41 bg:#656568
 W = fg:#471c15 bg:#471c15
-X = fg:panel_bg bg:panel_border_focus
-Y = fg:text_dim bg:panel_bg
-Z = fg:text_highlight bg:panel_bg
+X = fg:text_dim bg:panel_bg
+Y = fg:text_highlight bg:panel_bg

@@ -117,8 +117,8 @@ lead: Let's move.
 | `    <text>` (more spaces) | Continues the reaction's speech or narration line above. |
 | `@endchoice` | Ends the choice. Every reply **rejoins** the scene here. |
 
-While the choice is open, the line before it stays in the text box and the
-replies are a menu above it. When the reaction ends, the portraits stay as
+While the choice is open, the line before it stays in the text box with the
+replies listed under it (the box grows upward if they don't fit). When the reaction ends, the portraits stay as
 the reaction left them: **the script sets the transition**. If the replies
 leave a character with different expressions, set the one the scene goes on
 with right after `@endchoice` (`@right bors neutral`) or on the next line
