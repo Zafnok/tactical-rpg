@@ -1085,8 +1085,9 @@ impl BattleScreen {
         }
     }
 
-    /// The toggles' state for the message row, e.g. `w danger zone: OFF ·
-    /// Shift+Space auto-end: ON`.
+    /// The toggles' state for the message row: the Danger zone key and
+    /// `danger zone: OFF`, then the Auto-end key and `auto-end: ON`, each
+    /// key named from the active keymap.
     pub fn status(&self, ctx: &Ctx) -> String {
         let km = &ctx.keymap;
         let danger = format!("danger zone: {}", on_off(self.danger.is_some()));

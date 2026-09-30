@@ -22,6 +22,7 @@ locally, install it with `cargo install --locked <tool>`.
 cargo fmt --all
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+cargo xtask check-keys                    # no hard-coded keys (keyboard-input skill)
 cargo doc --workspace --no-deps          # with RUSTDOCFLAGS="-D warnings"
 cargo build -p trpg-app --target wasm32-unknown-unknown
 cargo deny check                          # after ticket 0103

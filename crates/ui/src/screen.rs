@@ -152,7 +152,7 @@ impl Ctx {
     /// and no layout chosen (so [`Keymap::layout_picker`] is active).
     pub fn new(content: Content) -> Result<Self, LoadError> {
         let palette = Palette::new(&content.palette).map_err(LoadError::Palette)?;
-        let keymap = Keymap::layout_picker(content.keymap.repeat);
+        let keymap = Keymap::layout_picker(&content.keymap);
         Ok(Self {
             content,
             palette,
@@ -553,7 +553,7 @@ pub(crate) mod tests {
     fn a_new_ctx_has_no_layout_and_the_picker_keys() {
         let c = Ctx::embedded().unwrap();
         assert_eq!(c.layout(), None);
-        assert_eq!(c.keymap, Keymap::layout_picker(c.content.keymap.repeat));
+        assert_eq!(c.keymap, Keymap::layout_picker(&c.content.keymap));
         assert_eq!(c.saved_layout(), None);
     }
 
