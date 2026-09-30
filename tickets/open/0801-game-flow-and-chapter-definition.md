@@ -5,7 +5,7 @@ type: feature
 milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
-status: todo
+status: in-progress
 blocked_by: ["0405", "0502", "0705", "0307", "0708"]
 nick_input: none
 completed:

@@ -130,9 +130,10 @@ struct RawCharacter {
     loadout: RawLoadout,
 }
 
+/// A loadout as data files write it (characters, generics, battle files).
 #[derive(Deserialize, Default)]
 #[serde(deny_unknown_fields)]
-struct RawLoadout {
+pub(crate) struct RawLoadout {
     #[serde(default)]
     weapons: Vec<String>,
     #[serde(default)]
@@ -142,7 +143,7 @@ struct RawLoadout {
 }
 
 impl RawLoadout {
-    fn to_def(&self) -> LoadoutDef {
+    pub(crate) fn to_def(&self) -> LoadoutDef {
         LoadoutDef {
             weapons: self.weapons.iter().map(|w| ItemId::new(w)).collect(),
             armour: self.armour.as_deref().map(ItemId::new),

@@ -5,7 +5,9 @@
 pub mod ai;
 pub mod art;
 pub mod audio;
+pub mod battle;
 pub mod bundle;
+pub mod chapter;
 pub mod character;
 pub mod class;
 pub mod dialogue;
@@ -26,9 +28,15 @@ pub mod trigger;
 
 use std::collections::BTreeMap;
 
-use trpg_core::{AiWeights, ArtTable, ClassTable, ItemTable, SkillTable, SpellTable};
+use std::sync::Arc;
+
+use trpg_core::{
+    AiWeights, ArtTable, BattleDef, ClassTable, GameTables, ItemTable, SkillTable, SpellTable,
+};
 
 pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
+pub use battle::BattleRefs;
+pub use chapter::{ChapterDef, NewGameDef, battle_campaign, new_campaign};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
@@ -76,6 +84,26 @@ pub struct Content {
     pub tips: TipTable,
     /// Sound and music cues, pools and credits (ADR-0026).
     pub audio: AudioManifest,
+    /// Battles by id (file stem).
+    pub battles: BTreeMap<String, BattleDef>,
+    /// Chapters by id (file stem).
+    pub chapters: BTreeMap<String, ChapterDef>,
+    /// How a new game starts.
+    pub new_game: NewGameDef,
+}
+
+impl Content {
+    /// The tables battles read, shared.
+    pub fn tables(&self) -> GameTables {
+        GameTables {
+            terrain: Arc::new(self.terrain.rules.clone()),
+            classes: Arc::new(self.classes.clone()),
+            items: Arc::new(self.items.clone()),
+            spells: Arc::new(self.spells.clone()),
+            skills: Arc::new(self.skills.clone()),
+            arts: Arc::new(self.arts.clone()),
+        }
+    }
 }
 
 /// Loads and validates every content type from the embedded bundle. Runs all
@@ -110,6 +138,14 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Err(_) => Ok(BTreeMap::new()),
     };
     let dialogue = dialogue::load(characters.as_ref().ok(), portraits.as_ref().ok());
+    let (battles, chapters, new_game) = load_story(
+        maps.as_ref().ok(),
+        terrain.as_ref().ok(),
+        classes.as_ref().ok(),
+        items.as_ref().ok(),
+        characters.as_ref().ok(),
+        dialogue.as_ref().ok(),
+    );
     assemble(
         palette,
         KeymapDef::load(),
@@ -128,8 +164,55 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             ai: ai::load(),
             tips: tip::load(),
             audio: audio::load(),
+            battles,
+            chapters,
+            new_game,
         },
     )
+}
+
+/// Loader results for the battles, chapters and New Game file.
+type Story = (
+    Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
+    Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
+    Result<NewGameDef, Vec<ContentError>>,
+);
+
+/// Loads the battles, then the chapters, then the New Game file, each
+/// checked against what it refers to. Each is skipped (empty, no errors)
+/// when a file it depends on failed, so one broken file doesn't flood the
+/// report.
+fn load_story(
+    maps: Option<&BTreeMap<String, MapDef>>,
+    terrain: Option<&TerrainDef>,
+    classes: Option<&ClassTable>,
+    items: Option<&ItemTable>,
+    characters: Option<&CharacterTable>,
+    dialogue: Option<&DialogueTable>,
+) -> Story {
+    let (Some(maps), Some(terrain), Some(classes), Some(items), Some(characters), Some(dialogue)) =
+        (maps, terrain, classes, items, characters, dialogue)
+    else {
+        return (Ok(BTreeMap::new()), Ok(BTreeMap::new()), Ok(NewGameDef::default()));
+    };
+    let refs = BattleRefs {
+        maps,
+        terrain: &terrain.rules,
+        classes,
+        items,
+        characters,
+        dialogue,
+    };
+    let battles = battle::load_all(&refs);
+    let Ok(loaded) = &battles else {
+        return (battles, Ok(BTreeMap::new()), Ok(NewGameDef::default()));
+    };
+    let chapters = chapter::load_all(loaded, dialogue);
+    let new_game = match &chapters {
+        Ok(chapters) => chapter::load_new_game(chapters, characters, items),
+        Err(_) => Ok(NewGameDef::default()),
+    };
+    (battles, chapters, new_game)
 }
 
 /// Adds the art reference checks ([`art::check_references`]: every
@@ -227,6 +310,9 @@ struct Loaded {
     ai: Result<AiWeights, Vec<ContentError>>,
     tips: Result<TipTable, Vec<ContentError>>,
     audio: Result<AudioManifest, Vec<ContentError>>,
+    battles: Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
+    chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
+    new_game: Result<NewGameDef, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -266,6 +352,9 @@ fn assemble(
         ai: take(units.ai, &mut errors),
         tips: take(units.tips, &mut errors),
         audio: take(units.audio, &mut errors),
+        battles: take(units.battles, &mut errors),
+        chapters: take(units.chapters, &mut errors),
+        new_game: take(units.new_game, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -310,7 +399,20 @@ mod tests {
         dialogue::load(ok_characters().ok().as_ref(), ok_portraits().ok().as_ref())
     }
 
+    fn ok_story() -> Story {
+        let terrain = ok_terrain().ok();
+        load_story(
+            ok_maps().ok().as_ref(),
+            terrain.as_ref(),
+            ok_classes().ok().as_ref(),
+            item::load().ok().as_ref(),
+            ok_characters().ok().as_ref(),
+            ok_dialogue().ok().as_ref(),
+        )
+    }
+
     fn ok_units() -> Loaded {
+        let (battles, chapters, new_game) = ok_story();
         Loaded {
             classes: ok_classes(),
             items: item::load(),
@@ -323,6 +425,9 @@ mod tests {
             ai: ai::load(),
             tips: tip::load(),
             audio: audio::load(),
+            battles,
+            chapters,
+            new_game,
         }
     }
 
@@ -400,8 +505,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 16] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "y", "v",
+    const NAMES: [&str; 19] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "y", "v", "b", "h",
+        "n",
     ];
 
     #[test]
@@ -426,6 +532,9 @@ mod tests {
                     ai: Err(e("w")),
                     tips: Err(e("y")),
                     audio: Err(e("v")),
+                    battles: Err(e("b")),
+                    chapters: Err(e("h")),
+                    new_game: Err(e("n")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -465,6 +574,9 @@ mod tests {
                     ai: if i == 13 { Err(e("w")) } else { ai::load() },
                     tips: if i == 14 { Err(e("y")) } else { tip::load() },
                     audio: if i == 15 { Err(e("v")) } else { audio::load() },
+                    battles: if i == 16 { Err(e("b")) } else { ok_story().0 },
+                    chapters: if i == 17 { Err(e("h")) } else { ok_story().1 },
+                    new_game: if i == 18 { Err(e("n")) } else { ok_story().2 },
                 },
             )
         };

@@ -556,7 +556,7 @@ fn skill_class(skill: &str) -> ClassId {
 /// `fighter` and `flier` (every weapon kind), `sage` (0 weapon slots),
 /// `frost_elemental` (Fire `Weak`, Ice `Absorb`; `magic.md`), and a
 /// `with_<skill>` class like `fighter` for every active of [`skills`].
-fn classes() -> ClassTable {
+pub(crate) fn classes() -> ClassTable {
     let flier = UnitTags::from_tags(&[UnitTag::Flying]);
     let sage = ClassDef {
         weapons: vec![],
@@ -597,7 +597,7 @@ fn classes() -> ClassTable {
 
 /// `table` with levels on: level cap 99, class level cap 10, 2 minimum
 /// gains and 10 CP per class level at every tier (0601).
-fn leveling(table: ClassTable) -> ClassTable {
+pub(crate) fn leveling(table: ClassTable) -> ClassTable {
     ClassTable {
         level_cap: 99,
         class_level_cap: 10,
@@ -842,7 +842,7 @@ fn fixed_items() -> ItemTable {
 }
 
 /// The fixed items plus every `w:…` weapon the units carry.
-fn items_for<'a>(units: impl IntoIterator<Item = &'a Unit>) -> ItemTable {
+pub(crate) fn items_for<'a>(units: impl IntoIterator<Item = &'a Unit>) -> ItemTable {
     let mut table = fixed_items();
     for u in units {
         for w in u.loadout.weapons.iter().flatten() {
@@ -869,11 +869,11 @@ fn carrying(u: Unit, weapons: &[ItemId]) -> Unit {
     Unit { loadout, ..u }
 }
 
-fn item(id: &str) -> ItemId {
+pub(crate) fn item(id: &str) -> ItemId {
     ItemId::new(id)
 }
 
-fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
+pub(crate) fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
     let u = Unit {
         id: UnitId(id),
         character: None,
@@ -904,7 +904,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
     carrying(u, &[weapon(1, 1, 3)])
 }
 
-fn lord(id: u32, pos: Pos) -> Unit {
+pub(crate) fn lord(id: u32, pos: Pos) -> Unit {
     Unit {
         is_lord: true,
         ..unit(id, Faction::Player, pos)
@@ -912,7 +912,7 @@ fn lord(id: u32, pos: Pos) -> Unit {
 }
 
 /// With a weapon of this might.
-fn armed(u: Unit, might: StatValue) -> Unit {
+pub(crate) fn armed(u: Unit, might: StatValue) -> Unit {
     carrying(u, &[weapon(1, 1, might)])
 }
 
