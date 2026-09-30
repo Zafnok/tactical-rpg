@@ -155,6 +155,11 @@ fn new_game_names_the_lead_and_rests_the_roster() {
     units[0].character = Some(c(LEAD_ID));
     units[1].hp = 1;
     units[1].acted = true;
+    units[1].effects.push(crate::skill::TimedEffect {
+        source: crate::skill::SkillId::new("keen").into(),
+        mods: crate::skill::TimedMods::default(),
+        until: crate::battle::Phase::Player,
+    });
     let game = Campaign::new_game(
         GameMode::Casual,
         LeadProfile::new("Mara", LeadGender::Female),
@@ -168,6 +173,7 @@ fn new_game_names_the_lead_and_rests_the_roster() {
     assert_eq!(game.roster[1].name, "ann", "only the lead is renamed");
     assert_eq!(game.roster[1].hp, game.roster[1].stats.hp);
     assert!(!game.roster[1].acted);
+    assert!(game.roster[1].effects.is_empty());
     assert_eq!(game.mode, GameMode::Casual);
     assert_eq!(game.chapter, "ch01");
     assert_eq!(game.gold, 5);

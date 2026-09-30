@@ -150,6 +150,18 @@ fn a_battle_campaign_has_the_battles_characters() {
     assert_eq!(game.stock, Stock::default());
 }
 
+#[test]
+fn the_tables_are_the_contents() {
+    let c = content();
+    let t = c.tables();
+    assert_eq!(*t.terrain, c.terrain.rules);
+    assert_eq!(*t.classes, c.classes);
+    assert_eq!(*t.items, c.items);
+    assert_eq!(*t.spells, c.spells);
+    assert_eq!(*t.skills, c.skills);
+    assert_eq!(*t.arts, c.arts);
+}
+
 /// Every battle file plays: its setup builds with its own characters,
 /// and every chapter's battle can be won or lost (it starts undecided).
 #[test]

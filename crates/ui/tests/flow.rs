@@ -275,3 +275,37 @@ fn playtime_counts_while_playing() {
         .map_or(0, |c| c.playtime_s);
     assert_eq!(played, 2);
 }
+
+/// A chapter with a `next` goes on to it after its victory scenes, with
+/// the army it won with.
+#[test]
+fn the_next_chapter_follows_a_victory() {
+    let mut ctx = trpg_ui::Ctx::embedded()
+        .unwrap_or_else(|e| panic!("{e}"))
+        .with_layout(Layout::RightHanded);
+    if let Some(test) = ctx.content.chapters.get_mut("test") {
+        test.next = Some("quick".into());
+    }
+    let mut h = Harness::from_game(trpg_ui::Game::start(ctx));
+    // New Game, Classic, Start.
+    h.keys("f f Up f");
+    skip_scene(&mut h);
+    seize(&mut h);
+    h.keys("f");
+    skip_scene(&mut h);
+    assert_eq!(h.screens(), ["title", "battle"]);
+    let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
+    assert_eq!(flow.chapter().map(|c| c.id.as_str()), Some("quick"));
+    let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
+    assert_eq!(campaign.chapter, "quick");
+    assert_eq!(campaign.gold, 500);
+    // The Quick Battle's slots are the test lord, knight and archer: of
+    // this army only the knight has one.
+    let players: Vec<String> = battle(&h)
+        .units()
+        .iter()
+        .filter(|u| u.faction == trpg_core::Faction::Player)
+        .map(|u| u.name.clone())
+        .collect();
+    assert_eq!(players, ["Test Knight"]);
+}

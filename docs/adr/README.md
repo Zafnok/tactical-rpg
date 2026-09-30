@@ -40,5 +40,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0029](0029-acted-units-keep-label-case.md) | Acted units are dimmed only; the label keeps its case | Accepted |
 | [0030](0030-battle-dialogue-triggers.md) | Dialogue triggers are battle data; their scenes are events at their moment | Accepted |
 | [0031](0031-player-key-bindings.md) | Player key bindings: slots, per-layout config, fixed Esc/Delete | Accepted |
+| [0032](0032-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

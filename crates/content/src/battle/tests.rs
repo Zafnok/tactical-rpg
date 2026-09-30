@@ -243,6 +243,15 @@ fn enemy_errors() {
         errors(&c, "level: Some(3)", "level: Some(0)"),
         [format!("enemy 1: level 0 is outside 1..={cap}")]
     );
+    let over = cap + 1;
+    assert_eq!(
+        errors(&c, "level: Some(3)", &format!("level: Some({over})")),
+        [format!("enemy 1: level {over} is outside 1..={cap}")]
+    );
+    for ok in [1, cap] {
+        let level = format!("level: Some({ok})");
+        assert_eq!(errors(&c, "level: Some(3)", &level), Vec::<String>::new());
+    }
     assert_eq!(
         errors(&c, "pos: (12, 3),", "pos: (12, 3), level: Some(2),"),
         ["reinforcement 1: a character's level comes from characters.ron"]

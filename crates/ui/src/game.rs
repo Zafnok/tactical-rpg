@@ -409,6 +409,19 @@ mod tests {
     }
 
     #[test]
+    fn the_clock_adds_up_frame_times() {
+        let mut game = Game::start(ctx());
+        game.frame(&[], 0.5);
+        game.frame(&[], 0.25);
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+        // Nonsense frame times don't count.
+        for dt in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            game.frame(&[], dt);
+        }
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+    }
+
+    #[test]
     fn popping_the_last_screen_quits() {
         let mut game = Game::new(ctx(), Box::new(crate::screens::ModeSelectScreen::new()));
 

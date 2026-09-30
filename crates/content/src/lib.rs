@@ -590,6 +590,18 @@ mod tests {
     }
 
     #[test]
+    fn story_files_are_skipped_when_what_they_need_failed() {
+        let (battles, chapters, new_game) = load_story(None, None, None, None, None, None);
+        assert_eq!(battles, Ok(BTreeMap::new()));
+        assert_eq!(chapters, Ok(BTreeMap::new()));
+        assert_eq!(new_game, Ok(NewGameDef::default()));
+        let (battles, chapters, new_game) = ok_story();
+        assert!(battles.is_ok_and(|b| b.contains_key("test")));
+        assert!(chapters.is_ok_and(|c| c.contains_key("test")));
+        assert!(new_game.is_ok_and(|n| n.first_chapter == "test"));
+    }
+
+    #[test]
     fn map_feature_checks_join_the_map_errors() {
         let terrain = ok_terrain().ok();
         let items = item::load().ok();

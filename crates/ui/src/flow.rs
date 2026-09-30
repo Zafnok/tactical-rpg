@@ -336,6 +336,8 @@ impl FlowScreen {
     }
 }
 
+/// Every screen the flow hosts is opaque (a battle's scene overlays are
+/// pushed on the stack, not hosted), so the flow is too.
 impl Screen for FlowScreen {
     fn name(&self) -> &'static str {
         self.screen().name()
@@ -357,10 +359,6 @@ impl Screen for FlowScreen {
 
     fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         self.screen().draw(ctx, buf);
-    }
-
-    fn is_overlay(&self) -> bool {
-        self.screen().is_overlay()
     }
 
     fn as_any(&self) -> Option<&dyn Any> {
