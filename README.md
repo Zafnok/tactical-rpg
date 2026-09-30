@@ -1,4 +1,4 @@
-# tactical-rpg *(working title)*
+# Visions of Shuyi
 
 An ASCII-art tactical RPG in the spirit of Fire Emblem, drawn with coloured
 glyphs the way Dwarf Fortress and Rogue do it, and played entirely from the
