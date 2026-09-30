@@ -35,12 +35,12 @@ fn place(side: Side, character: &str) -> Step {
 
 /// `scene` full-screen, with the default lead.
 fn full(scene: Scene) -> DialogueScreen {
-    DialogueScreen::new(scene, ctx().lead)
+    DialogueScreen::new(scene, ctx().lead, ctx().content.names)
 }
 
 /// `scene` as an overlay, with the default lead.
 fn over(scene: Scene) -> DialogueScreen {
-    DialogueScreen::overlay(scene, ctx().lead)
+    DialogueScreen::overlay(scene, ctx().lead, ctx().content.names)
 }
 
 fn scene(steps: Vec<Step>) -> Scene {
@@ -572,7 +572,11 @@ fn the_lead_shows_the_players_name_and_gendered_portrait() {
         (trpg_core::LeadGender::Male, "lead_m"),
         (trpg_core::LeadGender::Female, "lead_f"),
     ] {
-        let s = DialogueScreen::new(lead_scene(), LeadProfile::new("Isolde", gender));
+        let s = DialogueScreen::new(
+            lead_scene(),
+            LeadProfile::new("Isolde", gender),
+            c.content.names.clone(),
+        );
         let buf = draw(&s, &c);
         assert!(row(&buf, PLATE_Y).contains("Isolde"));
         assert!(row(&buf, TEXT_BOX.y).starts_with("┌── Isolde ─"));

@@ -1,6 +1,6 @@
 //! Checks on parsed scenes: who is on screen, known characters and
-//! expressions, text length, lead tokens and lines, reply choices, and
-//! scene ids unique across files.
+//! expressions, text length, lead and name tokens, names written out, lead
+//! lines, reply choices, and scene ids unique across files.
 
 use std::collections::BTreeMap;
 
@@ -14,23 +14,27 @@ use super::{
 };
 use crate::character::CharacterTable;
 use crate::error::ContentError;
+use crate::names::{Names, is_name_id, name_token};
 use crate::portrait::{Portrait, PortraitTable};
 
 /// Who stands on the left and right.
 type Screen<'a> = [Option<&'a CharacterId>; 2];
 
 /// Checks one scene, replaying it to know who is on screen at each line.
-/// Character ids are checked against `characters`, and expressions against
-/// `portraits`, when given.
+/// Character ids are checked against `characters`, expressions against
+/// `portraits`, and name tokens and names written out against `names`,
+/// when given.
 pub fn check_scene(
     parsed: &ParsedScene,
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
+    names: Option<&Names>,
 ) -> Vec<ContentError> {
     let mut c = Checker {
         file: &parsed.file,
         characters,
         portraits,
+        names,
         errors: Vec::new(),
     };
     let mut state = State::default();
@@ -73,6 +77,7 @@ struct Checker<'a> {
     file: &'a str,
     characters: Option<&'a CharacterTable>,
     portraits: Option<&'a PortraitTable>,
+    names: Option<&'a Names>,
     errors: Vec<ContentError>,
 }
 
@@ -98,7 +103,8 @@ impl<'a> Checker<'a> {
     fn step<'s>(&mut self, step: &'s Step, line: u32, state: &mut State<'s>) {
         if let Some(text) = step.text() {
             self.tokens(line, text);
-            let len = lead::longest_len(text);
+            self.literal_names(line, text);
+            let len = self.len(text);
             if len > MAX_TEXT_LEN {
                 self.err(
                     line,
@@ -109,6 +115,7 @@ impl<'a> Checker<'a> {
         match step {
             Step::Caption { text } => {
                 self.tokens(line, text);
+                self.literal_names(line, text);
                 state.caption = Some(text);
             }
             Step::Place {
@@ -157,7 +164,7 @@ impl<'a> Checker<'a> {
                 if let Some(message) = problem {
                     self.err(line, message);
                 }
-                let len = lead::longest_len(text);
+                let len = self.len(text);
                 if speaker.0 == LEAD_ID && len > MAX_LEAD_LINE_LEN {
                     self.err(
                         line,
@@ -190,7 +197,8 @@ impl<'a> Checker<'a> {
         for (option, option_lines) in options.iter().zip(&lines.options) {
             let at = option_lines.line;
             self.tokens(at, &option.text);
-            let len = lead::longest_len(&option.text);
+            self.literal_names(at, &option.text);
+            let len = self.len(&option.text);
             if len > MAX_OPTION_LEN {
                 self.err(
                     at,
@@ -238,15 +246,76 @@ impl<'a> Checker<'a> {
         }
     }
 
-    /// Reports every `{...}` in `text` that isn't a lead token.
+    /// Characters `text` can take once every token is filled in, at most:
+    /// lead tokens at their longest ([`lead::longest`]) and every name token
+    /// as the longest name in the table, so a rename can't push the line
+    /// over its limit. Unknown tokens count as written.
+    fn len(&self, text: &str) -> usize {
+        lead::split_tokens(text)
+            .map(|part| match part {
+                Part::Text(t) | Part::Unclosed(t) => t.chars().count(),
+                Part::Token(t) => match (name_token(t), self.names) {
+                    (Some(_), Some(names)) => names.longest(),
+                    _ => lead::longest(t).unwrap_or(t.chars().count() + 2),
+                },
+            })
+            .sum()
+    }
+
+    /// Reports a display name from the names table written out in `text`
+    /// instead of its token, which a rename would leave behind.
+    fn literal_names(&mut self, line: u32, text: &str) {
+        let Some(names) = self.names else {
+            return;
+        };
+        let Some((id, form)) = names.literal_in(text) else {
+            return;
+        };
+        let message = if id == LEAD_ID {
+            format!(
+                "\"{form}\" is the lead's default name; write {{lead}} for the name the player chose"
+            )
+        } else {
+            let name = names.get(id).unwrap_or(form);
+            format!(
+                "\"{form}\" is written out; write {{n:{id}}} (\"{name}\") so a rename reaches this line"
+            )
+        };
+        self.err(line, message);
+    }
+
+    /// Checks name token `{token}`: its id must be in the names table, and
+    /// not the lead's (the player names the lead).
+    fn name_token(&mut self, line: u32, token: &str) {
+        let id = name_token(token).map_or("", |t| t.id);
+        if id == LEAD_ID {
+            self.err(
+                line,
+                format!(
+                    "{{{token}}} is only the lead's default name; write {{lead}} for the name the player chose"
+                ),
+            );
+        } else if !is_name_id(id) || self.names.is_some_and(|n| n.get(id).is_none()) {
+            self.err(
+                line,
+                format!(
+                    "unknown name id \"{id}\" in {{{token}}}; name ids are listed in assets/data/names.ron"
+                ),
+            );
+        }
+    }
+
+    /// Reports every `{...}` in `text` that isn't a lead token or a name
+    /// token with a known id.
     fn tokens(&mut self, line: u32, text: &str) {
         for part in lead::split_tokens(text) {
             match part {
+                Part::Token(t) if name_token(t).is_some() => self.name_token(line, t),
                 Part::Token(t) if !lead::is_token(t) => self.err(
                     line,
                     format!(
                         "unknown token \"{{{t}}}\"; use {{lead}}, {{they}}, {{them}}, {{their}}, \
-                         {{theirs}} or {{themself}} (capitalised: {{They}}...)"
+                         {{theirs}}, {{themself}} (capitalised: {{They}}...) or a name, {{n:<id>}}"
                     ),
                 ),
                 Part::Unclosed(_) => {

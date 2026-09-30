@@ -1522,7 +1522,11 @@ impl Screen for BattleScreen {
             }
         }
         if let Some(scene) = self.next_scene(ctx) {
-            return Transition::Push(Box::new(DialogueScreen::overlay(scene, ctx.lead.clone())));
+            return Transition::Push(Box::new(DialogueScreen::overlay(
+                scene,
+                ctx.lead.clone(),
+                ctx.content.names.clone(),
+            )));
         }
         self.check_auto_end();
         Transition::None
