@@ -98,6 +98,7 @@ Later Act 1 recruits (named in `outline.md`, sheets written by later tickets):
 | `term.gifted` | the gifted | People born able to swear vows |
 | `term.door` | the Door | Othe's door between the living and the dead |
 | `term.door_vow` | the Door Vow | The forbidden vow that opens it |
+| `shuyi` | **Shuyi** *(fixed: it's in the game's title, so never rename it)* | The Jade Reach's long-unseen guardian of the lifeblood they worship. Many people use the name for the lifeblood itself. See `docs/design/title.md` |
 | `term.echo` | an echo | A vow still burning with no caster (elementals) |
 | `term.unfinished` | the Unfinished | Those who come back through the Door incomplete |
 | `term.final_vow` | the Final Vow | The vow to lay down steel (tier-3 casters) |

@@ -238,6 +238,7 @@ Nick picked **vows** at gate 1. Mechanics are in
 | **Unfinished** | Someone who came back through the Door incomplete: cold, tasteless, sleepless and without a heartbeat. The Jade Reach's word (secret until the midpoint). |
 | **Vow** | A spell: a promise sworn to a dead god, and the power that answers it. |
 | **Breath** | The Jade Reach's discipline instead of vows (Act 2). |
+| **Shuyi** | The Jade Reach's guardian of the lifeblood its people worship, unseen for so long that many use the name for the lifeblood itself. It gives the game its title. Its role and its link to Breath and the vows are open (`docs/design/title.md`). |
 
 ## Gate 1: Nick's feedback (verbatim, 2026-09-28)
 
