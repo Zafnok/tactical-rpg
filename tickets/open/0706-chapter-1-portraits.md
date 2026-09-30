@@ -24,6 +24,11 @@ its rules). This ticket now **assigns bought portraits** to the cast
 instead of drawing them. The files come from the private assets repo (0110)
 and use the 64×64 PNG format (0711).
 
+**Changed 2026-09-30:** Nick also wants bought battle sprites (0413), and
+CaptainSkolot sells none, so 0021 may pick a different artist who sells both.
+The mapping below is for CaptainSkolot. If 0021 picks someone else, 0021
+rewrites it for the new packs before this ticket starts.
+
 ## First mapping (from the store previews, 2026-09-28)
 
 Claude went through every pack in the bundle's store pages before Nick

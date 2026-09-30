@@ -27,6 +27,12 @@ different colours, so these portraits are drawn with the pixel overlays the
 cursor already uses (ADR-0024: `GlyphBuffer::add_overlay`, `Overlay`,
 `Layer`).
 
+**Changed 2026-09-30:** 0021 may pick a different artist (one who sells
+portraits and battle sprites). The 64×64 numbers here are CaptainSkolot's.
+If the new portraits are another size, 0021 updates this ticket. Keep the
+overlay drawing general enough that 0413 reuses it for battle sprites
+(any PNG size, not only 64×64 portraits).
+
 ## Nick input
 
 **Sign-off:** a screenshot of the test scene (F2 → Play test scene) with two
