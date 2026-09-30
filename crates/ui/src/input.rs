@@ -11,7 +11,8 @@
 //! **Fixed keys** (`docs/design/controls.md`, *Rebinding keys*; ADR-0031):
 //! plain `Escape` is Cancel in every keymap, and `Delete` does nothing in
 //! play (the Key bindings screen reads it to empty a slot). Neither can be
-//! bound; see [`Key::is_reserved`].
+//! bound; see [`Chord::is_reserved`]. `Shift+Escape` and `Shift+Delete`
+//! are ordinary chords.
 
 pub mod bindings;
 
@@ -43,13 +44,14 @@ pub struct Keymap {
 
 impl Keymap {
     /// A keymap with `bindings` plus the fixed keys (plain `Escape` is
-    /// Cancel). A chord listed twice keeps its last action; chords with a
-    /// [reserved](Key::is_reserved) key (`Escape`, `Delete`) are left out.
+    /// Cancel). A chord listed twice keeps its last action;
+    /// [reserved](Chord::is_reserved) chords (plain `Escape` and `Delete`)
+    /// are left out.
     pub fn new(bindings: impl IntoIterator<Item = (Chord, Action)>, repeat: RepeatDef) -> Self {
         let mut lookup = HashMap::new();
         let mut chords: BTreeMap<Action, Vec<Chord>> = BTreeMap::new();
         for (chord, action) in bindings {
-            if chord.key.is_reserved() {
+            if chord.is_reserved() {
                 continue;
             }
             if let Some(old) = lookup.insert(chord, action)
@@ -405,9 +407,22 @@ mod tests {
             assert_eq!(km.action(chord("Escape")), Some(Action::Cancel));
             assert_eq!(km.action(chord("Shift+Escape")), None);
             assert_eq!(km.action(chord("Delete")), None);
+            assert_eq!(km.action(chord("Shift+Delete")), None);
             assert!(!km.chords_for(Action::Cancel).contains(&chord("Escape")));
             assert!(!km.chords_for(Confirm).contains(&chord("Escape")));
         }
+        // Shifted, they are ordinary chords.
+        let km = Keymap::new(
+            [
+                (chord("Shift+Escape"), Info),
+                (chord("Shift+Delete"), Confirm),
+            ],
+            RepeatDef::default(),
+        );
+        assert_eq!(km.action(chord("Shift+Escape")), Some(Info));
+        assert_eq!(km.action(chord("Shift+Delete")), Some(Confirm));
+        assert_eq!(km.action(chord("Escape")), Some(Action::Cancel));
+        assert_eq!(km.chords_for(Info), vec![chord("Shift+Escape")]);
         assert_eq!(
             Keymap::fixed_chords_for(Action::Cancel),
             vec![chord("Escape")]

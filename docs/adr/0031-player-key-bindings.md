@@ -25,15 +25,17 @@ game needs the effective keymap from it at startup and after every edit.
 
 - **Defaults stay in `assets/data/keymap.ron`**, now limited to at most
   `SLOTS` (3) chords per action in each layout, in slot order (the first is
-  what help text names). The loader rejects a 4th chord, and `Escape` or
-  `Delete` (with or without `Shift`) anywhere in the file, including
+  what help text names). The loader rejects a 4th chord, and plain
+  `Escape` or `Delete` anywhere in the file, including
   `layout_picker`. The layout picker isn't rebindable, so its sections may
   list more than 3. `KeymapDef.layouts` keeps each action's chords in file
   order (`LayoutKeys`); `KeymapDef::bindings` derives the chord lookup.
 - **Fixed keys live in `trpg-ui::input::Keymap`, not in data.**
   `Keymap::new` adds plain `Escape` → Cancel to every keymap (layouts, the
-  layout picker, player bindings) and drops any chord on a reserved key, so
-  `Delete` does nothing in play. `Keymap::chords_for(Cancel)` lists only
+  layout picker, player bindings) and drops the reserved chords
+  (`Chord::is_reserved`: plain `Escape` and `Delete`), so plain `Delete`
+  does nothing in play. `Shift+Escape` and `Shift+Delete` are ordinary
+  chords a player may bind (Nick, ticket 0217). `Keymap::chords_for(Cancel)` lists only
   Cancel's own slots; `Keymap::fixed_chords_for` reports `Escape`. `Esc`
   therefore never counts as Cancel's required key.
 - **Model** (`trpg-ui::input::bindings`, pure):

@@ -69,6 +69,18 @@ fn escape_cancels_even_with_cancel_unbound() {
 }
 
 #[test]
+fn shift_escape_can_be_bound_and_plain_escape_still_cancels() {
+    let mut h = Harness::with_layout(Layout::RightHanded);
+    rebind(&mut h, Layout::RightHanded, |b| {
+        assert_eq!(b.bind(Action::Confirm, 1, chord("Shift+Escape")), Ok(None));
+    });
+    h.keys("Shift+Escape");
+    assert_eq!(h.screens(), ["title", "placeholder"]);
+    h.keys("Escape");
+    assert_eq!(h.screens(), ["title"]);
+}
+
+#[test]
 fn the_layout_picker_has_escape_as_cancel() {
     let h = Harness::new();
     assert_eq!(h.top_screen(), "layout_picker");

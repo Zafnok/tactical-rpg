@@ -70,10 +70,11 @@ Even the layout picker's own keys are data: the `layout_picker` section of
    and must match the table in `docs/design/controls.md`; a test pins it.
    Changing a default is a design change: ask with the `ask-nick` skill,
    then edit both files. Never pick a default key yourself.
-5. **Reserved keys**: `Esc` is always Cancel and backs out of
-   "Press a key…"; `Delete` empties a slot. Neither may appear in
-   `keymap.ron` or in a player's slots (`Key::is_reserved`,
-   `LayoutBindings::is_reserved`). `Keymap::chords_for(Cancel)` leaves
+5. **Reserved keys**: plain `Esc` is always Cancel and backs out of
+   "Press a key…"; plain `Delete` empties a slot. Neither may appear in
+   `keymap.ron` or in a player's slots (`Chord::is_reserved`,
+   `LayoutBindings::is_reserved`); `Shift+Esc` and `Shift+Delete` are
+   ordinary keys. `Keymap::chords_for(Cancel)` leaves
    `Esc` out; `Keymap::fixed_chords_for` names it. The Debug key is not
    rebindable (and reserved in builds with debug tools).
 6. **Held and repeated keys** come from `InputState` (repeat timings in

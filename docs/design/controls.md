@@ -150,6 +150,9 @@ The developer Debug key is not on the screen.
 1. Pick an action's slot and press Confirm: the slot shows `Press a key…`.
 2. The next key pressed goes in that slot. Any key the game can read counts,
    with or without `Shift`, except `Esc` and `Delete` (below).
+   `Shift+Esc` and `Shift+Delete` are ordinary keys and can be bound
+   (Nick, 2026-09-30, ticket 0217: only plain `Esc` and `Delete` have a
+   job, so nothing conflicts with their `Shift+` chords).
 3. **If that key is already in another slot, it moves:** the old slot is
    emptied. An action left with no keys at all shows **`! not mapped`**.
    (Same layout only; the other layout's keys are separate.)

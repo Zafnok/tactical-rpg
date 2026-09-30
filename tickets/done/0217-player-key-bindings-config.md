@@ -170,8 +170,8 @@ None. (Rules already decided in 0030.)
 
 Done as planned; ADR-0031 records the format and rules.
 
-- `keymap.ron`: at most 3 chords per action in a layout; `Escape`/`Delete`
-  (also shifted) are loader errors anywhere, including `layout_picker`.
+- `keymap.ron`: at most 3 chords per action in a layout; plain
+  `Escape`/`Delete` are loader errors anywhere, including `layout_picker`.
   `Escape` removed from both layouts' Cancel. The layout picker keeps its 4
   Confirm keys: it isn't rebindable, so the 3-slot limit applies to layouts
   only (small deviation from step 3's wording).
@@ -204,10 +204,12 @@ Done as planned; ADR-0031 records the format and rules.
 
 No follow-up tickets.
 
+Nick's call during review (2026-09-30): only plain `Esc` and `Delete` are
+fixed; `Shift+Esc` and `Shift+Delete` are ordinary keys a player can bind
+(recorded in `controls.md`).
+
 *Claude's starting rules* (small; the design docs didn't say):
 
-- `Shift+Esc` and `Shift+Delete` can't be bound either ("Esc and Delete"
-  read as the keys, with or without Shift); only plain `Esc` cancels.
 - The first-launch layout picker draws each layout with the player's own
   keys for it (so after Options (0805) lets them come back to it, it shows
   their keys), and an action with no key reads `! not mapped` there.

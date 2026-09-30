@@ -87,13 +87,13 @@ impl LayoutBindings {
         self.slots.get(&action).copied().unwrap_or_default()
     }
 
-    /// Whether `chord` can never be put in a slot: a [reserved key]
-    /// (`Escape`, `Delete`, with or without `Shift`), or a Debug chord in a
-    /// build with debug tools.
+    /// Whether `chord` can never be put in a slot: a [fixed chord] (plain
+    /// `Escape` or `Delete`; their `Shift+` chords are ordinary), or a Debug
+    /// chord in a build with debug tools.
     ///
-    /// [reserved key]: super::Key::is_reserved
+    /// [fixed chord]: Chord::is_reserved
     pub fn is_reserved(&self, chord: Chord) -> bool {
-        chord.key.is_reserved() || (self.debug_reserved && self.debug.contains(&chord))
+        chord.is_reserved() || (self.debug_reserved && self.debug.contains(&chord))
     }
 
     /// The slot holding `chord`, if any.

@@ -148,13 +148,6 @@ impl Key {
     pub fn from_name(name: &str) -> Option<Self> {
         Self::ALL.iter().copied().find(|k| k.name() == name)
     }
-
-    /// Whether this key is fixed by the game and can never be bound
-    /// (`docs/design/controls.md`, *Rebinding keys*): `Escape` always
-    /// cancels and `Delete` empties a key slot, with or without `Shift`.
-    pub fn is_reserved(self) -> bool {
-        matches!(self, Self::Escape | Self::Delete)
-    }
 }
 
 /// Key slots per action: a layout lists at most this many chords for an
@@ -190,6 +183,14 @@ impl Chord {
     /// A chord with Shift held.
     pub const fn shifted(key: Key) -> Self {
         Self { key, shift: true }
+    }
+
+    /// Whether this chord is fixed by the game and can never be bound
+    /// (`docs/design/controls.md`, *Rebinding keys*): plain `Escape` always
+    /// cancels and plain `Delete` empties a key slot. `Shift+Escape` and
+    /// `Shift+Delete` are ordinary chords.
+    pub fn is_reserved(self) -> bool {
+        !self.shift && matches!(self.key, Key::Escape | Key::Delete)
     }
 
     /// Parses `"h"`, `"Shift+h"`, `"Left"`, `"Shift+Tab"`, `"F12"`, …
@@ -422,7 +423,7 @@ pub type Bindings = BTreeMap<Chord, Action>;
 /// on two actions. The order matters: the first chord is the one help text
 /// names, and the chords fill the player's key slots in this order.
 ///
-/// [reserved]: Key::is_reserved
+/// [reserved]: Chord::is_reserved
 pub type LayoutKeys = BTreeMap<Action, Vec<Chord>>;
 
 /// The validated keymap: every [`Layout`]'s default keys, the layout
@@ -485,7 +486,7 @@ impl KeymapDef {
     /// Parses and validates keymap `source`, attributing errors to `file`.
     /// Reports every unknown or missing layout, and within each layout every
     /// unknown action, unparsable chord, chord bound more than once,
-    /// [reserved](Key::is_reserved) key, action with more than [`SLOTS`]
+    /// [reserved](Chord::is_reserved) chord, action with more than [`SLOTS`]
     /// chords and missing action (prefixed with the layout name), the same
     /// for the `layout_picker` section (except that unlisted actions are
     /// unbound there, and an action may have more than [`SLOTS`] chords:
@@ -606,7 +607,7 @@ fn validate_bindings(
         let listed = keys.entry(action).or_default();
         for text in chords {
             match Chord::parse(text) {
-                Ok(chord) if chord.key.is_reserved() => errors.push(err_at(
+                Ok(chord) if chord.is_reserved() => errors.push(err_at(
                     action_name,
                     format!(
                         "action \"{action}\": \"{chord}\" can't be bound here: Esc and Delete \
@@ -1248,7 +1249,7 @@ mod tests {
 
     #[test]
     fn escape_and_delete_are_errors_anywhere() {
-        for chord in ["Escape", "Delete", "Shift+Escape", "Shift+Delete"] {
+        for chord in ["Escape", "Delete"] {
             let extra = format!("        \"Cancel\": [\"d\", \"{chord}\"],\n");
             let errs = errors(&source_with("Cancel", &extra));
             assert_eq!(
@@ -1270,6 +1271,17 @@ mod tests {
             );
             assert!(errs[0].contains("Esc and Delete are fixed"), "{}", errs[0]);
         }
+    }
+
+    #[test]
+    fn shifted_escape_and_delete_are_ordinary_chords() {
+        let extra = "        \"Info\": [\"Shift+Escape\", \"Shift+Delete\"],
+";
+        let k = KeymapDef::from_source("k.ron", &source_with("Info", extra)).unwrap_or_default();
+        assert_eq!(
+            k.chords(Layout::LeftHanded, Action::Info),
+            [Chord::shifted(Key::Escape), Chord::shifted(Key::Delete)]
+        );
     }
 
     #[test]
@@ -1320,13 +1332,16 @@ mod tests {
     }
 
     #[test]
-    fn reserved_keys() {
-        let reserved: Vec<Key> = Key::ALL
+    fn reserved_chords() {
+        let reserved: Vec<Chord> = Key::ALL
             .iter()
-            .copied()
-            .filter(|k| k.is_reserved())
+            .flat_map(|&k| [Chord::plain(k), Chord::shifted(k)])
+            .filter(|c| c.is_reserved())
             .collect();
-        assert_eq!(reserved, [Key::Escape, Key::Delete]);
+        assert_eq!(
+            reserved,
+            [Chord::plain(Key::Escape), Chord::plain(Key::Delete)]
+        );
     }
 
     #[test]

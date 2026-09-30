@@ -106,13 +106,20 @@ fn binding_over_a_key_replaces_it() {
 #[test]
 fn esc_delete_and_the_debug_key_are_reserved() {
     let mut b = right();
-    for s in ["Escape", "Delete", "Shift+Escape", "Shift+Delete", "F2"] {
+    for s in ["Escape", "Delete", "F2"] {
         let c = chord(s);
         assert!(b.is_reserved(c), "{s}");
         assert_eq!(b.bind(Info, 0, c), Err(BindError::Reserved(c)), "{s}");
     }
     assert!(!b.is_reserved(chord("Shift+F2")));
     assert_eq!(b, right(), "a refused bind changes nothing");
+    // Shifted Esc and Delete are ordinary keys (Nick, ticket 0217).
+    assert_eq!(b.bind(Info, 1, chord("Shift+Escape")), Ok(None));
+    assert_eq!(b.bind(Info, 2, chord("Shift+Delete")), Ok(None));
+    let km = b.keymap(RepeatDef::default());
+    assert_eq!(km.action(chord("Shift+Escape")), Some(Info));
+    assert_eq!(km.action(chord("Shift+Delete")), Some(Info));
+    assert_eq!(km.action(chord("Escape")), Some(Cancel));
     assert_eq!(
         BindError::Reserved(chord("Escape")).to_string(),
         "Escape is a fixed key and can't be bound"
