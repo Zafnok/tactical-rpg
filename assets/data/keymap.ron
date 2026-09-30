@@ -1,15 +1,26 @@
-// Key bindings: the two layouts from docs/design/controls.md. The player
-// picks one on first launch. Screens only see the action names on the left;
-// each maps to a list of key chords. In every layout, every action must be
-// listed (use [] to leave one unbound) and a chord may be bound to only one
+// Key bindings: the two layouts' default keys from docs/design/controls.md.
+// The player picks a layout on first launch and can rebind every action but
+// Debug (their keys are saved separately, per layout; ADR-0031). Screens only
+// see the action names on the left; each maps to a list of key chords. In
+// every layout, every action must be listed (use [] to leave one unbound),
+// with at most 3 chords (the player's 3 key slots, filled in this order; the
+// first is the one help text shows), and a chord may be bound to only one
 // action.
+//
+// Esc and Delete are fixed and may not appear anywhere in this file: Esc
+// always cancels (in every layout and the layout picker) and Delete empties
+// a key slot on the Key bindings screen. "Shift+Escape" and "Shift+Delete"
+// are ordinary chords. See controls.md, Rebinding keys.
 //
 // layout_picker holds the keys that work before a layout is chosen (the
 // first-launch picker), so it can be used with either hand. Only the actions
-// listed there are bound; the rest do nothing until a layout is picked.
+// listed there are bound; the rest do nothing until a layout is picked. It
+// isn't rebindable, so the 3-chord limit doesn't apply there.
 //
-// Chords: lowercase letters "a".."z", digits "0".."9", ";", "Up" "Down"
-// "Left" "Right" "Enter" "Escape" "Space" "Tab" "Backspace" "F1".."F12",
+// Chords: lowercase letters "a".."z", digits "0".."9", punctuation as
+// itself ";" "," "." "/" "'" "[" "]" "\\" "-" "=" "`", "Up" "Down" "Left"
+// "Right" "Enter" "Space" "Tab" "Backspace" "Insert" "Home" "End" "PageUp"
+// "PageDown" "F1".."F12", numpad "Kp0".."Kp9" "Kp+" "Kp-" "Kp*" "Kp/" "Kp.",
 // optionally prefixed by "Shift+". "Shift+e" and "e" are different chords.
 (
     layouts: {
@@ -23,8 +34,9 @@
 
             // Hold Confirm to fast-forward text and animations.
             "Confirm": ["f"],
-            // Escape also cancels; with nothing to cancel it opens the map menu.
-            "Cancel": ["d", "Escape"],
+            // With nothing to cancel it opens the map menu. Esc also cancels
+            // (a fixed key, not listed here).
+            "Cancel": ["d"],
             "PrevUnit": ["a"],
             "NextUnit": ["s"],
             "Info": ["e"],
@@ -47,7 +59,7 @@
             "CursorRight": ["d"],
 
             "Confirm": ["j"],
-            "Cancel": ["k", "Escape"],
+            "Cancel": ["k"],
             "PrevUnit": [";"],
             "NextUnit": ["l"],
             "Info": ["i"],
@@ -60,7 +72,8 @@
         },
     },
     // Before a layout is chosen: either hand's up/down and confirm keys.
-    // Nothing cancels (a layout must be picked).
+    // Nothing but the fixed Esc cancels, and the picker ignores it (a layout
+    // must be picked).
     layout_picker: {
         "CursorUp": ["Up", "w"],
         "CursorDown": ["Down", "s"],

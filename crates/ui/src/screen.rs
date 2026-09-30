@@ -14,13 +14,17 @@ use trpg_content::{Content, ContentErrors};
 use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Keymap, Layout};
+use crate::input::{Action, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
 
 /// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
 /// e.g. `LeftHanded`, which is also valid RON for the enum).
 pub const LAYOUT_KEY: &str = "layout";
+
+/// [`Storage`] key under which the player's key bindings are saved
+/// ([`PlayerKeys::to_ron`], ADR-0031).
+pub const KEYBINDINGS_KEY: &str = "keybindings";
 
 /// Whether this build offers debug tools: debug builds, and release builds
 /// with the `debug-tools` feature (ADR-0023).
@@ -107,12 +111,17 @@ pub struct Ctx {
     /// Named colours, from `content.palette`.
     pub palette: Palette,
     /// The active key bindings, for help text that names keys: the chosen
-    /// layout's, or [`Keymap::layout_picker`] until one is chosen. Change it
-    /// with [`use_layout`](Self::use_layout) or
-    /// [`choose_layout`](Self::choose_layout), never directly.
+    /// layout's with the player's changes, or [`Keymap::layout_picker`]
+    /// until one is chosen. Change it with [`use_layout`](Self::use_layout),
+    /// [`choose_layout`](Self::choose_layout) or
+    /// [`set_layout_bindings`](Self::set_layout_bindings), never directly.
     pub keymap: Keymap,
     /// The layout in use; `None` until the player has picked one.
     layout: Option<Layout>,
+    /// The player's key bindings for every layout, loaded from `storage`.
+    player_keys: PlayerKeys,
+    /// Problems found while loading saved data, for `app` to log.
+    warnings: Vec<String>,
     /// Where saves and settings persist (0207): files on native,
     /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
     /// the platform implementation with [`Ctx::with_storage`].
@@ -158,6 +167,8 @@ impl Ctx {
             palette,
             keymap,
             layout: None,
+            player_keys: PlayerKeys::default(),
+            warnings: Vec::new(),
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
@@ -178,10 +189,73 @@ impl Ctx {
         self.layout
     }
 
-    /// Switches to `layout`'s bindings for this session, without saving.
+    /// Switches to `layout`'s bindings (the player's own for that layout,
+    /// else its defaults) for this session, without saving the choice.
     pub fn use_layout(&mut self, layout: Layout) {
-        self.keymap = Keymap::for_layout(&self.content.keymap, layout);
+        self.keymap = self.keymap_for(layout);
         self.layout = Some(layout);
+    }
+
+    /// The keymap `layout` would have: the player's bindings for it, else
+    /// its defaults. (The layout picker draws both layouts with this.)
+    pub fn keymap_for(&self, layout: Layout) -> Keymap {
+        self.player_keys.keymap(&self.content.keymap, layout)
+    }
+
+    /// The player's key bindings for every layout.
+    pub fn player_keys(&self) -> &PlayerKeys {
+        &self.player_keys
+    }
+
+    /// `layout`'s current bindings, for the Key bindings screen (0815) to
+    /// edit and hand back to [`set_layout_bindings`](Self::set_layout_bindings).
+    pub fn layout_bindings(&self, layout: Layout) -> LayoutBindings {
+        self.player_keys.bindings(&self.content.keymap, layout)
+    }
+
+    /// Replaces `layout`'s bindings and saves every layout's under
+    /// [`KEYBINDINGS_KEY`]. If `layout` is in use, its keys work from the
+    /// next key press (`Game` hands the new keymap to its input at once).
+    /// The change applies even if saving fails (it is then lost on quit).
+    pub fn set_layout_bindings(
+        &mut self,
+        layout: Layout,
+        bindings: LayoutBindings,
+    ) -> Result<(), StorageError> {
+        self.player_keys.set(&self.content.keymap, layout, bindings);
+        if self.layout == Some(layout) {
+            self.use_layout(layout);
+        }
+        self.storage
+            .write(KEYBINDINGS_KEY, &self.player_keys.to_ron())
+    }
+
+    /// Loads the player's key bindings from `storage` (repairing what it
+    /// must, with a warning per fix) and re-applies the layout in use.
+    fn load_player_keys(&mut self) {
+        let (keys, warnings) = match self.storage.read(KEYBINDINGS_KEY) {
+            Ok(Some(text)) => PlayerKeys::from_ron(&text, &self.content.keymap),
+            Ok(None) => (PlayerKeys::default(), Vec::new()),
+            Err(e) => (
+                PlayerKeys::default(),
+                vec![format!("can't be read, using the default keys: {e}")],
+            ),
+        };
+        self.player_keys = keys;
+        self.warnings.extend(
+            warnings
+                .into_iter()
+                .map(|w| format!("{KEYBINDINGS_KEY}: {w}")),
+        );
+        if let Some(layout) = self.layout {
+            self.use_layout(layout);
+        }
+    }
+
+    /// Takes the warnings gathered while loading saved data (e.g. repaired
+    /// key bindings), for `app` to log.
+    pub fn take_warnings(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.warnings)
     }
 
     /// Builder form of [`use_layout`](Self::use_layout).
@@ -208,10 +282,12 @@ impl Ctx {
     }
 
     /// Replaces the storage backend (the harness and tests keep
-    /// [`MemoryStorage`]; `app` installs the platform implementation).
+    /// [`MemoryStorage`]; `app` installs the platform implementation) and
+    /// loads the player's key bindings from it.
     #[must_use]
     pub fn with_storage(mut self, storage: Box<dyn Storage>) -> Self {
         self.storage = storage;
+        self.load_player_keys();
         self
     }
 }
@@ -623,6 +699,89 @@ pub(crate) mod tests {
         assert_eq!(c.saved_layout(), None);
         assert!(c.choose_layout(Layout::LeftHanded).is_err());
         assert_eq!(c.layout(), Some(Layout::LeftHanded));
+    }
+
+    #[test]
+    fn unreadable_storage_gives_default_keys_and_a_warning() {
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(Failing));
+        assert_eq!(c.player_keys(), &PlayerKeys::default());
+        assert_eq!(
+            c.take_warnings(),
+            ["keybindings: can't be read, using the default keys: storage error: down"]
+        );
+        assert!(c.take_warnings().is_empty());
+    }
+
+    /// `Info` on `g` instead of its default key.
+    fn info_on_g(c: &Ctx, layout: Layout) -> LayoutBindings {
+        let mut b = c.layout_bindings(layout);
+        let g = crate::input::Chord::plain(crate::input::Key::G);
+        assert!(b.bind(Action::Info, 0, g).is_ok());
+        b
+    }
+
+    #[test]
+    fn set_layout_bindings_saves_and_switches_the_layout_in_use() {
+        let mut c = ctx();
+        let b = info_on_g(&c, Layout::RightHanded);
+        assert_eq!(
+            c.set_layout_bindings(Layout::RightHanded, b.clone()),
+            Ok(())
+        );
+        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
+        assert_eq!(c.layout_bindings(Layout::RightHanded), b);
+        let saved = c.storage.read(KEYBINDINGS_KEY).unwrap().unwrap();
+        assert_eq!(saved, c.player_keys().to_ron());
+        // The other layout's keys change only the saved config.
+        let before = c.keymap.clone();
+        let left = info_on_g(&c, Layout::LeftHanded);
+        c.set_layout_bindings(Layout::LeftHanded, left.clone())
+            .unwrap();
+        assert_eq!(c.keymap, before);
+        c.use_layout(Layout::LeftHanded);
+        assert_eq!(c.keymap, left.keymap(c.content.keymap.repeat));
+        assert_eq!(c.keymap_for(Layout::RightHanded), before);
+    }
+
+    #[test]
+    fn saved_keys_load_with_the_storage() {
+        let mut c = ctx();
+        let b = info_on_g(&c, Layout::RightHanded);
+        c.set_layout_bindings(Layout::RightHanded, b.clone())
+            .unwrap();
+        let storage = std::mem::replace(&mut c.storage, Box::new(MemoryStorage::new()));
+        // A layout already in use picks up the loaded keys.
+        let mut again = ctx().with_storage(storage);
+        assert_eq!(again.layout_bindings(Layout::RightHanded), b);
+        assert_eq!(again.keymap, b.keymap(again.content.keymap.repeat));
+        assert!(again.take_warnings().is_empty());
+    }
+
+    #[test]
+    fn repaired_keys_leave_a_warning() {
+        let mut storage = MemoryStorage::new();
+        storage.write(KEYBINDINGS_KEY, "nonsense").unwrap();
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(storage));
+        let warnings = c.take_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].starts_with("keybindings: unreadable"),
+            "{warnings:?}"
+        );
+    }
+
+    #[test]
+    fn a_failed_save_still_switches_keys() {
+        let mut c = Ctx::embedded()
+            .unwrap()
+            .with_storage(Box::new(Failing))
+            .with_layout(Layout::LeftHanded);
+        let b = info_on_g(&c, Layout::LeftHanded);
+        assert!(
+            c.set_layout_bindings(Layout::LeftHanded, b.clone())
+                .is_err()
+        );
+        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
     }
 
     #[test]

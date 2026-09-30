@@ -17,9 +17,6 @@ use crate::widgets::help::{cursor_keys_name, key_name};
 /// one per line.
 pub const TIPS_SEEN_KEY: &str = "tips_seen";
 
-/// What a placeholder shows for an action with no key.
-pub const UNBOUND: &str = "(unbound)";
-
 /// The tips already shown to this profile.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TipsSeen {
@@ -64,8 +61,9 @@ pub fn reset_tips(storage: &mut dyn Storage) -> Result<(), StorageError> {
 }
 
 /// `text` with each `{Action}` replaced by the key `keymap` binds to that
-/// action (its primary key), `{Cursor}` by the cursor keys, and [`UNBOUND`]
-/// for one with no key. Anything else in braces is left alone.
+/// action (its primary key), `{Cursor}` by the cursor keys, and
+/// [`NOT_MAPPED`](crate::widgets::help::NOT_MAPPED) for one with no key.
+/// Anything else in braces is left alone.
 pub fn fill_placeholders(text: &str, keymap: &Keymap) -> String {
     let mut out = text.to_owned();
     for name in placeholders(text) {
@@ -76,7 +74,7 @@ pub fn fill_placeholders(text: &str, keymap: &Keymap) -> String {
         } else {
             continue;
         };
-        out = out.replace(&format!("{{{name}}}"), keys.as_deref().unwrap_or(UNBOUND));
+        out = out.replace(&format!("{{{name}}}"), &keys);
     }
     out
 }
@@ -123,6 +121,7 @@ mod tests {
     use super::*;
     use crate::input::Layout;
     use crate::storage::MemoryStorage;
+    use crate::widgets::help::NOT_MAPPED;
 
     fn keymap(pairs: &[(&str, Action)]) -> Keymap {
         Keymap::new(
@@ -192,7 +191,7 @@ bb",
     fn placeholders_show_the_bound_keys() {
         let km = keymap(&[
             ("f", Action::Confirm),
-            ("Escape", Action::Cancel),
+            ("d", Action::Cancel),
             ("Up", Action::CursorUp),
             ("Left", Action::CursorLeft),
             ("Down", Action::CursorDown),
@@ -200,12 +199,18 @@ bb",
         ]);
         assert_eq!(
             fill_placeholders("{Confirm}/{Cancel} {Cursor} {Confirm}", &km),
-            "f/Escape arrows f"
+            "f/d arrows f"
         );
         // Unbound and unknown placeholders.
         assert_eq!(
             fill_placeholders("{Rewind} {Nope} {", &km),
-            "(unbound) {Nope} {"
+            format!("{NOT_MAPPED} {{Nope}} {{")
+        );
+        // A cursor action with no key: the whole cursor placeholder.
+        let no_cursor = keymap(&[("f", Action::Confirm)]);
+        assert_eq!(
+            fill_placeholders("{Cursor} {Confirm}", &no_cursor),
+            "! not mapped f"
         );
     }
 

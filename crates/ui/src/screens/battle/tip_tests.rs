@@ -360,6 +360,17 @@ fn a_tip_names_the_keys_the_player_has_bound() {
 }
 
 #[test]
+fn a_tip_shows_not_mapped_for_an_action_with_no_key() {
+    let mut c = tipped();
+    let mut keys = c.layout_bindings(Layout::RightHanded);
+    keys.clear(Action::NextUnit, 0);
+    c.set_layout_bindings(Layout::RightHanded, keys).unwrap();
+    let mut s = quick();
+    press(&mut s, &mut c, &[]);
+    assert!(shows(&s, &c, "your units to select it. ! not mapped jumps"));
+}
+
+#[test]
 fn the_start_tip_renders() {
     let mut c = tipped();
     let mut s = quick();

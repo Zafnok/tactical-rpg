@@ -100,9 +100,9 @@ impl TitleScreen {
     pub fn help(ctx: &Ctx) -> String {
         let km = &ctx.keymap;
         help_line(&[
-            (cursor_keys_name(km), "move"),
-            (key_name(km, Action::Confirm), "select"),
-            (key_name(km, Action::Cancel), "back"),
+            (Some(cursor_keys_name(km)), "move"),
+            (Some(key_name(km, Action::Confirm)), "select"),
+            (Some(key_name(km, Action::Cancel)), "back"),
         ])
     }
 }
@@ -169,10 +169,10 @@ impl PlaceholderScreen {
     /// The message shown: `Coming soon`, then `press <Cancel key> to go
     /// back` with the key named from the active keymap.
     pub fn message(ctx: &Ctx) -> String {
-        match key_name(&ctx.keymap, Action::Cancel) {
-            Some(key) => format!("Coming soon — press {key} to go back"),
-            None => "Coming soon".to_owned(),
-        }
+        format!(
+            "Coming soon — press {} to go back",
+            key_name(&ctx.keymap, Action::Cancel)
+        )
     }
 }
 
@@ -370,8 +370,15 @@ mod tests {
                 .filter(|&(_, a)| a != Action::Cancel),
             c.keymap.repeat(),
         );
-        assert_eq!(TitleScreen::help(&c), "arrows move · f select");
-        assert_eq!(PlaceholderScreen::message(&c), "Coming soon");
+        // Cancel with no key of its own (the fixed Esc isn't named).
+        assert_eq!(
+            TitleScreen::help(&c),
+            "arrows move · f select · ! not mapped back"
+        );
+        assert_eq!(
+            PlaceholderScreen::message(&c),
+            "Coming soon — press ! not mapped to go back"
+        );
     }
 
     /// Opaque screens must paint every cell, not rely on `Game` clearing.

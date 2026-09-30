@@ -29,12 +29,11 @@ pub(crate) fn print_centred(buf: &mut GlyphBuffer, y: i32, text: &str, fg: Rgb, 
 }
 
 /// The debug-menu hint, e.g. `F2 debug`: `None` unless debug tools are on
-/// and the Debug action is bound.
+/// and the Debug action has a key (it isn't rebindable, so no
+/// `! not mapped` hint for it).
 pub(crate) fn debug_hint(ctx: &Ctx) -> Option<String> {
-    ctx.debug_tools
-        .then(|| key_name(&ctx.keymap, Action::Debug))
-        .flatten()
-        .map(|key| format!("{key} debug"))
+    let bound = ctx.keymap.primary(Action::Debug).is_some();
+    (ctx.debug_tools && bound).then(|| format!("{} debug", key_name(&ctx.keymap, Action::Debug)))
 }
 
 /// Prints the [`debug_hint`] right-aligned on row `y`, one cell in from the

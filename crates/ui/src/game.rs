@@ -7,7 +7,7 @@ use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
-use crate::input::{Action, Chord, InputState, Key, Layout};
+use crate::input::{Action, Chord, InputState, Key};
 use crate::screen::{Ctx, FrameInput, Screen, ScreenStack};
 use crate::screens::{LayoutPickerScreen, TitleScreen};
 
@@ -40,9 +40,6 @@ pub struct FrameOutput<'a> {
 pub struct Game {
     stack: ScreenStack,
     input: InputState,
-    /// The layout whose bindings `input` uses, to notice when a screen
-    /// switches layout in `ctx`.
-    input_layout: Option<Layout>,
     ctx: Ctx,
     buffer: GlyphBuffer,
     quit: bool,
@@ -81,7 +78,6 @@ impl Game {
 
     fn with_stack(ctx: Ctx, stack: ScreenStack) -> Self {
         let input = InputState::new(ctx.keymap.clone());
-        let input_layout = ctx.layout();
         let blank = Cell::new(
             ' ',
             ctx.palette.get(UiColor::Text),
@@ -92,7 +88,6 @@ impl Game {
         let mut game = Self {
             stack,
             input,
-            input_layout,
             ctx,
             buffer: GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank),
             quit: false,
@@ -146,6 +141,8 @@ impl Game {
     }
 
     fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
+        // Bindings changed between frames (a test rebinding keys).
+        self.sync_keymap();
         for &event in events {
             match event {
                 RawKeyEvent::Down(chord) => self.input.key_down(chord),
@@ -168,12 +165,17 @@ impl Game {
         } else {
             let input = FrameInput::new(actions, dt, held);
             self.quit = self.stack.update(&mut self.ctx, &input);
-            if self.ctx.layout() != self.input_layout {
-                self.input_layout = self.ctx.layout();
-                self.input.set_keymap(self.ctx.keymap.clone());
-            }
+            self.sync_keymap();
         }
         self.redraw();
+    }
+
+    /// Hands `ctx`'s keymap to the input if it changed (a layout was
+    /// picked, keys were rebound), so the new keys work from the next press.
+    fn sync_keymap(&mut self) {
+        if *self.input.keymap() != self.ctx.keymap {
+            self.input.set_keymap(self.ctx.keymap.clone());
+        }
     }
 
     /// Clears the buffer and draws the stack into it.
@@ -241,6 +243,7 @@ fn is_known(manifest: &trpg_content::AudioManifest, request: &AudioRequest) -> b
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::input::Layout;
     use crate::screen::tests::{ctx, ctx_with_cues};
 
     fn down(key: Key) -> RawKeyEvent {
@@ -318,6 +321,33 @@ mod tests {
         assert_eq!(game.screens(), ["title"]);
         let ctx = game.into_ctx();
         assert_eq!(ctx.saved_layout(), Some(Layout::LeftHanded));
+    }
+
+    #[test]
+    fn rebinding_keys_reaches_the_input_before_the_next_press() {
+        let mut game = Game::start(ctx());
+        let mut b = game.ctx().layout_bindings(Layout::RightHanded);
+        assert_eq!(b.bind(Action::Confirm, 0, Chord::plain(Key::G)), Ok(None));
+        game.ctx_mut()
+            .set_layout_bindings(Layout::RightHanded, b)
+            .unwrap();
+        // The old key does nothing; the new one confirms at once.
+        tap(&mut game, Key::F);
+        assert_eq!(game.screens(), ["title"]);
+        tap(&mut game, Key::G);
+        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.input.keymap(), &game.ctx().keymap);
+    }
+
+    #[test]
+    fn escape_is_ignored_by_the_first_launch_picker() {
+        let mut game = Game::start(first_launch());
+        assert_eq!(
+            game.input.keymap().action(Chord::plain(Key::Escape)),
+            Some(Action::Cancel)
+        );
+        tap(&mut game, Key::Escape);
+        assert_eq!(game.screens(), ["title", "layout_picker"]);
     }
 
     #[test]
