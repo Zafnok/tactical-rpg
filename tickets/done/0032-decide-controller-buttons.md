@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-30
 ---
 
 # 0032 — Decide: controller buttons
@@ -75,13 +75,44 @@ optional Select / Confirm end turn (0218). Debug stays keyboard-only.
 
 ## Acceptance criteria
 
-- [ ] Answers recorded in `docs/design/controls.md` (new *Controller*
+- [x] Answers recorded in `docs/design/controls.md` (new *Controller*
       section) with Nick's words verbatim, including a defaults table like
       the keyboard one.
-- [ ] `docs/design/README.md` row updated.
-- [ ] 0219, 0220 and 0816 updated to match the answers (e.g. drop rumble
+- [x] `docs/design/README.md` row updated.
+- [x] 0219, 0220 and 0816 updated to match the answers (e.g. drop rumble
       from 0219's out-list if Nick wants it, adjust 0816's rules).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+Asked Nick in three rounds with the `ask-nick` skill, with rendered
+mockups: three pad layouts (`docs/screenshots/0032-controller-defaults.png`
+is the chosen one) and a help bar + tip in each naming style
+(`docs/screenshots/0032-button-names.png`). Answers: 1C (Confirm/Cancel
+follow the controller), 2A (shoulders cycle units, Start ends the turn when
+pressed twice), 3A (D-pad and left stick, one tile, key repeat; right stick
+unused), 4B (names follow the pad), 5A (last device pressed), 6a A (same
+rules as keys, one pad setup for both layouts), 6b B (hold any button to
+back out, `Clear` on the slot, with a hint), 7: no rumble for now.
+
+Recorded in `docs/design/controls.md` (*Controller*), README row updated,
+and 0219, 0220 and 0816 rewritten to match (0219 now also detects the pad
+kind, because the Confirm/Cancel swap needs it; 0220 skips the layout
+picker for controller players).
+
+Game comparisons only quote layouts a source confirmed (Three Houses,
+Wargroove, Triangle Strategy, XCOM 2 console). Rumble and stick speed in
+those games couldn't be confirmed, so no claims were made.
+
+"Pick your layout" for controller players was asked again in the PR
+round (Nick had missed it as a sub-bullet). Nick's answer goes further:
+`Press any key or button` (with keyboard and controller pictures) on every
+build, and that first press decides whether the picker shows; recorded in
+`title-screen.md` and `controls.md`. New ticket **0226** builds it (0220
+no longer handles the picker).
+
+Claude's six proposed small rules went to Nick in the PR round and are
+now decided (`controls.md`, *Follow-up answers*): Switch pads swap only
+Confirm/Cancel (as in Fire Emblem), bind on release / hold to back out,
+`Clear` only with the pad, both sticks bindable (right stick too, Nick's
+change), help bar shows `D-pad/stick move` (Nick's change), several pads
+act as one player.
