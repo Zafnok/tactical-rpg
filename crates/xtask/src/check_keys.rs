@@ -315,22 +315,19 @@ fn is_ident(c: char) -> bool {
 fn exempt_lines(lines: &[Line], honour_marker: bool) -> Vec<bool> {
     let mut exempt = vec![false; lines.len()];
     for (i, line) in lines.iter().enumerate() {
-        if line.code.contains("#[cfg(test)]") {
+        let marked = honour_marker && line.comment.contains(MARKER);
+        if marked || line.code.contains("#[cfg(test)]") {
             mark_item(lines, i, &mut exempt);
-        } else if honour_marker && line.comment.contains(MARKER) {
-            if line.code.trim().is_empty() {
-                mark_item(lines, i + 1, &mut exempt);
-            } else if let Some(e) = exempt.get_mut(i) {
-                *e = true;
-            }
         }
     }
     exempt
 }
 
-/// Marks the item starting at line `start` (leading attribute lines
-/// included) through the line where its brackets balance and it ends with
-/// `;`, `}` or `,`.
+/// Marks the item starting at line `start` through the line where its
+/// brackets balance and it ends with `;`, `}` or `,`. A line that is only a
+/// comment or `#[…]` attributes never ends an item, so an attribute or a
+/// marker comment on its own line covers the item below it, and a marker
+/// after code on a line covers that line's item.
 fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
     let mut depth: i64 = 0;
     for (i, line) in lines.iter().enumerate().skip(start) {
@@ -338,9 +335,6 @@ fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
             *e = true;
         }
         let code = line.code.trim();
-        if code.is_empty() || is_attribute_only(code) {
-            continue;
-        }
         for c in code.chars() {
             match c {
                 '(' | '[' | '{' => depth += 1,
@@ -352,26 +346,6 @@ fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
             return;
         }
     }
-}
-
-/// Whether `code` is nothing but `#[…]` attributes.
-fn is_attribute_only(code: &str) -> bool {
-    let mut rest = code.trim();
-    while let Some(after) = rest.strip_prefix("#[") {
-        let mut depth = 1;
-        let Some(end) = after.char_indices().find_map(|(i, c)| {
-            match c {
-                '[' => depth += 1,
-                ']' => depth -= 1,
-                _ => {}
-            }
-            (depth == 0).then_some(i)
-        }) else {
-            return false;
-        };
-        rest = after[end + 1..].trim_start();
-    }
-    rest.is_empty()
 }
 
 /// One source line split into its parts.
@@ -412,7 +386,10 @@ fn lex(source: &str) -> Vec<Line> {
         skip_ws: false,
     };
     let mut i = 0;
-    while let Some(c) = lexer.at(i) {
+    // Every step uses at least one char, so this bound is never reached; it
+    // only stops a broken step from looping forever.
+    for _ in 0..=lexer.chars.len() {
+        let Some(c) = lexer.at(i) else { break };
         i += if c == '\n' {
             lexer.newline();
             1
@@ -899,17 +876,19 @@ let d = is_key_down_fast(x);
     }
 
     #[test]
-    fn nested_block_comments_close() {
-        let lines = lex("/* a /* b */ Key::F */ let x = Key::G;");
-        assert_eq!(lines[0].code.trim(), "let x = Key::G;");
+    fn lexer_keeps_newlines_in_strings_and_slashes_in_code() {
+        let lines = lex("let s = \"a\nb\"; let d = a / b * c; let k = Key::F;");
+        assert_eq!(lines[0].strings, vec!["a\nb".to_owned()]);
+        assert_eq!(lines[1].code, "\"; let d = a / b * c; let k = Key::F;");
+        let lines = lex("x = 'a'; y = \"s\";");
+        assert_eq!(lines[0].code, "x = ''; y = \"\";");
+        assert_eq!(lines[0].strings, vec!["s".to_owned()]);
     }
 
     #[test]
-    fn attribute_only_lines() {
-        assert!(is_attribute_only("#[cfg(test)]"));
-        assert!(is_attribute_only("#[allow(a)] #[cfg(test)]"));
-        assert!(!is_attribute_only("#[cfg(test)] mod tests {"));
-        assert!(!is_attribute_only("#[cfg(test"));
+    fn nested_block_comments_close() {
+        let lines = lex("/* a /* b */ Key::F */ let x = Key::G;");
+        assert_eq!(lines[0].code.trim(), "let x = Key::G;");
     }
 
     #[test]
