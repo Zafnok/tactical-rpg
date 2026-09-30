@@ -15,8 +15,9 @@ completed:
 
 ## Context
 
-Nick is buying portrait and battle-sprite art (0021, 0413) whose licence allows it in a sold game but
-forbids redistributing the files on their own. This repo is public (ADR-0013),
+Nick is buying portrait and battle art (0021, 0413): Mega Tiles' Tiny Tales
+packs (`docs/design/look-and-feel.md`, ADR-0032), whose licence allows them
+in a sold game but forbids redistributing the files. This repo is public (ADR-0013),
 so the bought files can't be committed here. They go in a **private** GitHub
 repo and are pulled in only when a build is made. The shipped game (exe,
 Pages web build, Steam) contains them, which the licence allows. The public
@@ -29,7 +30,10 @@ Assets are embedded with `include_dir!` over `assets/`
 
 **Setup** (Claude can't make purchases or create repos for him):
 
-1. Buy the packs 0021 picked on itch.io and download every zip.
+1. Buy the packs 0021 picked on itch.io (at least *Tiny Tales 2D Heroes: A
+   New Beginning*; the others listed in `look-and-feel.md` as he chooses)
+   and download every zip. Claude rechecks prices and licence text first
+   (ADR-0032).
 2. Create a **private** GitHub repo `Zafnok/tactical-rpg-assets`. Upload the
    zips as they are (the importer in 0711 reads them), plus a copy of each
    licence text from the store pages.
@@ -51,8 +55,9 @@ Assets are embedded with `include_dir!` over `assets/`
   jobs keep running without it, on placeholders.
 - A local dev command that clones or updates it (`cargo xtask
   private-assets`), documented in `CLAUDE.md` § Environment.
-- The `THIRD_PARTY_ASSETS.md` convention for private assets (listed there
-  and marked private, with the licence text kept in the private repo).
+- The `THIRD_PARTY_ASSETS.md` convention for private assets, as ADR-0032
+  sets it (item, seller, URL, quoted licence, date bought, AI-assisted or
+  not, marked private; the licence text kept in the private repo).
 
 **Out (do not do):** importing or drawing portraits (0711, 0706);
 encrypting assets inside the binary (the licence doesn't require it).

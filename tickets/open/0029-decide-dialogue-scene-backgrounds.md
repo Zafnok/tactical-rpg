@@ -23,10 +23,10 @@ while listing Chapter 1 gaps (2026-09-29).
 
 Constraints:
 
-- Portraits are bought 64×64 art (0021, 0711). Nick disliked Claude-drawn
+- Portraits are bought 48×48 Tiny Tales faces by Mega Tiles (0021, 0711). Nick disliked Claude-drawn
   portraits, so Claude-drawn backgrounds may clash in the same way; say so
   honestly and show them next to the bought portraits.
-- Any bought art follows ADR-0013 and the private assets repo (0110).
+- Any bought art follows ADR-0032 and the private assets repo (0110).
 - Glyph-drawn art is the game's own style (ADR-0018).
 
 ## Nick input
@@ -39,8 +39,9 @@ screen with a bought portrait on each option:
   portraits stand out.
 - **C. Bought background art** matching the portrait style (search for packs
   under allowed licences; name the price and licence). Look first at the
-  artist 0021 picked: CaptainSkolot sells background packs, and another
-  artist may too.
+  artist 0021 picked (Mega Tiles, which sells tile and terrain packs), then
+  others such as CaptainSkolot, who sells background packs; say honestly
+  if the styles clash.
 - **D. No picture, just a place line** (for example "The old fort, at dusk") above
   the text box.
 - **E.** "Describe your own."

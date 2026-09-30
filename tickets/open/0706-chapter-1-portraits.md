@@ -18,73 +18,80 @@ completed:
 Portraits for every character who speaks in Chapter 1, using the portrait
 briefs in `docs/story/characters/*.md` (0701).
 
-**Changed 2026-09-28:** Nick doesn't want Claude-drawn portraits. He chose
-bought art, CaptainSkolot's portrait bundle (0021 records the decision and
-its rules). This ticket now **assigns bought portraits** to the cast
-instead of drawing them. The files come from the private assets repo (0110)
-and use the 64×64 PNG format (0711).
+**Changed 2026-09-28 and 2026-09-30:** Nick doesn't want Claude-drawn
+portraits. In 0021 he chose **Mega Tiles' Tiny Tales packs** for both faces
+and combat art (`docs/design/look-and-feel.md`, *Portraits and battle art*;
+ADR-0032). This ticket **assigns bought faces** to the cast instead of
+drawing them. The files come from the private assets repo (0110) and use
+0711's PNG format (48×48 faces, 5 px per pixel).
 
-**Changed 2026-09-30:** Nick also wants bought battle sprites (0413), and
-CaptainSkolot sells none, so 0021 may pick a different artist who sells both.
-The mapping below is for CaptainSkolot. If 0021 picks someone else, 0021
-rewrites it for the new packs before this ticket starts.
+## First mapping (from the store previews, 2026-09-30)
 
-## First mapping (from the store previews, 2026-09-28)
+Made from a few preview images before anything was bought. Previews show
+only some of the faces, small, so recheck everything on the real files.
 
-Claude went through every pack in the bundle's store pages before Nick
-bought it. Previews are small, so recheck everything on the real files.
-
-**What the bundle has:**
-- **15 one-character packs** with 9–12 expressions each: Knight, Women
-  Knight, Bearded Knight, Wise Old Knight (grey beard), Man Peasant, Woman
-  Peasant, Blacksmith (9), Lumberjack, Wise Wizard, Old Villager, Blond
-  Villager (man and woman), Medieval Lady (black hair, red dress),
-  Merchant, Little Girl. Their sheets show neutral, smiles and laughs, sad,
-  angry, serious, smirk, wink and an open-mouthed shocked face (Nick
-  confirmed the Bearded Knight's bottom-left face reads as surprised).
-- **The Ultimate Medieval Village pack:** 12 characters with **6
-  expressions each and no "surprised"** (some also lack "sad"). The seller's
-  expression lists are on its store page.
-- **Crowd packs** (soldiers, women soldiers, women, vikings, pirates, elves,
-  orcs, "magic heroes" 1–3, Gameboy): one face per character, no
-  expressions. The soldier packs are modern military. Good only for generic
-  portraits.
-- Off-theme packs (cowboys, astronauts, animals, mafia, Christmas, chefs):
-  not used.
+**What the packs have:**
+- **Heroes: A New Beginning** ($24.99): 8 heroes with a face set of **8
+  expressions** each (which 8 isn't stated on the page), a large portrait,
+  a big still battle image and a map sprite. Female Fighter "Child of
+  Destiny", Male Fighter "Hero of Prophecy", Archer "Forest Protector",
+  Witch, Samurai, Dancer, Thief, Dragon Knight (plus an alternative Dragon
+  Knight face).
+- **Heroes 2: Rebellious Souls** ($24.99): the same for 8 more, mostly not
+  human: female dark elf gladiator, male dark elf mercenary, Amazon
+  barbarian, tiefling strider, warforged, female orc, dragonian sorcerer,
+  kitsune miko.
+- **Still battler packs** (Vol.1–5): battle images and map sprites only,
+  **no faces**. Generic enemies have no faces anywhere in the catalogue.
+- **Character Generator EX** ($49.99, early access; also in the $99.99
+  bundle): makes new characters in the same style: a face set with 8
+  expressions, a small animated battle sprite (not a big still image) and a
+  map sprite. Its licence allows generated characters in a sold game.
+  Content is thin so far: few outfits and hairstyles; casters, helmets and
+  glasses are still promised.
 
 **Candidates:**
 
 | Character | Best match | Fit |
 | --------- | ---------- | --- |
-| `retainer` Hollis | Wise Old Knight (12) | Strong, almost as-is |
-| `red_captain` Harl | Bearded Knight or Lumberjack (12), hair and beard recoloured to rust red | Good with a recolour |
-| `lead_m` | Knight (12), already brown-haired | Good face; plate armour instead of the travel coat |
-| `lead_f` | Women Knight (12), recoloured blond → dark chestnut | Good with a recolour; armour again |
-| `poacher` Aske | Man Peasant (12) recoloured to straw blond, or the village peasant boy (6) | Good with a recolour; no braids or hood |
-| `rival` Dace | Village Young Knight (dark hair, dark armour) | Looks right; missing `sad` and `surprised` |
-| `keeper` Piers | Village Monk (bald, bearded), robe recoloured grey | Weak: bald rather than thinning hair; no `surprised` |
-| `heretic` Rue | Medieval Lady (12, black hair, red) | Weak: a refined noble, not a hunched, squinting rogue |
-| `sergeant` Tamsin | Village Seamstress (auburn) at best | **Gap** |
-| `vowmaster` Crane | Wise Wizard (big white beard) at best | **Gap** (he's clean-shaven, with a hood and spectacles) |
-| `soldier` (generic) | Any vikings or men-soldier face | Fine (one expression is enough) |
+| `lead_m` | Male Fighter "Hero of Prophecy" (sword, long coat) | Good; recolour hair if needed |
+| `lead_f` | Female Fighter "Child of Destiny" | Good; check it matches `lead_m`'s costume and colours |
+| `poacher` Aske | Archer "Forest Protector" | Partial: check he doesn't read as an elf |
+| `rival` Dace | Samurai (dark hair) or the dark elf mercenary | Partial |
+| `heretic` Rue | **Witch** (decided in 0021: face and combat picture match) | Rewrite her portrait brief to the Witch's look, hair recoloured as needed |
+| `retainer` Hollis | none (old, broad, mail coif) | **Gap** |
+| `red_captain` Harl | none (big, bearded, kettle helm) | **Gap** |
+| `keeper` Piers | none (round, balding, grey hood) | **Gap** |
+| `sergeant` Tamsin | none (cavalry cape, riding cap) | **Gap** |
+| `vowmaster` Crane | none (hood up, spectacles) | **Gap** |
+| `soldier` (generic) | none | **Gap** |
 
-Later chapters: `king` could be the village Knight Commander or the Old
-Villager (partial); `sister` Wren could be the village peasant girl
-(partial).
+**Gaps** (Nick, 0021: "probably A or D"): first the Character Generator EX
+once Nick has bought it (its licence was checked in 0021: commercial use is
+fine); in combat a generated character uses its class's still image;
+otherwise, or on top, Claude's small
+edits to a bought face. Nick also allows **rewriting a character's written
+look to fit the bought art** (his words: "we can rewrite Rue's physical
+description as needed once we buy the art"): update the character sheet's
+portrait brief in the same PR, and list each rewrite in the PR for Nick.
+No commissions (Nick vetoed them).
+
+**Face and combat picture match** (0021): a character with their own hero art
+uses it for both; everyone else uses their class's combat picture,
+recoloured to their colours (0413).
 
 **What Claude can and can't do to bought faces:** recolour hair, clothes and
 eyes (a palette swap of a few exact colours), and small pixel edits (a scar,
 a missing `surprised` made from a neutral face, a spectacle rim). Not new
 hairstyles, removing beards, or new clothes: that's redrawing, and Nick
-doesn't want Claude's art. Gaps are resolved per Nick's answer to 0021
-question 3.
+doesn't want Claude's art.
 
 ## Nick input
 
 **Sign-off:** for each Chapter 1 speaker, Claude proposes two or three
 candidate faces from the bought packs (rendered in the dialogue screen,
 neutral plus one other expression), and Nick picks one or asks for others.
-Characters no pack fits follow Nick's answer to 0021 question 3.
+Characters no pack fits are handled as in *Gaps* above.
 
 ## Scope
 

@@ -6,7 +6,11 @@ JavaScript, images, audio, SDK files) must be listed here, per
 checked automatically by `cargo-deny` and listed in the generated
 `THIRD_PARTY_LICENSES.html` in release packages.
 
-Only licenses allowed by ADR-0013 (amended by ADR-0027) are permitted. The
+Only licenses allowed by ADR-0013 (amended by ADR-0027 and ADR-0032) are
+permitted. **Bought art** (ADR-0032) is listed here too, with the seller, the
+licence text as quoted on the store page, the date bought, whether it's
+AI-assisted, and *private*: its files and licence text live in the private
+assets repo (0110), never in this public repo. The
 license text must be committed next to the item. The music and sounds are
 also listed, with tags, in [`assets/audio/audio.ron`](assets/audio/audio.ron);
 the game's credits screen (0808) reads them from there.

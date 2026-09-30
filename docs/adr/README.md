@@ -21,12 +21,12 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0010](0010-ticket-workflow-and-model-routing.md) | Ticket workflow and model routing | Accepted |
 | [0011](0011-story-authoring-pipeline.md) | Story authoring pipeline with LLMs | Accepted |
 | [0012](0012-visual-style.md) | Visual style: cells, tiles, color, portraits | Superseded by ADR-0018 |
-| [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted; art/audio licenses amended by ADR-0027 |
+| [0013](0013-licensing-and-third-party-policy.md) | Licensing and third-party policy | Accepted; art/audio licenses amended by ADR-0027; bought art allowed by ADR-0032 |
 | [0014](0014-ci-gates-skip-docs-only-prs.md) | CI quality gates, skipping heavy jobs on docs-only PRs | Accepted |
 | [0015](0015-input-actions-and-keymap-layouts.md) | Input actions, keymap layouts, virtual cursor | Accepted; per-key overrides superseded by ADR-0031 |
 | [0016](0016-font-atlas-and-glyph-blitting.md) | Font atlas format and glyph blitting | Accepted |
 | [0017](0017-screen-stack-and-frame-driver.md) | Screen stack, frame driver and test Harness | Accepted |
-| [0018](0018-visual-style-v2.md) | Visual style v2 (after Nick's look sign-off) | Accepted; browsing cursor superseded by ADR-0024, acted-label rule by ADR-0029 |
+| [0018](0018-visual-style-v2.md) | Visual style v2 (after Nick's look sign-off) | Accepted; browsing cursor superseded by ADR-0024, acted-label rule by ADR-0029, portraits in part by ADR-0032 |
 | [0019](0019-simulation-rng-and-serde-in-core.md) | In-crate PCG32 simulation RNG; serde derives in `core` | Accepted |
 | [0020](0020-battle-state-serialisation.md) | Battle state saves its own data, not the content tables | Accepted |
 | [0021](0021-skill-effects-as-data.md) | Skill effects are data, gathered into combat modifiers | Accepted |
@@ -40,5 +40,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0029](0029-acted-units-keep-label-case.md) | Acted units are dimmed only; the label keeps its case | Accepted |
 | [0030](0030-battle-dialogue-triggers.md) | Dialogue triggers are battle data; their scenes are events at their moment | Accepted |
 | [0031](0031-player-key-bindings.md) | Player key bindings: slots, per-layout config, fixed Esc/Delete | Accepted |
+| [0032](0032-bought-art.md) | Bought art is allowed; audio stays free | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

@@ -1,6 +1,6 @@
 # ADR-0013: Licensing and third-party policy
 
-- **Status:** Accepted; the art/audio license list is amended by ADR-0027 (adds CC-BY-3.0)
+- **Status:** Accepted; the art/audio license list is amended by ADR-0027 (adds CC-BY-3.0); superseded in part by ADR-0032 (bought art allowed, and bought portraits and battle art instead of original ones)
 - **Date:** 2026-09-25
 - **Related tickets:** 0101, 0103, 0107, 0203, 0206, 0903
 
