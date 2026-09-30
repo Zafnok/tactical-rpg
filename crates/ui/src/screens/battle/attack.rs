@@ -413,6 +413,17 @@ mod tests {
         assert_eq!(Targeting::new(&s, at(&s, p(7, 2)), &none, None), None);
     }
 
+    /// Cycles `t` through its actives (at most a few) until `active` is
+    /// chosen.
+    fn pick(t: &mut Targeting, s: &BattleState, active: Option<&SkillId>) {
+        for _ in 0..8 {
+            if t.active.as_ref() != active {
+                t.cycle_skill(true, s);
+            }
+        }
+        assert_eq!(t.active.as_ref(), active);
+    }
+
     /// The skirmish with the archer (unit 3) knowing Long Shot at (8, 4) and
     /// brigand 4 moved to `brigand`.
     fn archer_vs(c: &crate::screen::Ctx, brigand: Pos) -> BattleState {
@@ -447,9 +458,12 @@ mod tests {
         let mut t = Targeting::new(&s, sel, &choices[0], None).unwrap();
         assert_eq!(t.active, Some(long.clone()));
         assert!(t.targets.contains(&brigand));
-        while t.target() != brigand {
-            t.cycle(true, &s);
+        for _ in 0..t.targets.len() {
+            if t.target() != brigand {
+                t.cycle(true, &s);
+            }
         }
+        assert_eq!(t.target(), brigand);
         // The only way to attack it is with the active: cycling skills
         // never lands on the plain attack.
         for _ in 0..4 {
@@ -457,9 +471,7 @@ mod tests {
             assert_eq!(t.target(), brigand);
             assert!(t.active.is_some());
         }
-        while t.active != Some(long.clone()) {
-            t.cycle_skill(true, &s);
-        }
+        pick(&mut t, &s, Some(&long));
         let mut after = s.clone();
         let events = after.apply(&t.command()).unwrap();
         assert!(!events.is_empty());
@@ -478,14 +490,10 @@ mod tests {
         assert_eq!((t.target(), t.active.clone()), (UnitId(4), None));
         let plain = t.targets.clone();
         let long = Some(SkillId::new("long_shot"));
-        while t.active != long {
-            t.cycle_skill(true, &s);
-        }
+        pick(&mut t, &s, long.as_ref());
         assert_eq!(t.target(), UnitId(4));
         assert!(t.targets.len() > plain.len());
-        while t.active.is_some() {
-            t.cycle_skill(true, &s);
-        }
+        pick(&mut t, &s, None);
         assert_eq!(t.targets, plain);
         // Without Long Shot known, a target beyond range isn't offered.
         let s = skirmish(&c, 20);
