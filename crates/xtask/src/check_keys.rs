@@ -5,11 +5,12 @@
 //! It scans the non-test Rust in `crates/{ui,app,content}/src` for key types
 //! (`Key::`, `Chord::`) and macroquad key reads (`KeyCode`, `is_key_down`,
 //! …) outside the files that make up the key pipeline, and scans string
-//! literals there plus the `.ron` strings in `assets/` for key names shown
-//! to the player (`"f select"`, `"press f"`, `"[F]"`, `"Space"`, `"arrows"`,
-//! …). Dialogue scripts (`.dlg`) are prose, so there only an instruction to
-//! press a key (`press f`, `hold Shift`), a `Shift+` chord, `WASD` or `[F]`
-//! counts; "Escape!" or "arrows" as plain words are fine.
+//! literals there for key names shown to the player (`"f select"`,
+//! `"press f"`, `"[F]"`, `"Space"`, `"arrows"`, …). Text in `assets/` (`.ron`
+//! strings: tips, item and skill descriptions; `.dlg` dialogue) is prose, so
+//! there only an instruction to press a key (`press f`, `hold Shift`), a
+//! `Shift+` chord, `WASD` or `[F]` counts; "Escape!" or "fires arrows" as
+//! plain words are fine.
 //!
 //! It is a line-based scanner, not a parser: comments are ignored, and a
 //! `#[cfg(test)]` item (usually `mod tests { … }`) is skipped by bracket
@@ -183,12 +184,14 @@ pub fn scan_rust(rel: &str, source: &str) -> Vec<String> {
     errors
 }
 
-/// Scans one RON data file's string literals.
+/// Scans one RON data file's string literals with the [`prose_names_key`]
+/// rule: they are player-facing prose (tips, item and skill descriptions),
+/// where "fires arrows" or "Shift the odds" are just words.
 pub fn scan_ron(rel: &str, source: &str) -> Vec<String> {
     let mut errors = Vec::new();
     for (i, line) in lex(source).iter().enumerate() {
         for text in &line.strings {
-            if let Some(why) = names_key(text) {
+            if let Some(why) = prose_names_key(text) {
                 errors.push(format!("{rel}:{}: text {why}: {text:?} — {HINT}", i + 1));
             }
         }
@@ -197,8 +200,7 @@ pub fn scan_ron(rel: &str, source: &str) -> Vec<String> {
 }
 
 /// Scans one `.dlg` dialogue script: every line but `#` comments, with the
-/// narrower [`prose_names_key`] rule, since dialogue is prose where
-/// "Escape!" or "a volley of arrows" are just words.
+/// [`prose_names_key`] rule like `.ron` text.
 pub fn scan_dlg(rel: &str, source: &str) -> Vec<String> {
     let mut errors = Vec::new();
     for (i, line) in source.lines().enumerate() {
@@ -803,8 +805,9 @@ let d = is_key_down_fast(x);
 
     #[test]
     fn ron_strings_and_dlg_lines_are_scanned() {
-        let ron = "(\n  // press f here is a comment\n  text: \"Press {Confirm} to go on\",\n  bad: \"Press f to go on\",\n)";
+        let ron = "(\n  // press f here is a comment\n  text: \"Press {Confirm} to go on\",\n  bad: \"Press f to go on\",\n  bow: \"Fires arrows. Escape is harder.\",\n  art: \"Shift the odds: Enter a stance.\",\n)";
         let errs = scan_ron("assets/data/tips.ron", ron);
+        // Only the instruction to press a key; key words as prose pass.
         assert_eq!(errs.len(), 1, "{errs:?}");
         assert!(
             errs[0].starts_with("assets/data/tips.ron:4: "),

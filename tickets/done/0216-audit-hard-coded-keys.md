@@ -163,11 +163,14 @@ Deviations:
   word (`"f select"`), because keys print lowercase and capitals are names
   (`"Battle Theme B for RPG"` in `audio.ron` was a false positive).
   `"press F"` and `"[F]"` are still caught in any case.
-- `.dlg` dialogue scripts get a narrower rule than code and RON strings,
-  because they're prose: a line fails only when it tells the player to
+- Text in `assets/` (`.ron` strings such as tips and item/skill
+  descriptions, and `.dlg` dialogue) gets a narrower rule than Rust string
+  literals, because it's prose: a line fails only when it tells the player to
   press a key (`press`/`hit`/`tap`/`hold` + a letter, a key name or F1–F12),
   names a `Shift+` chord or `WASD`, or has a bracketed letter (`[F]`).
-  "Escape while you can!", "a volley of arrows" or "Plan B" pass.
+  "Escape while you can!", "fires arrows" or "Plan B" pass. The strict
+  rule (any key word, `"f select"`-style hints) stays for Rust strings,
+  where help bars are built.
 - The 0705 merge left a stale `tickets/open/0905-…` next to
   `tickets/done/0905-…`, which failed ticket-lint on `main` and in this
   branch's tests. Removed the stale open copy in its own commit.

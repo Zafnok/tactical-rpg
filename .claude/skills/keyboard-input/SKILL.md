@@ -36,13 +36,14 @@ picture item there sits under a `// check-keys: keyboard picture` comment
 may use `KeyCode` or macroquad's key reads. Anywhere else is a bug.
 
 `cargo xtask check-keys` enforces this (CI `tickets` job and `run-gates`).
-It scans `crates/{ui,app,content}/src` and the `.ron` strings in `assets/`
-(except `keymap.ron`) for key types, macroquad key reads, and player text
-naming a key (`"f select"`, `"press f"`, `"[F]"`, `Space`, `Esc`, `Escape`,
-`Enter`, `Shift`, `arrows`, `WASD`). Dialogue belongs in `.dlg` scripts,
-not source; those are prose, so they only fail on an instruction to press
-a key (`press f`, `hold Shift`, `hit Space`), a `Shift+` chord, `WASD` or
-`[F]`. Plain words like "Escape!" or "arrows" are fine there. Comments are
+It scans `crates/{ui,app,content}/src` for key types, macroquad key
+reads, and string literals naming a key (`"f select"`, `"press f"`,
+`"[F]"`, `Space`, `Esc`, `Escape`, `Enter`, `Shift`, `arrows`, `WASD`).
+Text in `assets/` (`.ron` strings except `keymap.ron`: tips, item and skill
+descriptions; `.dlg` dialogue) is prose, so it only fails on an
+instruction to press a key (`press f`, `hold Shift`, `hit Space`), a
+`Shift+` chord, `WASD` or `[F]`. Plain words like "Escape!" or "fires
+arrows" are fine there. Comments are
 not scanned, but doc comments should still name the action, not the key.
 Even the layout picker's own keys are data: the `layout_picker` section of
 `assets/data/keymap.ron`.
