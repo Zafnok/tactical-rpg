@@ -241,11 +241,15 @@ sprites.
   (0706). A missing one may be made by a small edit.
 - **Characters no bought face fits** (in Chapter 1 likely Hollis, Harl,
   Piers and Crane): first Mega Tiles' **Character Generator EX** ($49.99,
-  early access), which makes new characters in the same style with 8
-  expressions, a battle image and a map sprite, *if its licence allows
-  generated characters in a sold game* (Claude checks before Nick buys).
-  Otherwise, or on top, Claude's small edits. Commissioning, or changing a
-  character's look to fit a face (a story change), needs asking Nick first.
+  or in the $99.99 "2025 Bundle Sale"), a Windows program that makes new
+  characters in the same style: a face with 8 expressions, a small animated
+  battle sprite and a map sprite. Its licence (the same text as the packs)
+  allows the characters it makes in a sold game. It makes **no big still
+  battle image**, so in combat a generated character uses its class's
+  still image. It's early access (few outfits; casters, helmets and glasses
+  still promised), so some faces may not be possible yet. Otherwise, or on
+  top, Claude's small edits. Commissioning, or changing a character's look
+  to fit a face (a story change), needs asking Nick first.
 - **Where portraits appear** (unchanged):
   - **Conversations:** two full portraits, speaker on the left at full
     brightness with a double-line frame, listener dimmed on the right, name

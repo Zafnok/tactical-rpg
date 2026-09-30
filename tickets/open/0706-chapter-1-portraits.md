@@ -43,8 +43,12 @@ only some of the faces, small, so recheck everything on the real files.
   kitsune miko.
 - **Still battler packs** (Vol.1–5): battle images and map sprites only,
   **no faces**. Generic enemies have no faces anywhere in the catalogue.
-- **Character Generator EX** ($49.99, early access): makes new characters in
-  the same style with 8 expressions, a battle image and a map sprite.
+- **Character Generator EX** ($49.99, early access; also in the $99.99
+  bundle): makes new characters in the same style: a face set with 8
+  expressions, a small animated battle sprite (not a big still image) and a
+  map sprite. Its licence allows generated characters in a sold game.
+  Content is thin so far: few outfits and hairstyles; casters, helmets and
+  glasses are still promised.
 
 **Candidates:**
 
@@ -62,9 +66,10 @@ only some of the faces, small, so recheck everything on the real files.
 | `vowmaster` Crane | none (hood up, spectacles) | **Gap** |
 | `soldier` (generic) | none | **Gap** |
 
-**Gaps** (Nick, 0021: "probably A or D"): first the Character Generator EX,
-*after* Claude has confirmed its licence allows generated characters in a
-sold game and Nick has bought it; otherwise, or on top, Claude's small
+**Gaps** (Nick, 0021: "probably A or D"): first the Character Generator EX
+once Nick has bought it (its licence was checked in 0021: commercial use is
+fine); in combat a generated character uses its class's still image;
+otherwise, or on top, Claude's small
 edits to a bought face. Commissioning, or changing a character's look to fit
 a face (a story change), needs asking Nick first.
 

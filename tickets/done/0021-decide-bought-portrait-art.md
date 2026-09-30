@@ -221,8 +221,25 @@ anything.
   Brigand stand-in is the orc axe fighter, but Chapter 1's bandits **stay
   human in the story**. Nick accepted "3A" without choosing between that
   and making the bandits orcs.
-- **Before buying:** recheck prices and licence text (nothing was on sale on
-  2026-09-30; the Mega Tiles bundle is $99.99 for 37 packs), and check the
-  Character Generator's licence for generated characters.
+- **Before buying:** recheck prices and licence text. Nothing was on sale on
+  2026-09-30.
+- **Checked after Nick asked (2026-09-30):**
+  - **Bundle:** the "2025 Bundle Sale" (<https://itch.io/s/57158/2025-bundle-sale>)
+    is $99.99 for all 37 Mega Tiles products, with no end date shown.
+    - It includes both Heroes packs, Character Generator EX, battler packs
+      Vol.1–5, Gods and Gallants, Epic Monsters, Battle Backs Vol.1, the
+      NPC map-sprite packs and the tilesets.
+    - What was planned (Heroes 1 and 2, Vol.1, Vol.5, Generator EX) costs
+      $129.95 bought separately.
+  - **Generator EX:** Windows and Linux, early access.
+    - Exports a face set (8 expressions), a small animated RPG Maker battle
+      sprite and a map sprite. It makes no big still battle image.
+    - Same licence text as the packs, so generated characters may go in a
+      sold game.
+    - Shipping the generator inside our game (players making custom
+      characters) is redistribution. That's forbidden without Mega Tiles'
+      permission, and the page says nothing about allowing it.
+    - Updates are slow; the developer went silent for about a year in
+      2024–25.
 - No follow-up tickets created: the open questions belong to 0413, 0706
   and 1006, which were updated.
