@@ -54,6 +54,37 @@ pub fn targets_with(
     found.into_iter().map(|(_, id)| id).collect()
 }
 
+/// Whether some weapon of `unit` can attack `target` from `from` (0428).
+pub fn can_hit(state: &BattleState, unit: UnitId, from: Pos, target: UnitId) -> bool {
+    (0..WEAPON_SLOTS).any(|slot| {
+        state
+            .preview_attack(unit, from, &attack(target, slot))
+            .is_ok()
+    })
+}
+
+/// The tile `sel`'s unit attacks `target` from when the player points at it
+/// (0428): the path's end if it can already hit from there, else the
+/// stoppable tile that can, cheapest first, then the shortest path, then
+/// lowest `(y, x)`. `None` if no tile can.
+pub fn attack_tile(state: &BattleState, sel: &Selection, target: UnitId) -> Option<Pos> {
+    let end = sel.dest();
+    if sel.reach.is_stoppable(end) && can_hit(state, sel.unit, end, target) {
+        return Some(end);
+    }
+    sel.reach
+        .stoppable()
+        .iter()
+        .filter(|&t| can_hit(state, sel.unit, t, target))
+        .filter_map(|t| {
+            let cost = sel.reach.cost(t)?;
+            let len = sel.reach.path_to(t)?.len();
+            Some((cost, len, t.y, t.x, t))
+        })
+        .min_by_key(|&(cost, len, y, x, _)| (cost, len, y, x))
+        .map(|(.., t)| t)
+}
+
 /// Everyone the weapon in `slot` could attack plain or with any combat
 /// active, in `(y, x)` order.
 fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec<UnitId> {
@@ -171,7 +202,7 @@ impl Targeting {
         choice: &WeaponChoice,
         weapons: Option<(Menu, Vec<WeaponChoice>)>,
     ) -> Option<Self> {
-        choice.targets.first()?;
+        let wanted = *choice.targets.first()?;
         let (unit, dest) = (sel.unit, sel.dest());
         // Plain if the weapon reaches anyone; else the first active that
         // extends its reach to someone.
@@ -184,7 +215,10 @@ impl Targeting {
         } else {
             (None, plain)
         };
-        let first = *targets.first()?;
+        // The choice's first target is the one to open on (the enemy aimed
+        // at, 0428), if the attack reaches it; cycling keeps `(y, x)` order.
+        let index = targets.iter().position(|&t| t == wanted).unwrap_or(0);
+        let first = *targets.get(index)?;
         let preview = state
             .preview_attack(unit, dest, &attack_with(first, choice.slot, active.clone()))
             .ok()?;
@@ -192,7 +226,7 @@ impl Targeting {
             sel,
             slot: choice.slot,
             targets,
-            index: 0,
+            index,
             active,
             preview,
             weapons,

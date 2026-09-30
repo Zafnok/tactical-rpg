@@ -96,6 +96,24 @@ split movement for anyone.
 5. The unit is now **done** (`acted = true`, drawn dimmed) until the start of
    its side's next phase.
 
+**Pointing at an enemy** (Nick, 2026-09-29, ticket 0428). With a unit
+selected, moving the cursor onto an enemy it can attack after moving aims the
+path at the tile it will attack from, and Confirm attacks straight away
+instead of going through the action menu.
+
+> "moving cursor from unit selected to an enemy in attack range should move it
+> to an appropriate tile and open the menu to select an attack / art that is
+> allowed w/in range."
+
+- **Which tile:** keep the arrow the player drew if it already ends on a tile
+  the unit can attack the enemy from; otherwise the arrow jumps to the closest
+  such tile (cheapest move; *Claude's tie-break:* shortest path, then topmost,
+  then leftmost).
+- **What opens:** after Confirm the unit walks there, then the weapon list
+  (only weapons that reach that enemy; skipped if just one), then the attack
+  forecast on that enemy. Cancel goes back to the normal action menu at that
+  tile, and Cancel again to the path.
+
 **Skill-granted movement.** Specific combat skills may give a unit movement
 *after* its action, like Fire Emblem's bow skill that steps the archer 1 tile
 away after attacking. These are not a general rule: each skill states exactly
