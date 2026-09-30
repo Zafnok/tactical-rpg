@@ -77,7 +77,7 @@ hard beats.
 | Age | **18–25** | Nick |
 | Gender | **Player chooses** (male/female) at New Game | Nick |
 | Personality | **Persona-style lead.** Defined background, look and situation; few spoken lines; the player shapes the personality through reply choices | Nick |
-| Name | **Player can rename** the lead, with a default first name (**Rowan**, placeholder); the family name **Veyne** is fixed (Nick, 0701 gate 1: "A") | Nick |
+| Name | **Player can rename** the lead, with a default first name (**Ellery**, placeholder: Claude's pick after Nick turned down Rowan on 2026-09-30, "lame name, pick something better"); the family name **Veyne** is fixed (Nick, 0701 gate 1: "A") | Nick |
 
 ### Rules for writing the lead
 
@@ -90,6 +90,13 @@ hard beats.
    the plot**, recruit or lose units, or change the ending. Budget: at most
    about 1–3 choice points per chapter (*tunable*). Players should feel they
    have a voice without every scene becoming a menu.
+   When a reaction ends, **the script decides the transition** back into the
+   scene (Nick, 0708, 2026-09-30: "I think the written script should
+   determine reaction transitions"): portraits stay as the reaction left
+   them, and the script sets any expression change. While the replies are
+   up, the line being answered stays on screen; the picked reply isn't
+   repeated. Back does nothing at a choice, and skipping a scene stops at
+   each choice (Nick agreed, same day).
 3. **The lead's personality is never fixed by the script.** No cruelty, jokes
    or strong opinions that the player didn't pick. Their *situation* (exiled,
    wronged, carrying a title they lost) is defined, and gives the story weight.

@@ -28,6 +28,7 @@ test_archer: {lead}! You came back for us.
 * blunt: Get moving. We're not safe here.
   test_archer: Right. Moving.
 @endchoice
+@right test_archer neutral
 lead: Let's move.
 > {lead} tightens {their} grip on the sword. {They} won't lose anyone today.
 @end

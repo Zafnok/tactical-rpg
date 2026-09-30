@@ -13,9 +13,9 @@ fn id(s: &str) -> CharacterId {
     CharacterId(s.into())
 }
 
-/// A lead named Rowan, male.
+/// A lead named Ellery, male.
 fn lead() -> LeadProfile {
-    LeadProfile::new("Rowan", trpg_core::LeadGender::Male)
+    LeadProfile::new("Ellery", trpg_core::LeadGender::Male)
 }
 
 /// Plays `scene` with [`lead`].
@@ -125,12 +125,12 @@ fn walks_the_test_scene() {
     let lord = |e| Some(portrait("test_lord", e));
     let knight = Some(portrait("test_knight", "angry"));
     let archer = |e| Some(portrait("test_archer", e));
-    let rowan = Some(portrait("lead", "neutral"));
+    let ellery = Some(portrait("lead", "neutral"));
     let came_back = says(
-        rowan.clone(),
+        ellery.clone(),
         archer("surprised"),
         Side::Right,
-        "Rowan! You came back for us.",
+        "Ellery! You came back for us.",
     );
     assert_eq!(
         views,
@@ -173,27 +173,22 @@ fn walks_the_test_scene() {
                 ..came_back
             },
             says(
-                rowan.clone(),
+                ellery.clone(),
                 archer("happy"),
                 Side::Right,
                 "You do. It's why we follow you."
             ),
-            // Rejoined: the archer is back to the expression from before.
-            says(
-                rowan.clone(),
-                archer("surprised"),
-                Side::Left,
-                "Let's move."
-            ),
+            // Rejoined: the script sets the archer's expression.
+            says(ellery.clone(), archer("neutral"), Side::Left, "Let's move."),
             narrates(
-                rowan.clone(),
-                archer("surprised"),
-                "Rowan tightens his grip on the sword. He won't lose anyone today."
+                ellery.clone(),
+                archer("neutral"),
+                "Ellery tightens his grip on the sword. He won't lose anyone today."
             ),
             // Finished: the last portraits stay, no text.
             Shown {
-                left: rowan,
-                right: archer("surprised"),
+                left: ellery,
+                right: archer("neutral"),
                 speaker: None,
                 text: None,
                 caption: Some(CAPTION.into()),
@@ -352,7 +347,7 @@ fn a_choice_waits_for_a_reply() {
     assert_eq!(v.text, None);
     assert_eq!(
         v.choices,
-        Some(vec![Cow::from("He goes."), Cow::from("Rowan stays.")])
+        Some(vec![Cow::from("He goes."), Cow::from("Ellery stays.")])
     );
     assert!(player.is_choosing() && !player.is_finished());
     let before = player.clone();
@@ -381,10 +376,10 @@ fn a_choice_without_replies_is_passed_over() {
     assert_eq!(player.current().text.as_deref(), Some("after"));
 }
 
-/// At the rejoin, portraits take back the expressions from before the
-/// choice; someone who came on during it shows neutral.
+/// At the rejoin, portraits stay as the reaction left them: the script,
+/// not the player, decides any change.
 #[test]
-fn the_rejoin_restores_expressions() {
+fn the_reaction_leaves_the_portraits_as_they_are() {
     let place = |side, who: &str, expression: &str| Step::Place {
         side,
         character: id(who),
@@ -411,21 +406,18 @@ fn the_rejoin_restores_expressions() {
     });
     player.advance();
     player.choose(0);
+    let during = shown(player.current());
+    player.advance();
     let v = shown(player.current());
+    assert_eq!(v.text.as_deref(), Some("after"));
     assert_eq!(
-        (v.left, v.right),
+        (v.left.clone(), v.right.clone()),
         (
             Some(portrait("b", "happy")),
             Some(portrait("c", "surprised"))
         )
     );
-    player.advance();
-    let v = shown(player.current());
-    assert_eq!(v.text.as_deref(), Some("after"));
-    assert_eq!(
-        (v.left, v.right),
-        (Some(portrait("b", "angry")), Some(portrait("c", "neutral")))
-    );
+    assert_eq!((during.left, during.right), (v.left, v.right));
 }
 
 /// Skipping stops at each choice, and at the end.
@@ -436,7 +428,7 @@ fn skipping_stops_at_choices() {
     assert!(player.is_choosing());
     assert_eq!(
         player.current().text.as_deref(),
-        Some("Rowan! You came back for us.")
+        Some("Ellery! You came back for us.")
     );
     player.skip_to_choice();
     assert!(player.is_choosing());

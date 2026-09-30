@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub const LEAD_ID: &str = "lead";
 /// The lead's default first name (a placeholder; the family name Veyne is
 /// fixed), which the player can change at New Game.
-pub const DEFAULT_NAME: &str = "Rowan";
+pub const DEFAULT_NAME: &str = "Ellery";
 /// Longest lead name, in characters.
 pub const MAX_NAME_LEN: usize = 12;
 /// Portrait of the male lead.

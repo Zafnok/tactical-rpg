@@ -72,7 +72,7 @@ None.
 
 1. `assets/data/names.ron`: a map `{ "retainer": "Hollis Marr", "king":
    "Emeric", "place.brennmark": "Brennmark", … }` for every row in
-   `docs/story/names.md` (the lead's default first name `Rowan` goes in as
+   `docs/story/names.md` (the lead's default first name `Ellery` goes in as
    `lead`), plus the test characters' names. Load it in `trpg_content`
    (`names.rs`, `Content::names`), and add it to the all-assets test.
 2. Token syntax: `{n:<id>}`. Ids may contain `.` and `_`. It doesn't collide

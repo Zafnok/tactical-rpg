@@ -66,13 +66,13 @@ fn substitutes_for_both_genders() {
     let text = "{lead} drew {their} sword. {They} swore {they} would \
                 keep it; it was {theirs}. Ask {them}: {they} did it {themself}.";
     assert_eq!(
-        male("Rowan").substitute(text),
-        "Rowan drew his sword. He swore he would keep it; it was his. \
+        male("Ellery").substitute(text),
+        "Ellery drew his sword. He swore he would keep it; it was his. \
          Ask him: he did it himself."
     );
     assert_eq!(
-        female("Rowan").substitute(text),
-        "Rowan drew her sword. She swore she would keep it; it was hers. \
+        female("Ellery").substitute(text),
+        "Ellery drew her sword. She swore she would keep it; it was hers. \
          Ask her: she did it herself."
     );
 }
@@ -89,7 +89,7 @@ fn substitutes_a_custom_name() {
 
 #[test]
 fn leaves_text_without_tokens_alone() {
-    let p = male("Rowan");
+    let p = male("Ellery");
     assert!(matches!(
         p.substitute("No tokens."),
         Cow::Borrowed("No tokens.")
@@ -139,7 +139,7 @@ fn splits_tokens() {
 
 #[test]
 fn round_trips_through_serde() {
-    let p = female("Rowan");
+    let p = female("Ellery");
     let text = ron::to_string(&p).unwrap_or_default();
     let back: LeadProfile = ron::from_str(&text).unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(back, p);

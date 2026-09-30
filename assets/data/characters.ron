@@ -24,8 +24,8 @@
         // name at New Game, so dialogue shows the chosen name and the
         // portrait lead_m or lead_f. Stats are a copy of test_lord's.
         (
-            id: "lead", name: "Rowan", class: "exile", level: 1, is_lord: true,
-            map_label: Some("Ro"),
+            id: "lead", name: "Ellery", class: "exile", level: 1, is_lord: true,
+            map_label: Some("El"),
             talent: Spd,
             base: (19, 6, 1, 7, 7, 4, 3),
             weapon_ranks: [(Sword, D)],

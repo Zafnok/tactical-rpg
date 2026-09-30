@@ -122,7 +122,7 @@ None.
 - `trpg_core::lead`: `LeadProfile { name, gender }`, `LeadGender { Male, Female }`,
   the pronoun table, `portrait_id()` / `portrait_for()` (`lead` → `lead_m` /
   `lead_f`), token substitution, and `longest_len()` for the validator
-  (`MAX_NAME_LEN = 12`, `DEFAULT_NAME = "Rowan"`). Serde round-trip tested.
+  (`MAX_NAME_LEN = 12`, `DEFAULT_NAME = "Ellery"`). Serde round-trip tested.
 - `.dlg`: `@choice` / `* tone: text` / two-space-indented reactions /
   `@endchoice`, parsed into `Step::Choice { options: Vec<ChoiceOption> }`;
   `print_scene` writes them back (round-trip property test includes choices).
@@ -161,21 +161,24 @@ None.
 - `_typos.toml`: allowed `abd`, a run of colour keys in a snapshot grid (same
   as the existing `iy`).
 
-**Claude's starting rules** (the design docs were silent; Nick can veto):
+**Starting rules and Nick's answers** (2026-09-30, recorded in
+`docs/design/setting-and-tone.md`):
 
-1. When the scene rejoins after a reply, each portrait goes back to the
-   expression it had before the choice (someone who came on during the reply
-   shows neutral). Example: Bors looks angry after the blunt reply, then back
-   to how he looked before once the scene goes on.
+1. After a reply's reaction, the portraits stay as the reaction left them and
+   the script sets any expression change (Nick: "I think the written script
+   should determine reaction transitions"; replaces my first rule, which reset
+   expressions automatically).
 2. While the replies are up, the line being answered stays in the text box;
-   the reply the player picks is not repeated as a text box: the other
-   character's reaction plays straight away.
+   the picked reply is not repeated as a text box (Nick: "sure").
 3. Back does nothing while the replies are up, and "Skip scene" stops at each
-   reply choice instead of skipping it.
+   choice (Nick: "sure").
 4. The replies menu sits centred just above the text box; long replies
-   overlap the lower edge of the portrait frames.
-5. Until New Game asks the player (0801), the lead is Rowan, male.
-6. For writers: `{They}` becomes He/She, so verbs agree with he/she
-   ("{They} knows").
+   overlap the lower edge of the portrait frames. Asked Nick with mockups;
+   *Claude's starting rule* until he answers.
+5. The lead's default first name is **Ellery** (Nick turned down Rowan:
+   "lame name, pick something better"; still renameable). Until New Game asks
+   the player (0801), the lead is Ellery, male (*Claude's starting rule*).
+6. Writers: `{They}` becomes He/She, so verbs agree with he/she. Claude
+   writes all scripts (Nick: "I'm not writing anything, that's all you").
 
 **Follow-ups:** none created.

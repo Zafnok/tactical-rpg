@@ -26,7 +26,7 @@ any time.**
 
 | Id | Current name | Who |
 | -- | ------------ | --- |
-| `lead` | *(player's choice)*, default **Rowan** · family name **Veyne** | The lead. First name chosen by the player; the family name is fixed text (most people just say "Veyne") |
+| `lead` | *(player's choice)*, default **Ellery** · family name **Veyne** | The lead. First name chosen by the player; the family name is fixed text (most people just say "Veyne") |
 | `retainer` | Hollis Marr | Old captain of House Veyne's guard; Dace's and Wren's father |
 | `sergeant` | Tamsin Rook | Cavalry sergeant of the Unpaid |
 | `poacher` | Aske | Brennish refugee archer |

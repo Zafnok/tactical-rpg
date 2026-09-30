@@ -7,10 +7,6 @@ use std::borrow::Cow;
 use trpg_content::{ChoiceOption, Scene, Side, Step};
 use trpg_core::{CharacterId, LeadProfile};
 
-/// The expression a character who came on during a reply's reaction shows
-/// once the scene rejoins (every portrait has it).
-const REJOIN_EXPRESSION: &str = "neutral";
-
 /// A character standing on one side of the screen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Placed {
@@ -78,9 +74,10 @@ enum Showing {
     Finished,
 }
 
-/// A reply being played: its reaction, and the expressions to restore when
-/// the scene rejoins.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A reply being played: its reaction. When the reaction ends the scene
+/// goes on after the choice, with the portraits as the reaction left them
+/// (the script sets any expression change for the rejoin).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Reaction {
     /// The scene step of the `Choice`.
     choice: usize,
@@ -88,8 +85,6 @@ struct Reaction {
     option: usize,
     /// The next reaction step.
     next: usize,
-    /// Who stood on screen when the choice opened.
-    before: [Option<Placed>; 2],
 }
 
 /// Plays a scene: each [`advance`](Self::advance) moves to the next text
@@ -213,7 +208,6 @@ impl DialoguePlayer {
             choice: index,
             option,
             next: 0,
-            before: [self.left.clone(), self.right.clone()],
         });
         self.step_on();
     }
@@ -251,7 +245,8 @@ impl DialoguePlayer {
                             return;
                         }
                     }
-                    None => self.rejoin(),
+                    // The reaction is over: on with the scene.
+                    None => self.reaction = None,
                 }
                 continue;
             }
@@ -277,25 +272,6 @@ impl DialoguePlayer {
             if self.apply(&step, at) {
                 return;
             }
-        }
-    }
-
-    /// Ends the reaction being played: each portrait takes back the
-    /// expression it had before the choice ([`REJOIN_EXPRESSION`] for a
-    /// character who came on during it), so every reply leaves the same
-    /// screen.
-    fn rejoin(&mut self) {
-        let Some(r) = self.reaction.take() else {
-            return;
-        };
-        for p in [&mut self.left, &mut self.right].into_iter().flatten() {
-            let before = r
-                .before
-                .iter()
-                .flatten()
-                .find(|b| b.character == p.character);
-            p.expression =
-                before.map_or_else(|| REJOIN_EXPRESSION.to_owned(), |b| b.expression.clone());
         }
     }
 

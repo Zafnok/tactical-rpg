@@ -108,7 +108,7 @@ fn skipping_asks_first() {
     assert!(row(&h, 21).contains(" Test Knight "));
     // Yes: it skips to the reply choice; after that, to the end.
     h.keys("d f");
-    assert!(row(&h, 23).contains("Rowan! You came back for us."));
+    assert!(row(&h, 23).contains("Ellery! You came back for us."));
     h.keys("f d f");
     assert_eq!(h.screens(), ["title", "debug_menu"]);
 }
@@ -195,7 +195,7 @@ fn at_the_choice() -> Harness {
 #[test]
 fn three_reply_choice_snapshot() {
     let h = at_the_choice();
-    assert!(row(&h, 23).contains("Rowan! You came back for us."));
+    assert!(row(&h, 23).contains("Ellery! You came back for us."));
     assert_snapshot!(h.snapshot());
 }
 
@@ -218,7 +218,7 @@ fn skipping_stops_at_the_choice() {
     let mut h = full_screen();
     h.keys("d f");
     assert_eq!(h.top_screen(), "dialogue");
-    assert!(row(&h, 23).contains("Rowan! You came back for us."));
+    assert!(row(&h, 23).contains("Ellery! You came back for us."));
     // Pick the blunt reply, then skip the rest.
     h.keys("Up f d f");
     assert_eq!(h.screens(), ["title", "debug_menu"]);
