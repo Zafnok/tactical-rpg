@@ -886,6 +886,13 @@ let d = is_key_down_fast(x);
     }
 
     #[test]
+    fn r_ending_an_identifier_does_not_start_a_raw_string() {
+        // `abr"…"` is identifier `abr` then an ordinary string, unlike `br"…"`.
+        let lines = lex(r#"abr"a\"b"; br"c\";"#);
+        assert_eq!(lines[0].strings, vec!["a\"b".to_owned(), r"c\".to_owned()]);
+    }
+
+    #[test]
     fn nested_block_comments_close() {
         let lines = lex("/* a /* b */ Key::F */ let x = Key::G;");
         assert_eq!(lines[0].code.trim(), "let x = Key::G;");
