@@ -39,15 +39,8 @@ fn embedded_chapters_and_new_game_load() {
 #[test]
 fn chapter_errors() {
     let c = content();
-    let check = |def: &ChapterDef| {
-        messages(check_chapter(
-            "c.ron",
-            "t",
-            def,
-            &c.battles,
-            &c.dialogue,
-        ))
-    };
+    let check =
+        |def: &ChapterDef| messages(check_chapter("c.ron", "t", def, &c.battles, &c.dialogue));
     assert_eq!(check(&chapter("t")), Vec::<String>::new());
     assert_eq!(
         check(&chapter("x")),
@@ -71,7 +64,10 @@ fn chapter_errors() {
 
 #[test]
 fn next_must_be_a_chapter() {
-    let mut chapters = BTreeMap::from([("a".to_owned(), chapter("a")), ("b".to_owned(), chapter("b"))]);
+    let mut chapters = BTreeMap::from([
+        ("a".to_owned(), chapter("a")),
+        ("b".to_owned(), chapter("b")),
+    ]);
     assert!(check_next(&chapters).is_empty());
     chapters.get_mut("a").unwrap().next = Some("b".into());
     assert!(check_next(&chapters).is_empty());
@@ -96,13 +92,14 @@ fn a_chapter_file_parses() {
 #[test]
 fn new_game_errors() {
     let c = content();
-    let load = |source: &str| {
-        new_game_from_source("n.ron", source, &c.chapters, &c.characters, &c.items)
-    };
-    let ok = r#"(first_chapter: "test", roster: ["lead"], gold: 9, stock: ["potion", "iron_sword"])"#;
+    let load =
+        |source: &str| new_game_from_source("n.ron", source, &c.chapters, &c.characters, &c.items);
+    let ok =
+        r#"(first_chapter: "test", roster: ["lead"], gold: 9, stock: ["potion", "iron_sword"])"#;
     let def = load(ok).unwrap_or_else(|e| panic!("{e:?}"));
     assert_eq!(def.gold, 9);
-    let bad = r#"(first_chapter: "nope", roster: ["test_knight", "x", "test_knight"], stock: ["y"])"#;
+    let bad =
+        r#"(first_chapter: "nope", roster: ["test_knight", "x", "test_knight"], stock: ["y"])"#;
     assert_eq!(
         messages(load(bad).err().unwrap_or_default()),
         [
@@ -120,7 +117,11 @@ fn new_game_errors() {
 fn a_new_campaign_starts_as_the_new_game_file_says() {
     let mut c = content();
     c.new_game.gold = 30;
-    c.new_game.stock = vec![ItemId::new("potion"), ItemId::new("iron_sword"), ItemId::new("nope")];
+    c.new_game.stock = vec![
+        ItemId::new("potion"),
+        ItemId::new("iron_sword"),
+        ItemId::new("nope"),
+    ];
     let lead = LeadProfile::new("Mara", LeadGender::Female);
     let game = new_campaign(&c, GameMode::Casual, lead.clone());
     assert_eq!(game.mode, GameMode::Casual);
@@ -159,7 +160,11 @@ fn every_battle_starts_undecided() {
         let lead = LeadProfile::new("Ellery", LeadGender::Male);
         let game = battle_campaign(&c, def, GameMode::Classic, lead);
         let setup = game.battle_setup(def, &tables);
-        assert_eq!(setup.units.len(), def.player_slots.len() + def.enemies.len(), "{id}");
+        assert_eq!(
+            setup.units.len(),
+            def.player_slots.len() + def.enemies.len(),
+            "{id}"
+        );
         let (state, _) = trpg_core::BattleState::new(setup);
         assert_ne!(state.outcome(), Some(Outcome::Victory), "{id}");
         assert_ne!(state.outcome(), Some(Outcome::Defeat), "{id}");

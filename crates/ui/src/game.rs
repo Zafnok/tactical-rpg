@@ -152,6 +152,9 @@ impl Game {
                 RawKeyEvent::Up(key) => self.input.key_up(key),
             }
         }
+        if dt.is_finite() && dt > 0.0 {
+            self.ctx.clock_s += f64::from(dt);
+        }
         let actions = self.input.update(dt);
         let held = Action::ALL
             .into_iter()
@@ -190,6 +193,17 @@ impl Game {
         );
         self.buffer.fill_rect(self.buffer.bounds(), blank);
         self.stack.draw(&self.ctx, &mut self.buffer);
+    }
+
+    /// The top-most screen of type `T` on the stack, if it opts in
+    /// ([`Screen::as_any`]).
+    pub fn screen<T: std::any::Any>(&self) -> Option<&T> {
+        self.stack.find()
+    }
+
+    /// [`screen`](Self::screen), mutable, for scripted tests.
+    pub fn screen_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.stack.find_mut()
     }
 
     /// The music state machine (which track plays).
@@ -319,7 +333,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::J);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::K);
         assert_eq!(game.screens(), ["title"]);
         let ctx = game.into_ctx();
@@ -354,7 +368,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::G);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         assert_eq!(game.input.keymap(), &game.ctx().keymap);
     }
 
@@ -373,7 +387,7 @@ mod tests {
     fn events_reach_the_top_screen() {
         let mut game = Game::start(ctx());
         assert!(!tap(&mut game, Key::F));
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::D);
         assert_eq!(game.screens(), ["title"]);
     }
@@ -386,7 +400,7 @@ mod tests {
         assert!(out.quit);
         assert!(game.quit_requested());
         let before = game.buffer().clone();
-        // Would open the placeholder if the game were still running.
+        // Would open New Game if the game were still running.
         game.frame(&[RawKeyEvent::Up(Key::F), down(Key::Up)], 0.0);
         game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert_eq!(game.screens(), ["title"]);
@@ -396,7 +410,8 @@ mod tests {
 
     #[test]
     fn popping_the_last_screen_quits() {
-        let mut game = Game::new(ctx(), Box::new(crate::screens::PlaceholderScreen));
+        let mut game = Game::new(ctx(), Box::new(crate::screens::ModeSelectScreen::new()));
+
         assert!(tap(&mut game, Key::D));
         assert_eq!(game.top_screen(), None);
     }

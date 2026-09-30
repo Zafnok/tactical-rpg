@@ -10,12 +10,13 @@
 //!
 //! let mut h = Harness::with_layout(Layout::RightHanded);
 //! h.keys("f");
-//! assert_eq!(h.top_screen(), "placeholder");
+//! assert_eq!(h.top_screen(), "mode_select");
 //! h.keys("d");
 //! assert_eq!(h.top_screen(), "title");
 //! ```
 
 use crate::audio::{AudioRequest, MusicCommand};
+use crate::flow::FlowScreen;
 use crate::game::{Game, RawKeyEvent};
 use crate::input::{Chord, Layout};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
@@ -219,6 +220,17 @@ impl Harness {
         self.game.buffer().to_snapshot(&self.game.ctx().palette)
     }
 
+    /// The game flow on the stack (New Game or Quick Battle), if any.
+    pub fn flow(&self) -> Option<&FlowScreen> {
+        self.game.screen()
+    }
+
+    /// The game flow on the stack, to play its battle with scripted
+    /// commands ([`FlowScreen::battle_mut`]).
+    pub fn flow_mut(&mut self) -> Option<&mut FlowScreen> {
+        self.game.screen_mut()
+    }
+
     /// Whether the game has asked to quit.
     pub fn quit_requested(&self) -> bool {
         self.game.quit_requested()
@@ -393,7 +405,8 @@ mod tests {
         );
         h.keys("Up f");
         assert!(h.quit_requested());
-        let mut h = Harness::with_screen(Box::new(crate::screens::PlaceholderScreen));
+        let mut h = Harness::with_screen(Box::new(crate::screens::ModeSelectScreen::new()));
+
         h.keys("d");
         assert_eq!(h.top_screen(), "");
         assert!(h.screens().is_empty());

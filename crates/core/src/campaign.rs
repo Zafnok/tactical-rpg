@@ -54,7 +54,9 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::art::ArtTable;
-use crate::battle::{BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement, Trigger};
+use crate::battle::{
+    BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement, Trigger,
+};
 use crate::class::ClassTable;
 use crate::geom::Pos;
 use crate::item::{BattlePack, ItemId, ItemTable, Stock};
@@ -272,16 +274,12 @@ impl Campaign {
 
     /// The battle `def` with this campaign's army (see the module docs).
     pub fn battle_setup(&self, def: &BattleDef, tables: &GameTables) -> BattleSetup {
-        let players = def
-            .player_slots
-            .iter()
-            .enumerate()
-            .filter_map(|(i, slot)| {
-                let mut unit = self.member(&slot.character)?.clone();
-                unit.id = BattleDef::slot_id(i);
-                unit.pos = slot.pos;
-                Some(unit)
-            });
+        let players = def.player_slots.iter().enumerate().filter_map(|(i, slot)| {
+            let mut unit = self.member(&slot.character)?.clone();
+            unit.id = BattleDef::slot_id(i);
+            unit.pos = slot.pos;
+            Some(unit)
+        });
         let units = players.chain(def.enemies.iter().cloned()).collect();
         BattleSetup {
             map: def.map.clone(),

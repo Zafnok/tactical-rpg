@@ -260,7 +260,10 @@ fn enemy_errors() {
         errors(&c, "pos: (8, 3)", "pos: (3, 6)"),
         ["enemy 1: (3, 6) is already taken by player slot 2 (\"test_knight\")"]
     );
-    assert_eq!(errors(&c, "pos: (12, 3)", "pos: (3, 6)"), Vec::<String>::new());
+    assert_eq!(
+        errors(&c, "pos: (12, 3)", "pos: (3, 6)"),
+        Vec::<String>::new()
+    );
     // The rogue both an enemy and a reinforcement.
     assert_eq!(
         errors(
@@ -268,18 +271,22 @@ fn enemy_errors() {
             "(template: \"test_brigand\", level: Some(3),",
             "(character: \"test_rogue\","
         ),
-
         ["reinforcement 1: character \"test_rogue\" is placed twice"]
     );
 }
 
 /// The loadout error of a brigand given an unknown weapon.
-
 fn loadout_error(c: &Content) -> String {
     let mut template = c.characters.generics["test_brigand"].clone();
     template.loadout.weapons = vec![ItemId::new("nope")];
     template
-        .unit(UnitId(3), &c.classes, &c.items, Faction::Enemy, Pos::new(8, 3))
+        .unit(
+            UnitId(3),
+            &c.classes,
+            &c.items,
+            Faction::Enemy,
+            Pos::new(8, 3),
+        )
         .err()
         .map(|e| e.to_string())
         .unwrap_or_default()

@@ -102,7 +102,9 @@ struct RawEnemy {
 }
 
 /// Reads an optional field written without `Some(…)`.
-fn bare<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<Option<T>, D::Error> {
+fn bare<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(
+    d: D,
+) -> Result<Option<T>, D::Error> {
     T::deserialize(d).map(Some)
 }
 
@@ -407,7 +409,13 @@ impl Checker<'_, '_> {
                 map.tiles.width(),
                 map.tiles.height()
             )),
-            (Some(t), Some(class)) if self.refs.terrain.move_cost(t, class.movement_type).is_none() => {
+            (Some(t), Some(class))
+                if self
+                    .refs
+                    .terrain
+                    .move_cost(t, class.movement_type)
+                    .is_none() =>
+            {
                 self.err(format!(
                     "{what}: a {} can't stand on ({}, {})",
                     class.name, at.x, at.y
@@ -503,9 +511,7 @@ impl Checker<'_, '_> {
         for item in items {
             match self.refs.items.get(&ItemId::new(item)) {
                 Some(ItemDef::Consumable(_)) => {}
-                Some(_) => self.err(format!(
-                    "default_pack: \"{item}\" isn't a consumable"
-                )),
+                Some(_) => self.err(format!("default_pack: \"{item}\" isn't a consumable")),
                 None => self.err(format!("default_pack: no item \"{item}\"")),
             }
         }

@@ -188,7 +188,10 @@ pub fn new_game_from_source(
     let mut errors = Vec::new();
     let mut err = |m: String| errors.push(ContentError::new(file, m));
     if !chapters.contains_key(&def.first_chapter) {
-        err(format!("first_chapter: no chapter \"{}\"", def.first_chapter));
+        err(format!(
+            "first_chapter: no chapter \"{}\"",
+            def.first_chapter
+        ));
     }
     for (i, c) in def.roster.iter().enumerate() {
         if !characters.characters.contains_key(c) {

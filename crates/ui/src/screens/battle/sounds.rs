@@ -49,7 +49,10 @@ fn depth(mode: &Mode) -> u8 {
         | Mode::MapMenu { .. }
         | Mode::EndTurnPrompt { .. }
         | Mode::Info { .. } => 1,
-        Mode::ActionMenu { .. } | Mode::UnitList { .. } | Mode::Objective => 2,
+        Mode::ActionMenu { .. } | Mode::UnitList { .. } | Mode::Objective | Mode::RestartPrompt => {
+            2
+        }
+
         Mode::WeaponMenu { .. }
         | Mode::SkillMenu { .. }
         | Mode::ItemMenu { .. }

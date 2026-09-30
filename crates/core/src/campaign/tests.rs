@@ -77,7 +77,11 @@ fn def() -> BattleDef {
     BattleDef {
         id: "test".into(),
         map: setup(vec![]).map,
-        player_slots: vec![slot("lord", p(0, 0)), slot("ann", p(0, 2)), slot("cal", p(3, 3))],
+        player_slots: vec![
+            slot("lord", p(0, 0)),
+            slot("ann", p(0, 2)),
+            slot("cal", p(3, 3)),
+        ],
         enemies: vec![
             unit(4, Faction::Enemy, p(1, 0)),
             named(armed(unit(5, Faction::Enemy, p(1, 2)), 20), "rook"),
@@ -362,7 +366,10 @@ fn recruits_join_after_a_victory_but_not_after_a_defeat() {
     assert!(game.member(&c("rook")).is_none());
     // Not over yet: not won either.
     let (fresh, _) = BattleState::new(game.battle_setup(&limited, &tables()));
-    assert_eq!(game.apply_result(&limited, &fresh, 3), Err(ApplyError::NotWon));
+    assert_eq!(
+        game.apply_result(&limited, &fresh, 3),
+        Err(ApplyError::NotWon)
+    );
     assert_eq!(ApplyError::NotWon.to_string(), "the battle wasn't won");
 }
 

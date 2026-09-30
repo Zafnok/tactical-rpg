@@ -75,9 +75,9 @@ fn left_handed_wasd_moves_and_j_confirms() {
     h.keys("s j");
     // Title menu: `s` moves down, `w` back to New Game, `j` confirms.
     h.keys("s w j");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
     // The help text names the left-handed keys.
-    assert!(h.snapshot().contains("press k to go back"));
+    assert!(h.snapshot().contains("wasd choose · j select · k back"));
     h.keys("k");
     assert_eq!(h.top_screen(), "title");
     assert!(h.snapshot().contains("wasd move · j select · k back"));
@@ -95,7 +95,7 @@ fn right_handed_arrows_move_and_f_confirms() {
     h.keys("j");
     assert_eq!(h.top_screen(), "title", "j does nothing right-handed");
     h.keys("f");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
     h.keys("d Down Down f");
     assert!(h.quit_requested());
 }

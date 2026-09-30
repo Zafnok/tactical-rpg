@@ -193,7 +193,11 @@ fn load_story(
     let (Some(maps), Some(terrain), Some(classes), Some(items), Some(characters), Some(dialogue)) =
         (maps, terrain, classes, items, characters, dialogue)
     else {
-        return (Ok(BTreeMap::new()), Ok(BTreeMap::new()), Ok(NewGameDef::default()));
+        return (
+            Ok(BTreeMap::new()),
+            Ok(BTreeMap::new()),
+            Ok(NewGameDef::default()),
+        );
     };
     let refs = BattleRefs {
         maps,

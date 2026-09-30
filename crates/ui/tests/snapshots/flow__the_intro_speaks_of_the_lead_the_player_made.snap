@@ -1,0 +1,150 @@
+---
+source: crates/ui/tests/flow.rs
+assertion_line: 146
+expression: h.snapshot()
+---
+                                        Test Field, morning                                         
+ ┌────────────────────────────────┐                              ┌────────────────────────────────┐ 
+ │            ▄▄▄▄▄▄▄▄            │                              │           ▄▄▀▀▀▀▀▄▄▄           │ 
+ │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │                              │        ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄        │ 
+ │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │                              │      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │          ▀▀▀▀▀▀▀▀▀▀▀▀          │                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
+ │            ▀▀▀▀▀▀▀▀            │                              │           ▄▀▀▀▀▀▀▀▀▄           │ 
+ │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                              │       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       │ 
+ │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                              │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │ 
+ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                              │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │ 
+ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                              │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │ 
+ └────────────────────────────────┘                              └────────────────────────────────┘ 
+                 Ma                                                         Test Knight             
+                                                                                                    
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                  │
+│                                                                                                  │
+│                     Ma looks over the field. She can see the fort from here.                     │
+│                                                                                                  │
+│                                                                                             f ▼  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccca
+acddddddddddddeeeeeeeeddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddddddddddeefgggheeedddddddddddca
+acdddddddddeiijjjjkkkkiiedddddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddelmnnnnnnnoopqleddddddddca
+acdddddddeikjrskkkkkkkkktiedddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddeluvnnnnnnnnnnnoopleddddddca
+acddddddfkkrkkkkkktkkkkkkwkfddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfnxnnnnnnnnnnnnnnynfddddddca
+acddddddfkkkkzzAkBzzAkkzkkwfddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfuxxCCCCCnpCCCCCxvpfddddddca
+acddddddfkwDEEEEDDDDEEEFGtwfddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfxxxHIIIJnnJIIIIxnyfddddddca
+acddddddfkKDDLMfDNDDfMLGGBkfddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfxxxOLPfJQRJfPLJxnnfddddddca
+acddddddfkDDDDDDDSDDDDDGGGkfddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfxxxOJJJJJTJJJJJxnnfddddddca
+acddddddeUUDDSVDDVWWDDDGGUUeddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfxxxOJJJXXYJJYTJxnnfddddddca
+acdddddddddfDDDDZZZZDDGGfdddddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfxxxOOJJ0000JJJJxnnfddddddca
+acdddddddddde1DDD22DzG3eddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddddde44456O7J88JJJ95455eddddddca
+acddddddddddddfW一一一一一fddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddddddddddem丁丁丁丁丁丂medddddddddddca
+acddddddd七丄丄丅丆万丈GGGG丈万丆丅丄丄三dddddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddd三丄丄丄万xxxxxxnx万丄丄丄七dddddddca
+acddddd七onnn上下下下下丌丌下下下下上nnnv三dddddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddd三vnnnn下下下下不不下下下下nnnno七dddddca
+acddd七onnnnn上下下下下不不下下下下上nnnnnv三dddcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddd三vnnnnnn下下下下不不下下下下nnnnnno七dddca
+acd七onnnnnnn上下下下下不不下下下下上nnnnnnnv三dcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacd三vnnnnnnnn下下下下不不下下下下nnnnnnnno七dca
+accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccca
+a与与与与与与与与与与与与与与与与丏丏与与与与与与与与与与与与与与与与aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa与与与与与与与与与与与丏丏丏丏丏丏丏丏丏丏丏与与与与与与与与与与与与a
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与c
+c与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与c
+c与与与与与与与与与与与与与与与与与与与与与丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏丏与与与与与与与与与与与与与与与与与与与与与c
+c与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与c
+c与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与与丏与丐与与c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:panel_border bg:panel_bg
+d = fg:panel_bg bg:panel_bg
+e = fg:#1d130d bg:panel_bg
+f = fg:#1d130d bg:#1d130d
+g = fg:#7b3327 bg:#7b3327
+h = fg:#1d130d bg:#7b3327
+i = fg:#1d130d bg:#351f13
+j = fg:#351f13 bg:#50301c
+k = fg:#351f13 bg:#351f13
+l = fg:#1d130d bg:#656568
+m = fg:#1d130d bg:#3e3e41
+n = fg:#656568 bg:#656568
+o = fg:#7f7f81 bg:#656568
+p = fg:#656568 bg:#7f7f81
+q = fg:#1d130d bg:#7f7f81
+r = fg:#50301c bg:#50301c
+s = fg:#50301c bg:#351f13
+t = fg:#351f13 bg:#2d1c11
+u = fg:#656568 bg:#3e3e41
+v = fg:#3e3e41 bg:#656568
+w = fg:#2d1c11 bg:#2d1c11
+x = fg:#3e3e41 bg:#3e3e41
+y = fg:#7f7f81 bg:#7f7f81
+z = fg:#8b6d54 bg:#815f48
+A = fg:#2d1c11 bg:#815f48
+B = fg:#351f13 bg:#815f48
+C = fg:#3e3e41 bg:#6d4d39
+D = fg:#8b6d54 bg:#8b6d54
+E = fg:#8b6d54 bg:#2d1c11
+F = fg:#815f48 bg:#2d1c11
+G = fg:#815f48 bg:#815f48
+H = fg:#6d4d39 bg:#2d1c11
+I = fg:#7b5a41 bg:#2d1c11
+J = fg:#7b5a41 bg:#7b5a41
+K = fg:#2d1c11 bg:#8b6d54
+L = fg:#1d130d bg:#918a81
+M = fg:#1d130d bg:#2d4c65
+N = fg:#8b6d54 bg:#917860
+O = fg:#6d4d39 bg:#6d4d39
+P = fg:#1d130d bg:#355f39
+Q = fg:#656568 bg:#7b5a41
+R = fg:#656568 bg:#85674f
+S = fg:#917860 bg:#917860
+T = fg:#85674f bg:#85674f
+U = fg:#351f13 bg:#1d130d
+V = fg:#917860 bg:#8b6d54
+W = fg:#8b6d54 bg:#724d3a
+X = fg:#7b5a41 bg:#5b3e2c
+Y = fg:#85674f bg:#7b5a41
+Z = fg:#8b6d54 bg:#50211c
+0 = fg:#7b5a41 bg:#50211c
+1 = fg:#8b6d54 bg:#1d130d
+2 = fg:#724d3a bg:#8b6d54
+3 = fg:#815f48 bg:#1d130d
+4 = fg:#3e3e41 bg:#1d130d
+5 = fg:#656568 bg:#1d130d
+6 = fg:#6d4d39 bg:#1d130d
+7 = fg:#7b5a41 bg:#6d4d39
+8 = fg:#5b3e2c bg:#7b5a41
+9 = fg:#7b5a41 bg:#1d130d
+一 = fg:#815f48 bg:#724d3a
+丁 = fg:#6d4d39 bg:#3e3e41
+丂 = fg:#7b5a41 bg:#656568
+七 = fg:#7f7f81 bg:panel_bg
+丄 = fg:#656568 bg:panel_bg
+丅 = fg:#7f672b bg:panel_bg
+丆 = fg:#692a23 bg:panel_bg
+万 = fg:#1d130d bg:#692a23
+丈 = fg:#815f48 bg:#692a23
+三 = fg:#3e3e41 bg:panel_bg
+上 = fg:#7f672b bg:#7f672b
+下 = fg:#692a23 bg:#692a23
+丌 = fg:#7f672b bg:#471c15
+不 = fg:#471c15 bg:#471c15
+与 = fg:text bg:panel_bg
+丏 = fg:text_dim bg:panel_bg
+丐 = fg:text_highlight bg:panel_bg

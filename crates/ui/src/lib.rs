@@ -6,7 +6,9 @@ pub mod color;
 pub mod console;
 pub mod debug;
 pub mod dialogue;
+pub mod flow;
 pub mod game;
+
 pub mod glyph_buffer;
 #[cfg(any(test, feature = "harness"))]
 pub mod harness;

@@ -14,8 +14,10 @@
 //! there and goes straight to the weapon list / forecast on that enemy.
 //!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
-//! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]) and
+//! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]), the
+//! restart prompt ([`Mode::RestartPrompt`], 0801) and
 //! the unit info screen ([`Mode::Info`]). Talking (0705): `Talk` in the
+
 //! action menu picks who to talk to ([`Mode::TalkTarget`]); it's free, so
 //! the menu opens again after the scene.
 //!
@@ -327,6 +329,9 @@ pub enum Mode {
         /// Units still ready.
         ready: usize,
     },
+    /// `Restart the battle from turn 1?`: Confirm restarts
+    /// ([`Effect::Restart`]), Cancel goes back to the map menu.
+    RestartPrompt,
     /// The info screen for a unit.
     Info {
         /// The unit shown.
@@ -354,6 +359,8 @@ pub enum Effect {
     ApplyStay(Command, Box<Selection>),
     /// Put the cursor on this tile.
     Cursor(Pos),
+    /// Start the battle again (the map menu's `Restart Battle`, confirmed).
+    Restart,
 }
 
 impl Mode {
@@ -455,6 +462,7 @@ impl Mode {
             | Mode::UnitList { .. }
             | Mode::Objective
             | Mode::EndTurnPrompt { .. }
+            | Mode::RestartPrompt
             | Mode::Info { .. } => None,
         }
     }
@@ -809,6 +817,11 @@ fn step_around(mode: Mode, action: Action, state: &BattleState) -> (Mode, Effect
             Action::Cancel => (Mode::default(), Effect::None),
             _ => (Mode::EndTurnPrompt { ready }, Effect::None),
         },
+        Mode::RestartPrompt => match action {
+            Action::Confirm => (Mode::default(), Effect::Restart),
+            Action::Cancel => (open_map_menu(state, MapEntry::Restart), Effect::None),
+            _ => (Mode::RestartPrompt, Effect::None),
+        },
         Mode::Info { unit } => step_info(unit, action, state),
         other => (other, Effect::None),
     }
@@ -897,7 +910,9 @@ fn step_map_menu(
                 (Mode::UnitList { menu, units }, Effect::None)
             }
             Some(MapEntry::Objective) => (Mode::Objective, Effect::None),
+            Some(MapEntry::Restart) => (Mode::RestartPrompt, Effect::None),
             Some(MapEntry::EndTurn) => end_turn(state),
+
             // Disabled: the menu never chooses them.
             Some(MapEntry::Options | MapEntry::Suspend) | None => {
                 (Mode::MapMenu { menu, entries }, Effect::None)
