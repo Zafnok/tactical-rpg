@@ -39,7 +39,7 @@ Design answers unblock most of the rules work. Suggested order:
 1. **0001** stats & combat · **0002** turn structure · **0003** weapons & items · **0004** magic · **0006** death & difficulty · **0007** setting, tone & story beats
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
-4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (CaptainSkolot sale ends ~2026-10-03) · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
+4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0035** Harl's combat picture (Nick shops around) · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
 5. Anytime, low priority: **0012** title (then **0811** title art) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons
 

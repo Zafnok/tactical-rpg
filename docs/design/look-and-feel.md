@@ -11,8 +11,8 @@ game's own font atlas at in-game size. The final ones are in
 | ---------- | ----- |
 | `0011-battle-browse.png` | Battle screen, palette D, browsing: initials, HP bars (its bracket cursor was replaced by corner marks in 0416) |
 | `0011-battle-selected.png` | A unit selected: move/attack ranges, path line with arrowhead |
-| `0011-conversation.png` | Conversation screen with 32×32 shaded portraits |
-| `0011-portrait-expressions.png` | Portrait style sample: confident, happy, angry, sad |
+| `0011-conversation.png` | Conversation screen with 32×32 shaded portraits (the portrait style was replaced by bought art in 0021; the layout stands) |
+| `0011-portrait-expressions.png` | Old portrait style sample: confident, happy, angry, sad (replaced by bought art, 0021) |
 | `0011-theme-c/d/e/g.png` | The four palettes offered as colour themes |
 | `0404-forecast.png` | The attack forecast (decided 2026-09-27, ticket 0404) |
 
@@ -71,6 +71,31 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > in hover/selection we have to make sure they won't clutter the UI" … [after
 > seeing the 16×16 panel mini-portrait:] "that one looks like a memeface so we
 > can just forego the battle portrait"
+>
+> **Bought character art** (2026-09-28 to 2026-09-30, ticket 0021): [on
+> Claude's portraits and CaptainSkolot's bundle:] "I like the style better
+> than your style" … "it's fantasy not modern day which fits the game" …
+> "buying is OK as long as it's not super expensive" … "I'll buy it later
+> when we finish more stuff" … [on the combat screen:] "I guess we need an
+> itch artist who has a pack with portraits and battle sprites" … [shown
+> mockups of five artist options:] "I like A2 the best but want to ensure you
+> know how to route the animations correctly" … "AI assisted art is ok as
+> long as it is not shipped without a human touch at all... the captain guy
+> said he touched it up, that's alright" … [asked for a price ceiling:] "stop
+> asking, I will decide each time if I am comfortable" … [told that the big
+> Tiny Tales fighters are still images and only the small ones animate:] "1A
+> seems best" [the big still images, moved by the game] … [characters no
+> face fits:] "probably A or D" [the Character Generator, or Claude's small
+> edits] … [classes with no animated fighter:] "since I am ok with 1A then 3A
+> seems fine?" [still images as stand-ins] … [named characters without
+> their own combat picture use their class's picture, recoloured:] "sure" …
+> [Rue: the Witch's face and combat picture, or a generated face and a class
+> picture:] "I think we can rewrite Rue's physical description as needed once
+> we buy the art... I would rather have visual consistency at this time
+> between portrait and battler" … [on commissions:] "this is where I veto --
+> this would be expensive for just a single asset" … [Harl:] "let's just have
+> a follow up for this Harl character I can shop around and find more
+> contenders"
 
 ## Rules
 
@@ -181,30 +206,102 @@ then three strike-list layouts). Screenshot: `0404-forecast.png`.
 - The Combat Arts list and art line (0414) go above this forecast; that
   ticket works out the combined box.
 
-### Portraits
+### Portraits and battle art (bought)
 
-- **Style: shaded pixel art.** A portrait is a **32×32 pixel** image drawn with
-  half-block cells (`▀`, top pixel = fg colour, bottom pixel = bg colour), so it
-  takes **32×16 cells** and each pixel is a square 8×8 screen px. It's not
-  line-art ASCII: Nick rejected both line-art and block-shading ASCII.
-- **Lighting:** from the **upper left**. Mid-tone down the right side of the face
-  and jaw, shadow under the fringe, nose, lower lip and chin, a soft highlight
-  on the left cheek and nose bridge. **Keep shading light on young characters.**
-  Nick's feedback on the sample was that heavy shade lines read as wrinkles and
-  age the face.
-- **Expressive, human faces:** expressions change brows, eyes and mouth (at
-  minimum `neutral`, `happy`, `angry`, `sad`, `surprised`). The sample shows the
-  range expected (a raised brow, a squint-smile, bared teeth, a tear).
-- **Iterated per character with Nick.** The sample face is a style reference
-  only. Each real character is drawn and revised with his feedback (0706).
-- **Where portraits appear:**
+Decided 2026-09-30, ticket 0021 (it replaces the 2026-09-25 rule that
+portraits are 32×32 pixel art drawn by Claude with Nick). Nick judged
+mockups made from store previews in our dialogue screen and a stand-in combat
+scene: one artist with both kinds of art (SolaarNoble, Tiny Tales, Time
+Fantasy), and CaptainSkolot's portraits next to another artist's battle
+sprites.
+
+- **Artist: Mega Tiles, "Tiny Tales" packs** (<https://megatiles.itch.io/>),
+  hand-drawn pixel art, medieval fantasy. The core packs are *Tiny Tales 2D
+  Heroes: A New Beginning* and *Heroes 2: Rebellious Souls* ($24.99 each on
+  2026-09-30). Each hero comes with a face set, a large portrait, a big still
+  battle image, a small animated battle sprite and a map sprite. The still
+  battler packs (e.g. *Vol.5 Faith and Evil*, *Vol.1 Monstrous Uprising*)
+  add classes with a still battle image and a map sprite but **no face**.
+  Nothing has been bought yet; Nick buys when he's ready.
+- **No Claude-drawn character art.** Portraits and battle art are bought.
+  Claude may only make **small edits** to bought art: recolours, a scar,
+  spectacles, a missing expression made from an existing face. No new hair,
+  clothes or bodies (that's redrawing).
+- **Paid art is fine; Nick decides each purchase himself.** He doesn't want a
+  price ceiling asked. Music and sound stay free (`audio.md`).
+- **AI-assisted art is acceptable if a human has worked on it**, e.g.
+  CaptainSkolot's "local generative tool for rough concepts, then refined by
+  hand". Art that is AI output with no human touch is not. The Tiny Tales
+  packs say no generative AI was used. If AI-assisted art ships, the Steam
+  page discloses it (ticket 0903).
+- **Every bought work is credited** on the credits screen (0808), even when
+  its licence doesn't ask for credit (`audio.md` rule 3).
+
+#### Dialogue portraits
+
+- **The face set faces**, not the large portraits: each Tiny Tales hero has
+  **8 expressions**; the large portrait has one. The faces are **48×48**
+  pixel art. They're drawn with square pixels at the largest whole scale that
+  fits the existing 32×16-cell frame (0711 works out the size), so the
+  dialogue layout doesn't change.
+- **Expressions:** the five the dialogue needs (`neutral`, `happy`, `angry`,
+  `sad`, `surprised`) are mapped to the closest of the 8 per character
+  (0706). A missing one may be made by a small edit.
+- **Characters no bought face fits** (in Chapter 1 likely Hollis, Harl,
+  Piers and Crane): first Mega Tiles' **Character Generator EX** ($49.99,
+  or in the $99.99 "2025 Bundle Sale"), a Windows program that makes new
+  characters in the same style: a face with 8 expressions, a small animated
+  battle sprite and a map sprite. Its licence (the same text as the packs)
+  allows the characters it makes in a sold game. It makes **no big still
+  battle image**, so in combat a generated character uses its class's
+  still image. It's early access (few outfits; casters, helmets and glasses
+  still promised), so some faces may not be possible yet. Otherwise, or on
+  top, Claude's small edits, or rewriting the character's written look to
+  fit a bought face (see *Combat screen* below; Nick allows it, done in
+  0706 after purchase). **No commissions**: Nick vetoed them as too
+  expensive for single assets.
+- **Where portraits appear** (unchanged):
   - **Conversations:** two full portraits, speaker on the left at full
     brightness with a double-line frame, listener dimmed on the right, name
     plates underneath, 3-line text box below.
   - **Not** in the battle side panel or hover. That panel shows stats only
     (Nick dropped the mini portrait).
-  - **Combat screen:** Nick expects **full-body art of the two fighting units**
-    there, not portraits. Its design is a separate ticket (0413).
+
+#### Combat screen
+
+- Nick expects **full-body art of the two fighting units** there, not
+  portraits.
+- **The art is the big Tiny Tales still battle images, moved by the game**
+  (like the enemies in Final Fantasy VI or Dragon Quest): each fighter is one
+  picture; the game makes it lunge to strike, flash on a hit, shake, and fade
+  when defeated. The packs' small animated battle sprites are **not** used
+  there. Scale, the exact motions and the rest of the scene are ticket 0413.
+- **Classes with no hero art use a still image as a stand-in in Chapter 1**:
+  - **Cleric:** the church cleric (*Faith and Evil*).
+  - **Guard:** the church knight (*Faith and Evil*).
+  - **Brigand:** the orc axe fighter (*Monstrous Uprising*). Chapter 1's
+    bandits stay human in the story *(Claude's starting rule: Nick accepted
+    the stand-in without choosing between it and making the bandits orcs)*.
+  - **Rider:** no pack has anything mounted; an on-foot lance fighter
+    stands in until real art exists (no commissions).
+  0413 picks the exact images. None of these have faces; they're generic
+  enemies or get a face from the Character Generator.
+- **Named characters use their class's picture, recoloured to their own
+  colours** when they have no picture of their own (like Fire Emblem GBA,
+  where most named units share their class's battle animation in their own
+  palette). Characters with their own hero art use it for both face and
+  combat picture.
+- **Face and combat picture should match** (Nick prefers visual
+  consistency). Where a character's written look doesn't fit the art we
+  can buy, the written look is rewritten to fit the art after purchase
+  (0706), not the other way round. First case: **Rue** uses the Tiny Tales
+  **Witch** for both, hair recoloured as needed.
+- **Harl** (Chapter 1 boss) has no fitting picture in the Mega Tiles
+  catalogue: the axe fighters are orcs, beasts or a minotaur, and a human
+  knight would change his weapon (weapon type is a rule, so the picture must
+  match it). Nick is shopping around for candidates (ticket 0035). The
+  orc, the Dragon Knight and the Magitek dark knight were shown and not
+  chosen.
 
 ### Screen layout
 
@@ -249,5 +346,7 @@ black.
 - Selection arrows `►Al◄` next to another unit: whole-glyph arrows would hide
   one of its letters (the 0416 bracket problem). Ask Nick before 0403 draws them.
 - Custom class icons vs initials (ticket 1006, after Chapter 1).
-- Combat screen full-body art: bought, with the portraits (ticket 0021); size
-  and animation (ticket 0413).
+- Combat screen: scale and the exact motions of the still battle images
+  (ticket 0413).
+- Map sprites: the Tiny Tales packs include 16×20 map sprites; whether they
+  replace name initials on the map is ticket 1006's question.

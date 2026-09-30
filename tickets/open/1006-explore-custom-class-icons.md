@@ -24,10 +24,12 @@ class (a helmeted head, a horse head, a drawn bow…), 16×16 px, tinted by
 faction like any glyph.
 
 **Changed 2026-09-30:** Nick doesn't want Claude-drawn character art (0021),
-and the combat scene uses bought sprites (0413). If the pack 0021 picked
-has map sprites (Fire Emblem-style packs often do), offer those as well as
-Claude-drawn one-colour icons, and say honestly that Claude-drawn icons may
-clash in the same way the portraits did.
+and the combat scene uses bought sprites (0413). The packs 0021 picked
+(Mega Tiles' Tiny Tales) include **16×20 map sprites** for every hero and
+still-battler class: offer those as well as Claude-drawn one-colour icons,
+and say honestly that Claude-drawn icons may clash in the same way the
+portraits did. A 16×20 sprite is taller than a 16×16 tile; show how that
+looks.
 
 ## Nick input
 
