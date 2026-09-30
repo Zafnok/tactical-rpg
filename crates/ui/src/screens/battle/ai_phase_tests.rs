@@ -143,11 +143,14 @@ fn an_action_pans_marks_the_unit_then_walks() {
         panic!("{:?}", s.mode());
     };
     assert!(a.shows_cursor());
+    let marked = render(&s, &c).overlays().len();
     frame(&mut s, &mut c, &[], PACING.highlight, false);
     let Mode::AiAction(a) = s.mode() else {
         panic!("{:?}", s.mode());
     };
     assert!(a.walking());
+    // The cursor's marks are gone.
+    assert!(render(&s, &c).overlays().len() < marked);
     // Then its combat plays, as the player's do.
     for _ in 0..100 {
         if !matches!(s.mode(), Mode::AiAction(_)) {

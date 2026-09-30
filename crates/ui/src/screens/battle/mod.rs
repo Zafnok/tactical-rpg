@@ -627,7 +627,6 @@ impl BattleScreen {
         if !matches!(self.mode, Mode::Idle { .. })
             || !self.queue.is_empty()
             || self.progress.is_some()
-            || self.rewind.is_some()
             || self.shown_tip().is_some()
         {
             return;
@@ -674,10 +673,11 @@ impl BattleScreen {
         let Some(unit) = unit else {
             return;
         };
+        // An AI command moves only its own unit.
         let path = events
             .iter()
             .find_map(|e| match e {
-                Event::UnitMoved { unit: u, path } if *u == unit => Some(path.clone()),
+                Event::UnitMoved { path, .. } => Some(path.clone()),
                 _ => None,
             })
             .unwrap_or_default();

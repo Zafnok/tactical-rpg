@@ -241,8 +241,8 @@ mod tests {
 
     #[test]
     fn pans_then_highlights_then_walks() {
-        let still = Pos::new(0, 0);
-        let mut a = action((still, Pos::new(4, -2)), line(3));
+        let still = Pos::new(1, 2);
+        let mut a = action((still, Pos::new(5, 0)), line(3));
         let walk = 3.0 / PACING.walk_tiles_per_s;
         assert!((a.walk_start() - (PACING.pan + PACING.highlight)).abs() < 1e-6);
         assert!((a.total() - (a.walk_start() + walk)).abs() < 1e-6);
@@ -250,11 +250,11 @@ mod tests {
         assert_eq!(a.camera(), still);
         assert!(!a.shows_cursor());
         a.tick(PACING.pan / 2.0, false);
-        assert_eq!(a.camera(), Pos::new(2, -1));
+        assert_eq!(a.camera(), Pos::new(3, 1));
         assert!(!a.shows_cursor());
         // The highlight: the cursor on the unit, still on its tile.
         a.tick(PACING.pan / 2.0 + 0.01, false);
-        assert_eq!(a.camera(), Pos::new(4, -2));
+        assert_eq!(a.camera(), Pos::new(5, 0));
         assert!(a.shows_cursor());
         assert!(!a.walking());
         assert_eq!(a.walker_pos(), Pos::new(1, 1));
@@ -265,6 +265,8 @@ mod tests {
         assert_eq!(a.tiles_entered(walk, false), 3);
         a.tick(1.5 / PACING.walk_tiles_per_s, false);
         assert_eq!(a.walker_pos(), Pos::new(2, 1));
+        // One step taken, two to go.
+        assert_eq!(a.tiles_entered(walk, false), 2);
         assert_eq!(a.units()[0].pos, Pos::new(2, 1));
         assert_eq!(a.units()[1].pos, Pos::new(3, 3), "others stay");
         assert!(!a.done());
@@ -272,6 +274,8 @@ mod tests {
         assert!(a.done());
         assert_eq!(a.walker_pos(), Pos::new(4, 1));
         assert!((a.time() - a.total()).abs() < 1e-6);
+        // The camera stays where the pan ended.
+        assert_eq!(a.camera(), Pos::new(5, 0));
     }
 
     #[test]
