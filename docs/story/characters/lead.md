@@ -1,6 +1,6 @@
 # The lead: [first name] Veyne
 
-Id: `lead` (portraits `lead_m` / `lead_f`) · Default first name: **Rowan**
+Id: `lead` (portraits `lead_m` / `lead_f`) · Default first name: **Ellery**
 (both genders) · [Name registry](../names.md)
 
 This is a **Persona-style lead** (`docs/design/setting-and-tone.md`, "The

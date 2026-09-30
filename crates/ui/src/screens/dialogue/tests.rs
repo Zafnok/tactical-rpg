@@ -33,6 +33,16 @@ fn place(side: Side, character: &str) -> Step {
     }
 }
 
+/// `scene` full-screen, with the default lead.
+fn full(scene: Scene) -> DialogueScreen {
+    DialogueScreen::new(scene, ctx().lead)
+}
+
+/// `scene` as an overlay, with the default lead.
+fn over(scene: Scene) -> DialogueScreen {
+    DialogueScreen::overlay(scene, ctx().lead)
+}
+
 fn scene(steps: Vec<Step>) -> Scene {
     Scene {
         id: "t".into(),
@@ -86,7 +96,7 @@ fn page_sizes(s: &mut DialogueScreen, c: &mut Ctx) -> Vec<usize> {
 #[test]
 fn reveals_at_the_text_speed() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("Hello there, knight."));
+    let mut s = full(two_speakers("Hello there, knight."));
     assert_eq!(s.name(), "dialogue");
     assert!(!s.is_overlay());
     s.update(&mut c, &frame(&[], 0.1, false));
@@ -105,7 +115,7 @@ fn reveals_at_the_text_speed() {
 #[test]
 fn holding_confirm_fast_forwards() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers(&"word ".repeat(50)));
+    let mut s = full(two_speakers(&"word ".repeat(50)));
     s.update(&mut c, &frame(&[], 0.1, true));
     assert!((s.shown - 36.0).abs() < 1e-3, "{}", s.shown);
 }
@@ -113,7 +123,7 @@ fn holding_confirm_fast_forwards() {
 #[test]
 fn confirm_reveals_then_advances() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("First."));
+    let mut s = full(two_speakers("First."));
     assert!(!s.is_revealed());
     assert!(matches!(
         press(&mut s, &mut c, Action::Confirm),
@@ -133,7 +143,7 @@ fn confirm_reveals_then_advances() {
 #[test]
 fn end_turn_advances_like_confirm() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("First."));
+    let mut s = full(two_speakers("First."));
     press(&mut s, &mut c, Action::EndTurn);
     assert!(s.is_revealed());
     press(&mut s, &mut c, Action::EndTurn);
@@ -155,7 +165,7 @@ fn long_text_pages_three_lines_at_a_time() {
     let mut c = ctx();
     // 10 lines of 90 characters: four pages.
     let line = format!("{} ", "x".repeat(90));
-    let mut s = DialogueScreen::new(two_speakers(&line.repeat(10)));
+    let mut s = full(two_speakers(&line.repeat(10)));
     let pages = page_sizes(&mut s, &mut c);
     assert_eq!(pages, [3, 3, 3, 1]);
 }
@@ -164,7 +174,7 @@ fn long_text_pages_three_lines_at_a_time() {
 fn text_filling_whole_pages_has_no_empty_page_after() {
     let mut c = ctx();
     let line = format!("{} ", "x".repeat(90));
-    let mut s = DialogueScreen::new(two_speakers(&line.repeat(6)));
+    let mut s = full(two_speakers(&line.repeat(6)));
     let pages = page_sizes(&mut s, &mut c);
     assert_eq!(pages, [3, 3]);
 }
@@ -173,7 +183,7 @@ fn text_filling_whole_pages_has_no_empty_page_after() {
 fn two_lines_of_narration_start_at_the_top() {
     let c = ctx();
     let text = format!("{} {}", "a".repeat(60), "b".repeat(60));
-    let mut s = DialogueScreen::new(scene(vec![Step::Narrate { text }]));
+    let mut s = full(scene(vec![Step::Narrate { text }]));
     s.shown = 120.0;
     let buf = draw(&s, &c);
     assert!(row(&buf, TEXT_Y).contains(&"a".repeat(60)));
@@ -183,7 +193,7 @@ fn two_lines_of_narration_start_at_the_top() {
 #[test]
 fn cancel_asks_before_skipping() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("First."));
+    let mut s = full(two_speakers("First."));
     press(&mut s, &mut c, Action::Cancel);
     assert!(s.is_asking_skip());
     let buf = draw(&s, &c);
@@ -207,7 +217,7 @@ fn cancel_asks_before_skipping() {
 #[test]
 fn a_scene_without_text_pops_at_once() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(scene(vec![place(Side::Left, "test_lord")]));
+    let mut s = full(scene(vec![place(Side::Left, "test_lord")]));
     assert!(matches!(
         s.update(&mut c, &frame(&[], 0.0, false)),
         Transition::Pop
@@ -217,7 +227,7 @@ fn a_scene_without_text_pops_at_once() {
 #[test]
 fn speaker_frame_is_double_and_bright() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("Hi."));
+    let mut s = full(two_speakers("Hi."));
     let buf = draw(&s, &c);
     let glyph = |b: &GlyphBuffer, x, y| b.get(x, y).map(|c| c.glyph);
     assert_eq!(glyph(&buf, LEFT_X, FRAME_Y), Some('╔'));
@@ -242,7 +252,7 @@ fn speaker_frame_is_double_and_bright() {
 #[test]
 fn portraits_are_dimmed_and_mirrored_like_the_renderer() {
     let c = ctx();
-    let s = DialogueScreen::new(two_speakers("Hi."));
+    let s = full(two_speakers("Hi."));
     let buf = draw(&s, &c);
     let bg = c.palette.get(UiColor::PanelBg);
     let mut expected = GlyphBuffer::new(34, 18, Cell::new(' ', bg, bg));
@@ -270,7 +280,7 @@ fn portraits_are_dimmed_and_mirrored_like_the_renderer() {
 #[test]
 fn narration_dims_both_and_centres_the_text() {
     let c = ctx();
-    let s = DialogueScreen::new(scene(vec![
+    let s = full(scene(vec![
         place(Side::Left, "test_lord"),
         place(Side::Right, "test_knight"),
         Step::Narrate {
@@ -296,7 +306,7 @@ fn narration_dims_both_and_centres_the_text() {
 #[test]
 fn an_empty_side_draws_nothing() {
     let c = ctx();
-    let s = DialogueScreen::new(scene(vec![
+    let s = full(scene(vec![
         place(Side::Left, "test_lord"),
         say("test_lord", "Alone."),
     ]));
@@ -312,7 +322,7 @@ fn an_empty_side_draws_nothing() {
 #[test]
 fn the_overlay_leaves_the_rest_of_the_screen() {
     let c = ctx();
-    let s = DialogueScreen::overlay(two_speakers("Hi."));
+    let s = over(two_speakers("Hi."));
     assert!(s.is_overlay());
     let buf = draw(&s, &c);
     // Between the frames the screen below shows; below the text box (the
@@ -322,14 +332,14 @@ fn the_overlay_leaves_the_rest_of_the_screen() {
     for y in 28..32 {
         assert_eq!(row(&buf, y).trim(), "", "row {y}");
     }
-    let full = draw(&DialogueScreen::new(two_speakers("Hi.")), &c);
+    let full = draw(&full(two_speakers("Hi.")), &c);
     assert_eq!(full.get(50, 5).map(|c| c.glyph), Some(' '));
 }
 
 #[test]
 fn the_arrow_blinks_once_revealed() {
     let mut c = ctx();
-    let mut s = DialogueScreen::new(two_speakers("Hi."));
+    let mut s = full(two_speakers("Hi."));
     let arrow_row = TEXT_BOX.y + TEXT_BOX.h - 2;
     assert!(!row(&draw(&s, &c), arrow_row).contains('▼'));
     press(&mut s, &mut c, Action::Confirm);
@@ -347,7 +357,7 @@ fn the_arrow_blinks_once_revealed() {
 #[test]
 fn the_caption_is_top_centre() {
     let c = ctx();
-    let s = DialogueScreen::new(scene(vec![
+    let s = full(scene(vec![
         Step::Caption {
             text: "Heth".into(),
         },
@@ -360,7 +370,7 @@ fn the_caption_is_top_centre() {
 #[test]
 fn a_character_without_a_portrait_gets_an_empty_frame() {
     let c = ctx();
-    let s = DialogueScreen::new(scene(vec![
+    let s = full(scene(vec![
         place(Side::Right, "test_archer"),
         say("test_archer", "Me?"),
     ]));
@@ -374,11 +384,251 @@ fn a_character_without_a_portrait_gets_an_empty_frame() {
 #[test]
 fn a_character_without_an_entry_is_named_by_id() {
     let c = ctx();
-    let s = DialogueScreen::new(scene(vec![
+    let s = full(scene(vec![
         place(Side::Left, "stranger"),
         say("stranger", "Who, me?"),
     ]));
     let buf = draw(&s, &c);
     assert!(row(&buf, PLATE_Y).contains("stranger"));
     assert!(row(&buf, TEXT_BOX.y).starts_with("┌── stranger ─"));
+}
+
+// --- Reply choices (0708) ---------------------------------------------------
+
+fn reply(text: &str, reaction: &str) -> trpg_content::ChoiceOption {
+    trpg_content::ChoiceOption {
+        tone: "t".into(),
+        text: text.into(),
+        steps: vec![say("test_knight", reaction)],
+    }
+}
+
+/// The knight asks; the lord's two replies; the knight answers after.
+fn asking() -> Scene {
+    scene(vec![
+        place(Side::Left, "test_lord"),
+        place(Side::Right, "test_knight"),
+        say("test_knight", "Ready?"),
+        Step::Choice {
+            options: vec![reply("Yes.", "Good."), reply("{They} knows.", "Hm.")],
+        },
+        say("test_knight", "Go."),
+    ])
+}
+
+/// The sound cues played since the last call.
+fn sounds(c: &mut Ctx) -> Vec<String> {
+    c.audio
+        .take()
+        .iter()
+        .filter_map(|r| r.cue().map(str::to_owned))
+        .collect()
+}
+
+#[test]
+fn a_choice_lists_its_replies_under_the_question() {
+    let mut c = ctx();
+    let mut s = full(asking());
+    press(&mut s, &mut c, Action::Confirm);
+    assert!(s.menu().is_none());
+    // The press that opens the choice doesn't pick a reply, even with a
+    // second press in the same frame.
+    let t = s.update(
+        &mut c,
+        &frame(&[Action::Confirm, Action::Confirm], 0.0, false),
+    );
+    assert!(matches!(t, Transition::None));
+    assert_eq!(s.menu().map(Menu::focus), Some(0));
+    let buf = draw(&s, &c);
+    // The question, fully shown, a blank row, then the replies, the
+    // focused one marked; this fits the usual box, so it doesn't grow.
+    assert_eq!(s.text_box(), (TEXT_BOX, TEXT_Y));
+    assert!(s.is_revealed());
+    assert!(row(&buf, TEXT_Y).starts_with("│   Ready?  "));
+    assert_eq!(row(&buf, TEXT_Y + 1).trim_matches(['│', ' ']), "");
+    assert!(row(&buf, TEXT_Y + 2).starts_with("│   > Yes.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│     He knows.  "));
+    assert_eq!(
+        buf.get(TEXT_X, TEXT_Y + 2).map(|c| c.fg),
+        Some(c.palette.get(UiColor::TextHighlight))
+    );
+    assert_eq!(
+        buf.get(TEXT_X, TEXT_Y + 3).map(|c| c.fg),
+        Some(c.palette.get(UiColor::Text))
+    );
+    // No ▼ while choosing; the portraits' name plates stay clear.
+    assert!(!row(&buf, TEXT_BOX.y + TEXT_BOX.h - 2).contains('▼'));
+    assert!(row(&buf, PLATE_Y).contains("Test Lord"));
+    // The focus marker follows the cursor.
+    press(&mut s, &mut c, Action::CursorDown);
+    let buf = draw(&s, &c);
+    assert!(row(&buf, TEXT_Y + 2).starts_with("│     Yes.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│   > He knows.  "));
+}
+
+/// A long question and three replies: the box grows upward, its bottom
+/// staying put.
+#[test]
+fn the_text_box_grows_to_fit_the_replies() {
+    let mut c = ctx();
+    let long = "word ".repeat(40);
+    let mut s = full(scene(vec![
+        place(Side::Left, "test_lord"),
+        place(Side::Right, "test_knight"),
+        say("test_knight", long.trim()),
+        Step::Choice {
+            options: vec![reply("A.", "a"), reply("B.", "b"), reply("C.", "c")],
+        },
+    ]));
+    press(&mut s, &mut c, Action::Confirm);
+    press(&mut s, &mut c, Action::Confirm);
+    let lines = s.page_lines().len();
+    assert_eq!(lines, 3);
+    // 3 question rows, a blank one and 3 replies: 7 rows from row 20.
+    let (rect, text_y) = s.text_box();
+    assert_eq!(text_y, 20);
+    assert_eq!(rect, Rect::new(0, 18, 100, 10));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, 18).starts_with("┌── Test Knight ─"));
+    assert!(row(&buf, 26).starts_with("│     C.  "));
+    assert!(row(&buf, 27).starts_with("└──"));
+}
+
+#[test]
+fn replies_are_picked_with_the_cursor_keys_and_confirm() {
+    let mut c = ctx();
+    let mut s = full(asking());
+    press(&mut s, &mut c, Action::Confirm);
+    press(&mut s, &mut c, Action::Confirm);
+    sounds(&mut c);
+    press(&mut s, &mut c, Action::CursorDown);
+    assert_eq!(s.menu().map(Menu::focus), Some(1));
+    press(&mut s, &mut c, Action::CursorDown);
+    assert_eq!(s.menu().map(Menu::focus), Some(0));
+    press(&mut s, &mut c, Action::CursorUp);
+    assert_eq!(s.menu().map(Menu::focus), Some(1));
+    assert_eq!(sounds(&mut c), ["menu_move"; 3]);
+    // Cancel doesn't skip past a choice, and makes no sound.
+    press(&mut s, &mut c, Action::Cancel);
+    assert!(!s.is_asking_skip());
+    assert!(sounds(&mut c).is_empty());
+    // End turn confirms, like everywhere in dialogue.
+    press(&mut s, &mut c, Action::EndTurn);
+    assert_eq!(sounds(&mut c), ["menu_select"]);
+    assert!(s.menu().is_none());
+    assert_eq!(s.page_lines(), ["Hm."]);
+    press(&mut s, &mut c, Action::Confirm);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(s.page_lines(), ["Go."]);
+}
+
+#[test]
+fn skipping_stops_at_a_choice() {
+    let mut c = ctx();
+    let mut s = full(asking());
+    press(&mut s, &mut c, Action::Cancel);
+    let t = s.update(
+        &mut c,
+        &frame(&[Action::Confirm, Action::Confirm], 0.0, false),
+    );
+    assert!(matches!(t, Transition::None));
+    assert!(!s.is_asking_skip());
+    assert_eq!(s.menu().map(Menu::focus), Some(0));
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(s.page_lines(), ["Good."]);
+    // After the choice, skipping ends the scene.
+    press(&mut s, &mut c, Action::Cancel);
+    assert!(matches!(
+        press(&mut s, &mut c, Action::Confirm),
+        Transition::Pop
+    ));
+}
+
+#[test]
+fn a_last_reply_with_nothing_after_ends_the_scene() {
+    let mut c = ctx();
+    let mut s = full(scene(vec![Step::Choice {
+        options: vec![
+            trpg_content::ChoiceOption {
+                tone: "t".into(),
+                text: "Bye.".into(),
+                steps: vec![],
+            },
+            reply("Stay.", "Ok."),
+        ],
+    }]));
+    assert!(s.menu().is_some());
+    assert!(matches!(
+        press(&mut s, &mut c, Action::Confirm),
+        Transition::Pop
+    ));
+}
+
+#[test]
+fn the_lead_shows_the_players_name_and_gendered_portrait() {
+    let c = ctx();
+    let lead_scene = || scene(vec![place(Side::Left, "lead"), say("lead", "Let's move.")]);
+    for (gender, art) in [
+        (trpg_core::LeadGender::Male, "lead_m"),
+        (trpg_core::LeadGender::Female, "lead_f"),
+    ] {
+        let s = DialogueScreen::new(lead_scene(), LeadProfile::new("Isolde", gender));
+        let buf = draw(&s, &c);
+        assert!(row(&buf, PLATE_Y).contains("Isolde"));
+        assert!(row(&buf, TEXT_BOX.y).starts_with("┌── Isolde ─"));
+        let bg = c.palette.get(UiColor::PanelBg);
+        let mut expected = GlyphBuffer::new(34, 18, Cell::new(' ', bg, bg));
+        let portrait = &c.content.portraits[art];
+        draw_portrait(
+            &mut expected,
+            &c.palette,
+            (1, 1),
+            portrait,
+            "neutral",
+            0.0,
+            false,
+        );
+        for y in 1..17 {
+            for x in 1..33 {
+                assert_eq!(
+                    buf.get(LEFT_X + x, FRAME_Y + y),
+                    expected.get(x, y),
+                    "{art} ({x}, {y})"
+                );
+            }
+        }
+    }
+}
+
+/// Only a press that opens a choice ends the frame's keys: two presses in
+/// one frame otherwise both count.
+#[test]
+fn two_presses_in_one_frame_both_count() {
+    let mut c = ctx();
+    let mut s = full(two_speakers("First."));
+    press(&mut s, &mut c, Action::Confirm);
+    s.update(
+        &mut c,
+        &frame(&[Action::Confirm, Action::Confirm], 0.0, false),
+    );
+    assert_eq!(s.page_lines(), ["Second."]);
+    assert!(s.is_revealed());
+}
+
+/// Replies with no line before them get no blank row above them.
+#[test]
+fn replies_without_a_question_start_at_the_top() {
+    let c = ctx();
+    let s = full(scene(vec![Step::Choice {
+        options: vec![
+            reply("A.", "a"),
+            reply("B.", "b"),
+            reply("C.", "c"),
+            reply("D.", "d"),
+        ],
+    }]));
+    assert_eq!(s.text_box(), (TEXT_BOX, TEXT_Y));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, TEXT_Y).starts_with("│   > A.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│     D.  "));
 }

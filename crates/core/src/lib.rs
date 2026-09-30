@@ -8,6 +8,7 @@ pub mod combat;
 pub mod geom;
 pub mod history;
 pub mod item;
+pub mod lead;
 pub mod magic;
 pub mod map;
 pub mod movement;
@@ -44,6 +45,7 @@ pub use item::{
     ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef,
     WeaponInstance, WeaponRules,
 };
+pub use lead::{LEAD_ID, LeadGender, LeadProfile, Pronouns};
 pub use magic::{Affinity, Element};
 pub use map::{BattleMap, TileFeature};
 pub use movement::{

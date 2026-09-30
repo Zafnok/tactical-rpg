@@ -493,6 +493,8 @@ fn files_that_are_not_utf8() {
     );
 }
 
+mod choice;
+
 // --- Embedded files ---------------------------------------------------------
 
 #[test]
@@ -570,7 +572,8 @@ fn arb_side() -> impl Strategy<Value = Side> {
     prop_oneof![Just(Side::Left), Just(Side::Right)]
 }
 
-fn arb_step() -> impl Strategy<Value = Step> {
+/// Any step but a choice.
+fn arb_simple_step() -> impl Strategy<Value = Step> {
     prop_oneof![
         arb_text().prop_map(|text| Step::Caption { text }),
         (arb_side(), arb_id(), arb_id()).prop_map(|(side, c, expression)| Step::Place {
@@ -587,6 +590,20 @@ fn arb_step() -> impl Strategy<Value = Step> {
             }
         }),
         arb_text().prop_map(|text| Step::Narrate { text }),
+    ]
+}
+
+/// Any step, choices (of simple steps) included.
+fn arb_step() -> impl Strategy<Value = Step> {
+    let option = (
+        arb_id(),
+        arb_text(),
+        proptest::collection::vec(arb_simple_step(), 0..4),
+    )
+        .prop_map(|(tone, text, steps)| ChoiceOption { tone, text, steps });
+    prop_oneof![
+        4 => arb_simple_step(),
+        1 => proptest::collection::vec(option, 0..4).prop_map(|options| Step::Choice { options }),
     ]
 }
 

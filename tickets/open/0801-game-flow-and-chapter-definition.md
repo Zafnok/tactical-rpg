@@ -104,7 +104,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 4. `ui::flow`: `New Game` → `ModeSelectScreen` (Classic / Casual, one line
    explaining each) → `LeadSelectScreen` (pick the lead's gender, showing the
    `lead_m`/`lead_f` portraits, plus a first-name entry: Nick wants renaming
-   (0701 gate 1). Default first name **Rowan** (from the names table, see
+   (0701 gate 1). Default first name **Ellery** (from the names table, see
    `docs/story/names.md`); the family name "Veyne" isn't editable;
    `setting-and-tone.md`) → intro scenes, with dialogue rendered using
    `campaign.lead` → (`PreparationsScreen` from 0408 if

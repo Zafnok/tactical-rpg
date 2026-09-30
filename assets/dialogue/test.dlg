@@ -1,6 +1,7 @@
-# PLACEHOLDER test scene for the dialogue player and screen (0702, 0704).
-# Uses the placeholder characters from data/characters.ron; the real
-# Chapter 1 script (0707) goes in its own files.
+# PLACEHOLDER test scene for the dialogue player and screen (0702, 0704),
+# with a reply choice and lead tokens (0708). Uses the placeholder
+# characters from data/characters.ron; the real Chapter 1 script (0707)
+# goes in its own files.
 
 @scene test
 @caption Village of Heth, dusk
@@ -16,4 +17,18 @@ test_knight: Than never. Say it.
 @right test_archer surprised
 test_archer: Was that about me?
 test_lord[sad]: It's always about you.
+@left lead neutral
+test_archer: {lead}! You came back for us.
+@choice
+* earnest: I said I would. I keep my word.
+  test_archer[happy]: You do. It's why we follow you.
+* wry: Someone has to carry your arrows.
+  test_archer[angry]: I carry my own arrows, thank you.
+  > The archer's ears go red anyway.
+* blunt: Get moving. We're not safe here.
+  test_archer: Right. Moving.
+@endchoice
+@right test_archer neutral
+lead: Let's move.
+> {lead} tightens {their} grip on the sword. {They} won't lose anyone today.
 @end

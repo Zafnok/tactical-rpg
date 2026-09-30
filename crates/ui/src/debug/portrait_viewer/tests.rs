@@ -29,10 +29,20 @@ fn wrap_steps_within_range() {
     assert_eq!(wrap(0, -1, 0), 0);
 }
 
-/// The test context plus a third portrait, `test_zed` (a copy of
-/// `test_lord`), so up and down lead to different characters.
-fn ctx3() -> Ctx {
+/// The test context with only the `test_lord` and `test_knight`
+/// portraits, so these tests don't change as portraits are added.
+fn ctx2() -> Ctx {
     let mut ctx = ctx();
+    ctx.content
+        .portraits
+        .retain(|id, _| id == "test_lord" || id == "test_knight");
+    ctx
+}
+
+/// [`ctx2`] plus a third portrait, `test_zed` (a copy of `test_lord`), so
+/// up and down lead to different characters.
+fn ctx3() -> Ctx {
+    let mut ctx = ctx2();
     let mut zed = ctx.content.portraits["test_lord"].clone();
     zed.character = "test_zed".to_owned();
     ctx.content.portraits.insert("test_zed".to_owned(), zed);
@@ -112,7 +122,7 @@ fn help_names_the_keys() {
 
 #[test]
 fn viewer_snapshot() {
-    let mut ctx = ctx();
+    let mut ctx = ctx2();
     let mut v = PortraitViewerScreen::new();
     v.update(&mut ctx, &frame(&[Action::CursorDown, Action::CursorRight]));
     assert_snapshot!(draw(&v, &ctx).to_snapshot(&ctx.palette));

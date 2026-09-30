@@ -20,6 +20,17 @@
 //   come from the class (progression.md, "Generic units").
 (
     characters: [
+        // The lead (ticket 0708): the player picks the gender and first
+        // name at New Game, so dialogue shows the chosen name and the
+        // portrait lead_m or lead_f. Stats are a copy of test_lord's.
+        (
+            id: "lead", name: "Ellery", class: "exile", level: 1, is_lord: true,
+            map_label: Some("El"),
+            talent: Spd,
+            base: (19, 6, 1, 7, 7, 4, 3),
+            weapon_ranks: [(Sword, D)],
+            loadout: (weapons: ["iron_sword", "steel_sword"], armour: Some("leather_vest")),
+        ),
         (
             id: "test_lord", name: "Test Lord", class: "exile", level: 1, is_lord: true,
             map_label: Some("Lo"),

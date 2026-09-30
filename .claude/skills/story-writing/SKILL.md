@@ -55,6 +55,28 @@ registry change.
 - Plain ASCII punctuation in scripts (`'` `"` `...` `--`) — the font may not
   have smart quotes.
 
+## Writing the lead
+
+The lead is Persona-style (`docs/design/setting-and-tone.md`, "Rules for
+writing the lead"); the validator enforces the limits below.
+
+- **Few lines.** Outside reply choices the lead (`lead:`) speaks only in
+  short, neutral lines of at most 40 characters ("Let's move."). Other
+  characters carry scenes.
+- **Reply choices** (`@choice` … `@endchoice`) at key moments: 2–3 replies
+  with distinct tones (earnest / wry / blunt…), each at most 60 characters.
+  Each reply gets a reaction of at most 4 text boxes, then the scene rejoins
+  and goes on the same way for every reply. Choices never branch the plot,
+  recruit or lose units, or change the ending. Budget: about 1–3 choice
+  points per chapter.
+- **Never fix the lead's personality** outside what the player picks: no
+  cruelty, jokes or strong opinions in `lead:` lines.
+- **Gender-neutral text.** The player picks the lead's gender and first name,
+  so refer to the lead with `{lead}` and `{they}` `{them}` `{their}`
+  `{theirs}` `{themself}` (`{They}` etc. at the start of a sentence). They
+  become he/she, so the verb agrees with he/she: `{They} knows`, not
+  `{They} know`. No line may depend on the lead's gender.
+
 ## Critique pass (mandatory before committing a script)
 
 Reread the whole script as an editor, separately from writing it, and fix:

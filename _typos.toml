@@ -12,8 +12,9 @@ pn = "pn"
 # as said, not a real typo to fix.
 beginnning = "beginnning"
 # Two-letter runs of colour keys in snapshot colour grids (ADR-0007),
-# e.g. `Iy` in the portrait snapshots.
+# e.g. `Iy` in the portrait snapshots, `abd` in the dialogue ones.
 iy = "iy"
+abd = "abd"
 # Invented story names and words (docs/story/names.md, ticket 0701).
 aske = "aske"
 othe = "othe"

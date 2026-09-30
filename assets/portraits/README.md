@@ -3,11 +3,14 @@
 Each `*.portrait` file here is one character's portrait, loaded by
 `trpg_content::portrait` and validated by the all-assets test (ADR-0005). The
 file stem is the character id and must equal the header's `character`
-(`ana.portrait` → `"ana"`). The style is in ADR-0018, `docs/design/look-and-feel.md`
-and the `ascii-art` skill.
+(`ana.portrait` → `"ana"`). The lead is the exception: the character `lead`
+has two portraits, `lead_m` and `lead_f`, and dialogue shows the one for the
+gender the player picked. The style is in ADR-0018,
+`docs/design/look-and-feel.md` and the `ascii-art` skill.
 
 `test_lord` and `test_knight` are **placeholders** for tests and the viewer,
-not real characters. Real portraits come with ticket 0706.
+not real characters. `lead_m` and `lead_f` are placeholder recolours of
+`test_lord`. Real portraits come with ticket 0706.
 
 ## Format
 

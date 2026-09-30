@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0702", "0704"]
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0708 — Dialogue: lead reply choices and lead name/pronoun tokens
@@ -102,12 +102,12 @@ None.
 
 ## Acceptance criteria
 
-- [ ] Spec documents `@choice` and tokens with a full example.
-- [ ] Every new validator error has a test with the exact message.
-- [ ] `DialoguePlayer` on the test scene: each option leads to the same `View` after `@endchoice` (test).
-- [ ] Token substitution is correct for both genders and a custom name (tests).
-- [ ] Snapshot of the choice menu, and the `lead` portrait resolves to `lead_m`/`lead_f`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Spec documents `@choice` and tokens with a full example.
+- [x] Every new validator error has a test with the exact message.
+- [x] `DialoguePlayer` on the test scene: each option leads to the same `View` after `@endchoice` (test).
+- [x] Token substitution is correct for both genders and a custom name (tests).
+- [x] Snapshot of the choice menu, and the `lead` portrait resolves to `lead_m`/`lead_f`.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -117,5 +117,69 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done (2026-09-30).**
+
+- `trpg_core::lead`: `LeadProfile { name, gender }`, `LeadGender { Male, Female }`,
+  the pronoun table, `portrait_id()` / `portrait_for()` (`lead` → `lead_m` /
+  `lead_f`), token substitution, and `longest_len()` for the validator
+  (`MAX_NAME_LEN = 12`, `DEFAULT_NAME = "Ellery"`). Serde round-trip tested.
+- `.dlg`: `@choice` / `* tone: text` / two-space-indented reactions /
+  `@endchoice`, parsed into `Step::Choice { options: Vec<ChoiceOption> }`;
+  `print_scene` writes them back (round-trip property test includes choices).
+- Validator (each error tested with its exact message): 2–3 options, missing
+  `@endchoice`, nested `@choice`, reply text > 60, reaction > 4 text lines,
+  different characters (or caption) on screen after a reaction, unknown
+  `{token}` and unclosed `{`, `lead:` line > 40 (message points to
+  `setting-and-tone.md`), plus syntax errors (option outside a choice, bad
+  option line, wrong reaction indent…). Lengths count tokens at their longest.
+  The lead's expressions are checked against both lead portraits.
+- `DialoguePlayer`: takes a `LeadProfile`; `View` gains `choices` (text,
+  caption and replies are `Cow<str>` with tokens filled in; the stored scene is
+  unchanged); `choose(i)`, `is_choosing()`, `skip_to_choice()`.
+- `DialogueScreen`: the replies are listed in the text box under the line
+  being answered, and the box grows upward to fit (Nick's pick B; the `Menu`
+  widget handles focus and sounds), picked with the layout's cursor up/down and Confirm (or End
+  turn); skipping stops at a choice. The lead's name plate shows the
+  player's name and the gendered portrait. `Ctx.lead` holds a placeholder
+  profile until 0801.
+- `lead` character in `characters.ron` (placeholder stats copied from
+  `test_lord`), placeholder portraits `lead_m` / `lead_f` (recoloured
+  `test_lord`), `test.dlg` gained a lead, a 3-reply choice and tokens.
+- Docs: `assets/dialogue/README.md` (full example, tokens table, rules),
+  `assets/portraits/README.md`, `story-writing` skill ("Writing the lead").
+- Snapshots: 3-reply choice (test scene) and 2-reply choice with a female
+  lead named Isolde.
+
+**Deviations**
+
+- The ticket says `j/k` to move: the key layouts bind the cursor to arrows
+  (right-handed) or W/S (left-handed), and game code only sees `Action`s, so
+  the menu uses `CursorUp`/`CursorDown` (whatever the player bound).
+- `View` holds `Cow<str>` instead of `&str` (substituted text must be owned)
+  and is no longer `Copy`.
+- The portrait viewer's tests now filter to the two test portraits, so they
+  don't change whenever a portrait is added.
+- `_typos.toml`: allowed `abd`, a run of colour keys in a snapshot grid (same
+  as the existing `iy`).
+
+**Starting rules and Nick's answers** (2026-09-30, recorded in
+`docs/design/setting-and-tone.md`):
+
+1. After a reply's reaction, the portraits stay as the reaction left them and
+   the script sets any expression change (Nick: "I think the written script
+   should determine reaction transitions"; replaces my first rule, which reset
+   expressions automatically).
+2. While the replies are up, the line being answered stays in the text box;
+   the picked reply is not repeated as a text box (Nick: "sure").
+3. Back does nothing while the replies are up, and "Skip scene" stops at each
+   choice (Nick: "sure").
+4. The replies are listed inside the text box, under the line being
+   answered, like Stardew Valley; the box grows upward when they don't fit
+   (Nick picked option B from three mockups).
+5. The lead's default first name is **Ellery** (Nick turned down Rowan:
+   "lame name, pick something better"; still renameable). Until New Game asks
+   the player (0801), the lead is Ellery, male (*Claude's starting rule*).
+6. Writers: `{They}` becomes He/She, so verbs agree with he/she. Claude
+   writes all scripts (Nick: "I'm not writing anything, that's all you").
+
+**Follow-ups:** none created.
