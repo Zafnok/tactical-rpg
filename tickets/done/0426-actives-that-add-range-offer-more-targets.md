@@ -5,10 +5,10 @@ type: bug
 milestone: M3 Battle UI
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-29
 ---
 
 # 0426 — Combat actives that add range offer their extra targets
@@ -44,11 +44,23 @@ the extra reach can't be used from the menu.
 
 ## Acceptance criteria
 
-- [ ] Harness: with Long Shot chosen, an enemy just beyond the bow's range can be targeted and attacked; without it, it can't.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Harness: with Long Shot chosen, an enemy just beyond the bow's range can be targeted and attacked; without it, it can't.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
 - Harness test as above.
 
 ## Completion notes
+
+Target lists are now per chosen active (`targets_with`). A weapon is offered
+if it reaches someone plain or with any combat active; targeting starts plain,
+or, when only an active reaches anyone, on the first active that does.
+Choosing an active re-lists targets (keeping the current one), and the
+range tint follows since it draws the target list. Cycling skips entries the
+core refuses (e.g. plain against a target only Long Shot reaches).
+Test: `long_shot_offers_a_target_just_beyond_the_bows_range` and
+`choosing_long_shot_adds_targets_and_dropping_it_removes_them` (unit-level on
+`Targeting`, not the key-driven harness).
+
+Gameplay rules decided: none. No follow-up tickets.
