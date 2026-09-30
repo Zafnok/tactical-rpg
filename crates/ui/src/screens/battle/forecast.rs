@@ -483,6 +483,22 @@ mod tests {
     }
 
     #[test]
+    fn notes_skip_no_counter_and_stop_above_the_bottom_border() {
+        let c = ctx();
+        let state = skirmish(&c, 20);
+        let mut p = targeting(&state).preview;
+        p.notes = vec![ArtNote::NoCounter, ArtNote::Pierces, ArtNote::Pierces];
+        let blank = Cell::new(' ', Rgb::new(1, 2, 3), Rgb::new(1, 2, 3));
+        let mut buf = GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank);
+        let border = SIDE_PANEL.y + SIDE_PANEL.h - 1;
+        draw_notes(&mut buf, &c.palette, &p, border - 1);
+        // `no counter` isn't repeated; one row is left for the two notes.
+        assert_eq!(text(&buf, LEFT_X, border - 1, 7), "pierces");
+        assert_eq!(text(&buf, LEFT_X, border, 7), "       ");
+        assert_eq!(text(&buf, LEFT_X, border + 1, 7), "       ");
+    }
+
+    #[test]
     fn a_spell_or_nothing_equipped_names_the_counter_weapon_that_way() {
         let c = ctx();
         let state = skirmish(&c, 20);

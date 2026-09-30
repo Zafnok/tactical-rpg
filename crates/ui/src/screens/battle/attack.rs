@@ -227,7 +227,7 @@ impl Targeting {
         let at = self
             .choices
             .iter()
-            .position(|c| c.technique == kept && c.usable())
+            .position(|c| c.technique == kept)
             .unwrap_or(0);
         self.list = art_menu(state, &self.choices, at);
         if !self.refresh(state) {

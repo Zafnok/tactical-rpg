@@ -76,13 +76,6 @@ pub struct ArtChoice {
     pub reason: Option<String>,
 }
 
-impl ArtChoice {
-    /// Whether it can be chosen.
-    pub fn usable(&self) -> bool {
-        self.reason.is_none()
-    }
-}
-
 /// Why a cost can't be paid, as the list shows it.
 pub fn reason_text(error: &CostError) -> String {
     match error {

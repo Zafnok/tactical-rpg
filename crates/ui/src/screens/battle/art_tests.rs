@@ -430,6 +430,11 @@ fn a_boss_or_green_units_art_names_the_playback_and_the_players_doesnt() {
         playback_banner(&state, &[skill], &green).as_deref(),
         Some("Keen Edge")
     );
+    let own = Event::SkillUsed {
+        unit: UnitId(1),
+        skill: SkillId::new("keen_edge"),
+    };
+    assert_eq!(playback_banner(&state, &[own], &units), None);
     // Drawn in the box's top border.
     let mut after = state.clone();
     let events = after
@@ -450,8 +455,9 @@ fn a_boss_or_green_units_art_names_the_playback_and_the_players_doesnt() {
     draw_box(&mut buf, &c.palette, &pb);
     let top = text(&buf, BOX.x, BOX.y, BOX.w);
     assert!(top.contains(" Guard Break "), "{top}");
-    let at = top.find("Guard").unwrap();
-    let x = BOX.x + i32::try_from(top[..at].chars().count()).unwrap();
+    // Centred: " Guard Break " is 13 cells, (44 - 13) / 2 = 15 in.
+    let x = BOX.x + 16;
+    assert_eq!(text(&buf, x, BOX.y, 11), "Guard Break");
     assert_eq!(
         buf.get(x, BOX.y).unwrap().fg,
         c.palette.get(UiColor::TextHighlight)

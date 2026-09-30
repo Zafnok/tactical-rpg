@@ -1582,6 +1582,11 @@ mod tests {
         let (listed, effect) = step(mode.clone(), Action::CursorDown, p(0, 0), &s);
         assert_eq!((target(&listed), effect), (UnitId(6), Effect::None));
         assert_ne!(listed, mode);
+        let Mode::Targeting(t) = &listed else {
+            unreachable!()
+        };
+        // Down goes forward: the first art after `Attack`.
+        assert_eq!(t.list.focus(), 1);
         let (back, _) = step(listed, Action::CursorUp, p(0, 0), &s);
         assert_eq!(back, mode);
         for (a, id, at) in [
