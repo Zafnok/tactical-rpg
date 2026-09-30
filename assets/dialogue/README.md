@@ -50,6 +50,7 @@ Every line is one of these. Directives start at the very first column.
 | `<character>[<expression>]: <text>` | The character changes expression, then speaks. The new expression stays. |
 | `> <text>` | Narration: a text box with no speaker. |
 | `  <text>` (indented) | Continues the speech or narration line above; the two are joined with one space. |
+| `@choice` … `@endchoice` | The lead's reply choice: see below. |
 
 Each speech or narration line is **one text box** on screen (the screen
 splits a long one into pages). Directives (`@caption`, `@left`, `@right`)
@@ -75,3 +76,80 @@ The validator reports every broken rule, with the file and line:
 - **Plain ASCII text.** Use `'` and `"`, not curly quotes; `...` not `…`;
   `--` not `—`; `-` not `–`. The error message names the ASCII form.
 - Every scene has at least one speech or narration line.
+
+## The lead: reply choices and tokens
+
+The lead is shaped by the player (`docs/design/setting-and-tone.md`,
+"Rules for writing the lead"): they speak mostly through **reply choices**,
+and the player picks their gender and first name at New Game. The
+character id `lead` is the lead; their name plate shows the player's name
+and their portrait is `lead_m` or `lead_f` by gender.
+
+### A full example
+
+```
+@scene ch01_gate
+@left  lead neutral
+@right bors angry
+bors: {lead}. You took your time.
+@choice
+* earnest: We do this properly, or not at all.
+  bors[surprised]: ...Huh. Fine.
+* wry: I've had worse mornings. Not many.
+  bors[happy]: Ha! There's the spirit.
+  > Even the guards smile.
+* blunt: Stop talking. Move.
+  bors[angry]: Charming as ever.
+@endchoice
+> {lead} checks {their} sword. {They} knows the way from here.
+lead: Let's move.
+@end
+```
+
+### Reply choices
+
+| Line | Meaning |
+| ---- | ------- |
+| `@choice` | Starts a reply choice. |
+| `* <tone>: <text>` | One reply, at the very first column. The text is what the lead says; it is shown in the menu (the reply isn't shown again as a text box). The tone (`earnest`, `wry`, `blunt`…) is an id for writers; the player doesn't see it. |
+| `  <line>` (two spaces) | A line of that reply's **reaction**: any speech, narration or directive (`@left`, `@caption`…), indented by exactly two spaces. |
+| `    <text>` (more spaces) | Continues the reaction's speech or narration line above. |
+| `@endchoice` | Ends the choice. Every reply **rejoins** the scene here. |
+
+While the choice is open, the line before it stays in the text box and the
+replies are a menu above it. When the reaction ends, each portrait goes
+back to the expression it had before the choice (someone who came on during
+the reaction shows `neutral`), so every reply leaves the same screen.
+Skipping a scene stops at each choice.
+
+### Lead tokens
+
+In speech, narration, captions and reply text:
+
+| Token | Male lead | Female lead |
+| ----- | --------- | ----------- |
+| `{lead}` | the player's name (default Rowan) | the player's name |
+| `{they}` | he | she |
+| `{them}` | him | her |
+| `{their}` | his | her |
+| `{theirs}` | his | hers |
+| `{themself}` | himself | herself |
+
+`{They}`, `{Them}`, `{Their}`, `{Theirs}` and `{Themself}` give the
+capitalised word, for the start of a sentence. The tokens become he/she, so
+write the verb to agree with he/she: `{They} knows`, not `{They} know`.
+
+### Rules for choices and the lead
+
+- A choice has **2 or 3** replies. Choices can't be nested.
+- Reply text is at most **60 characters** (it must fit the menu).
+- A reaction has at most **4** speech or narration lines, so the scene
+  rejoins quickly.
+- Every reaction must leave the **same characters on the same sides** (and
+  the same caption) as the first reply's does.
+- Outside choices the lead speaks only in short, neutral lines: a `lead:`
+  line is at most **40 characters**.
+- Only the tokens above exist; any other `{...}`, or a `{` without a `}`,
+  is an error.
+- Lengths count each token at its longest: `{lead}` as 12 characters (the
+  longest name), `{themself}` as 7 (`himself`), and so on.

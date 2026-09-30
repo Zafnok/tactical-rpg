@@ -822,7 +822,13 @@ mod tests {
         let ids: Vec<&str> = t.characters.keys().map(|c| c.0.as_str()).collect();
         assert_eq!(
             ids,
-            ["test_archer", "test_knight", "test_lord", "test_rogue"]
+            [
+                "lead",
+                "test_archer",
+                "test_knight",
+                "test_lord",
+                "test_rogue"
+            ]
         );
         assert_eq!(t.generics.len(), 2);
         let lords: Vec<&str> = t
@@ -831,7 +837,7 @@ mod tests {
             .filter(|c| c.is_lord)
             .map(|c| c.id.0.as_str())
             .collect();
-        assert_eq!(lords, ["test_lord"]);
+        assert_eq!(lords, ["lead", "test_lord"]);
         for def in t.characters.values() {
             let unit = character_unit(
                 def,

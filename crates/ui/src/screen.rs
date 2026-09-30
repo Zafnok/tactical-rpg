@@ -10,6 +10,8 @@
 use std::fmt;
 
 use trpg_content::{Content, ContentErrors};
+use trpg_core::lead::DEFAULT_NAME;
+use trpg_core::{LeadGender, LeadProfile};
 
 use crate::audio::AudioQueue;
 use crate::color::Palette;
@@ -141,6 +143,10 @@ pub struct Ctx {
     /// [`DEFAULT_MUSIC_SEED`] here, so tests are repeatable; `app` sets it
     /// from the clock at startup so each launch picks differently.
     pub music_seed: u64,
+    /// Who the player made the lead, for dialogue's name and pronoun
+    /// tokens and the lead's portrait. A placeholder here until New Game
+    /// (0801) asks the player and stores it in the campaign.
+    pub lead: LeadProfile,
 }
 
 /// [`Ctx::music_seed`] until `app` sets it.
@@ -165,6 +171,7 @@ impl Ctx {
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),
             music_seed: DEFAULT_MUSIC_SEED,
+            lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
         })
     }
 

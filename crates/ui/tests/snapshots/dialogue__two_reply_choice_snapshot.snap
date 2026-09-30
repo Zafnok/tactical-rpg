@@ -1,0 +1,162 @@
+---
+source: crates/ui/tests/dialogue.rs
+expression: h.snapshot()
+---
+                                                                                                    
+ ┌────────────────────────────────┐                              ╔════════════════════════════════╗ 
+ │            ▄▄▄▄▄▄▄▄            │                              ║           ▄▄▀▀▀▀▀▄▄▄           ║ 
+ │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │                              ║        ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄        ║ 
+ │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │                              ║      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │          ▀▀▀▀▀▀▀▀▀▀▀▀          │                              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║ 
+ │            ▀▀▀▀▀▀▀▀            │                              ║           ▄▀▀▀▀▀▀▀▀▄           ║ 
+ │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                              ║       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       ║ 
+ │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                              ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║ 
+ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                              ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║ 
+ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │   ┌─────────────────────┐    ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║ 
+ └────────────────────────────────┘   │ I will. Stay close. │    ╚════════════════════════════════╝ 
+               Isolde                 │ Someone has to.     │               Test Knight             
+                                      └─────────────────────┘                                       
+┌── Test Knight ───────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                  │
+│   Isolde, will you lead the charge?                                                              │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccca
+abddddddddddddeeeeeeeeddddddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddddddddddffghhhifffdddddddddddca
+abdddddddddejjkkkklllljjedddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddddfmnoooooooppqrmfddddddddca
+abdddddddejlkstlllllllllujedddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddfmvwoooooooooooppqmfddddddca
+abddddddxllsllllllullllllylxddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgozooooooooooooooAogddddddca
+abddddddxllllBBClDBBCllBllyxddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgvzzEEEEEoqEEEEEzwqgddddddca
+abddddddxlyFGGGGFFFFGGGHIuyxddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgzzzJKKKLooLKKKKzoAgddddddca
+abddddddxlMFFNOxFPFFxONIIDlxddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgzzzQRSgLTULgSRLzoogddddddca
+abddddddxlFFFFFFFVFFFFFIIIlxddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgzzzQLLLLLWLLLLLzoogddddddca
+abddddddeXXFFVYFFYZZFFFIIXXeddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgzzzQLLL001LL1WLzoogddddddca
+abdddddddddxFFFF2222FFIIxdddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddgzzzQQLL3333LLLLzoogddddddca
+abdddddddddde4FFF55FBI6eddddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddf77789Q一L丁丁LLL丂8788fddddddca
+abddddddddddddxZ七七七七七xddddddddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacdddddddddddfn丄丄丄丄丄丅nfdddddddddddca
+abddddddd丆万万丈三上下IIII下上三丈万万丌dddddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddddd不与与与丏zzzzzzoz丏与与与丐dddddddca
+abddddd丆丑丒丒丒专且且且且丕丕且且且且专丒丒丒世丌dddddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddddd不woooo丗丗丗丗丘丘丗丗丗丗oooop丐dddddca
+abddd丆丑丒丒丒丒丒专且且且且丙丙且且且且专丒丒丒丒丒世丌dddbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacddd不woooooo丗丗丗丗丘丘丗丗丗丗oooooop丐dddca
+abd丆丑丒丒丒丒丒丒丒专且且且且丙丙且且且且专丒丒丒丒丒丒丒世丌dbaaabbbbbbbbbbbbbbbbbbbbbbbaaaacd不woooooooo丗丗丗丗丘丘丗丗丗丗oooooooop丐dca
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaab业业业业业业业业业业业业业业业业业业业业业baaaacccccccccccccccccccccccccccccccccca
+a丛丛丛丛丛丛丛丛丛丛丛丛丛丛东东东东东东丛丛丛丛丛丛丛丛丛丛丛丛丛丛aaab丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛baaaa丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛a
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+bbb丝丝丝丝丝丝丝丝丝丝丝丝丝bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+b丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛丛b
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:panel_border_focus bg:panel_bg
+d = fg:panel_bg bg:panel_bg
+e = fg:#1d130d bg:panel_bg
+f = fg:portrait_outline bg:panel_bg
+g = fg:portrait_outline bg:portrait_outline
+h = fg:plume_red bg:plume_red
+i = fg:portrait_outline bg:plume_red
+j = fg:#1d130d bg:#351f13
+k = fg:#351f13 bg:#50301c
+l = fg:#351f13 bg:#351f13
+m = fg:portrait_outline bg:armor_steel
+n = fg:portrait_outline bg:armor_steel_dark
+o = fg:armor_steel bg:armor_steel
+p = fg:armor_steel_light bg:armor_steel
+q = fg:armor_steel bg:armor_steel_light
+r = fg:portrait_outline bg:armor_steel_light
+s = fg:#50301c bg:#50301c
+t = fg:#50301c bg:#351f13
+u = fg:#351f13 bg:#2d1c11
+v = fg:armor_steel bg:armor_steel_dark
+w = fg:armor_steel_dark bg:armor_steel
+x = fg:#1d130d bg:#1d130d
+y = fg:#2d1c11 bg:#2d1c11
+z = fg:armor_steel_dark bg:armor_steel_dark
+A = fg:armor_steel_light bg:armor_steel_light
+B = fg:#8b6d54 bg:#815f48
+C = fg:#2d1c11 bg:#815f48
+D = fg:#351f13 bg:#815f48
+E = fg:armor_steel_dark bg:skin_tan_mid
+F = fg:#8b6d54 bg:#8b6d54
+G = fg:#8b6d54 bg:#2d1c11
+H = fg:#815f48 bg:#2d1c11
+I = fg:#815f48 bg:#815f48
+J = fg:skin_tan_mid bg:brow_dark
+K = fg:skin_tan bg:brow_dark
+L = fg:skin_tan bg:skin_tan
+M = fg:#2d1c11 bg:#8b6d54
+N = fg:#1d130d bg:#918a81
+O = fg:#1d130d bg:#2d4c65
+P = fg:#8b6d54 bg:#917860
+Q = fg:skin_tan_mid bg:skin_tan_mid
+R = fg:portrait_outline bg:eye_white
+S = fg:portrait_outline bg:eye_green
+T = fg:armor_steel bg:skin_tan
+U = fg:armor_steel bg:skin_tan_highlight
+V = fg:#917860 bg:#917860
+W = fg:skin_tan_highlight bg:skin_tan_highlight
+X = fg:#351f13 bg:#1d130d
+Y = fg:#917860 bg:#8b6d54
+Z = fg:#8b6d54 bg:#724d3a
+0 = fg:skin_tan bg:skin_tan_shadow
+1 = fg:skin_tan_highlight bg:skin_tan
+2 = fg:#8b6d54 bg:#50211c
+3 = fg:skin_tan bg:mouth_dark
+4 = fg:#8b6d54 bg:#1d130d
+5 = fg:#724d3a bg:#8b6d54
+6 = fg:#815f48 bg:#1d130d
+7 = fg:armor_steel_dark bg:portrait_outline
+8 = fg:armor_steel bg:portrait_outline
+9 = fg:skin_tan_mid bg:portrait_outline
+一 = fg:skin_tan bg:skin_tan_mid
+丁 = fg:skin_tan_shadow bg:skin_tan
+丂 = fg:skin_tan bg:portrait_outline
+七 = fg:#815f48 bg:#724d3a
+丄 = fg:skin_tan_mid bg:armor_steel_dark
+丅 = fg:skin_tan bg:armor_steel
+丆 = fg:#7f7f81 bg:panel_bg
+万 = fg:#656568 bg:panel_bg
+丈 = fg:#7f672b bg:panel_bg
+三 = fg:#692a23 bg:panel_bg
+上 = fg:#1d130d bg:#692a23
+下 = fg:#815f48 bg:#692a23
+丌 = fg:#3e3e41 bg:panel_bg
+不 = fg:armor_steel_dark bg:panel_bg
+与 = fg:armor_steel bg:panel_bg
+丏 = fg:portrait_outline bg:cloth_red
+丐 = fg:armor_steel_light bg:panel_bg
+丑 = fg:#7f7f81 bg:#656568
+丒 = fg:#656568 bg:#656568
+专 = fg:#7f672b bg:#7f672b
+且 = fg:#692a23 bg:#692a23
+丕 = fg:#7f672b bg:#471c15
+世 = fg:#3e3e41 bg:#656568
+丗 = fg:cloth_red bg:cloth_red
+丘 = fg:cloth_red_dark bg:cloth_red_dark
+丙 = fg:#471c15 bg:#471c15
+业 = fg:panel_bg bg:panel_border_focus
+丛 = fg:text bg:panel_bg
+东 = fg:text_dim bg:panel_bg
+丝 = fg:text_highlight bg:panel_bg

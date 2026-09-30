@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use trpg_core::CharacterId;
 
 pub use check::{check_duplicates, check_scene};
-pub use parse::{ParsedScene, parse_dlg};
+pub use parse::{ChoiceLines, OptionLines, ParsedScene, parse_dlg};
 
 use crate::bundle;
 use crate::character::CharacterTable;
@@ -26,6 +26,14 @@ pub const DIALOGUE_EXTENSION: &str = ".dlg";
 /// Longest text of one speech or narration line, in characters (two text
 /// boxes of about 3 × 70; ADR-0011).
 pub const MAX_TEXT_LEN: usize = 200;
+/// Longest text of a reply choice, in characters: it must fit the menu.
+pub const MAX_OPTION_LEN: usize = 60;
+/// Most text steps (speech or narration) in one reply's reaction, so the
+/// scene rejoins quickly.
+pub const MAX_REACTION_TEXTS: usize = 4;
+/// Longest line the lead may speak outside reply choices
+/// (`docs/design/setting-and-tone.md`, "Rules for writing the lead").
+pub const MAX_LEAD_LINE_LEN: usize = 40;
 /// The expressions every portrait has: the ones a script may use for a
 /// character without a portrait. A character with one may use exactly its
 /// portrait's expressions.
@@ -97,6 +105,24 @@ pub enum Step {
         /// The narration.
         text: String,
     },
+    /// `@choice` … `@endchoice`: the lead's reply choices (2–3), each with
+    /// its own reaction steps. Every option rejoins the scene after the
+    /// block.
+    Choice {
+        /// The options, in menu order.
+        options: Vec<ChoiceOption>,
+    },
+}
+
+/// One reply the lead can pick: `* <tone>: <text>`, then its reaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChoiceOption {
+    /// The reply's tone (`earnest`, `wry`…), for writers; not shown.
+    pub tone: String,
+    /// What the lead says, shown in the menu.
+    pub text: String,
+    /// The reaction: steps played after picking this option (no choices).
+    pub steps: Vec<Step>,
 }
 
 impl Step {
@@ -104,7 +130,10 @@ impl Step {
     pub fn text(&self) -> Option<&str> {
         match self {
             Step::Say { text, .. } | Step::Narrate { text } => Some(text),
-            Step::Caption { .. } | Step::Place { .. } | Step::Clear { .. } => None,
+            Step::Caption { .. }
+            | Step::Place { .. }
+            | Step::Clear { .. }
+            | Step::Choice { .. } => None,
         }
     }
 }
@@ -203,36 +232,55 @@ pub fn from_sources<F: AsRef<str>>(
     }
 }
 
-/// Writes `scene` in `.dlg` format (one line per step), ending with `@end`
-/// and a newline. Parsing the result gives `scene` back.
+/// Writes `scene` in `.dlg` format (one line per step, reactions indented
+/// under their option), ending with `@end` and a newline. Parsing the
+/// result gives `scene` back.
 pub fn print_scene(scene: &Scene) -> String {
     let mut out = format!("@scene {}\n", scene.id);
     for step in &scene.steps {
-        let line = match step {
-            Step::Caption { text } => format!("@caption {text}"),
-            Step::Place {
-                side,
-                character,
-                expression,
-            } => format!("@{} {} {expression}", side.name(), character.0),
-            Step::Clear { side } => format!("@{} clear", side.name()),
-            Step::Say {
-                speaker,
-                expression: Some(e),
-                text,
-            } => format!("{}[{e}]: {text}", speaker.0),
-            Step::Say {
-                speaker,
-                expression: None,
-                text,
-            } => format!("{}: {text}", speaker.0),
-            Step::Narrate { text } => format!("> {text}"),
-        };
-        out.push_str(&line);
-        out.push('\n');
+        print_step(&mut out, step, "");
     }
     out.push_str("@end\n");
     out
+}
+
+/// Appends `step`'s line(s) to `out`, each starting with `indent`.
+fn print_step(out: &mut String, step: &Step, indent: &str) {
+    let line = match step {
+        Step::Caption { text } => format!("@caption {text}"),
+        Step::Place {
+            side,
+            character,
+            expression,
+        } => format!("@{} {} {expression}", side.name(), character.0),
+        Step::Clear { side } => format!("@{} clear", side.name()),
+        Step::Say {
+            speaker,
+            expression: Some(e),
+            text,
+        } => format!("{}[{e}]: {text}", speaker.0),
+        Step::Say {
+            speaker,
+            expression: None,
+            text,
+        } => format!("{}: {text}", speaker.0),
+        Step::Narrate { text } => format!("> {text}"),
+        Step::Choice { options } => {
+            out.push_str("@choice\n");
+            for o in options {
+                for part in ["* ", &o.tone, ": ", &o.text, "\n"] {
+                    out.push_str(part);
+                }
+                for s in &o.steps {
+                    print_step(out, s, "  ");
+                }
+            }
+            "@endchoice".to_owned()
+        }
+    };
+    out.push_str(indent);
+    out.push_str(&line);
+    out.push('\n');
 }
 
 #[cfg(test)]

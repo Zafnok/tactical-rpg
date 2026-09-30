@@ -30,7 +30,7 @@ use trpg_core::{AiWeights, ArtTable, ClassTable, ItemTable, SkillTable, SpellTab
 
 pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
-pub use dialogue::{DialogueTable, Scene, Side, Step};
+pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};

@@ -4,8 +4,10 @@
 //!
 //! Layout (100×32): 32×16-cell portraits in 34×18 frames at `x = 1` and
 //! `x = 65` from row 1, name plates on row 19, the text box on rows 21–27.
+//! The lead's reply choices are a menu centred just above the text box.
 
 use trpg_content::{Scene, Side};
+use trpg_core::{LEAD_ID, LeadProfile};
 
 use crate::audio::MenuSound;
 use crate::color::UiColor;
@@ -16,6 +18,7 @@ use crate::portrait::draw_portrait;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::print_centred;
 use crate::widgets::help::{SEPARATOR, help_line, key_name};
+use crate::widgets::menu::{Menu, MenuEvent, MenuItem};
 use crate::widgets::word_wrap;
 
 /// Top row of the portrait frames.
@@ -48,7 +51,9 @@ const BLINK_S: f32 = 0.5;
 /// Plays a scene: Confirm reveals the text at once, or moves on when it's
 /// all shown; holding Confirm reveals faster. The End turn key does
 /// everything Confirm does. Cancel asks whether to skip
-/// the scene. Pops when the scene ends or is skipped.
+/// the scene. At a reply choice, the cursor keys move through the lead's
+/// replies and Confirm picks one; skipping stops at each choice. Pops when
+/// the scene ends or is skipped.
 #[derive(Debug, Clone)]
 pub struct DialogueScreen {
     player: DialoguePlayer,
@@ -63,32 +68,35 @@ pub struct DialogueScreen {
     waiting: f32,
     /// Whether the "Skip scene?" question is open.
     asking_skip: bool,
+    /// The lead's replies, while a choice is open.
+    menu: Option<Menu>,
 }
 
 impl DialogueScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "dialogue";
 
-    /// `scene` full-screen.
-    pub fn new(scene: Scene) -> Self {
+    /// `scene` full-screen, with `lead`'s name and pronouns.
+    pub fn new(scene: Scene, lead: LeadProfile) -> Self {
         let mut screen = Self {
-            player: DialoguePlayer::new(scene),
+            player: DialoguePlayer::new(scene, lead),
             overlay: false,
             lines: Vec::new(),
             page: 0,
             shown: 0.0,
             waiting: 0.0,
             asking_skip: false,
+            menu: None,
         };
         screen.start_box();
         screen
     }
 
     /// `scene` drawn over the screen below (the battle map).
-    pub fn overlay(scene: Scene) -> Self {
+    pub fn overlay(scene: Scene, lead: LeadProfile) -> Self {
         Self {
             overlay: true,
-            ..Self::new(scene)
+            ..Self::new(scene, lead)
         }
     }
 
@@ -114,11 +122,28 @@ impl DialogueScreen {
         self.asking_skip
     }
 
+    /// The replies menu, while a choice is open.
+    pub fn menu(&self) -> Option<&Menu> {
+        self.menu.as_ref()
+    }
+
     /// Wraps the player's current text box and starts on its first page.
+    /// At a choice, the line being answered stays up, fully shown (its last
+    /// page), under the replies menu.
     fn start_box(&mut self) {
-        self.lines = word_wrap(self.player.current().text.unwrap_or(""), TEXT_W);
+        let view = self.player.current();
+        let lines = word_wrap(view.text.as_deref().unwrap_or(""), TEXT_W);
+        let menu = view.choices.map(|choices| {
+            Menu::new(choices.into_iter().map(MenuItem::new).collect()).without_cancel()
+        });
+        self.lines = lines;
+        self.menu = menu;
         self.page = 0;
         self.start_page();
+        if self.menu.is_some() {
+            self.page = self.lines.len().saturating_sub(1) / TEXT_LINES;
+            self.shown = page_len(self.page_lines());
+        }
     }
 
     fn start_page(&mut self) {
@@ -173,11 +198,28 @@ impl Screen for DialogueScreen {
         }
         for &action in &input.actions {
             let action = advance_key(action);
+            if let Some(menu) = self.menu.as_mut() {
+                if let Some(MenuEvent::Chosen(i)) = menu.handle_with_sound(action, &mut ctx.audio) {
+                    self.player.choose(i);
+                    self.start_box();
+                    if self.player.is_finished() {
+                        return Transition::Pop;
+                    }
+                }
+                continue;
+            }
             // Only the skip prompt sounds; reading on plays nothing.
             match (self.asking_skip, action) {
                 (true, Action::Confirm) => {
                     ctx.audio.menu(MenuSound::Select);
-                    return Transition::Pop;
+                    self.asking_skip = false;
+                    self.player.skip_to_choice();
+                    if self.player.is_finished() {
+                        return Transition::Pop;
+                    }
+                    self.start_box();
+                    // The rest of this frame's keys can't pick a reply.
+                    break;
                 }
                 (true, Action::Cancel) => {
                     ctx.audio.menu(MenuSound::Cancel);
@@ -192,6 +234,9 @@ impl Screen for DialogueScreen {
                     self.shown = page_len(self.page_lines());
                 }
                 (false, Action::Confirm) if self.next() => return Transition::Pop,
+                // A choice just opened: the rest of this frame's keys
+                // can't pick a reply.
+                (false, Action::Confirm) if self.menu.is_some() => break,
                 _ => {}
             }
         }
@@ -225,16 +270,28 @@ impl Screen for DialogueScreen {
             buf.fill_rect(buf.bounds(), blank);
         }
         let view = self.player.current();
-        if let Some(caption) = view.caption {
+        if let Some(caption) = &view.caption {
             let text = format!(" {caption} ");
             print_centred(buf, 0, &text, c(UiColor::TextHighlight), c(UiColor::Black));
         }
         for (side, portrait) in [(Side::Left, view.left), (Side::Right, view.right)] {
             if let Some(portrait) = portrait {
-                draw_side(ctx, buf, side, portrait, view.speaker == Some(side));
+                draw_side(
+                    ctx,
+                    buf,
+                    self.player.lead(),
+                    side,
+                    portrait,
+                    view.speaker == Some(side),
+                );
             }
         }
         self.draw_text_box(ctx, buf, &view);
+        if let Some(menu) = &self.menu {
+            let (w, h) = menu.size();
+            let x = TEXT_BOX.x + (TEXT_BOX.w - w) / 2;
+            menu.draw(&ctx.palette, buf, x, TEXT_BOX.y - h);
+        }
     }
 
     fn is_overlay(&self) -> bool {
@@ -242,8 +299,12 @@ impl Screen for DialogueScreen {
     }
 }
 
-/// A character's display name (their id if they have no character entry).
-fn display_name<'a>(ctx: &'a Ctx, portrait: Portrait<'a>) -> &'a str {
+/// A character's display name: the name the player gave the lead, else
+/// the character entry's (their id if they have none).
+fn display_name<'a>(ctx: &'a Ctx, lead: &'a LeadProfile, portrait: Portrait<'a>) -> &'a str {
+    if portrait.character.0 == LEAD_ID {
+        return &lead.name;
+    }
     ctx.content
         .characters
         .characters
@@ -251,8 +312,15 @@ fn display_name<'a>(ctx: &'a Ctx, portrait: Portrait<'a>) -> &'a str {
         .map_or(portrait.character.0.as_str(), |c| c.name.as_str())
 }
 
-/// One side's frame, portrait and name plate.
-fn draw_side(ctx: &Ctx, buf: &mut GlyphBuffer, side: Side, portrait: Portrait, speaking: bool) {
+/// One side's frame, portrait (the lead's by gender) and name plate.
+fn draw_side(
+    ctx: &Ctx,
+    buf: &mut GlyphBuffer,
+    lead: &LeadProfile,
+    side: Side,
+    portrait: Portrait,
+    speaking: bool,
+) {
     let c = |u| ctx.palette.get(u);
     let bg = c(UiColor::PanelBg);
     let x = match side {
@@ -277,7 +345,8 @@ fn draw_side(ctx: &Ctx, buf: &mut GlyphBuffer, side: Side, portrait: Portrait, s
         )
     };
     buf.draw_box(frame, style, c(border), bg);
-    if let Some(art) = ctx.content.portraits.get(portrait.character.0.as_str()) {
+    let art_id = lead.portrait_for(&portrait.character.0);
+    if let Some(art) = ctx.content.portraits.get(art_id) {
         let mirror = side == Side::Right;
         draw_portrait(
             buf,
@@ -291,7 +360,7 @@ fn draw_side(ctx: &Ctx, buf: &mut GlyphBuffer, side: Side, portrait: Portrait, s
     }
     let plate = Rect::new(x, PLATE_Y, FRAME.0, 1);
     buf.fill_rect(plate, Cell::new(' ', c(UiColor::Text), bg));
-    let name = display_name(ctx, portrait);
+    let name = display_name(ctx, lead, portrait);
     let w = i32::try_from(name.chars().count()).unwrap_or(0);
     buf.print(x + (FRAME.0 - w) / 2, PLATE_Y, name, c(name_fg), bg);
 }
@@ -311,7 +380,7 @@ impl DialogueScreen {
             None => None,
         };
         if let Some(speaker) = speaker {
-            let name = format!(" {} ", display_name(ctx, speaker));
+            let name = format!(" {} ", display_name(ctx, self.player.lead(), speaker));
             buf.print(
                 TEXT_BOX.x + 3,
                 TEXT_BOX.y,
@@ -359,7 +428,7 @@ impl DialogueScreen {
             budget = budget.saturating_sub(len);
         }
 
-        if self.is_revealed() {
+        if self.is_revealed() && self.menu.is_none() {
             let right = TEXT_BOX.x + TEXT_BOX.w - 4;
             let bottom = TEXT_BOX.y + TEXT_BOX.h - 2;
             if let Some(key) = key_name(km, Action::Confirm) {
