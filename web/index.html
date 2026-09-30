@@ -22,6 +22,13 @@
 </head>
 <body>
 <canvas id="glcanvas" tabindex="1"></canvas>
+<script>
+  // The bundle is strict-mode JS and its last plugin (`quad_net`, unused)
+  // assigns to an undeclared global `register_plugin`, which throws an
+  // uncaught ReferenceError. Declaring the global first lets it succeed
+  // (ticket 0223). Keep this before `mq_js_bundle.js`.
+  var register_plugin;
+</script>
 <script src="mq_js_bundle.js"></script>
 <!-- Storage (0207): register the localStorage plugin before it's needed. -->
 <script src="sapp_jsutils.js"></script>

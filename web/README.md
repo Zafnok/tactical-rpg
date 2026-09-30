@@ -7,6 +7,10 @@ Browser play via WASM ([ADR-0009](../docs/adr/0009-distribution.md)).
 - `index.html` — the page shell: a full-window black `<canvas id="glcanvas">`,
   no margins or scrollbars, focused on load and on click, loads the bundle
   then `visions-of-shuyi.wasm`.
+  Before the bundle it declares a global `var register_plugin;` (ticket
+  0223): the bundle is strict-mode JS and its unused `quad_net` plugin
+  assigns to that undeclared global, which otherwise throws an uncaught
+  `ReferenceError` on every load.
 - `mq_js_bundle.js` — macroquad's JS loader, vendored (see below). It already
   calls `preventDefault` on the sokol-mapped arrow/space/tab keys inside its
   own `canvas.onkeydown` handler; `index.html` adds a small backstop
@@ -55,6 +59,13 @@ matching tag (or commit, if no tag exists) and update this note and the
   `.cargo_vcs_info.json`). License: MIT (dual MIT/Apache-2.0; text committed
   at [`quad-storage-LICENSE-MIT.txt`](quad-storage-LICENSE-MIT.txt), copied
   from the crate's own `LICENSE-MIT`).
+  **Local patch (ticket 0223):** the plugin's `version` is changed from
+  upstream's `"0.1.2"` to `65536`, the number `quad_storage_crate_version()`
+  in the `quad-storage-sys` crate (0.1.0) actually reports
+  (`(major << 24) + (minor << 16) + patch`); otherwise the loader logs a
+  version-mismatch error on every load. Re-apply it when re-vendoring; the
+  xtask test `quad_storage_js_version_matches_the_locked_crate` fails if it
+  is lost.
 - Both back [`trpg_ui::storage::Storage`](../crates/ui/src/storage.rs) on
   web (ticket 0207); `index.html` loads `sapp_jsutils.js` before
   `quad-storage.js`, both before `mq_js_bundle.js`'s `load(...)` call. See
