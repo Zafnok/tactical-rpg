@@ -26,6 +26,7 @@ pub mod playback;
 pub mod progress;
 pub mod rewind;
 pub mod skills;
+pub mod sounds;
 pub mod tips;
 pub mod units;
 
@@ -52,6 +53,7 @@ use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
 use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
+use self::sounds::CueQueue;
 use self::tips::TipState;
 use super::draw_debug_hint;
 use crate::color::{Palette, Rgb, UiColor};
@@ -223,6 +225,12 @@ pub struct BattleScreen {
     /// The EXP bar and level-up pages of the last command (0602), shown
     /// once its combat has played.
     progress: Option<Progress>,
+    /// Sounds of events that no playback or walk plays (0424), waiting
+    /// for their moment.
+    cues: CueQueue,
+    /// The unit whose walk was shown since the last command: its move's
+    /// steps have been heard.
+    walked: Option<UnitId>,
 }
 
 impl BattleScreen {
@@ -259,6 +267,8 @@ impl BattleScreen {
             tips: TipState::default(),
             popups: vec![],
             progress: None,
+            cues: CueQueue::default(),
+            walked: None,
         }
     }
 
@@ -505,6 +515,7 @@ impl BattleScreen {
     /// command changes nothing.
     fn apply(&mut self, cmd: &Command) {
         let before = self.state.units().to_vec();
+        let walked = self.walked.take();
         // Refused: the battle is unchanged and the player browses again.
         let events = self.state.apply(cmd).ok();
         if let Some(events) = &events {
@@ -530,12 +541,40 @@ impl BattleScreen {
             self.end_armed = true;
             self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
         }
-        let playback =
-            events.and_then(|events| Playback::new(&events, &before, self.state.fallen(), TIMINGS));
+        let playback = events.and_then(|events| {
+            let playback = Playback::new(&events, &before, self.state.fallen(), TIMINGS);
+            let cues = sounds::event_cues(&events, walked, playback.is_some(), &self.state);
+            self.cues.extend(cues);
+            let attacks = sounds::combat_attacks(&events, &before, &self.state);
+            playback.map(|p| p.with_sounds(&attacks, sounds::heals(&events)))
+        });
         self.mode = match playback {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
         };
+    }
+
+    /// Plays this frame's sounds (0424): the combat playback's and the
+    /// walk's that the coming tick reaches, and the queued events' that
+    /// are due.
+    fn play_sounds(&mut self, ctx: &mut Ctx, input: &FrameInput) {
+        let held = input.is_held(Action::Confirm);
+        let mut due = match &self.mode {
+            Mode::Combat(playback) => playback.sounds(input.dt, held),
+            _ => Vec::new(),
+        };
+        if let Some((id, tiles)) = self.mode.tiles_entered(input.dt, held) {
+            self.walked = Some(id);
+            let step = self
+                .state
+                .unit(id)
+                .and_then(|u| sounds::unit_step_sound(&self.state, u));
+            due.extend(step.into_iter().cycle().take(tiles));
+        }
+        due.extend(self.cues.tick(input.dt));
+        for cue in due {
+            ctx.audio.play_sound(cue);
+        }
     }
 
     /// Applies `cmd`, which leaves the unit's action open (`Equip`), and
@@ -1196,6 +1235,7 @@ impl Screen for BattleScreen {
                 }
             }
         }
+        self.play_sounds(ctx, input);
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
         self.tick_progress(dt, input.is_held(Action::Confirm));
@@ -1431,6 +1471,9 @@ mod rewind_tests;
 
 #[cfg(test)]
 mod skill_tests;
+
+#[cfg(test)]
+mod sound_tests;
 
 #[cfg(test)]
 mod tip_tests;

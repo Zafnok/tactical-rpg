@@ -404,6 +404,24 @@ impl Mode {
         }
     }
 
+    /// During a walk, the walking unit and how many tiles it enters in the
+    /// next [`tick`](Self::tick) with the same arguments (none if the hold
+    /// skips the rest of the walk); `None` in other modes.
+    pub fn tiles_entered(&self, dt: f32, confirm_held: bool) -> Option<(UnitId, usize)> {
+        let Mode::Moving { sel, t, held } = self else {
+            return None;
+        };
+        let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
+        let (to, held) = (t + dt, if confirm_held { held + dt } else { 0.0 });
+        let skipped = held >= HOLD_SKIP_S && !walk_done(sel, to);
+        let entered = if skipped {
+            0
+        } else {
+            walk_steps(sel, to) - walk_steps(sel, *t)
+        };
+        Some((sel.unit, entered))
+    }
+
     /// Advances a walk by `dt` seconds (`confirm_held`: Confirm is down this
     /// frame). The walk ends, opening the action menu, once the unit
     /// reaches the path's end or Confirm has been held [`HOLD_SKIP_S`].

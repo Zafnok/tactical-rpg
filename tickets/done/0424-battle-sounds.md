@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0212", "0213", "0214"]
 nick_input: sign-off
-completed:
+completed: 2026-09-29
 ---
 
 # 0424 — Battle sounds
@@ -74,12 +74,12 @@ each sound lands: timing, volume, and whether anything gets annoying.
 
 ## Acceptance criteria
 
-- [ ] A Harness test per row of the table: the right cue, once, at the right
+- [x] A Harness test per row of the table: the right cue, once, at the right
       playback step.
-- [ ] A foot unit moving 5 tiles emits 5 `step_foot` requests.
-- [ ] Skipping playback emits no further sound requests (test).
-- [ ] Nick signed off on the feel.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] A foot unit moving 5 tiles emits 5 `step_foot` requests.
+- [x] Skipping playback emits no further sound requests (test).
+- [ ] Nick signed off on the feel. *(Pending: play the PR build.)*
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -89,4 +89,35 @@ each sound lands: timing, volume, and whether anything gets annoying.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+- New `crates/ui/src/screens/battle/sounds.rs`: the cue rules as pure
+  functions (`sound_for_strike`, `cast_sound`, `step_sound`), what each
+  fighter strikes with (`combat_attacks`, following the command's
+  `Equipped` events), and a small `CueQueue` for timed cues.
+- `Playback::with_sounds` places the cues on the combat timeline: cast
+  sound when the striker's name starts flashing, strike sound when the
+  result shows. `Playback::sounds` hands out only the cues a frame
+  reaches, so Cancel (skip) drops everything not yet played.
+- Movement: the player's walk (`Mode::Moving`) plays a step per tile as
+  the unit enters it (`Mode::tiles_entered`). A move with no walk shown
+  (Canto's move-after now, enemy moves once 0502 lands) plays its steps
+  from `Event::UnitMoved` at the walk's pace. The unit whose walk was
+  shown doesn't step twice when its `Act` command applies.
+- Deviation: step 1 said "one function for events"; heals and non-combat
+  casts go through `event_cues`, while combat casts are timed by the
+  playback instead (so they sit on the animation).
+- `game.rs`'s title-music test now ignores sound requests (the battle it
+  plays makes a hit sound now).
+
+**Claude's starting rules (Nick: agree or veto):**
+1. An Absorb strike (the target heals from its element) sounds like any
+   spell landing: `hit_magic`.
+2. Every spell strike plays its cast sound as the caster's name flashes,
+   including a follow-up and a spell counter, not only the first cast.
+3. A critical that does 0 damage plays `block`, like any 0-damage hit.
+4. A heal during a combat (e.g. a draining skill) plays `heal` when the
+   combat box's final hold starts; any other heal plays it at once.
+5. A spell cast on a tile (fire on a forest, ice on water) plays its cast
+   sound.
+6. Steps come at the walk's pace (12 tiles/s); skipping a walk with
+   Confirm skips its remaining steps.
+
