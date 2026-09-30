@@ -145,3 +145,19 @@ fn overlay_on_the_battle_map_snapshot() {
     h.keys("f f f f f");
     assert_snapshot!(h.snapshot());
 }
+
+/// Reading on plays nothing; the skip prompt sounds like a menu (0425).
+#[test]
+fn only_the_skip_prompt_makes_sounds() {
+    let mut h = full_screen();
+    h.clear_audio().keys("f f Space");
+    assert!(h.sounds().is_empty(), "{:?}", h.sounds());
+    // Back opens the prompt, back again closes it, then yes skips.
+    h.keys("d");
+    assert_eq!(h.sounds(), ["menu_select"]);
+    h.clear_audio().keys("d");
+    assert_eq!(h.sounds(), ["menu_cancel"]);
+    h.clear_audio().keys("d f");
+    assert_eq!(h.sounds(), ["menu_select", "menu_select"]);
+    assert_eq!(h.top_screen(), "debug_menu");
+}

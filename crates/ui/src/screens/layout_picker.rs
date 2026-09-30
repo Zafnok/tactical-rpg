@@ -91,7 +91,9 @@ impl LayoutPickerScreen {
                     .iter()
                     .map(|&l| MenuItem::new(label(l)))
                     .collect(),
-            ),
+            )
+            // A layout must be picked.
+            .without_cancel(),
         }
     }
 
@@ -234,8 +236,8 @@ impl Screen for LayoutPickerScreen {
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         for &action in &input.actions {
-            // Cancel does nothing: a layout must be picked.
-            if let Some(MenuEvent::Chosen(i)) = self.menu.handle(action) {
+            if let Some(MenuEvent::Chosen(i)) = self.menu.handle_with_sound(action, &mut ctx.audio)
+            {
                 let layout = Layout::ALL.get(i).copied().unwrap_or(Layout::RightHanded);
                 // If saving fails the layout is still used this session;
                 // the player is just asked again next launch.
