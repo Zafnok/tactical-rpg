@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The `[[bin]]` name in `crates/app/Cargo.toml`.
-const BIN_NAME: &str = "tactical-rpg";
+const BIN_NAME: &str = "visions-of-shuyi";
 
 /// Files copied from `web/` into `dist/web/` unchanged.
 const SHELL_FILES: &[&str] = &[
@@ -341,7 +341,7 @@ mod tests {
         );
         assert_eq!(
             path,
-            Path::new("/repo/target/wasm32-unknown-unknown/debug/tactical-rpg.wasm")
+            Path::new("/repo/target/wasm32-unknown-unknown/debug/visions-of-shuyi.wasm")
         );
     }
 
@@ -357,7 +357,7 @@ mod tests {
         );
         assert_eq!(
             path,
-            Path::new("/repo/target/wasm32-unknown-unknown/release/tactical-rpg.wasm")
+            Path::new("/repo/target/wasm32-unknown-unknown/release/visions-of-shuyi.wasm")
         );
     }
 
@@ -392,7 +392,7 @@ mod tests {
         .unwrap();
         assert!(summary.contains("10 bytes"), "{summary}");
         assert_eq!(
-            fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
+            fs::read(root.join("dist/web/visions-of-shuyi.wasm")).unwrap(),
             b"wasm-bytes"
         );
         assert_eq!(
@@ -470,7 +470,7 @@ mod tests {
         .unwrap();
         assert!(summary.contains("3 bytes"), "{summary}");
         assert_eq!(
-            fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
+            fs::read(root.join("dist/web/visions-of-shuyi.wasm")).unwrap(),
             b"opt"
         );
         fs::remove_dir_all(&root).unwrap();
@@ -499,7 +499,7 @@ mod tests {
         .unwrap();
         assert!(summary.contains("11 bytes"), "{summary}");
         assert_eq!(
-            fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
+            fs::read(root.join("dist/web/visions-of-shuyi.wasm")).unwrap(),
             b"unoptimized"
         );
         fs::remove_dir_all(&root).unwrap();
@@ -528,7 +528,7 @@ mod tests {
         .unwrap();
         assert!(summary.contains("11 bytes"), "{summary}");
         assert_eq!(
-            fs::read(root.join("dist/web/tactical-rpg.wasm")).unwrap(),
+            fs::read(root.join("dist/web/visions-of-shuyi.wasm")).unwrap(),
             b"unoptimized"
         );
         fs::remove_dir_all(&root).unwrap();

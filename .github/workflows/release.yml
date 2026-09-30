@@ -33,7 +33,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  BIN_NAME: tactical-rpg
+  BIN_NAME: visions-of-shuyi
 
 jobs:
   # Establishes the version for this run and whether this is a real release
@@ -124,7 +124,7 @@ jobs:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           set -euo pipefail
-          pkg="tactical-rpg-$VERSION-windows-x64"
+          pkg="visions-of-shuyi-$VERSION-windows-x64"
           mkdir -p "$pkg"
           cp "target/x86_64-pc-windows-msvc/release/$BIN_NAME.exe" "$pkg/"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
@@ -137,7 +137,7 @@ jobs:
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
           cat > "$pkg/README.txt" <<EOF
-          tactical-rpg $VERSION (Windows x64)
+          Visions of Shuyi $VERSION (Windows x64)
 
           Double-click $BIN_NAME.exe to run. No installation needed. Keep the
           music folder next to it: the game's music is loaded from there.
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-windows
-          path: tactical-rpg-*-windows-x64.zip
+          path: visions-of-shuyi-*-windows-x64.zip
 
   build-linux:
     name: build-linux
@@ -174,7 +174,7 @@ jobs:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           set -euo pipefail
-          pkg="tactical-rpg-$VERSION-linux-x64"
+          pkg="visions-of-shuyi-$VERSION-linux-x64"
           mkdir -p "$pkg"
           cp "target/x86_64-unknown-linux-gnu/release/$BIN_NAME" "$pkg/"
           chmod +x "$pkg/$BIN_NAME"
@@ -188,7 +188,7 @@ jobs:
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
           cat > "$pkg/README.txt" <<EOF
-          tactical-rpg $VERSION (Linux x64)
+          Visions of Shuyi $VERSION (Linux x64)
 
           Run ./$BIN_NAME from a terminal (mark it executable first if the
           archive extractor didn't preserve that: chmod +x $BIN_NAME). Keep the
@@ -204,7 +204,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-linux
-          path: tactical-rpg-*-linux-x64.tar.gz
+          path: visions-of-shuyi-*-linux-x64.tar.gz
 
   build-macos:
     name: build-macos
@@ -226,7 +226,7 @@ jobs:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           set -euo pipefail
-          pkg="tactical-rpg-$VERSION-macos-universal"
+          pkg="visions-of-shuyi-$VERSION-macos-universal"
           mkdir -p "$pkg"
           lipo -create -output "$pkg/$BIN_NAME" \
             "target/aarch64-apple-darwin/release/$BIN_NAME" \
@@ -242,7 +242,7 @@ jobs:
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
           cat > "$pkg/README.txt" <<EOF
-          tactical-rpg $VERSION (macOS, universal: Apple Silicon + Intel)
+          Visions of Shuyi $VERSION (macOS, universal: Apple Silicon + Intel)
 
           This build is unsigned. macOS will refuse to open it with a normal
           double-click ("cannot be opened because the developer cannot be
@@ -261,7 +261,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-macos
-          path: tactical-rpg-*-macos-universal.zip
+          path: visions-of-shuyi-*-macos-universal.zip
 
   build-web:
     name: build-web
@@ -281,7 +281,7 @@ jobs:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           set -euo pipefail
-          pkg="tactical-rpg-$VERSION-web"
+          pkg="visions-of-shuyi-$VERSION-web"
           mkdir -p "$pkg"
           cp -r dist/web/. "$pkg/"
           cp LICENSE THIRD_PARTY_LICENSES.html "$pkg/"
@@ -292,7 +292,7 @@ jobs:
           cp assets/audio/licenses/*.txt "$pkg/audio-licenses/"
           cp web/mq_js_bundle-LICENSE-MIT.txt "$pkg/"
           cat > "$pkg/README.txt" <<EOF
-          tactical-rpg $VERSION (web)
+          Visions of Shuyi $VERSION (web)
 
           Serve this folder with any static file server and open index.html,
           e.g.: python -m http.server 8000, then http://localhost:8000
@@ -307,7 +307,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-web
-          path: tactical-rpg-*-web.zip
+          path: visions-of-shuyi-*-web.zip
 
   # Only this job needs write access, and only for a real (non-dry-run) run.
   release:

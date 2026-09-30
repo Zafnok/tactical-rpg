@@ -48,7 +48,7 @@ pub(crate) struct Audio<B: Backend> {
     /// Loads stopped before they finished: polled until they do, then
     /// dropped, so a finished decode doesn't stay in memory.
     abandoned: Vec<B::Loading>,
-    /// Where music files are, e.g. `music` or `C:/Games/tactical-rpg/music`.
+    /// Where music files are, e.g. `music` or `C:/Games/visions-of-shuyi/music`.
     music_dir: String,
     rng: VariantRng,
     /// Problems to log (missing files, decode errors).
@@ -790,11 +790,11 @@ mod tests {
 
     #[test]
     fn the_music_folder_is_beside_the_exe_when_there() {
-        let exe = Path::new("/games/trpg/tactical-rpg.exe");
+        let exe = Path::new("/games/trpg/visions-of-shuyi.exe");
         assert_eq!(music_dir(Some(exe), |_| true), "/games/trpg/music");
         assert_eq!(music_dir(Some(exe), |_| false), "music");
         assert_eq!(music_dir(None, |_| true), "music");
-        let windows = Path::new(r"C:\games\trpg\tactical-rpg.exe");
+        let windows = Path::new(r"C:\games\trpg\visions-of-shuyi.exe");
         let found = music_dir(Some(windows), |d| d.ends_with(MUSIC_DIR));
         assert!(!found.contains('\\'), "{found}");
         assert!(found.ends_with("music"), "{found}");

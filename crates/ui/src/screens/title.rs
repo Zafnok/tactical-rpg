@@ -11,7 +11,7 @@ use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 
 /// Title text.
-pub const TITLE: &str = "tactical-rpg";
+pub const TITLE: &str = "Visions of Shuyi";
 /// Line under the title.
 pub const SUBTITLE: &str = "an ASCII tactics game";
 
