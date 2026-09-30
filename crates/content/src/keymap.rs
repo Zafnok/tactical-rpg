@@ -1,5 +1,6 @@
 //! The keymap (`assets/data/keymap.ron`, ADR-0015): for each [`Layout`],
-//! which key chords trigger which [`Action`], plus key-repeat timings.
+//! which key chords trigger which [`Action`], the keys that work before a
+//! layout is chosen, plus key-repeat timings.
 //!
 //! [`Key`], [`Chord`] and [`Action`] live here (not in `trpg-ui`) because the
 //! loader must parse chords and action names to validate the file, and
@@ -347,13 +348,16 @@ impl fmt::Display for Layout {
 /// Unbound chords are absent.
 pub type Bindings = BTreeMap<Chord, Action>;
 
-/// The validated keymap: every [`Layout`]'s bindings, plus the key-repeat
-/// timings they share.
+/// The validated keymap: every [`Layout`]'s bindings, the layout picker's
+/// bindings, plus the key-repeat timings they share.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct KeymapDef {
     /// Layout → its bindings. After [`load`](Self::load) every layout is
     /// present.
     pub layouts: BTreeMap<Layout, Bindings>,
+    /// The keys that work before any layout is chosen (the layout picker).
+    /// Actions not listed are unbound there.
+    pub layout_picker: Bindings,
     /// Key-repeat timings.
     pub repeat: RepeatDef,
 }
@@ -363,6 +367,7 @@ pub struct KeymapDef {
 #[serde(deny_unknown_fields)]
 struct RawKeymap {
     layouts: BTreeMap<String, BTreeMap<String, Vec<String>>>,
+    layout_picker: BTreeMap<String, Vec<String>>,
     repeat: RepeatDef,
 }
 
@@ -388,8 +393,9 @@ impl KeymapDef {
     /// Parses and validates keymap `source`, attributing errors to `file`.
     /// Reports every unknown or missing layout, and within each layout every
     /// unknown action, unparsable chord, chord bound more than once and
-    /// missing action (prefixed with the layout name), plus bad repeat
-    /// timing.
+    /// missing action (prefixed with the layout name), the same for the
+    /// `layout_picker` section (except that unlisted actions are unbound
+    /// there, not an error), plus bad repeat timing.
     pub fn from_source(file: &str, source: &str) -> Result<Self, Vec<ContentError>> {
         let raw: RawKeymap = parse_ron(file, source).map_err(|e| vec![e])?;
         let mut errors = Vec::new();
@@ -408,7 +414,8 @@ impl KeymapDef {
             // Search the layout's own lines first, so errors in the second
             // layout don't point into the first.
             let from = start.map_or(0, |line| usize::try_from(line).unwrap_or(0));
-            match validate_bindings(file, source, from, layout, actions) {
+            let label = format!("layout \"{layout}\"");
+            match validate_bindings(file, source, from, &label, true, actions) {
                 Ok(bindings) => {
                     layouts.insert(layout, bindings);
                 }
@@ -423,6 +430,22 @@ impl KeymapDef {
                 ));
             }
         }
+        let picker_line = line_of_quoted(source, 0, "layout_picker");
+        let from = picker_line.map_or(0, |line| usize::try_from(line).unwrap_or(0));
+        let layout_picker = match validate_bindings(
+            file,
+            source,
+            from,
+            "layout_picker",
+            false,
+            &raw.layout_picker,
+        ) {
+            Ok(bindings) => bindings,
+            Err(e) => {
+                errors.extend(e);
+                Bindings::new()
+            }
+        };
         if raw.repeat.interval_ms == 0 {
             errors.push(positioned(
                 ContentError::new(file, "repeat interval_ms must be at least 1"),
@@ -432,6 +455,7 @@ impl KeymapDef {
         if errors.is_empty() {
             Ok(Self {
                 layouts,
+                layout_picker,
                 repeat: raw.repeat,
             })
         } else {
@@ -440,21 +464,23 @@ impl KeymapDef {
     }
 }
 
-/// Validates one layout's `actions` (action name → chord names). Messages
-/// start with the layout name; lines are searched from line index `from`
-/// (just after the layout's own line) on.
+/// Validates one section's `actions` (action name → chord names): a layout
+/// or the layout picker. Messages start with `label`; lines are searched
+/// from line index `from` (just after the section's own line) on. With
+/// `require_all`, every [`Action`] must be listed.
 fn validate_bindings(
     file: &str,
     source: &str,
     from: usize,
-    layout: Layout,
+    label: &str,
+    require_all: bool,
     actions: &BTreeMap<String, Vec<String>>,
 ) -> Result<Bindings, Vec<ContentError>> {
     let mut errors = Vec::new();
     let mut bindings = Bindings::new();
     let err_at = |key: &str, message: String| {
         positioned(
-            ContentError::new(file, format!("layout \"{layout}\": {message}")),
+            ContentError::new(file, format!("{label}: {message}")),
             line_of_quoted(source, from, key),
         )
     };
@@ -494,12 +520,12 @@ fn validate_bindings(
         }
     }
     for action in Action::ALL {
-        if !actions.contains_key(action.name()) {
+        if require_all && !actions.contains_key(action.name()) {
             errors.push(ContentError::new(
                 file,
                 format!(
-                    "layout \"{layout}\": missing action \"{action}\" (list it with [] to leave \
-                     it unbound)"
+                    "{label}: missing action \"{action}\" (list it with [] to leave it \
+                     unbound)"
                 ),
             ));
         }
@@ -641,10 +667,19 @@ mod tests {
         )
     }
 
-    /// A keymap source holding `blocks` as its layouts.
+    /// A keymap source holding `blocks` as its layouts and an empty
+    /// `layout_picker`.
     fn source_of(blocks: &[String]) -> String {
+        source_with_picker(blocks, "")
+    }
+
+    /// A keymap source holding `blocks` as its layouts, then `repeat`, then
+    /// `picker` as the `layout_picker` section's entries (on the line after
+    /// `layout_picker: {`).
+    fn source_with_picker(blocks: &[String], picker: &str) -> String {
         format!(
-            "(\n    layouts: {{\n{}    }},\n    repeat: (delay_ms: 300, interval_ms: 55),\n)",
+            "(\n    layouts: {{\n{}    }},\n    repeat: (delay_ms: 300, interval_ms: 55),\n    \
+             layout_picker: {{\n{picker}    }},\n)",
             blocks.concat()
         )
     }
@@ -869,6 +904,84 @@ mod tests {
         assert_eq!(errors(src).len(), 1);
     }
 
+    /// Two complete layouts, every action `[]`.
+    fn empty_layouts() -> [String; 2] {
+        [block("LeftHanded", "", ""), block("RightHanded", "", "")]
+    }
+
+    /// Line of the `layout_picker` section's first entry in
+    /// [`source_with_picker`] with [`empty_layouts`].
+    fn first_picker_line() -> Option<u32> {
+        u32::try_from(3 + 2 * (Action::ALL.len() + 2) + 3).ok()
+    }
+
+    #[test]
+    fn layout_picker_section_loads_and_leaves_unlisted_actions_unbound() {
+        let picker = "        \"CursorUp\": [\"Up\", \"w\"],\n        \"Confirm\": [\"Enter\"],\n";
+        let src = source_with_picker(&empty_layouts(), picker);
+        let k = KeymapDef::from_source("k.ron", &src).unwrap_or_default();
+        let expected: Bindings = [
+            (Chord::plain(Key::Up), Action::CursorUp),
+            (Chord::plain(Key::W), Action::CursorUp),
+            (Chord::plain(Key::Enter), Action::Confirm),
+        ]
+        .into();
+        assert_eq!(k.layout_picker, expected);
+    }
+
+    #[test]
+    fn layout_picker_unknown_action_is_error_with_line() {
+        let src = source_with_picker(&empty_layouts(), "        \"Attack\": [\"f\"],\n");
+        let errs = KeymapDef::from_source("k.ron", &src)
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1);
+        assert!(
+            errs[0]
+                .message
+                .starts_with("layout_picker: unknown action \"Attack\""),
+            "{}",
+            errs[0].message
+        );
+        assert_eq!(errs[0].line, first_picker_line());
+    }
+
+    #[test]
+    fn layout_picker_bad_chord_is_error_with_line() {
+        let src = source_with_picker(&empty_layouts(), "        \"Confirm\": [\"Nope\"],\n");
+        let errs = KeymapDef::from_source("k.ron", &src)
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1);
+        assert!(
+            errs[0]
+                .message
+                .starts_with("layout_picker: action \"Confirm\": "),
+            "{}",
+            errs[0].message
+        );
+        assert_eq!(errs[0].line, first_picker_line());
+    }
+
+    #[test]
+    fn layout_picker_conflicting_chord_is_error() {
+        let picker = "        \"Confirm\": [\"f\"],\n        \"Cancel\": [\"f\"],\n";
+        let errs = errors(&source_with_picker(&empty_layouts(), picker));
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(
+            errs[0].contains("layout_picker: chord \"f\" is bound to both"),
+            "{}",
+            errs[0]
+        );
+    }
+
+    #[test]
+    fn missing_layout_picker_section_is_error() {
+        let src = source_of(&empty_layouts()).replace("    layout_picker: {\n    },\n", "");
+        assert!(!src.contains("layout_picker"));
+        assert_eq!(errors(&src).len(), 1);
+    }
+
     #[test]
     fn syntax_error_is_positioned() {
         let errs = KeymapDef::from_source("k.ron", "(\n  layouts: {\n  \"a\" {} },\n)")
@@ -959,6 +1072,22 @@ mod tests {
             assert_eq!(k.bindings(layout).map(BTreeMap::len), Some(15), "{layout}");
         }
         assert_eq!(k.layouts.len(), 2);
+        // Before a layout is chosen: either hand's up/down and confirm keys.
+        let picker: Bindings = [
+            ("Up", Action::CursorUp),
+            ("w", Action::CursorUp),
+            ("Down", Action::CursorDown),
+            ("s", Action::CursorDown),
+            ("f", Action::Confirm),
+            ("j", Action::Confirm),
+            ("Enter", Action::Confirm),
+            ("Space", Action::Confirm),
+        ]
+        .into_iter()
+        .filter_map(|(c, a)| Chord::parse(c).ok().map(|c| (c, a)))
+        .collect();
+        assert_eq!(picker.len(), 8);
+        assert_eq!(k.layout_picker, picker);
         assert_eq!(
             k.repeat,
             RepeatDef {

@@ -95,7 +95,8 @@ impl TitleScreen {
         }
     }
 
-    /// The bottom help line, e.g. `arrows move · f select · d back`.
+    /// The bottom help line: the cursor keys `move`, the Confirm key
+    /// `select`, the Cancel key `back`, named from the active keymap.
     pub fn help(ctx: &Ctx) -> String {
         let km = &ctx.keymap;
         help_line(&[
@@ -165,7 +166,8 @@ impl Screen for TitleScreen {
 pub struct PlaceholderScreen;
 
 impl PlaceholderScreen {
-    /// The message shown, e.g. `Coming soon — press d to go back`.
+    /// The message shown: `Coming soon`, then `press <Cancel key> to go
+    /// back` with the key named from the active keymap.
     pub fn message(ctx: &Ctx) -> String {
         match key_name(&ctx.keymap, Action::Cancel) {
             Some(key) => format!("Coming soon — press {key} to go back"),

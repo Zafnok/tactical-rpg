@@ -4,6 +4,10 @@
 // listed (use [] to leave one unbound) and a chord may be bound to only one
 // action.
 //
+// layout_picker holds the keys that work before a layout is chosen (the
+// first-launch picker), so it can be used with either hand. Only the actions
+// listed there are bound; the rest do nothing until a layout is picked.
+//
 // Chords: lowercase letters "a".."z", digits "0".."9", ";", "Up" "Down"
 // "Left" "Right" "Enter" "Escape" "Space" "Tab" "Backspace" "F1".."F12",
 // optionally prefixed by "Shift+". "Shift+e" and "e" are different chords.
@@ -55,7 +59,14 @@
             "Rewind": ["u"],
         },
     },
-    // Held cursor keys, in every layout: first repeat after delay_ms, then
-    // every interval_ms.
+    // Before a layout is chosen: either hand's up/down and confirm keys.
+    // Nothing cancels (a layout must be picked).
+    layout_picker: {
+        "CursorUp": ["Up", "w"],
+        "CursorDown": ["Down", "s"],
+        "Confirm": ["f", "j", "Enter", "Space"],
+    },
+    // Held cursor keys, in every layout and the layout picker: first repeat
+    // after delay_ms, then every interval_ms.
     repeat: (delay_ms: 300, interval_ms: 55),
 )

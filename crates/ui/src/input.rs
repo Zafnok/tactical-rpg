@@ -40,25 +40,13 @@ impl Keymap {
         Self::new(bindings.map(|(&c, &a)| (c, a)), def.repeat)
     }
 
-    /// The keys that work before any layout is chosen, so the layout picker
-    /// can be used whichever hand the player types with: `Up`/`w` and
-    /// `Down`/`s` move, `f`, `j`, `Enter` and `Space` confirm. Nothing
-    /// cancels (a layout must be picked) and nothing else is bound.
-    pub fn layout_picker(repeat: RepeatDef) -> Self {
-        let plain = |key, action| (Chord::plain(key), action);
-        Self::new(
-            [
-                plain(Key::Up, Action::CursorUp),
-                plain(Key::W, Action::CursorUp),
-                plain(Key::Down, Action::CursorDown),
-                plain(Key::S, Action::CursorDown),
-                plain(Key::F, Action::Confirm),
-                plain(Key::J, Action::Confirm),
-                plain(Key::Enter, Action::Confirm),
-                plain(Key::Space, Action::Confirm),
-            ],
-            repeat,
-        )
+    /// The keys that work before any layout is chosen, from the keymap
+    /// definition's `layout_picker` section, so the layout picker can be
+    /// used whichever hand the player types with. Actions it doesn't list
+    /// (e.g. Cancel: a layout must be picked) are unbound.
+    pub fn layout_picker(def: &KeymapDef) -> Self {
+        let bindings = def.layout_picker.iter().map(|(&c, &a)| (c, a));
+        Self::new(bindings, def.repeat)
     }
 
     /// The action bound to `chord`, if any. `Shift+h` and `h` are distinct:
@@ -83,6 +71,33 @@ impl Keymap {
             .collect();
         chords.sort_unstable();
         chords
+    }
+
+    /// What moves the cursor, for help text: `arrows` when the four cursor
+    /// actions' [`primary`](Self::primary) chords are the plain arrow keys,
+    /// otherwise those chords in up-left-down-right order (`wasd`). `None`
+    /// if any cursor action is unbound. Lives here, not in `widgets::help`,
+    /// because it names keys (only this module may).
+    pub fn cursor_keys_name(&self) -> Option<String> {
+        let order = [
+            (Action::CursorUp, Key::Up),
+            (Action::CursorLeft, Key::Left),
+            (Action::CursorDown, Key::Down),
+            (Action::CursorRight, Key::Right),
+        ];
+        let chords = order
+            .iter()
+            .map(|&(action, _)| self.primary(action))
+            .collect::<Option<Vec<_>>>()?;
+        let arrows = chords
+            .iter()
+            .zip(order)
+            .all(|(chord, (_, arrow))| *chord == Chord::plain(arrow));
+        Some(if arrows {
+            "arrows".to_owned()
+        } else {
+            chords.iter().map(ToString::to_string).collect()
+        })
     }
 
     /// The chord help text names for `action`: the first of
@@ -332,7 +347,8 @@ mod tests {
 
     #[test]
     fn layout_picker_keys_work_for_either_hand() {
-        let km = Keymap::layout_picker(RepeatDef::default());
+        let def = KeymapDef::load().unwrap_or_default();
+        let km = Keymap::layout_picker(&def);
         for (c, a) in [
             ("Up", CursorUp),
             ("w", CursorUp),
@@ -348,7 +364,7 @@ mod tests {
         assert_eq!(km.chords_for(Confirm).len(), 4);
         assert_eq!(km.primary(Action::Cancel), None);
         assert_eq!(km.action(chord("d")), None);
-        assert_eq!(km.repeat(), RepeatDef::default());
+        assert_eq!(km.repeat(), def.repeat);
     }
 
     #[test]
@@ -356,7 +372,9 @@ mod tests {
         let mut s = default_state();
         s.key_down(chord("l"));
         s.key_down(chord("f"));
-        s.set_keymap(Keymap::layout_picker(RepeatDef::default()));
+        s.set_keymap(Keymap::layout_picker(
+            &KeymapDef::load().unwrap_or_default(),
+        ));
         assert!(!s.is_held(Confirm));
         assert_eq!(s.update(ms(1000)), vec![]);
         // `f` is still physically down: ignored until pressed again.

@@ -5,10 +5,10 @@ type: infra
 milestone: M1 Engine
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0216 — Audit and remove hard-coded keys
@@ -108,17 +108,17 @@ None.
 
 ## Acceptance criteria
 
-- [ ] Completion notes list every hard-coded key found and its fix
+- [x] Completion notes list every hard-coded key found and its fix
       (or "none found" for a searched area).
-- [ ] `Keymap::layout_picker` builds from `keymap.ron`; the picker still
+- [x] `Keymap::layout_picker` builds from `keymap.ron`; the picker still
       works with `Up`/`w`/`Down`/`s` and `f`/`j`/`Enter`/`Space` (existing
       Harness tests pass unchanged).
-- [ ] `cargo xtask check-keys` passes on the repo and fails on a fixture
+- [x] `cargo xtask check-keys` passes on the repo and fails on a fixture
       containing `Key::F` in screen code and `"press f"` in help text (tests).
-- [ ] CI and the `run-gates` skill run `cargo xtask check-keys`.
-- [ ] No default key changed (existing keymap tests and snapshots pass
+- [x] CI and the `run-gates` skill run `cargo xtask check-keys`.
+- [x] No default key changed (existing keymap tests and snapshots pass
       unchanged).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -128,3 +128,52 @@ None.
 - Integration: existing layout-picker Harness tests unchanged.
 
 ## Completion notes
+
+Audited all non-test Rust in `crates/ui`, `crates/app`, `crates/content`
+and all text in `assets/` (every `.ron` except `keymap.ron`, every `.dlg`,
+`assets/dialogue/README.md`). The code was already close: help bars, tips
+and messages all use `widgets::help` lookups or `{Action}` placeholders.
+What was found and fixed:
+
+| file:line (before) | What it was | What it is now |
+| --- | --- | --- |
+| `crates/ui/src/input.rs:43-61` | `Keymap::layout_picker(repeat)` built the pre-layout keys (`Up`/`w`, `Down`/`s`, `f`/`j`/`Enter`/`Space`) from `Key::` constants | `Keymap::layout_picker(&KeymapDef)` builds from the new `layout_picker` section of `assets/data/keymap.ron` (same 8 keys), validated by the loader (unknown action, bad or doubled chord = error; unlisted actions unbound) |
+| `crates/ui/src/widgets/help.rs:30-50` | `cursor_keys_name` compared against `Key::Up`/`Left`/`Down`/`Right` and wrote `"arrows"` | Logic moved to `Keymap::cursor_keys_name` in `input.rs` (the pipeline file); `help::cursor_keys_name` delegates. Same output |
+| `crates/ui/src/screens/layout_picker.rs:40-63` | `TOP_ROW`/`HOME_ROW` `Key` arrays (keyboard picture) | Kept, marked `// check-keys: keyboard picture`. Highlighting already came from the keymap (`key_role` → `km.action(..)`) |
+| `crates/ui/src/screens/layout_picker.rs:186-199` | Arrow caps and space bar named `Key::Up`… `Key::Space` inline in `draw_panel` | Moved to marked picture constants `UP_CAP`, `LOWER_ARROW_CAPS`, `SPACE_BAR`; `key_role` marked too |
+| `crates/ui/src/screens/layout_picker.rs:105` | Doc comment quoted `w/Up s/Down choose · f/j/Enter/Space pick` | Names the actions (Cursor up/down, Confirm) |
+| `crates/ui/src/screens/dialogue.rs:48,142` | Doc comments: "End Turn key (Space)", "Space in every layout" | "the End turn key"; code already used only `Action::Confirm`/`Action::EndTurn` |
+| `crates/ui/src/screens/battle/mod.rs:1088` | Doc comment example `w danger zone: OFF · Shift+Space auto-end: ON` | Names the Danger zone / Auto-end keys; code already used `key_name` |
+| `crates/ui/src/screens/title.rs:98,168` | Doc comment examples `arrows move · f select · d back`, `press d to go back` | Name the actions; code already used lookups |
+| `crates/ui/src/harness.rs` | `Chord::parse` for scripted key presses | Test-only (`cfg(any(test, feature = "harness"))`): allowed, listed in the scanner as test support |
+| `crates/app/src` (outside `keys.rs`) | — | None found |
+| `crates/content/src` (outside `keymap.rs`) | — | None found |
+| `assets/data/*.ron`, `assets/audio/audio.ron`, `assets/fonts/atlas.ron`, `assets/dialogue/*` | — | None found (`tips.ron` already uses placeholders) |
+
+Guard: `cargo xtask check-keys` (`crates/xtask/src/check_keys.rs`), in CI's
+`tickets` job and the `run-gates` skill; `real_repo_has_no_hard_coded_keys`
+and `check_keys_passes_on_the_real_repo` run it on the repo in
+`cargo test`. It is a small line lexer (comments, strings, raw strings,
+char literals vs lifetimes) that skips `#[cfg(test)]` items by bracket
+counting and test files by name. The `// check-keys: keyboard picture`
+marker is honoured only in `layout_picker.rs` and is an error anywhere else.
+
+Deviations:
+- The help-hint rule only flags a *lowercase* single letter followed by a
+  word (`"f select"`), because keys print lowercase and capitals are names
+  (`"Battle Theme B for RPG"` in `audio.ron` was a false positive).
+  `"press F"` and `"[F]"` are still caught in any case.
+- Text in `assets/` (`.ron` strings such as tips and item/skill
+  descriptions, and `.dlg` dialogue) gets a narrower rule than Rust string
+  literals, because it's prose: a line fails only when it tells the player to
+  press a key (`press`/`hit`/`tap`/`hold` + a letter, a key name or F1–F12),
+  names a `Shift+` chord or `WASD`, or has a bracketed letter (`[F]`).
+  "Escape while you can!", "fires arrows" or "Plan B" pass. The strict
+  rule (any key word, `"f select"`-style hints) stays for Rust strings,
+  where help bars are built.
+- The 0705 merge left a stale `tickets/open/0905-…` next to
+  `tickets/done/0905-…`, which failed ticket-lint on `main` and in this
+  branch's tests. Removed the stale open copy in its own commit.
+
+No gameplay rules were decided. No default key changed.
+
