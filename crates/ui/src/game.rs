@@ -8,7 +8,7 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::{Action, Chord, InputState, Key, Layout};
-use crate::screen::{Ctx, FrameInput, Screen, ScreenStack};
+use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, ScreenStack};
 use crate::screens::{LayoutPickerScreen, TitleScreen};
 
 /// A keyboard event as `app` reports it.
@@ -147,6 +147,9 @@ impl Game {
 
     fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
         for &event in events {
+            if matches!(event, RawKeyEvent::Down(_)) && self.ctx.key_prompt == KeyPrompt::Waiting {
+                self.ctx.key_prompt = KeyPrompt::Pressed;
+            }
             match event {
                 RawKeyEvent::Down(chord) => self.input.key_down(chord),
                 RawKeyEvent::Up(key) => self.input.key_up(key),
@@ -177,7 +180,7 @@ impl Game {
     }
 
     /// Clears the buffer and draws the stack into it.
-    fn redraw(&mut self) {
+    pub(crate) fn redraw(&mut self) {
         let blank = Cell::new(
             ' ',
             self.ctx.palette.get(UiColor::Text),
@@ -318,6 +321,22 @@ mod tests {
         assert_eq!(game.screens(), ["title"]);
         let ctx = game.into_ctx();
         assert_eq!(ctx.saved_layout(), Some(Layout::LeftHanded));
+    }
+
+    /// Ticket 0224: the first key press ends the web title's wait; releases
+    /// don't, and native builds never wait.
+    #[test]
+    fn a_key_press_moves_the_key_prompt_on() {
+        let mut game = Game::start(ctx());
+        game.frame(&[down(Key::Q)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Off);
+        let mut web = ctx();
+        web.key_prompt = KeyPrompt::Waiting;
+        let mut game = Game::start(web);
+        game.frame(&[RawKeyEvent::Up(Key::Q)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
+        game.frame(&[down(Key::Q)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
     }
 
     #[test]

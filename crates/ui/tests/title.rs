@@ -173,3 +173,62 @@ fn debug_tool_sounds() {
     h.keys("F2 f").clear_audio().keys("d");
     assert_eq!(h.sounds(), ["menu_cancel"]);
 }
+
+/// The web build's launch (ticket 0224, `docs/design/title-screen.md`).
+fn web_title() -> Harness {
+    Harness::on_web_with_layout(Layout::RightHanded)
+}
+
+#[test]
+fn web_title_waits_for_a_key() {
+    let mut h = web_title();
+    h.wait(0.5);
+    assert_snapshot!(h.snapshot());
+    assert!(music(&h).is_empty());
+}
+
+#[test]
+fn any_key_shows_the_menu_and_starts_the_music() {
+    let mut h = web_title();
+    // `q` is bound to nothing: it still counts.
+    h.keys("q");
+    assert_eq!(music(&h), ["title"]);
+    assert_eq!(h.snapshot(), title().snapshot());
+}
+
+#[test]
+fn the_key_that_ends_the_wait_does_nothing_else() {
+    let mut h = web_title();
+    // `f` selects, but here it only ends the wait: New Game stays focused
+    // and nothing opens, and no menu sound plays.
+    h.keys("f");
+    assert_eq!(h.screens(), ["title"]);
+    assert!(h.sounds().is_empty());
+    assert_eq!(h.snapshot(), title().snapshot());
+    h.keys("f");
+    assert_eq!(h.top_screen(), "placeholder");
+}
+
+#[test]
+fn back_on_the_web_title_shows_the_menu_not_the_prompt() {
+    let mut h = web_title();
+    h.keys("f f d");
+    assert_eq!(h.top_screen(), "title");
+    assert_eq!(h.snapshot(), title().snapshot());
+    assert_eq!(music(&h), ["title"]);
+}
+
+#[test]
+fn picking_a_layout_first_skips_the_prompt() {
+    // First launch on the web: the layout picker takes the first keys, so
+    // the title shows its menu (and music) straight away after it.
+    let mut h = Harness::on_web();
+    h.keys("Down f");
+    assert_eq!(h.top_screen(), "title");
+    h.wait(0.1);
+    assert!(
+        !h.snapshot()
+            .contains(trpg_ui::screens::title::PRESS_ANY_KEY)
+    );
+    assert_eq!(music(&h), ["title"]);
+}

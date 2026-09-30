@@ -6,7 +6,7 @@ use crate::audio::{MenuSound, pick_from_pool};
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
-use crate::screen::{Ctx, FrameInput, Screen, Transition};
+use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, Transition};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 
@@ -21,6 +21,10 @@ const TITLE_ROW: i32 = 9;
 const SUBTITLE_ROW: i32 = 11;
 /// Top row of the menu box.
 const MENU_ROW: i32 = 14;
+
+/// Shown where the menu goes until a key is pressed, on the web build
+/// (`docs/design/title-screen.md`).
+pub const PRESS_ANY_KEY: &str = "Press any key";
 
 /// Menu item that starts a new game.
 const NEW_GAME: &str = "New Game";
@@ -58,6 +62,9 @@ pub struct TitleScreen {
     /// Quick Battles started, mixed into the music seed so each one can
     /// pick a different track.
     battles_started: u64,
+    /// Whether the "press any key" prompt ([`Ctx::key_prompt`]) is over.
+    /// It shows once per launch.
+    prompt_done: bool,
 }
 
 impl TitleScreen {
@@ -79,7 +86,14 @@ impl TitleScreen {
             items,
             music_on: false,
             battles_started: 0,
+            prompt_done: false,
         }
+    }
+
+    /// Whether the title is still showing [`PRESS_ANY_KEY`] instead of
+    /// its menu.
+    fn waiting(&self, ctx: &Ctx) -> bool {
+        ctx.key_prompt != KeyPrompt::Off && !self.prompt_done
     }
 
     /// Plays a Quick Battle track: one from [`QUICK_BATTLE_MUSIC_POOL`],
@@ -119,6 +133,16 @@ impl Screen for TitleScreen {
     }
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        if self.waiting(ctx) {
+            // A key pressed on another screen first (the layout picker)
+            // counts too. The key that ends the wait does nothing else.
+            if ctx.key_prompt == KeyPrompt::Pressed {
+                self.prompt_done = true;
+                ctx.audio.play_music(TITLE_MUSIC);
+                self.music_on = true;
+            }
+            return Transition::None;
+        }
         if !self.music_on {
             // The music state ignores a request for the track already on.
             ctx.audio.play_music(TITLE_MUSIC);
@@ -152,10 +176,15 @@ impl Screen for TitleScreen {
         clear(ctx, buf);
         print_centred(buf, TITLE_ROW, TITLE, c(UiColor::TextHighlight), black);
         print_centred(buf, SUBTITLE_ROW, SUBTITLE, c(UiColor::TextDim), black);
+        let bottom = i32::from(buf.height()) - 1;
+        if self.waiting(ctx) {
+            print_centred(buf, MENU_ROW, PRESS_ANY_KEY, c(UiColor::TextDim), black);
+            draw_debug_hint(ctx, buf, bottom);
+            return;
+        }
         let (w, _) = self.menu.size();
         let x = centre_x(buf, usize::try_from(w).unwrap_or(0));
         self.menu.draw(&ctx.palette, buf, x, MENU_ROW);
-        let bottom = i32::from(buf.height()) - 1;
         print_centred(buf, bottom, &Self::help(ctx), c(UiColor::TextDim), black);
         draw_debug_hint(ctx, buf, bottom);
     }

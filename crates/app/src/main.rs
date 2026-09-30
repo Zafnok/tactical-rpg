@@ -7,7 +7,7 @@ mod storage;
 
 use macroquad::prelude::*;
 use trpg_content::font::ATLAS_PNG_PATH;
-use trpg_ui::{Ctx, Game, UiColor};
+use trpg_ui::{Ctx, Game, KeyPrompt, UiColor};
 
 use crate::audio::Audio;
 use crate::audio::device::Macroquad;
@@ -34,6 +34,9 @@ async fn main() {
         Ok(mut ctx) => {
             ctx.tips_enabled = true;
             ctx.music_seed = miniquad::date::now().to_bits();
+            if cfg!(target_arch = "wasm32") {
+                ctx.key_prompt = KeyPrompt::Waiting;
+            }
             ctx.with_storage(storage::platform())
         }
         Err(e) => return show_content_errors(&e.to_string()).await,

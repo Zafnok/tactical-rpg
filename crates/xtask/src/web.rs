@@ -227,6 +227,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn index_html_keeps_resuming_audio_until_it_runs() {
+        // Ticket 0224: the shim must wrap `AudioContext` before the bundle
+        // creates one, and retry on every key press.
+        let html =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/index.html"))
+                .unwrap();
+        let shim = html
+            .find("class TrackedAudioContext extends Base")
+            .expect("index.html wraps AudioContext");
+        let bundle = html
+            .find(r#"<script src="mq_js_bundle.js">"#)
+            .expect("index.html loads mq_js_bundle.js");
+        assert!(shim < bundle, "wrap AudioContext before the bundle loads");
+        assert!(html.contains(r#"for (const type of ["keydown", "mousedown", "touchend"])"#));
+    }
+
     /// A fresh scratch repo root under `env::temp_dir()`, with `web/`
     /// populated like the real one, per the pattern in `font_atlas::tests`.
     fn fixture(name: &str) -> PathBuf {
