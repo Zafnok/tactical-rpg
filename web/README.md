@@ -8,7 +8,7 @@ Browser play via WASM ([ADR-0009](../docs/adr/0009-distribution.md)).
   no margins or scrollbars, focused on load and on click, loads the bundle
   then `visions-of-shuyi.wasm`.
   Before the bundle it declares a global `var register_plugin;` (ticket
-  0222): the bundle is strict-mode JS and its unused `quad_net` plugin
+  0223): the bundle is strict-mode JS and its unused `quad_net` plugin
   assigns to that undeclared global, which otherwise throws an uncaught
   `ReferenceError` on every load.
 - `mq_js_bundle.js` — macroquad's JS loader, vendored (see below). It already
@@ -59,7 +59,7 @@ matching tag (or commit, if no tag exists) and update this note and the
   `.cargo_vcs_info.json`). License: MIT (dual MIT/Apache-2.0; text committed
   at [`quad-storage-LICENSE-MIT.txt`](quad-storage-LICENSE-MIT.txt), copied
   from the crate's own `LICENSE-MIT`).
-  **Local patch (ticket 0222):** the plugin's `version` is changed from
+  **Local patch (ticket 0223):** the plugin's `version` is changed from
   upstream's `"0.1.2"` to `65536`, the number `quad_storage_crate_version()`
   in the `quad-storage-sys` crate (0.1.0) actually reports
   (`(major << 24) + (minor << 16) + patch`); otherwise the loader logs a

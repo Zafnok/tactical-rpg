@@ -1,5 +1,5 @@
 ---
-id: "0222"
+id: "0223"
 title: Fix the console errors the web build logs on load
 type: bug
 milestone: M1 Engine
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed: 2026-09-30
 ---
 
-# 0222 — Fix the console errors the web build logs on load
+# 0223 — Fix the console errors the web build logs on load
 
 ## Context
 
@@ -98,4 +98,5 @@ errors should be gone. The AudioContext warning remains (browser rule).
 - The autoplay warning and silent title (item 3) are unchanged: browsers
   block audio until the first click or key press. Music starts on that first
   input. Making it start with the title needs a player-facing "click to
-  start" step, which is Nick's call; no ticket was written until he decides.
+  start" step. Nick chose "Press any key" on the title, web only: decision
+  ticket 0034, built by ticket 0224.

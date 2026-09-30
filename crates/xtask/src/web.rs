@@ -610,7 +610,7 @@ version = "1.2.3"
 
     #[test]
     fn index_html_declares_register_plugin_before_the_bundle() {
-        // Ticket 0222: the strict-mode bundle assigns to `register_plugin`,
+        // Ticket 0223: the strict-mode bundle assigns to `register_plugin`,
         // which throws unless the global already exists.
         let html = fs::read_to_string(real_repo_root().join("web/index.html")).unwrap();
         let declared = html
@@ -627,7 +627,7 @@ version = "1.2.3"
 
     #[test]
     fn quad_storage_js_version_matches_the_locked_crate() {
-        // Ticket 0222: the loader logs a version-mismatch error unless the JS
+        // Ticket 0223: the loader logs a version-mismatch error unless the JS
         // plugin's `version` equals `quad_storage_crate_version()`.
         let root = real_repo_root();
         let lock = fs::read_to_string(root.join("Cargo.lock")).unwrap();
