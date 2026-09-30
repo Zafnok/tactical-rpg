@@ -26,6 +26,7 @@ use crate::item::{
     AccessoryDef, ArmourDef, ConsumableDef, ItemDef, Loadout, WEAPON_SLOTS, WeaponDef,
     WeaponInstance,
 };
+use crate::legal::legal_commands;
 use crate::magic::{Affinity, Element};
 use crate::map::TileFeature;
 use crate::movement::reachable;
@@ -965,13 +966,15 @@ fn with_objective(units: Vec<Unit>, objective: Objective) -> BattleState {
     })
 }
 
+/// Applies an `Act`, which [`BattleState::check`] must accept too.
 fn act(s: &mut BattleState, id: u32, dest: Pos, action: UnitAction) -> Vec<Event> {
-    s.apply(&Command::Act {
+    let cmd = Command::Act {
         unit: UnitId(id),
         dest,
         action,
-    })
-    .unwrap()
+    };
+    assert_eq!(s.check(&cmd), Ok(()), "{cmd:?}");
+    s.apply(&cmd).unwrap()
 }
 
 pub(crate) fn attack(target: u32) -> UnitAction {
@@ -1008,9 +1011,11 @@ fn walk(s: &mut BattleState, n: usize) -> Vec<(Turn, Phase)> {
     seen
 }
 
-/// Applies `cmd`, expecting `err`, and checks the state didn't change.
+/// Checks and applies `cmd`, expecting `err` from both, and checks the
+/// state didn't change.
 fn refused(s: &mut BattleState, cmd: &Command, err: CommandError) {
     let before = s.clone();
+    assert_eq!(s.check(cmd), Err(err.clone()), "{cmd:?}");
     assert_eq!(s.apply(cmd), Err(err), "{cmd:?}");
     assert_eq!(*s, before, "{cmd:?} changed the state");
 }
@@ -2567,408 +2572,6 @@ fn commands_and_events_round_trip_through_ron() {
 
 // ---- Property: random legal play -------------------------------------------------
 
-/// Every legal command in `s`: `EndPhase`, and for each ready unit of the
-/// phase, equipping each weapon it can wield and each attack spell it knows,
-/// and each stoppable tile with `Wait`, each attack in range (per weapon),
-/// each cast ([`legal_casts`]), each item use, a seize, shop visits
-/// ([`legal_shop_txns`]) and opening an unopened chest. Consumables in test
-/// packs are all known; weapons and spells are all known.
-pub(crate) fn legal_commands(s: &BattleState) -> Vec<Command> {
-    if let Some(moves) = legal_moves_after(s) {
-        return moves;
-    }
-    let mut out = vec![Command::EndPhase];
-    let ready = s
-        .units()
-        .iter()
-        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
-    for u in ready {
-        let class = s.classes().get(&u.class).unwrap();
-        for slot in 0..WEAPON_SLOTS {
-            if u.usable_weapon(slot, class, s.items()).is_some() {
-                out.push(Command::Equip {
-                    unit: u.id,
-                    equipped: Equipped::Weapon(slot),
-                });
-            }
-        }
-        for spell in &u.learned {
-            if s.spells().get(spell).unwrap().is_attack() {
-                out.push(Command::Equip {
-                    unit: u.id,
-                    equipped: Equipped::Spell(spell.clone()),
-                });
-            }
-        }
-        let reach = reachable(s.map(), s.terrain(), s.classes(), s.units(), u.id).unwrap();
-        for dest in reach.stoppable().iter() {
-            let mut add = |action| {
-                out.push(Command::Act {
-                    unit: u.id,
-                    dest,
-                    action,
-                });
-            };
-            add(UnitAction::Wait);
-            let class = s.classes().get(&u.class).unwrap();
-            for slot in 0..WEAPON_SLOTS {
-                let Some((_, w)) = u.usable_weapon(slot, class, s.items()) else {
-                    continue;
-                };
-                for t in s.units() {
-                    let d = Pos::manhattan(dest, t.pos);
-                    if u.faction.is_hostile_to(t.faction)
-                        && (w.min_range..=w.max_range).contains(&d)
-                    {
-                        add(UnitAction::Attack {
-                            target: t.id,
-                            slot,
-                            active: None,
-                            art: None,
-                        });
-                    }
-                }
-            }
-            for action in legal_casts(s, u, dest) {
-                add(action);
-            }
-            for action in legal_item_uses(s, u, dest) {
-                add(action);
-            }
-            if let Objective::Seize { pos, by_lord, .. } = s.objective()
-                && pos == dest
-                && u.faction == Faction::Player
-                && (u.is_lord || !by_lord)
-            {
-                add(UnitAction::Seize);
-            }
-            if u.faction == Faction::Player {
-                if s.map().chest(dest).is_some() && !s.is_opened(dest) {
-                    add(UnitAction::Open);
-                }
-                if let Some(shop) = s.map().shop(dest) {
-                    for txns in legal_shop_txns(s, u, shop) {
-                        add(UnitAction::Shop { txns });
-                    }
-                }
-            }
-        }
-    }
-    out.extend(legal_talks(s));
-    let skills = legal_skill_commands(s, &out);
-    let arts = legal_art_commands(s, &out);
-    out.extend(skills);
-    out.extend(arts);
-    out
-}
-
-/// Every talk of a ready unit of the phase: from each tile it can stop on,
-/// to each unit it can talk to there.
-fn legal_talks(s: &BattleState) -> Vec<Command> {
-    let mut out = Vec::new();
-    let ready = s
-        .units()
-        .iter()
-        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
-    for u in ready {
-        let reach = reachable(s.map(), s.terrain(), s.classes(), s.units(), u.id).unwrap();
-        for dest in reach.stoppable().iter() {
-            for target in s.talk_targets(u.id, dest) {
-                out.push(Command::Talk {
-                    unit: u.id,
-                    dest,
-                    target,
-                });
-            }
-        }
-    }
-    out
-}
-
-/// Every use of a pack item by `u` from `dest`: player units only, on
-/// itself or a non-hostile unit adjacent to `dest`.
-fn legal_item_uses(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
-    let own = if u.faction == Faction::Player {
-        s.pack().items.len()
-    } else {
-        0
-    };
-    let mut out = Vec::new();
-    for pack_index in 0..own {
-        for t in s.units() {
-            let near = t.id != u.id && Pos::manhattan(dest, t.pos) == 1;
-            if t.id == u.id || (near && !u.faction.is_hostile_to(t.faction)) {
-                out.push(UnitAction::UseItem {
-                    pack_index,
-                    target: t.id,
-                });
-            }
-        }
-    }
-    out
-}
-
-/// Some Combat Art attacks, kept only if `s` accepts them: each ready
-/// unit's arts for the weapon of its first two attacks in `commands`, and
-/// from its own tile, each art for each weapon on each hostile unit up to
-/// the weapon's max range (Close Shot reaches adjacent units).
-fn legal_art_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
-    let mut out = Vec::new();
-    let ready = s
-        .units()
-        .iter()
-        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
-    for u in ready {
-        let with_art = |target, slot, art: &ArtDef| UnitAction::Attack {
-            target,
-            slot,
-            active: None,
-            art: Some(art.id.clone()),
-        };
-        let attacks = commands
-            .iter()
-            .filter_map(|c| match c {
-                Command::Act {
-                    unit,
-                    dest,
-                    action: UnitAction::Attack { target, slot, .. },
-                } if *unit == u.id => Some((*dest, *target, *slot)),
-                _ => None,
-            })
-            .take(2);
-        for (dest, target, slot) in attacks {
-            for art in u.arts_for(slot, s.classes(), s.items(), s.arts()) {
-                out.push(Command::Act {
-                    unit: u.id,
-                    dest,
-                    action: with_art(target, slot, art),
-                });
-            }
-        }
-        let class = s.classes().get(&u.class).unwrap();
-        for slot in 0..WEAPON_SLOTS {
-            let Some((_, w)) = u.usable_weapon(slot, class, s.items()) else {
-                continue;
-            };
-            let near = s.units().iter().filter(|t| {
-                u.faction.is_hostile_to(t.faction) && Pos::manhattan(u.pos, t.pos) <= w.max_range
-            });
-            for t in near {
-                for art in u.arts_for(slot, s.classes(), s.items(), s.arts()) {
-                    out.push(Command::Act {
-                        unit: u.id,
-                        dest: u.pos,
-                        action: with_art(t.id, slot, art),
-                    });
-                }
-            }
-        }
-    }
-    out.retain(|c| s.clone().apply(c).is_ok());
-    out
-}
-
-/// If a unit was offered a move after its attack, the only legal commands:
-/// staying, or moving to each tile it can reach.
-fn legal_moves_after(s: &BattleState) -> Option<Vec<Command>> {
-    let pending = s.pending_move()?;
-    let stay = std::iter::once(None);
-    let moves = stay
-        .chain(s.move_after_tiles().into_iter().map(Some))
-        .map(|to| Command::MoveAfter {
-            unit: pending.unit,
-            to,
-        })
-        .collect();
-    Some(moves)
-}
-
-/// Some skill commands, kept only if `s` accepts them: each ready unit's
-/// combat actives on its first attacks and casts in `commands`, its other
-/// actives on those attacks'
-/// targets, and its other actives from its own tile, with no target or on
-/// an adjacent hostile unit.
-fn legal_skill_commands(s: &BattleState, commands: &[Command]) -> Vec<Command> {
-    let mut out = Vec::new();
-    let ready = s
-        .units()
-        .iter()
-        .filter(|u| Phase::of(u.faction) == s.phase() && !u.acted);
-    for u in ready {
-        let usable = u.usable_skills(s.classes(), s.skills());
-        let ids = |combat: bool| -> Vec<SkillId> {
-            usable
-                .iter()
-                .filter(|d| d.is_active() && d.is_combat() == combat)
-                .map(|d| d.id.clone())
-                .collect()
-        };
-        let (combat, actions) = (ids(true), ids(false));
-        let act = |dest, action| Command::Act {
-            unit: u.id,
-            dest,
-            action,
-        };
-        let attacks = commands
-            .iter()
-            .filter_map(|c| match c {
-                Command::Act { unit, dest, action } if *unit == u.id => Some((*dest, action)),
-                _ => None,
-            })
-            .filter(|(_, a)| {
-                matches!(
-                    a,
-                    UnitAction::Attack { .. }
-                        | UnitAction::Cast {
-                            target: CastTarget::Unit(_),
-                            ..
-                        }
-                )
-            })
-            .take(2);
-        for (dest, action) in attacks {
-            for variant in attack_variants(action, &combat) {
-                out.push(act(dest, variant));
-            }
-            if let UnitAction::Attack { target, .. } = action {
-                for skill in &actions {
-                    out.push(act(
-                        dest,
-                        UnitAction::UseSkill {
-                            skill: skill.clone(),
-                            target: Some(*target),
-                        },
-                    ));
-                }
-            }
-        }
-        let targets: Vec<Option<UnitId>> = std::iter::once(None)
-            .chain(
-                s.units()
-                    .iter()
-                    .filter(|t| {
-                        u.faction.is_hostile_to(t.faction) && Pos::manhattan(u.pos, t.pos) == 1
-                    })
-                    .map(|t| Some(t.id)),
-            )
-            .collect();
-        for skill in &actions {
-            for &target in &targets {
-                let skill = skill.clone();
-                out.push(act(u.pos, UnitAction::UseSkill { skill, target }));
-            }
-        }
-    }
-    out.retain(|c| s.clone().apply(c).is_ok());
-    out
-}
-
-/// `action` (an attack or a cast at a unit) with each of `combat` actives.
-fn attack_variants(action: &UnitAction, combat: &[SkillId]) -> Vec<UnitAction> {
-    combat
-        .iter()
-        .filter_map(|skill| match action.clone() {
-            UnitAction::Attack { target, slot, .. } => Some(UnitAction::Attack {
-                target,
-                slot,
-                active: Some(skill.clone()),
-                art: None,
-            }),
-            UnitAction::Cast { spell, target, .. } => Some(UnitAction::Cast {
-                spell,
-                target,
-                active: Some(skill.clone()),
-            }),
-            _ => None,
-        })
-        .collect()
-}
-
-/// Every spell `u` can cast from `dest`: each learned spell with a use left,
-/// on each hostile unit (attack) or wounded ally other than itself (heal) in
-/// its range, and on each empty tile in range its terrain effect can change.
-fn legal_casts(s: &BattleState, u: &Unit, dest: Pos) -> Vec<UnitAction> {
-    let mut out = Vec::new();
-    for spell in u.learned.iter().filter(|sp| u.spells.uses_left(sp) > 0) {
-        let def = s.spells().get(spell).unwrap();
-        for t in s.units() {
-            let ok = if def.is_attack() {
-                u.faction.is_hostile_to(t.faction)
-            } else {
-                t.id != u.id && u.faction.is_allied_to(t.faction) && t.hp < t.stats.hp
-            };
-            if ok && def.in_range(Pos::manhattan(dest, t.pos)) {
-                out.push(UnitAction::Cast {
-                    spell: spell.clone(),
-                    target: CastTarget::Unit(t.id),
-                    active: None,
-                });
-            }
-        }
-        let Some(effect) = &def.terrain_effect else {
-            continue;
-        };
-        for pos in s.map().tiles.positions() {
-            let terrain = s.map().tiles.get(pos).unwrap();
-            let empty = pos != dest && !s.units().iter().any(|t| t.pos == pos && t.id != u.id);
-            if empty && effect.from.contains(terrain) && def.in_range(Pos::manhattan(dest, pos)) {
-                out.push(UnitAction::Cast {
-                    spell: spell.clone(),
-                    target: CastTarget::Tile(pos),
-                    active: None,
-                });
-            }
-        }
-    }
-    out
-}
-
-/// Shop visits `u` can make at `shop`: each affordable buy (and buying the
-/// first item twice), each sale, each repair it can pay for.
-fn legal_shop_txns(s: &BattleState, u: &Unit, shop: &crate::shop::Shop) -> Vec<Vec<ShopTxn>> {
-    let mut out = Vec::new();
-    let price = |id: &ItemId| s.items().get(id).unwrap().price();
-    for id in &shop.stock {
-        if price(id) <= s.gold() {
-            out.push(vec![ShopTxn::Buy { item: id.clone() }]);
-        }
-    }
-    if let Some(first) = shop.stock.first()
-        && price(first).saturating_mul(2) <= s.gold()
-    {
-        out.push(vec![
-            ShopTxn::Buy {
-                item: first.clone()
-            };
-            2
-        ]);
-    }
-    if shop.kind.buys() {
-        let mut from: Vec<SellFrom> = (0..WEAPON_SLOTS)
-            .filter(|&slot| u.loadout.weapon(slot).is_some())
-            .map(SellFrom::Weapon)
-            .collect();
-        from.extend(u.loadout.armour.as_ref().map(|_| SellFrom::Armour));
-        from.extend(u.loadout.accessory.as_ref().map(|_| SellFrom::Accessory));
-        from.extend((!s.pack().items.is_empty()).then_some(SellFrom::Pack(0)));
-        out.extend(from.into_iter().map(|from| vec![ShopTxn::Sell { from }]));
-    }
-    if shop.kind == ShopKind::Blacksmith {
-        for slot in 0..WEAPON_SLOTS {
-            let Some(copy) = u.loadout.weapon(slot) else {
-                continue;
-            };
-            let def = s.items().weapon(&copy.def).unwrap();
-            if copy.durability_left < def.durability
-                && crate::shop::repair_cost(def, copy) <= s.gold()
-            {
-                out.push(vec![ShopTxn::Repair { slot }]);
-            }
-        }
-    }
-    out
-}
-
 /// The map of the property test, with a shop of each kind and three chests.
 fn prop_map() -> BattleMap {
     let shop = |kind, stock: &[&str]| {
@@ -3490,6 +3093,7 @@ fn scenes_placed(events: &[Event]) -> Result<Vec<usize>, TestCaseError> {
 }
 
 mod art;
+mod bots;
 mod progression;
 mod shop;
 mod skill;

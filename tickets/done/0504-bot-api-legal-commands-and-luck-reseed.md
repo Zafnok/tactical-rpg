@@ -5,10 +5,10 @@ type: feature
 milestone: M4 Enemy AI
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0504 — Bot support in core: legal commands and luck reseeding
@@ -98,27 +98,27 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `trpg_core::legal_commands` is public and documented; no `unwrap` or
+- [x] `trpg_core::legal_commands` is public and documented; no `unwrap` or
       `expect` in `legal.rs`.
-- [ ] Property test `every_legal_command_is_accepted`: from random seeded
+- [x] Property test `every_legal_command_is_accepted`: from random seeded
       setups (`arb_setup`), random play choosing only from `legal_commands`
       never gets a `CommandError`, to the end of the battle or 200 commands.
       (The existing random-play property in `battle/tests.rs` may be renamed
       to this.)
-- [ ] Property test `ai_commands_are_legal`: for random states reached as
+- [x] Property test `ai_commands_are_legal`: for random states reached as
       above, `ai::next_command(state, &AiWeights::STARTING)`, when `Some`, is
       in `legal_commands(state)`.
-- [ ] Unit test `legal_commands_is_deterministic`: two calls on equal states
+- [x] Unit test `legal_commands_is_deterministic`: two calls on equal states
       give equal lists.
-- [ ] Unit test `reseeding_changes_luck_but_not_the_board`: two copies of a
+- [x] Unit test `reseeding_changes_luck_but_not_the_board`: two copies of a
       state, reseeded with different seeds, differ only in their RNG (the
       board, units and turn are equal); applying the same attack over a range
       of seeds gives both a hit and a miss for a ~50% attack; the same seed
       twice gives identical events.
-- [ ] Unit test `the_real_battle_keeps_its_luck`: existing rewind test still
+- [x] Unit test `the_real_battle_keeps_its_luck`: existing rewind test still
       passes unchanged (`doing_the_same_thing_after_a_rewind_gives_the_same_result`).
-- [ ] ADR written and indexed.
-- [ ] All gates in the `run-gates` skill pass, including the mutation gate's
+- [x] ADR written and indexed.
+- [x] All gates in the `run-gates` skill pass, including the mutation gate's
       expectations for new `core` code.
 
 ## Tests required
@@ -129,3 +129,37 @@ None.
 
 ## Completion notes
 
+Done 2026-09-30.
+
+- **`crates/core/src/legal.rs`** (`trpg_core::legal_commands`): now lists
+  *every* command `apply` accepts, not the old test helper's sample (it only
+  tried arts and actives on a unit's first two attacks and from its own
+  tile). It builds candidates per ready unit and tile and keeps those the
+  battle's own validation accepts, so the rules stay in one place and a
+  missing table entry just drops that option. Order and the one exclusion
+  are in the module docs: shop visits are listed as single transactions
+  plus "buy two of the shop's first item" (what the old helper did, with
+  selling now covering every pack item, not just the first). Once the
+  battle is over the list is empty (the old helper still offered
+  `EndPhase`). No `unwrap`/`expect`.
+- **Deviation: `BattleState::check(&Command)`** (new, public): `apply` is
+  now "validate, then carry out"; `check` runs the same validation without
+  changing anything (no luck rolled). `move_after` was split the same way.
+  `legal.rs` also uses a crate-private `check_action` so each unit's moves
+  are worked out once, not per candidate. Needed to make the list exact
+  and fast; not listed in the ticket's steps.
+- **`BattleState::reseed_luck(seed)`**, documented as bots-only.
+- **Tests** (`battle/tests/bots.rs`): the two properties, plus
+  `legal_commands_are_every_accepted_command` (the list equals the accepted
+  commands of a far wider brute-force search, both ways, and has no
+  duplicates), a range-bonus case (Long Shot), the move-after and
+  battle-over lists, `check` vs `apply`, and the reseed test.
+  `the_real_battle_keeps_its_luck` is in `history/tests.rs`, next to the
+  unchanged rewind test. The existing `random_legal_play_keeps_the_invariants`
+  keeps its name (it checks much more than acceptance) and now uses the
+  public function; `every_legal_command_is_accepted` is a new property. The
+  `refused`/`act` test helpers now also assert `check` agrees with `apply`.
+  Core tests take ~8 s instead of ~4 s.
+- **ADR-0033** (playtest bots) written and indexed.
+- No gameplay rules decided; nothing changes in play. Follow-up tickets:
+  none.
