@@ -175,6 +175,8 @@ pub struct Playback {
     cues: Vec<(f32, &'static str)>,
     timings: Timings,
     t: f32,
+    /// The name of the art or active used, shown in the box's top border.
+    banner: Option<String>,
 }
 
 /// What a triggered scene plays before.
@@ -269,7 +271,21 @@ impl Playback {
             cues: Vec::new(),
             timings,
             t: 0.0,
+            banner: None,
         })
+    }
+
+    /// The same playback with `banner` (the name of the art or active a
+    /// boss or a green unit attacks with, 0414) in the box's top border.
+    #[must_use]
+    pub fn with_banner(mut self, banner: Option<String>) -> Self {
+        self.banner = banner;
+        self
+    }
+
+    /// The art's or active's name shown over the box, if any.
+    pub fn banner(&self) -> Option<&str> {
+        self.banner.as_deref()
     }
 
     /// The playback with its sound cues: `attacks` says what each
@@ -593,6 +609,12 @@ pub fn draw_box(buf: &mut GlyphBuffer, palette: &Palette, pb: &Playback) {
     let bg = c(UiColor::PanelBg);
     buf.fill_rect(BOX, Cell::new(' ', c(UiColor::Text), bg));
     buf.draw_box(BOX, BoxStyle::Double, c(UiColor::PanelBorderFocus), bg);
+    if let Some(name) = pb.banner() {
+        let text = format!(" {name} ");
+        let w = i32::try_from(text.chars().count()).unwrap_or(0);
+        let x = BOX.x + ((BOX.w - w) / 2).max(1);
+        buf.print(x, BOX.y, &text, c(UiColor::TextHighlight), bg);
+    }
     let flashing = match step.beat {
         Beat::Flash { strike, .. } => {
             // Whole half-periods since the flash began: on, off, on, …

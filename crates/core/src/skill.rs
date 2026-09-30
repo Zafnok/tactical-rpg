@@ -27,8 +27,8 @@
 //!   attacking weapon; other actives: the equipped weapon) or
 //!   [`SkillCost::ExtraSpellUse`] (spell actives: 1 use on top of the cast).
 //!   [`check_cost`] and [`pay_cost`] hold the rules (`combat-arts.md`,
-//!   *Using an art* 3–5): a durability cost needs an unbroken weapon with
-//!   `durability_left ≥ cost`; a spell active needs `uses_left ≥ 2`. The cost
+//!   *Using an art* 3–5): a durability cost needs an unbroken weapon, and
+//!   with less left than the cost it spends what is left; a spell active needs `uses_left ≥ 2`. The cost
 //!   is paid once, when the action is committed. A weapon brought to 0 by it
 //!   breaks after the action ([`Paid::broke`]). Combat Arts
 //!   ([`crate::art`]) use the same helpers.
@@ -525,13 +525,6 @@ pub enum CostError {
     NoWeapon,
     /// The weapon is broken.
     WeaponBroken,
-    /// The weapon has less durability left than the cost.
-    NotEnoughDurability {
-        /// Durability left.
-        left: u32,
-        /// The cost.
-        cost: u32,
-    },
     /// The spell has fewer than 2 uses left (the cast plus the extra use).
     NotEnoughUses {
         /// Uses left.
@@ -545,9 +538,6 @@ impl fmt::Display for CostError {
             CostError::WrongSource => f.write_str("it can't be paid that way"),
             CostError::NoWeapon => f.write_str("no weapon to pay with"),
             CostError::WeaponBroken => f.write_str("the weapon is broken"),
-            CostError::NotEnoughDurability { left, cost } => {
-                write!(f, "it costs {cost} durability and the weapon has {left}")
-            }
             CostError::NotEnoughUses { left } => {
                 write!(f, "it needs 2 spell uses and the spell has {left}")
             }
@@ -560,17 +550,13 @@ impl std::error::Error for CostError {}
 /// Whether `unit` can pay `cost` from `from` (see the module docs).
 pub fn check_cost(unit: &Unit, cost: SkillCost, from: &CostSource) -> Result<(), CostError> {
     match (cost, from) {
-        (SkillCost::Durability(cost), CostSource::Weapon(slot)) => {
+        (SkillCost::Durability(_), CostSource::Weapon(slot)) => {
             let copy = unit.loadout.weapon(*slot).ok_or(CostError::NoWeapon)?;
             if copy.is_broken() {
                 return Err(CostError::WeaponBroken);
             }
-            if copy.durability_left < cost {
-                return Err(CostError::NotEnoughDurability {
-                    left: copy.durability_left,
-                    cost,
-                });
-            }
+            // Less left than the cost is fine: the rest is spent and the
+            // weapon breaks after the action (Nick, 0414 review).
             Ok(())
         }
         (SkillCost::ExtraSpellUse, CostSource::Spell(spell)) => {
@@ -602,7 +588,10 @@ pub fn pay_cost(unit: &mut Unit, cost: SkillCost, from: &CostSource) -> Result<P
     let id = unit.id;
     let mut paid = Paid::default();
     match (cost, from) {
-        (SkillCost::Durability(amount), CostSource::Weapon(slot)) => {
+        (SkillCost::Durability(cost), CostSource::Weapon(slot)) => {
+            // Never more than is left (the weapon then breaks).
+            let left = unit.loadout.weapon(*slot).map_or(0, |w| w.durability_left);
+            let amount = cost.min(left);
             paid.broke = unit.spend_durability(*slot, amount);
             if let Some(copy) = unit.loadout.weapon(*slot) {
                 paid.events.push(Event::DurabilitySpent {

@@ -118,8 +118,11 @@ All numbers are FE-sized and rescale with ticket 0013.
    on counters or during another side's phase (Nick).
 2. **One per attack** (*Claude's starting rule*): an attack uses at most one
    art **or** one combat active, not both.
-3. **Can use** if: the art is usable (above), the attacking weapon is **not
-   broken**, and `durability_left ≥ cost`.
+3. **Can use** if: the art is usable (above) and the attacking weapon is
+   **not broken**. With less durability left than the cost it can still be
+   used: it spends what is left and the weapon breaks after the combat
+   (Nick, 0414 review: "it has 3 dur left and the art costs 5, ok, art goes
+   thru, then weapon is broken").
 4. **Cost** is paid **once per combat**, when the attack is committed, from
    the attacking weapon. It is paid even if every strike misses
    (*Claude's starting rule*, Three Houses).
@@ -228,10 +231,11 @@ replaces "uses per battle" for actives in `progression.md`. Nick chose
 | **Spell active** (with a spell) | Overcast, Siphon | **1 extra use** of the spell being cast |
 
 - The rules above for arts apply to actives too: they can't be paid with a
-  broken weapon, need `durability_left ≥ cost`, cost is paid once when
-  committed, and a weapon that hits 0 breaks after the action.
-- A non-attack active needs an **equipped**, unbroken weapon with enough
-  durability, of any kind. A unit with nothing equipped can't use it.
+  broken weapon, can be used with less durability left than the cost
+  (spending what is left; Nick, 0414 review: "Yes, all of them"), cost is
+  paid once when committed, and a weapon that hits 0 breaks after the
+  action.
+- A non-attack active needs an **equipped**, unbroken weapon of any kind. A unit with nothing equipped can't use it.
 - A spell active needs the spell to have `uses_left ≥ 2` (the cast plus the
   extra use). It never costs durability.
 - Classes with **0 weapon slots** (tier-3 magic classes) can only have spell
@@ -307,8 +311,10 @@ functions. The closest pairs, all judged in the playtest:
 
 - In the attack flow, after choosing a target, the player can pick an art or
   combat active from a list. Each row shows name, cost and source
-  (`E`/`D` rank, `weapon` art, `active`). Unaffordable or broken-weapon
-  entries are shown dimmed with the reason.
+  (`E`/`D` rank, `weapon` art, `active`). Entries a broken weapon can't
+  pay for are shown dimmed with the reason. An art that costs more than is
+  left stays usable; the forecast shows it breaking the weapon
+  (`Guard Break (3 → 0)`).
 - The forecast then shows the numbers **with** the art applied, plus a line
   with the art's name and the durability change, e.g. `Guard Break (20 → 16)`.
 - Effects that aren't numbers are spelled out on the forecast: `no counter`,

@@ -4,7 +4,7 @@ expression: buf.to_snapshot(&c.palette)
 ---
 ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║ ┌──────────────────────┐   Test Knight                Weapons                                    ║
-║ │                      │   Guard  Lv 1                E Iron Spear                          0/20 ║
+║ │                      │   Guard  Lv 1                E Iron Spear                        broken ║
 ║ │                      │   EXP 0                        Mt 7  Hit 80  Crit 0  Rng 1  Wt 4        ║
 ║ │                      │   HP 6/20    ███░░░░░░░        --                                       ║
 ║ │                      │                                                                         ║
@@ -37,7 +37,7 @@ expression: buf.to_snapshot(&c.palette)
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 abccccccccccccccccccccccccbbbdddddddddddbbbbbbbbbbbbbbbbeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abcbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbeeffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbfffffba
+abcbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbeeffffffffffbbbbbbbbbbbbbbbbbbbbbbbbffffffba
 abcbbbbbbbbbbbbbbbbbbbbbbcbbbccccbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccbbbbbbbba
 abcbbbbbbbbbbbbbbbbbbbbbbcbbbcccbbbbbbbbfffcccccccbbbbbbbbccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abcbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba

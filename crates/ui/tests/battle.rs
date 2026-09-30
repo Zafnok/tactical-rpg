@@ -367,7 +367,11 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     // forecast against the brigand.
     h.keys("f f");
     assert_eq!(panel(&h)[1], "Test Lord     Brigand");
-    assert_eq!(help(&h), "arrows next target · f attack · d back");
+    // The lord knows sword arts: up/down pick one from the list.
+    assert_eq!(
+        help(&h),
+        "Left/Right target · Up/Down art · f attack · d back"
+    );
     // Attack, then Cancel skips the playback.
     h.keys("f");
     assert_eq!(help(&h), "d skip · hold f fast");

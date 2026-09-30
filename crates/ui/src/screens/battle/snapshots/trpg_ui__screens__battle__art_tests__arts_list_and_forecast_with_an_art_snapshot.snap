@@ -1,22 +1,22 @@
 ---
-source: crates/ui/src/screens/battle/skill_tests.rs
+source: crates/ui/src/screens/battle/art_tests.rs
 expression: "render(&s, &c).to_snapshot(&c.palette)"
 ---
                                                                       ╔═════════ Forecast ═════════╗
-                                                                      ║ Keen Edge (20 → 17)        ║
+                                                                      ║ Guard Break (20 → 16)      ║
                                                                       ║ Test Lord     Brigand      ║
                                                                       ║ Iron Sword    Iron Axe     ║
-                                                                      ║                            ║
-                                                                      ║ HP 19 ███▒▒   HP 20 █▒▒▒▒  ║
-                                                                      ║ Hit  100      Hit  65      ║
-                                                                      ║ Crit 23       Crit 0       ║
+                                                                      ║ 20/20         20/20        ║
+                                                                      ║ HP 19 █████   HP 20 █▒▒▒▒  ║
+                                                                      ║ Hit  100      Hit  --      ║
+                                                                      ║ Crit 3        Crit --      ║
                                                                       ║                            ║
                                                                       ║ ────────────────────────── ║
-                                                                      ║  8 dmg   →  1              ║
-                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║             2 ←  9 dmg     ║
-                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║  9 dmg   →  3              ║
-                    ≈≈≈≈≈≈====····LoBr..♣♣♣♣....                      ║ ────────────────────────── ║
-                    ..≈≈≈≈..··..............╦╦..                      ║ 17 ×2     Total  9 ×1      ║
+                                                                      ║  8 dmg   →  1   no counter ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║  9 dmg   →  2              ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║ ────────────────────────── ║
+                    ≈≈≈≈≈≈====····LoBr..♣♣♣♣....                      ║ 17 ×2     Total            ║
+                    ..≈≈≈≈..··..............╦╦..                      ║                            ║
                     ....······....BrAr▓▓▓▓▓▓▓▓..                      ║                            ║
                     ..♣♣··....╦╦......▓▓░░╦╦▓▓..                      ║                            ║
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
@@ -26,30 +26,30 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
-                                                                      ║                            ║
-                                                                      ║                            ║
-                                                                      ║                            ║
-                                                                      ║                            ║
-                                                                      ║                            ║
-                                                                      ╚════════════════════════════╝
+                                    ┌─ Iron Sword 20/20 ─────────────┐║                            ║
+                                    │ Attack                         │║                            ║
+                                    │ Flowing Cut     −2 dur  E      │║                            ║
+                                    │ Guard Break     −4 dur  D      │║                            ║
+                                    │ Keen Edge       −3 dur  active │║                            ║
+                                    └────────────────────────────────┘╚════════════════════════════╝
                                                      w danger zone: OFF · Shift+Space auto-end: OFF 
- Left/Right target · Up/Down skill · f attack · d back                                     F2 debug 
+ Left/Right target · Up/Down art · f attack · d back                                       F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbccccccccccbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdcccccccccccccccccccddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdcccccccccccccccccccccddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdeeeeeeeeedddddfffffffddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggggggggddddggggggggdddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggddddhhhiidddggddddiiiiiddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdgggggdddddddddgggggddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggddddhhhhhdddggddddiiiiiddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdgggdddddddddddgggddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggddddddddddggggdddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
-aaaaaaaaaaaaaaaaaaaajjjjjjkkkkllllmmmmnnnnooooppaaaaaaaaaaaaaaaaaaaaaabdddddddddddddgdgddddddddddddb
-aaaaaaaaaaaaaaaaaaaajjjjkkkkllllqqrrqqmmmmooooooaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
-aaaaaaaaaaaaaaaaaaaajjkkkkssssqqqqttuullmmmmllllaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
-aaaaaaaaaaaaaaaaaaaallkkkkllqqllllllllllllllvvllaaaaaaaaaaaaaaaaaaaaaabdddddddddddgggggddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgdddggggggggggdb
+aaaaaaaaaaaaaaaaaaaajjjjjjkkkkllllmmmmnnnnooooppaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjkkkkllllqqrrqqmmmmooooooaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaajjkkkkssssqqqqttuullmmmmllllaaaaaaaaaaaaaaaaaaaaaabdddddddddddgggggddddddddddddb
+aaaaaaaaaaaaaaaaaaaallkkkkllqqllllllllllllllvvllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaallllqqqqqqllllwwxxyyyyyyyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaallmmqqllllvvllllllyyzzvvyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaammmmqqllxxllllllllyyzzzzyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
@@ -59,14 +59,14 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddd
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBa
-aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbccccccccccccddddddbbbbbbbbbbbbbbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCa
+aCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -75,7 +75,7 @@ d = fg:text bg:panel_bg
 e = fg:player bg:panel_bg
 f = fg:enemy bg:panel_bg
 g = fg:text_dim bg:panel_bg
-h = fg:hp_mid bg:panel_bg
+h = fg:hp_high bg:panel_bg
 i = fg:hp_low bg:panel_bg
 j = fg:water bg:sea
 k = fg:water bg:water_bg
@@ -95,7 +95,8 @@ x = fg:player bg:grass_bg
 y = fg:stone bg:stone_bg
 z = fg:floor bg:floor_bg
 A = fg:wood bg:stone_bg
-B = fg:text_dim bg:black
+B = fg:panel_bg bg:panel_border_focus
+C = fg:text_dim bg:black
 --- overlays ---
 over  272,222 16x2  hp_high
 over  224,286 16x2  hp_high

@@ -2,6 +2,7 @@
 
     python assets-src/audio/import.py            # download (if missing) + convert
     python assets-src/audio/import.py --check    # print loudness of the outputs
+    python assets-src/audio/import.py new_sunrise_v1.ogg  # redo only these outputs
 
 Downloads every original into assets-src/audio/originals/ (git-ignored, see
 README.md), checks it against the SHA-256 below, then writes the game files:
@@ -122,6 +123,14 @@ MUSIC = [
     ("rpg_battle_theme.ogg", "battle_theme_2.wav", None),
 ]
 
+# Extra ffmpeg filters for a music track, applied before loudness matching.
+MUSIC_CUTS = {
+    # The original sits below -60 dB for its first 3 s before the fade-in
+    # (ticket 0221): the title screen seemed silent. Keep the fade, drop the
+    # silence; a 50 ms fade-in avoids a click at the cut.
+    "new_sunrise_v1.ogg": "atrim=start=3.0,asetpts=PTS-STARTPTS,afade=t=in:d=0.05",
+}
+
 # (game file in assets/audio/sfx/, original, extra ffmpeg filters before
 # the leading-silence trim, or None)
 SFX = [
@@ -170,8 +179,12 @@ def sha256(path):
     return h.hexdigest()
 
 
-def download():
+def download(only):
+    """Fetch the originals (only those `only`'s outputs need, if given)."""
+    needed = {orig for out, orig, _ in MUSIC + SFX if out in only}
     for name, url, digest in DOWNLOADS:
+        if only and name not in needed:
+            continue
         path = os.path.join(ORIGINALS, name)
         if not os.path.exists(path):
             print("download", url)
@@ -221,13 +234,15 @@ def gain_for(level, target, peak):
     return min(target - level, PEAK_CEILING_DBTP - peak)
 
 
-def convert_music():
+def convert_music(only):
     os.makedirs(MUSIC_OUT, exist_ok=True)
     for out, original, member in MUSIC:
+        if only and out not in only:
+            continue
         src = source_path(original, member)
         if duration(src) > MAX_MUSIC_S:
             sys.exit(f"{out}: longer than {MAX_MUSIC_S / 60} minutes (ADR-0026 memory budget)")
-        base = "aresample=44100:resampler=soxr"
+        base = ",".join(f for f in [MUSIC_CUTS.get(out), "aresample=44100:resampler=soxr"] if f)
         integrated, _, peak = loudness(src, base)
         gain = gain_for(integrated, MUSIC_LUFS, peak)
         dest = os.path.join(MUSIC_OUT, out)
@@ -236,9 +251,11 @@ def convert_music():
         print(f"music {out:32} I {integrated:6.1f} LUFS, peak {peak:5.1f} dBTP, gain {gain:+5.1f} dB")
 
 
-def convert_sfx():
+def convert_sfx(only):
     os.makedirs(SFX_OUT, exist_ok=True)
     for out, original, extra in SFX:
+        if only and out not in only:
+            continue
         src = source_path(original, None)
         # Mono, 44.1 kHz, then drop the silence before the sound starts.
         base = ",".join(f for f in [
@@ -283,9 +300,13 @@ def main():
     if "--check" in sys.argv:
         check()
         return
-    download()
-    convert_music()
-    convert_sfx()
+    only = {a for a in sys.argv[1:] if not a.startswith("-")}
+    known = {m[0] for m in MUSIC} | {s[0] for s in SFX}
+    if only - known:
+        sys.exit(f"unknown output(s): {', '.join(sorted(only - known))}")
+    download(only)
+    convert_music(only)
+    convert_sfx(only)
 
 
 if __name__ == "__main__":

@@ -424,10 +424,8 @@ fn check_cost_rules() {
     let u = armed(5);
     assert_eq!(check_cost(&u, dur(5), &weapon), Ok(()));
     assert_eq!(check_cost(&u, dur(1), &weapon), Ok(()));
-    assert_eq!(
-        check_cost(&u, dur(6), &weapon),
-        Err(CostError::NotEnoughDurability { left: 5, cost: 6 })
-    );
+    // More than is left is fine: the rest is spent (Nick, 0414).
+    assert_eq!(check_cost(&u, dur(6), &weapon), Ok(()));
     assert_eq!(
         check_cost(&u, dur(1), &CostSource::Weapon(1)),
         Err(CostError::NoWeapon)
@@ -458,6 +456,20 @@ fn check_cost_rules() {
 
 #[test]
 fn pay_cost_spends_durability_and_breaks_at_zero() {
+    // More than is left: the rest is spent and the weapon breaks.
+    let mut short = armed(2);
+    let paid = pay_cost(&mut short, SkillCost::Durability(3), &CostSource::Weapon(0)).unwrap();
+    assert_eq!(
+        paid.events,
+        [Event::DurabilitySpent {
+            unit: UnitId(1),
+            slot: 0,
+            item: ItemId::new("iron"),
+            amount: 2,
+            left: 0,
+        }]
+    );
+    assert!(paid.broke.is_some());
     let weapon = CostSource::Weapon(0);
     let mut u = armed(5);
     let paid = pay_cost(&mut u, SkillCost::Durability(3), &weapon);
@@ -527,10 +539,6 @@ fn cost_error_messages() {
         (CostError::WrongSource, "it can't be paid that way"),
         (CostError::NoWeapon, "no weapon to pay with"),
         (CostError::WeaponBroken, "the weapon is broken"),
-        (
-            CostError::NotEnoughDurability { left: 2, cost: 3 },
-            "it costs 3 durability and the weapon has 2",
-        ),
         (
             CostError::NotEnoughUses { left: 1 },
             "it needs 2 spell uses and the spell has 1",
