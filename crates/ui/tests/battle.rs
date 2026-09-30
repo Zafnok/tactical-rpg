@@ -438,3 +438,28 @@ fn quick_battle_keeps_one_skirmish_track() {
     assert_eq!(music(&h), cues);
     assert_eq!(h.screens(), ["title", "battle"]);
 }
+
+/// The move loop's menus sound like every other menu (ticket 0425).
+#[test]
+fn battle_menus_sound() {
+    let mut h = quick_battle();
+    h.clear_audio();
+    // Select the lord, keep it where it stands: the action menu opens.
+    h.keys("f f");
+    assert_eq!(h.sounds(), ["menu_select", "menu_select"]);
+    assert_eq!(help(&h), "arrows choose · f confirm · d back");
+    h.clear_audio().keys("Down d d");
+    assert_eq!(h.sounds(), ["menu_move", "menu_cancel", "menu_cancel"]);
+    // Browsing: back opens the map menu (opening sounds as select).
+    h.clear_audio().keys("d Down d");
+    assert_eq!(h.sounds(), ["menu_select", "menu_move", "menu_cancel"]);
+    // The info screen: opened, cycled, closed.
+    h.clear_audio().keys("e Down e");
+    assert_eq!(h.sounds(), ["menu_select", "menu_move", "menu_cancel"]);
+    // Confirm on a unit that can't be selected (no threat to show for a
+    // player unit that has acted) plays nothing: Wait with the lord first.
+    h.clear_audio().keys("f f f");
+    assert_eq!(h.sounds(), ["menu_select"; 3]);
+    h.clear_audio().keys("f");
+    assert!(h.sounds().is_empty(), "{:?}", h.sounds());
+}

@@ -1648,9 +1648,10 @@ mod tests {
         let Mode::Targeting(t) = &mode else {
             panic!("{mode:?}");
         };
+        // The brigand two tiles up, and the one beside it (Close Shot).
         assert_eq!(
             (t.targets.clone(), t.weapons.is_none()),
-            (vec![UnitId(4)], true)
+            (vec![UnitId(4), UnitId(5)], true)
         );
         let (back, effect) = step(mode, Action::Cancel, p(8, 2), &s);
         assert_eq!(effect, Effect::Cursor(p(8, 4)));

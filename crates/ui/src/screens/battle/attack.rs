@@ -35,12 +35,32 @@ pub fn targets(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec
     found.into_iter().map(|(_, id)| id).collect()
 }
 
+/// The units `unit` could attack from `dest` with the weapon in `slot`
+/// plainly or with some line of the arts list: an art or active that
+/// changes range (Close Shot, Long Shot) reaches more (0426). In `(y, x)`
+/// order.
+pub fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec<UnitId> {
+    let mut found: Vec<(Pos, UnitId)> = state
+        .units()
+        .iter()
+        .filter(|u| {
+            art_choices(state, unit, dest, slot, u.id)
+                .iter()
+                .any(|c| c.reason.is_none())
+        })
+        .map(|u| (u.pos, u.id))
+        .collect();
+    found.sort_by_key(|(p, _)| (p.y, p.x));
+    found.into_iter().map(|(_, id)| id).collect()
+}
+
 /// A weapon that can attack someone from the destination.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WeaponChoice {
     /// Its loadout slot.
     pub slot: usize,
-    /// Who it can attack, in `(y, x)` order (never empty).
+    /// Who it can attack, plainly or with an art or active, in `(y, x)`
+    /// order (never empty).
     pub targets: Vec<UnitId>,
 }
 
@@ -49,7 +69,7 @@ pub struct WeaponChoice {
 pub fn weapon_choices(state: &BattleState, sel: &Selection) -> Vec<WeaponChoice> {
     (0..WEAPON_SLOTS)
         .filter_map(|slot| {
-            let targets = targets(state, sel.unit, sel.dest(), slot);
+            let targets = reachable(state, sel.unit, sel.dest(), slot);
             (!targets.is_empty()).then_some(WeaponChoice { slot, targets })
         })
         .collect()
@@ -156,7 +176,8 @@ pub struct Targeting {
 }
 
 impl Targeting {
-    /// Targeting the first of `choice`'s targets with a plain attack.
+    /// Targeting the first of `choice`'s targets with the first line that
+    /// reaches it (a plain attack, unless only an art or active does).
     /// `None` if its forecast can't be made (the battle changed; never
     /// while choosing).
     pub fn new(
@@ -166,11 +187,15 @@ impl Targeting {
         weapons: Option<(Menu, Vec<WeaponChoice>)>,
     ) -> Option<Self> {
         let first = *choice.targets.first()?;
-        let preview = state
-            .preview_attack(sel.unit, sel.dest(), &attack(first, choice.slot))
-            .ok()?;
         let choices = art_choices(state, sel.unit, sel.dest(), choice.slot, first);
         let list = art_menu(state, &choices, 0);
+        let technique = choices
+            .get(list.focus())
+            .map(|c| c.technique.clone())
+            .unwrap_or_default();
+        let preview = state
+            .preview_attack(sel.unit, sel.dest(), &technique.action(first, choice.slot))
+            .ok()?;
         Some(Self {
             sel,
             slot: choice.slot,

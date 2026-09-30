@@ -108,7 +108,9 @@ fn choice(
 
 /// The list for `unit` attacking `target` from `dest` with the weapon in
 /// `slot`: `Attack`, the weapon's arts (rank arts lowest rank first, then
-/// the weapon's own), then the unit's combat actives.
+/// the weapon's own), then the unit's combat actives. `Attack` is always
+/// listed; it is dimmed (`out of range`) on a target only an art or active
+/// reaches (Close Shot, Long Shot: 0426).
 pub fn art_choices(
     state: &BattleState,
     unit: UnitId,
@@ -116,9 +118,15 @@ pub fn art_choices(
     slot: usize,
     target: UnitId,
 ) -> Vec<ArtChoice> {
+    let plain = Technique::Attack.action(target, slot);
+    let reason = match state.preview_attack(unit, dest, &plain) {
+        Ok(_) => None,
+        Err(CommandError::OutOfRange { .. }) => Some("out of range".to_owned()),
+        Err(_) => Some("can't attack".to_owned()),
+    };
     let mut out = vec![ArtChoice {
         technique: Technique::Attack,
-        reason: None,
+        reason,
     }];
     let Some(u) = state.unit(unit) else {
         return out;
@@ -167,7 +175,7 @@ pub fn source_label(state: &BattleState, technique: &Technique) -> String {
 const NAME_W: usize = 14;
 
 /// The list as a menu: `Guard Break     −4 dur  D`, a dimmed line with its
-/// reason after it, focused on `focus` (or `Attack` if that line can't be
+/// reason after it, focused on `focus` (or the first line that can be
 /// chosen).
 pub fn art_menu(state: &BattleState, choices: &[ArtChoice], focus: usize) -> Menu {
     let items = choices

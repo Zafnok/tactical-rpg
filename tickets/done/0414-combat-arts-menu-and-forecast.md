@@ -127,20 +127,27 @@ pick an art, and can you tell what it will do and what it costs?
     the lists show `broken`.
   - The stance note reads `stance: +20 avo`, the wording the info screen
     already uses for skills, not `stance: avoid +20`.
-- **Follow-up:** 0426 now also covers Close Shot. Targets still come from the
-  plain attack, so Close Shot's adjacent targets (and Long Shot's far ones)
-  are never offered. Close Shot is listed at distance 2, where it only costs
-  durability and hit.
+- **0426 merged while this was open** (per-active target lists for Long
+  Shot). It is folded into the list flow here: a weapon's targets are
+  everyone *any* line of the list reaches (`attack::reachable`), so Close
+  Shot now offers the enemy beside the archer and Long Shot the ones beyond
+  the bow. 0426's tests were rewritten for the list (`art_tests.rs`). No
+  follow-up tickets.
 - **Existing tests/snapshots updated on purpose:** the lord and the archer
   know arts, so their forecasts now show the list and the help line reads
   `Up/Down art`; weapon durability under the forecast's weapon names; the
   info screen shows `broken` for a 0/20 weapon. 0412's ring tests were
-  replaced by list tests (`art_tests.rs`).
+  replaced by list tests (`art_tests.rs`). The archer's forecast snapshot
+  tints the brigand beside it too (Close Shot reaches it).
 - **Claude's starting rules (all presentation; please agree or veto):**
   - The list sits on the half of the map away from the attacker so it
     doesn't cover the fight.
   - When you switch targets, the chosen art stays if it can still be used
-    on the new target; otherwise it goes back to `Attack`.
+    on the new target; otherwise the first line that works is chosen
+    (`Attack` when it reaches).
+  - On a target only an art or active reaches (Close Shot beside the
+    archer, Long Shot beyond the bow's range), `Attack` is dimmed
+    `out of range` and that art is chosen for you.
   - Dimmed reasons read `broken`, `3 dur left` (or `1 uses left` for
     spells).
   - Only a boss's or a green unit's art gets the playback banner, since you

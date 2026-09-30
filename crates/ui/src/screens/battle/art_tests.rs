@@ -463,3 +463,103 @@ fn a_boss_or_green_units_art_names_the_playback_and_the_players_doesnt() {
         c.palette.get(UiColor::TextHighlight)
     );
 }
+
+/// The archer targeting from where it stands, cycled with Right until
+/// `target` is under the cursor.
+fn archer_on(c: &mut Ctx, state: BattleState, target: UnitId) -> BattleScreen {
+    let mut s = BattleScreen::new(state);
+    s.cursor.jump(p(8, 4));
+    step(
+        &mut s,
+        c,
+        &[Action::Confirm, Action::Confirm, Action::Confirm],
+    );
+    for _ in 0..4 {
+        if targeting(&s).target() == target {
+            return s;
+        }
+        step(&mut s, c, &[Action::CursorRight]);
+    }
+    panic!("{target:?} isn't a target: {:?}", targeting(&s).targets);
+}
+
+#[test]
+fn close_shot_reaches_an_adjacent_enemy_that_a_plain_shot_cant() {
+    let mut c = ctx();
+    // The brigand (unit 5) at (7, 4), beside the archer at (8, 4).
+    let state = battle(&c, |_| {});
+    assert_eq!(state.unit(UnitId(5)).unwrap().pos, p(7, 4));
+    let mut s = archer_on(&mut c, state, UnitId(5));
+    let shown = lines(&s);
+    assert_eq!(
+        shown[0],
+        ("Attack".to_owned(), false, Some("out of range".to_owned()))
+    );
+    // Pinning Shot keeps the bow's range: not listed here.
+    let names: Vec<&str> = shown.iter().map(|l| l.0.as_str()).collect();
+    assert_eq!(names, ["Attack", "Close Shot"]);
+    // Close Shot is chosen for you; Up/Down can't pick the plain shot.
+    assert_eq!(
+        targeting(&s).technique(),
+        Technique::Art(ArtId::new("close_shot"))
+    );
+    step(&mut s, &mut c, &[Action::CursorDown]);
+    assert_eq!(targeting(&s).technique().name(s.state()), "Close Shot");
+    // Back to the brigand two tiles up: Close Shot still works there, so
+    // it stays chosen, and the forecast says what it costs.
+    step(&mut s, &mut c, &[Action::CursorLeft]);
+    assert_eq!(targeting(&s).target(), UnitId(4));
+    let buf = render(&s, &c);
+    assert_eq!(text(&buf, LEFT_X, SKILL_ROW, 26), "Close Shot (20 → 18)");
+    // Shoot the adjacent one: paid 2.
+    step(&mut s, &mut c, &[Action::CursorRight, Action::Confirm]);
+    assert_eq!(durability(s.state(), UnitId(3)), 18);
+}
+
+/// The archer knowing Long Shot, the brigand (unit 4) at `brigand`.
+fn long_shot(c: &Ctx, brigand: Pos) -> BattleState {
+    battle(c, |units| {
+        units[3].pos = brigand;
+        assert!(units[2].learn_skill(&SkillId::new("long_shot"), &c.content.skills));
+    })
+}
+
+#[test]
+fn long_shot_reaches_a_target_just_beyond_the_bows_range() {
+    let mut c = ctx();
+    // Three tiles up: past the bow's two, within Long Shot's extra reach.
+    let state = long_shot(&c, p(8, 1));
+    let mut s = archer_on(&mut c, state, UnitId(4));
+    let shown = lines(&s);
+    assert_eq!(shown[0].2.as_deref(), Some("out of range"));
+    let names: Vec<&str> = shown.iter().map(|l| l.0.as_str()).collect();
+    assert_eq!(names, ["Attack", "Long Shot"]);
+    assert_eq!(targeting(&s).technique().name(s.state()), "Long Shot");
+    let before = durability(s.state(), UnitId(3));
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(durability(s.state(), UnitId(3)) < before);
+    // Within the bow's range, Long Shot is one more line after the arts.
+    let state = long_shot(&c, p(8, 2));
+    let s = archer_on(&mut c, state, UnitId(4));
+    let names: Vec<String> = lines(&s).into_iter().map(|l| l.0).collect();
+    assert_eq!(
+        names,
+        ["Attack", "Close Shot", "Pinning Shot", "Long Shot", "Vault"]
+    );
+    // The raider four tiles away (only Long Shot reaches it, +2) came
+    // first; Long Shot stays chosen on the brigand, where it works too.
+    let t = targeting(&s);
+    assert_eq!(t.targets.first(), Some(&UnitId(6)));
+    assert_eq!(t.technique(), Technique::Active(SkillId::new("long_shot")));
+}
+
+#[test]
+fn a_target_beyond_every_line_isnt_offered() {
+    let c = ctx();
+    // Three tiles up, without Long Shot: nothing reaches.
+    let state = battle(&c, |units| units[3].pos = p(8, 1));
+    let reach = super::attack::reachable(&state, UnitId(3), p(8, 4), 0);
+    assert!(!reach.contains(&UnitId(4)), "{reach:?}");
+    let reach = super::attack::reachable(&long_shot(&c, p(8, 1)), UnitId(3), p(8, 4), 0);
+    assert!(reach.contains(&UnitId(4)), "{reach:?}");
+}
