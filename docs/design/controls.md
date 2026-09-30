@@ -206,6 +206,178 @@ shows as `! not mapped` there too.
   they opened it; changes take effect when they leave. This way moving
   every cursor key elsewhere can't trap them on the screen.
 
+## Controller
+
+Decided: 2026-09-30
+Source: ticket 0032 (built by 0219 controller input, 0220 button names,
+0816 rebinding buttons)
+
+A controller is one more way to play: it produces the same actions as the
+keys, and the keyboard keeps working alongside it. Mockups shown to Nick:
+[`0032-controller-defaults.png`](../screenshots/0032-controller-defaults.png)
+(the chosen layout) and
+[`0032-button-names.png`](../screenshots/0032-button-names.png) (button
+naming styles).
+
+### Nick's words
+
+> **Q1. Which button confirms and which cancels?** Options: A bottom
+> confirms (Xbox / PlayStation / PC), B the Nintendo way (right confirms),
+> C follow the controller. "1C"
+>
+> **Q2. The other buttons.** Options: A shoulders cycle units and Start ends
+> the turn (pressed twice), like Wargroove; B triggers to look and End turn
+> only from the map menu, like Fire Emblem; C the right trigger ends the
+> turn and Start opens the menu. "2A"
+>
+> **Q3. Moving the cursor.** Options: A D-pad and left stick, one tile at a
+> time with the held-key repeat, nothing on the right stick; B faster when
+> the stick is pushed further; C D-pad only. "3A"
+>
+> **Q4. Button names in help bars and tips.** Options: A Xbox letters on
+> every pad; B follow the pad (Xbox letters, PlayStation shapes, Switch
+> letters); C position words. "4B"
+>
+> **Q5. Switching between keyboard and controller.** Options: A whatever
+> was pressed last, like Wargroove and Into the Breach; B a setting in
+> Options, like XCOM 2 on PC. "5A". (The "Pick your layout" sub-question
+> went unanswered, so the recommended option, *skipped for controller
+> players until they touch the keyboard*, is recorded; Nick may veto.)
+>
+> **Q6a. Rebinding rules.** Options: A same as keys, one controller setup
+> for both keyboard layouts; B same, but per layout; C one button per
+> action. "6a A"
+>
+> **Q6b. Backing out and emptying a slot with only a controller.** Options:
+> A Start and Back fixed, like Esc and Delete; B hold any button to back
+> out, and a Clear choice on the slot; C a countdown. "6b B with a hint
+> showing this"
+>
+> **Q7. Rumble.** "for now, no rumble, but we might add it later"
+
+### Default buttons
+
+Buttons are named by **position**; the table gives the Xbox letter (and
+the PlayStation / Switch name) for each position.
+
+| Action | Button (position) | Xbox | PlayStation | Switch-style | Notes |
+| ------ | ----------------- | ---- | ----------- | ------------ | ----- |
+| Move cursor | D-pad **and** left stick | D-pad, stick | same | same | Both work; see *Cursor* below |
+| Confirm / select | bottom face | `A` | `✕` | right face `A` | Nintendo pads swap: see below |
+| Cancel / back | right face | `B` | `○` | bottom face `B` | Nintendo pads swap: see below |
+| Previous ready unit | left shoulder | `LB` | `L1` | `L` | |
+| Next ready unit | right shoulder | `RB` | `R1` | `R` | |
+| Unit info (stat screen) | top face | `Y` | `△` | `X` | |
+| Enemy danger zone on/off | left face | `X` | `□` | `Y` | |
+| End turn | Start | `Start` (☰) | `Options` | `+` | Press twice, like `Space` |
+| Auto-end on/off | Back | `Back` (⧉) | `Create` / `Share` | `−` | The toggle shortcut `turn-structure.md` asks for |
+| Rewind (ticket 0307) | left trigger | `LT` | `L2` | `ZL` | |
+| Map menu | *no button*: Cancel with nothing to cancel, or Confirm on an empty tile | | | | Same as the keyboard |
+| Select *(optional, 0218)* | *no button* | | | | Starts empty, as on the keyboard |
+| Confirm end turn *(optional, 0218)* | *no button* | | | | Starts empty: Start pressed again accepts |
+| Debug | *no button* | | | | Keyboard only |
+
+Unused by default: right trigger, right stick, pressing either stick.
+
+**Confirm and Cancel follow the controller (Q1 C).** On Xbox, PlayStation,
+Steam Deck and unknown pads the **bottom** button confirms and the
+**right** one cancels. On **Switch-style pads** (Nintendo Switch Pro
+controller and similar) the two swap: the **right** button (labelled `A`)
+confirms and the **bottom** one (`B`) cancels, as in Fire Emblem on Switch.
+
+### End turn on the pad
+
+Same as `Space`: `Start` opens the end-turn prompt (`End turn with N units
+ready?`), `Start` again ends the turn, Confirm also accepts and Cancel backs
+out. With no units ready, `Start` ends the turn at once.
+
+### Cursor
+
+- The **D-pad and the left stick both move the cursor, one tile per
+  step**. A stick pushed past its dead zone counts as a held arrow key and
+  repeats with the **same timings as held keys** (first repeat after
+  300 ms, then every 55 ms, *tunable*, shared with the keys). How far the
+  stick is pushed doesn't change the speed.
+- The stick moves in 4 directions only (no diagonals), like the keys.
+- **The right stick does nothing.** No fast cursor button either (the
+  keyboard's *Cursor speed* note applies to the pad too: revisit after the
+  large-map playtest).
+
+### Button names on screen (Q4 B)
+
+Help bars and tips name buttons the way **the pad in use** labels them:
+
+| Pad | Names shown |
+| --- | ----------- |
+| Xbox, Steam Deck, unknown or generic pads | `A B X Y`, `LB RB LT RT`, `Start`, `Back` |
+| PlayStation | `✕ ○ □ △`, `L1 R1 L2 R2`, `Options`, `Create` (PS4: `Share`) |
+| Switch-style | `A B X Y` (Nintendo positions), `L R ZL ZR`, `+`, `−` |
+
+- Example (battle help bar, Xbox pad): `A select · Y info · RB next unit ·
+  LT rewind · Start end turn`; the same on a PlayStation pad: `✕ select · △
+  info · R1 next unit · L2 rewind · Options end turn`.
+- The PlayStation shapes `□` and `△` (and a bolder `✕`, `○`) aren't in
+  the font: they are drawn as new glyphs in its style (ticket 0220, mockup
+  first).
+- An action with no button shows `! not mapped`, as for keys.
+
+### Switching between keyboard and controller (Q5 A)
+
+- Help bars and tips show **whatever was pressed last**: press a pad
+  button and they name buttons; press a key and they name keys again.
+  No setting.
+- **"Pick your layout" on first launch:** if the player's first press is a
+  pad button, the screen is **skipped** (the right/left-handed choice only
+  matters for the keyboard). It appears once, the first time they touch the
+  keyboard. *(Recommended option, recorded because Nick didn't pick; he
+  may veto.)*
+
+### Rebinding buttons (Q6)
+
+Same rules as *Rebinding keys* above, on the same Key bindings screen:
+
+- Every action has **3 button slots**; only one needs a button. The
+  defaults fill 2 slots of each cursor direction (D-pad and left stick).
+- A button already in another slot **moves**; an action left with no
+  button shows **`! not mapped`**.
+- **Required** (must keep a button): cursor up, down, left, right, Confirm,
+  Cancel, End turn. Leaving the screen is **blocked** while one shows
+  `! not mapped`. The rest are optional.
+- **One controller setup for both keyboard layouts**: switching right/left-
+  handed changes only the keys, never the buttons.
+- **No fixed buttons**: every button can be rebound (unlike `Esc` and
+  `Delete` on the keyboard). With only a controller:
+  - **Backing out** of `Press a button…`: **hold any button** for about a
+    second (*tunable*). Nothing changes.
+  - **Emptying a slot**: Confirm on the slot offers **`Clear`**.
+  - A **hint** on the screen says so while capturing, e.g. `Press a
+    button… · hold any button to cancel`.
+
+### Rumble
+
+**None for now** (Q7). Nick: "we might add it later"; that would be its own
+ticket.
+
+*Claude's starting rules (Nick to veto at sign-off of 0219, 0220, 0816):*
+
+- **Switch-style pads swap only Confirm's and Cancel's buttons.** The other
+  buttons stay where they are: on a Switch pad, Unit info is still the top
+  button (labelled `X` there) and the danger zone the left one (`Y`). If
+  you rebind, the swap still applies: whatever you put on the bottom button
+  of an Xbox pad sits on the right button of a Switch pad.
+- **Rebinding by tapping:** a button goes into the slot when you let go of
+  it. Held for a second, it backs out instead (so a hold never binds).
+- **The `Clear` choice appears only when the pad was used last.** With the
+  keyboard, Confirm on a slot still goes straight to `Press a key…` and
+  `Delete` empties it, as decided in 0030.
+- **Left-stick directions are ordinary buttons**: they can be moved to
+  another action like any button. The right stick can't be bound (it does
+  nothing).
+- **Help bars name the D-pad** for moving the cursor (`D-pad move`), even
+  though the left stick also works.
+- **Several pads at once** all drive the game, as one player.
+
 ## Open sub-questions
 
 - Fast cursor movement: revisit after a large-map playtest (above).
+- Rumble: none for now; a later ticket if Nick wants it.

@@ -34,19 +34,26 @@ the `keyboard-input` and `ascii-art` skills.
 
 **Sign-off:** on Pages, play a Quick Battle with the controller and check
 the help bar and a tip name buttons; press a key and check they switch back
-(or whatever 0032 decided). Mockups first if new glyphs are needed.
+(0032: help text follows whatever was pressed last). Mockups of the new
+PlayStation glyphs first.
 
 ## Scope
 
 **In:**
-- "Last used device" (keyboard or controller) tracked in `InputState`,
-  switched as 0032 decided.
+- "Last used device" (keyboard or controller) tracked in `InputState`:
+  help text follows whatever was pressed last (0032 Q5 A), no setting.
 - Help bars and tip placeholders name the action's button(s) when the
   controller is the current device; `! not mapped` when it has none.
-- The naming style from 0032, including controller-type detection
-  (Xbox / PlayStation / Nintendo / other) if 0032 asked for it.
-- New font glyphs if the style needs them (e.g. PlayStation shapes).
-- The layout-picker rule for controller players from 0032.
+- Names follow the pad in use (0032 Q4 B), using 0219's `PadKind`: Xbox
+  letters (also Steam Deck and generic pads); PlayStation `✕ ○ □ △`,
+  `L1 R1 L2 R2`, `Options`, `Create`; Switch `A B X Y`, `L R ZL ZR`, `+`,
+  `−`. Tables in `controls.md` *Controller → Button names on screen*.
+  The cursor shows as `D-pad`.
+- New font glyphs for the PlayStation shapes: `□` and `△` are missing
+  from Terminus (`✕` / `○` may need bolder versions to match). Mockup in
+  `docs/screenshots/0032-button-names.png`.
+- First-launch "Pick your layout": skipped when the first press is a pad
+  button; shown once, the first time a key is pressed (0032 Q5).
 
 **Out (do not do):**
 - Rebinding buttons (0816). Steam Input glyph images (0903).
@@ -55,12 +62,9 @@ the help bar and a tip name buttons; press a key and check they switch back
 ## Implementation steps
 
 1. **Device** (`crates/ui/src/input.rs`): `pub enum Device { Keyboard,
-   Pad(PadKind) }`, `PadKind { Xbox, PlayStation, Nintendo, Generic }`.
+   Pad(PadKind) }` (`PadKind` and its vendor mapping come from 0219).
    `InputState::device()` returns the device of the last *bound* press
-   (ignore stick noise below the press threshold). `app` passes the pad's
-   kind with its events: gilrs gives the pad's name / vendor id; on web
-   `Gamepad.id` contains the vendor and product ids. Map known vendor ids
-   (Microsoft 045e, Sony 054c, Nintendo 057e) and fall back to `Generic`.
+   (ignore stick noise below the press threshold).
 2. **Names** (`crates/ui/src/widgets/help.rs`): make `key_name`,
    `all_key_names` and `cursor_keys_name` take the device (or an
    `&InputState`) and name buttons in the 0032 style when it's a pad
@@ -73,7 +77,10 @@ the help bar and a tip name buttons; press a key and check they switch back
    (`THIRD_PARTY_ASSETS.md`), mockups to Nick first (`ascii-art` skill).
 5. Update every caller the compiler flags; screens still never name a
    key or button themselves.
-6. `keyboard-input` skill: add the button rules (names through the same
+6. **Layout picker**: on first launch, a pad press skips "Pick your
+   layout" (the default layout's keys apply meanwhile), and the picker
+   appears once at the first key press; saved so it isn't asked again.
+7. `keyboard-input` skill: add the button rules (names through the same
    helpers, device-aware text).
 
 ## Acceptance criteria
@@ -84,7 +91,8 @@ the help bar and a tip name buttons; press a key and check they switch back
       (or per 0032's rule).
 - [ ] A tip with `{Confirm}` shows the button name on a pad (test).
 - [ ] An action with no button shows `! not mapped` on a pad (test).
-- [ ] Vendor-id → `PadKind` mapping unit-tested, unknown → `Generic`.
+- [ ] Harness: on first launch a pad press skips the layout picker; the
+      first key press later shows it once.
 - [ ] Snapshots of a help bar and a tip for keyboard and each pad style used.
 - [ ] All gates in the `run-gates` skill pass.
 

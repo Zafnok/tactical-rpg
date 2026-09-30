@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-30
 ---
 
 # 0032 — Decide: controller buttons
@@ -75,13 +75,46 @@ optional Select / Confirm end turn (0218). Debug stays keyboard-only.
 
 ## Acceptance criteria
 
-- [ ] Answers recorded in `docs/design/controls.md` (new *Controller*
+- [x] Answers recorded in `docs/design/controls.md` (new *Controller*
       section) with Nick's words verbatim, including a defaults table like
       the keyboard one.
-- [ ] `docs/design/README.md` row updated.
-- [ ] 0219, 0220 and 0816 updated to match the answers (e.g. drop rumble
+- [x] `docs/design/README.md` row updated.
+- [x] 0219, 0220 and 0816 updated to match the answers (e.g. drop rumble
       from 0219's out-list if Nick wants it, adjust 0816's rules).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+Asked Nick in three rounds with the `ask-nick` skill, with rendered
+mockups: three pad layouts (`docs/screenshots/0032-controller-defaults.png`
+is the chosen one) and a help bar + tip in each naming style
+(`docs/screenshots/0032-button-names.png`). Answers: 1C (Confirm/Cancel
+follow the controller), 2A (shoulders cycle units, Start ends the turn when
+pressed twice), 3A (D-pad and left stick, one tile, key repeat; right stick
+unused), 4B (names follow the pad), 5A (last device pressed), 6a A (same
+rules as keys, one pad setup for both layouts), 6b B (hold any button to
+back out, `Clear` on the slot, with a hint), 7: no rumble for now.
+
+Recorded in `docs/design/controls.md` (*Controller*), README row updated,
+and 0219, 0220 and 0816 rewritten to match (0219 now also detects the pad
+kind, because the Confirm/Cancel swap needs it; 0220 skips the layout
+picker for controller players).
+
+Game comparisons only quote layouts a source confirmed (Three Houses,
+Wargroove, Triangle Strategy, XCOM 2 console). Rumble and stick speed in
+those games couldn't be confirmed, so no claims were made.
+
+*Recorded without an explicit answer:* the "Pick your layout" screen is
+skipped for someone whose first press is a pad button, and shown once when
+they first touch the keyboard (my recommendation; Nick answered 5A without
+the sub-question).
+
+*Claude's starting rules* (in `controls.md`, Nick to veto at sign-off):
+- Switch-style pads swap only Confirm's and Cancel's buttons; on a Switch
+  pad Unit info stays on the top button, the danger zone on the left one.
+- Rebinding by tapping: a button goes in the slot when you let go of it;
+  held for a second it backs out instead.
+- The `Clear` choice appears only when the pad was used last; the keyboard
+  keeps Confirm → `Press a key…` and `Delete`.
+- Left-stick directions can be rebound like buttons; the right stick can't.
+- The help bar names the D-pad for moving (`D-pad move`).
+- Several pads at once all drive the game, as one player.
