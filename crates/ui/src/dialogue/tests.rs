@@ -5,7 +5,7 @@ use proptest::prelude::*;
 
 use std::borrow::Cow;
 
-use trpg_content::ChoiceOption;
+use trpg_content::{ChoiceOption, Names};
 
 use super::*;
 
@@ -18,9 +18,18 @@ fn lead() -> LeadProfile {
     LeadProfile::new("Ellery", trpg_core::LeadGender::Male)
 }
 
+/// A names table: the king is Emeric.
+fn names() -> Names {
+    Names {
+        names: [("king", "Emeric"), ("place.thornmarch", "the Thornmarch")]
+            .map(|(id, name)| (id.to_owned(), name.to_owned()))
+            .into(),
+    }
+}
+
 /// Plays `scene` with [`lead`].
 fn play(scene: Scene) -> DialoguePlayer {
-    DialoguePlayer::new(scene, lead())
+    DialoguePlayer::new(scene, lead(), names())
 }
 
 /// More text boxes than any scene in these tests has.
@@ -451,11 +460,57 @@ fn tokens_follow_the_lead() {
     let player = DialoguePlayer::new(
         scene.clone(),
         LeadProfile::new("Isolde", trpg_core::LeadGender::Female),
+        names(),
     );
     let v = player.current();
     assert_eq!(v.caption.as_deref(), Some("Isolde's camp"));
     assert_eq!(v.text.as_deref(), Some("She fed herself."));
     // The scene itself is unchanged.
+    assert_eq!(player.scene, scene);
+}
+
+#[test]
+fn name_tokens_are_filled_in() {
+    let options = ["For {n:king}!", "{N:place.thornmarch} first."]
+        .map(|text| ChoiceOption {
+            tone: "a".into(),
+            text: text.into(),
+            steps: vec![narration("Fine.")],
+        })
+        .to_vec();
+    let scene = Scene {
+        id: "s".into(),
+        steps: vec![
+            Step::Caption {
+                text: "{n:place.thornmarch}".into(),
+            },
+            narration("{n:king} rode out, and {n:king} rode home. {They} waited."),
+            Step::Choice { options },
+        ],
+    };
+    let mut player = DialoguePlayer::new(scene.clone(), lead(), names());
+    let v = player.current();
+    assert_eq!(v.caption.as_deref(), Some("the Thornmarch"));
+    assert_eq!(
+        v.text.as_deref(),
+        Some("Emeric rode out, and Emeric rode home. He waited.")
+    );
+    player.advance();
+    assert_eq!(
+        player.current().choices,
+        Some(vec![
+            Cow::Borrowed("For Emeric!"),
+            Cow::Borrowed("The Thornmarch first.")
+        ])
+    );
+    // A rename reaches every use; the scene keeps its tokens.
+    let mut renamed = names();
+    renamed.names.insert("king".into(), "Osric".into());
+    let player = DialoguePlayer::new(scene.clone(), lead(), renamed);
+    assert_eq!(
+        player.current().text.as_deref(),
+        Some("Osric rode out, and Osric rode home. He waited.")
+    );
     assert_eq!(player.scene, scene);
 }
 

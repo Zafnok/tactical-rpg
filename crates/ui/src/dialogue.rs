@@ -4,7 +4,7 @@
 
 use std::borrow::Cow;
 
-use trpg_content::{ChoiceOption, Scene, Side, Step};
+use trpg_content::{ChoiceOption, Names, Scene, Side, Step};
 use trpg_core::{CharacterId, LeadProfile};
 
 /// A character standing on one side of the screen.
@@ -33,7 +33,7 @@ pub struct Portrait<'a> {
 }
 
 /// What the screen shows for the current text box, with the lead's name
-/// and pronouns filled in.
+/// and pronouns and the story's names filled in.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct View<'a> {
     /// The left portrait, if any.
@@ -97,6 +97,8 @@ pub struct DialoguePlayer {
     scene: Scene,
     /// Fills in the lead's name and pronouns.
     lead: LeadProfile,
+    /// Fills in name tokens (`{n:king}`).
+    names: Names,
     /// Index of the next scene step (after the text box on screen, or the
     /// open choice's).
     next: usize,
@@ -112,11 +114,12 @@ pub struct DialoguePlayer {
 
 impl DialoguePlayer {
     /// Starts `scene`, at its first text box, with `lead`'s name and
-    /// pronouns in its text.
-    pub fn new(scene: Scene, lead: LeadProfile) -> Self {
+    /// pronouns and the names from `names` in its text.
+    pub fn new(scene: Scene, lead: LeadProfile, names: Names) -> Self {
         let mut player = Self {
             scene,
             lead,
+            names,
             next: 0,
             reaction: None,
             showing: Showing::Finished,
@@ -132,6 +135,15 @@ impl DialoguePlayer {
     /// The lead whose name and pronouns fill the text.
     pub fn lead(&self) -> &LeadProfile {
         &self.lead
+    }
+
+    /// `text` as shown: name tokens and the lead's tokens filled in. The
+    /// scene keeps the tokens.
+    fn fill<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        match self.names.substitute(text) {
+            Cow::Borrowed(text) => self.lead.substitute(text),
+            Cow::Owned(text) => Cow::Owned(self.lead.substitute(&text).into_owned()),
+        }
     }
 
     /// The id of the scene being played.
@@ -163,7 +175,7 @@ impl DialoguePlayer {
             Showing::Text(at) => (Some(at), None),
             Showing::Choice(index, before) => {
                 let options = self.options(index);
-                let texts = options.iter().map(|o| self.lead.substitute(&o.text));
+                let texts = options.iter().map(|o| self.fill(&o.text));
                 (before, Some(texts.collect()))
             }
             Showing::Finished => (None, None),
@@ -177,8 +189,8 @@ impl DialoguePlayer {
             left: self.left.as_ref().map(Placed::portrait),
             right: self.right.as_ref().map(Placed::portrait),
             speaker,
-            text: step.and_then(Step::text).map(|t| self.lead.substitute(t)),
-            caption: self.caption.as_deref().map(|c| self.lead.substitute(c)),
+            text: step.and_then(Step::text).map(|t| self.fill(t)),
+            caption: self.caption.as_deref().map(|c| self.fill(c)),
             narration: matches!(step, Some(Step::Narrate { .. })),
             choices,
         }

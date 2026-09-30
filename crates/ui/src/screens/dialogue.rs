@@ -7,7 +7,7 @@
 //! While the lead's replies are up, the text box grows upward to list them
 //! under the line being answered (Nick, 0708: like Stardew Valley).
 
-use trpg_content::{Scene, Side};
+use trpg_content::{Names, Scene, Side};
 use trpg_core::{LEAD_ID, LeadProfile};
 
 use crate::audio::MenuSound;
@@ -77,10 +77,11 @@ impl DialogueScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "dialogue";
 
-    /// `scene` full-screen, with `lead`'s name and pronouns.
-    pub fn new(scene: Scene, lead: LeadProfile) -> Self {
+    /// `scene` full-screen, with `lead`'s name and pronouns and the names
+    /// from `names`.
+    pub fn new(scene: Scene, lead: LeadProfile, names: Names) -> Self {
         let mut screen = Self {
-            player: DialoguePlayer::new(scene, lead),
+            player: DialoguePlayer::new(scene, lead, names),
             overlay: false,
             lines: Vec::new(),
             page: 0,
@@ -94,10 +95,10 @@ impl DialogueScreen {
     }
 
     /// `scene` drawn over the screen below (the battle map).
-    pub fn overlay(scene: Scene, lead: LeadProfile) -> Self {
+    pub fn overlay(scene: Scene, lead: LeadProfile, names: Names) -> Self {
         Self {
             overlay: true,
-            ..Self::new(scene, lead)
+            ..Self::new(scene, lead, names)
         }
     }
 

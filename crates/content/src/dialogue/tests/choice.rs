@@ -255,19 +255,18 @@ test_archer: Who's there?",
 fn unknown_tokens() {
     let src = scene(
         "test_lord: {lead}, {they} {Them} {themself}.
-> {n:king} and {he} and {Lead}.
+> {nope} and {he} and {Lead}.
 @caption {x} Heth
 @choice
 * a: {bogus}
 * b: {
 @endchoice",
     );
-    let hint =
-        "use {lead}, {they}, {them}, {their}, {theirs} or {themself} (capitalised: {They}...)";
+    let hint = "use {lead}, {they}, {them}, {their}, {theirs}, {themself} (capitalised: {They}...) or a name, {n:<id>}";
     assert_eq!(
         errors(&src),
         [
-            format!("t.dlg:5: unknown token \"{{n:king}}\"; {hint}"),
+            format!("t.dlg:5: unknown token \"{{nope}}\"; {hint}"),
             format!("t.dlg:5: unknown token \"{{he}}\"; {hint}"),
             format!("t.dlg:5: unknown token \"{{Lead}}\"; {hint}"),
             format!("t.dlg:6: unknown token \"{{x}}\"; {hint}"),
@@ -387,7 +386,7 @@ fn prints_choices() {
 fn readme_choice_example_is_valid() {
     let readme = bundle::file("dialogue/README.md").unwrap_or_default();
     let example = readme.split("```").nth(3).unwrap_or_default();
-    let table = from_sources(&[("README.md", example)], None, None);
+    let table = from_sources(&[("README.md", example)], None, None, None);
     assert!(table.is_ok(), "{table:?}");
     let scene = table.unwrap_or_default().scenes.remove("ch01_gate");
     let choice = scene.and_then(|s| {

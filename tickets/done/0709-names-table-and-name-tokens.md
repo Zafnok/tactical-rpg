@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0702"]
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0709 — Names table and name tokens
@@ -92,11 +92,11 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `names.ron` holds every id in `docs/story/names.md` (a test compares the id sets by parsing the Markdown table's first column).
-- [ ] Changing one entry in the table changes every line that uses its token (test with a scene using `{n:king}` twice).
-- [ ] Every new validator error has a test with its exact message.
-- [ ] Named characters' display names come from the table (test: a character's `Unit` name equals the table value).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `names.ron` holds every id in `docs/story/names.md` (a test compares the id sets by parsing the Markdown table's first column).
+- [x] Changing one entry in the table changes every line that uses its token (test with a scene using `{n:king}` twice).
+- [x] Every new validator error has a test with its exact message.
+- [x] Named characters' display names come from the table (test: a character's `Unit` name equals the table value).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -105,3 +105,41 @@ None.
 - Integration: the all-assets test loads `names.ron` and validates every `.dlg`.
 
 ## Completion notes
+
+- `assets/data/names.ron` holds all 71 ids of `docs/story/names.md` plus the
+  four placeholder test characters. It's loaded as `Content::names`
+  (`trpg_content::names`) and validated: ids, duplicate ids, empty names,
+  braces, non-ASCII, and two ids sharing one name. A test parses
+  `names.md`'s tables and compares the id sets both ways.
+- `characters.ron` no longer has `name:`; a named character's display name
+  is the names-table entry for its id (a literal `name:` is now an unknown
+  field). A character with no entry is an error that says what line to add.
+  The dialogue name plate and the battle `Unit` name both come from it.
+- `{n:<id>}` in speech, narration, captions and reply text, filled in by
+  `DialoguePlayer::current()` (names first, then the lead's tokens), so
+  stored scenes keep their tokens. `DialoguePlayer::new` and
+  `DialogueScreen::new`/`overlay` now take the `Names`.
+- Validator errors, each tested with its exact message: unknown name id;
+  `{n:lead}` (write `{lead}`); a display name written out (also in
+  captions and reply text); length with every name token counted as the
+  longest name in the table (also applied to the lead's 40-character line
+  and 60-character replies, for the same reason).
+
+Deviations (technical, my call):
+- Added `{N:<id>}`, the capitalised form, like 0708's `{They}`. Names keep
+  their article ("the Thornmarch"), so without it a sentence couldn't start
+  with one.
+- The literal-name check strips a leading "the"/"a"/"an" (so
+  "Thornmarch" alone is caught) and skips names with no capital letter
+  ("breath", "a vow", "mor"): they are ordinary words and would flag normal
+  prose.
+- Where `names.md`'s "Current name" column holds more than a name, the
+  table uses: `lead` "Ellery", `red_captain` "Harl Coster",
+  `faction.brennmark` "the Brennish", gods in full ("Ama, the Mother").
+
+Follow-up: **0712** short name forms (first names like "Hollis", god names
+without titles). Each id has one name, and dialogue mostly says first
+names, so the Chapter 1 script (0707) now waits for it; ROADMAP updated.
+
+No gameplay rules were decided. Nothing visible changes in the game: the
+test scenes don't use names yet.

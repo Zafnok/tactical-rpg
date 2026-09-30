@@ -151,7 +151,54 @@ write the verb to agree with he/she: `{They} knows`, not `{They} know`.
   the same caption) as the first reply's does.
 - Outside choices the lead speaks only in short, neutral lines: a `lead:`
   line is at most **40 characters**.
-- Only the tokens above exist; any other `{...}`, or a `{` without a `}`,
+- Only the tokens above and name tokens (`{n:<id>}`, see "Names") exist;
+  any other `{...}`, or a `{` without a `}`,
   is an error.
 - Lengths count each token at its longest: `{lead}` as 12 characters (the
   longest name), `{themself}` as 7 (`himself`), and so on.
+
+## Names
+
+Every proper noun of the story (characters, places, factions, gods, terms)
+has a stable id in `docs/story/names.md`, and its display name in the
+game's names table, `assets/data/names.ron` (ticket 0709). Nick may rename
+anything, so **scripts never write a name out**: they use a name token, and
+a rename is one line in `names.ron`.
+
+```
+@scene ch01_road
+@caption {N:place.thornmarch}, dusk
+@left  lead neutral
+@right retainer neutral
+retainer: {n:king} wants you out of {n:place.thornmarch}.
+@end
+```
+
+With the current names this shows the caption "The Thornmarch, dusk" and
+the line "Emeric wants you out of the Thornmarch."
+
+| Token | Becomes |
+| ----- | ------- |
+| `{n:<id>}` | The display name with that id, as written in `names.ron` (`{n:king}` → `Emeric`, `{n:place.thornmarch}` → `the Thornmarch`) |
+| `{N:<id>}` | The same with a capital first letter, for the start of a sentence (`{N:place.thornmarch}` → `The Thornmarch`) |
+
+Name tokens work in speech, narration, captions and reply text. Speaker
+ids (`retainer:`) and `@left`/`@right` use character ids, not tokens; a
+character's name plate comes from `names.ron` too (its character id is its
+name id). Names keep their article (`the Thornmarch`), so write
+`{n:place.thornmarch}`, not `the {n:place.thornmarch}`.
+
+### Rules for names
+
+- A name token's id must be in `names.ron`. Ids are lowercase letters,
+  digits, `_` and `.`.
+- `{n:lead}` is an error: the player names the lead, so write `{lead}`.
+- **No names written out.** A line that contains a display name from
+  `names.ron` is an error that names the token to use. The check matches
+  whole words, case-sensitively, without the name's leading `the`/`a`/`an`
+  (so `Thornmarch` alone is caught too). Names with no capital letter
+  (`breath`, `a vow`, `mor`) are ordinary words and aren't checked.
+  Comments aren't checked.
+- **Lengths** count every name token as the **longest** name in
+  `names.ron`, whichever name it is, so renaming anything can't push a line
+  over its limit.

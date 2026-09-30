@@ -1,0 +1,101 @@
+// The names table (ticket 0709): every display name in the game's data, by
+// stable id. It's the only place a name is written: characters.ron takes a
+// named character's name from here (its id is the name id), and .dlg text
+// writes {n:<id>} (or {N:<id>} for a capital first letter) instead of the
+// name. To rename, change the value here; see docs/story/names.md, "How
+// renaming works". Loaded by trpg_content::names.
+//
+// Ids: lowercase letters, digits, _ and ., as in docs/story/names.md (every
+// id there must be here). Values: plain ASCII, no { or }, each unique. Keep
+// the leading "the" where the name has one ("the Thornmarch"), so a token
+// reads right mid-sentence.
+{
+    // Characters (docs/story/names.md). The lead's name is the player's
+    // choice: dialogue writes {lead}; this is only the default.
+    "lead": "Ellery",
+    "retainer": "Hollis Marr",
+    "sergeant": "Tamsin Rook",
+    "poacher": "Aske",
+    "keeper": "Piers",
+    "heretic": "Rue",
+    "rival": "Dace Marr",
+    "king": "Emeric",
+    "vowmaster": "Absalom Crane",
+    "red_captain": "Harl Coster",
+    "sister": "Wren Marr",
+    "prince": "Aurel",
+    "vosse": "Harrick Vosse",
+    "defector": "Joss Pellam",
+    "prizefighter": "Gil Parrow",
+    "shieldbearer": "Hedda Ravn",
+    "envoy": "Ragna Holt",
+    "battlemage": "Oriel Mast",
+
+    // Places.
+    "place.west": "the Old Kingdoms",
+    "place.east": "the Jade Reach",
+    "place.south": "the Sunward Isles",
+    "place.ardeval": "Ardeval",
+    "place.capital": "Varenhall",
+    "place.brennmark": "Brennmark",
+    "place.thornmarch": "the Thornmarch",
+    "place.harrowby": "Harrowby",
+    "place.veyne_hall": "Veyne Hall",
+    "place.ashfields": "the Ashfields",
+    "place.ossary": "Ossary",
+    "place.greywater": "Greywater Abbey",
+    "place.saltmere": "Saltmere",
+    "place.kells_ford": "Kell's Ford",
+    "place.millhaven": "Millhaven",
+    "place.cairnford": "Cairnford",
+
+    // Factions, houses and groups.
+    "faction.crown": "the Crown of Ardeval",
+    "faction.hounds": "the Hounds",
+    "faction.vigil": "the Vigil",
+    "faction.brennmark": "the Brennish",
+    "faction.unpaid": "the Unpaid",
+    "faction.red_company": "the Red Company",
+    "faction.league": "the Saltmere League",
+    "house.veyne": "House Veyne",
+    "group.candles": "the Candles",
+
+    // Gods and magic terms.
+    "god.mother": "Ama, the Mother",
+    "god.pyre": "Vael, the Pyre",
+    "god.winter": "Hrim, the Long Winter",
+    "god.hand": "Orun, the Hand",
+    "god.door": "Othe, the Doorkeeper",
+    "term.vow": "a vow",
+    "term.gifted": "the gifted",
+    "term.door": "the Door",
+    "term.door_vow": "the Door Vow",
+    "shuyi": "Shuyi",
+    "term.echo": "an echo",
+    "term.unfinished": "the Unfinished",
+    "term.final_vow": "the Final Vow",
+    "term.long_dusk": "the Long Dusk",
+    "term.breath": "breath",
+    "event.border_war": "the Border War",
+    "event.ash_peace": "the Ash Peace",
+
+    // Minor names.
+    "brother_tor": "Tor",
+    "place.coldwell": "Coldwell",
+    "place.aldwater": "Aldwater Toll Bridge",
+    "place.millhaven_road": "Millhaven Road",
+    "place.salt_road": "the Salt Road",
+    "place.smugglers_cove": "Smugglers' Cove",
+    "place.burnt_mill": "the Burnt Mill",
+    "place.pilgrims_road": "Pilgrims' Road",
+    "place.ossuary_gate": "the Ossuary Gate",
+    "word.mother": "mor",
+    "word.home": "hus",
+
+    // PLACEHOLDER test characters (characters.ron), until the real cast
+    // replaces them (0803).
+    "test_lord": "Test Lord",
+    "test_knight": "Test Knight",
+    "test_archer": "Test Archer",
+    "test_rogue": "Test Rogue",
+}

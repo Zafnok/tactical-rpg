@@ -12,11 +12,13 @@ use std::collections::BTreeMap;
 use trpg_core::CharacterId;
 
 pub use check::{check_duplicates, check_scene};
+pub(crate) use parse::char_problem;
 pub use parse::{ChoiceLines, OptionLines, ParsedScene, parse_dlg};
 
 use crate::bundle;
 use crate::character::CharacterTable;
 use crate::error::ContentError;
+use crate::names::Names;
 use crate::portrait::PortraitTable;
 
 /// Directory of dialogue files inside the asset bundle.
@@ -162,19 +164,21 @@ impl DialogueTable {
 }
 
 /// Loads and validates every `*.dlg` file in the bundle. Character ids are
-/// checked against `characters`, and expressions against the characters'
-/// `portraits`, when given (each is skipped if its files failed to load).
-/// Reports every error of every file.
+/// checked against `characters`, expressions against the characters'
+/// `portraits`, and name tokens and names written out against `names`,
+/// when given (each is skipped if its files failed to load). Reports every
+/// error of every file.
 pub fn load(
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
+    names: Option<&Names>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let files: Vec<(String, Option<&str>)> = bundle::files_in(DIALOGUE_DIR)
         .into_iter()
         .filter(|path| path.ends_with(DIALOGUE_EXTENSION))
         .map(|path| (bundle::display_path(path), bundle::file(path)))
         .collect();
-    load_files(&files, characters, portraits)
+    load_files(&files, characters, portraits, names)
 }
 
 /// Like [`from_sources`], for files given as `(file name, source)` where a
@@ -183,6 +187,7 @@ fn load_files(
     files: &[(String, Option<&str>)],
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
+    names: Option<&Names>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut sources = Vec::new();
     let mut errors = Vec::new();
@@ -192,7 +197,7 @@ fn load_files(
             None => errors.push(ContentError::new(file, "file is not valid UTF-8")),
         }
     }
-    match from_sources(&sources, characters, portraits) {
+    match from_sources(&sources, characters, portraits, names) {
         Ok(table) if errors.is_empty() => Ok(table),
         Ok(_) => Err(errors),
         Err(e) => {
@@ -208,6 +213,7 @@ pub fn from_sources<F: AsRef<str>>(
     files: &[(F, &str)],
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
+    names: Option<&Names>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut scenes = Vec::new();
     let mut errors = Vec::new();
@@ -217,7 +223,7 @@ pub fn from_sources<F: AsRef<str>>(
         scenes.extend(parsed);
     }
     for s in &scenes {
-        errors.extend(check_scene(s, characters, portraits));
+        errors.extend(check_scene(s, characters, portraits, names));
     }
     errors.extend(check_duplicates(&scenes));
     if errors.is_empty() {
