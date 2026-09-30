@@ -102,7 +102,9 @@ cue.
 Magic plays in two beats (0020 follow-up Q2 "A"): the element's cast sound
 as the spell goes off, then `hit_magic` as it lands, or the element's crit
 sound instead of `hit_magic` on a crit. A spell with no element has no cast
-sound.
+sound. A spell that a target **absorbs** (heals from, e.g. an elemental hit
+by its own element) plays `heal` instead of `hit_magic` (Nick, 0424
+sign-off: "it should sound like a heal").
 
 ## Starting values (*tunable*, chosen by Claude)
 
