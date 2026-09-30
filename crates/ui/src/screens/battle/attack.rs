@@ -7,7 +7,7 @@
 use trpg_core::{AttackPreview, BattleState, Pos, SkillId, UnitAction, UnitId, WEAPON_SLOTS};
 
 use super::mode::Selection;
-use super::skills::combat_actives;
+use super::skills::{combat_active_ids, combat_actives};
 use crate::widgets::menu::{Menu, MenuItem};
 
 /// The weapon attack with the weapon in `slot` on `target`: no art, no
@@ -29,13 +29,24 @@ pub fn attack_with(target: UnitId, slot: usize, active: Option<SkillId>) -> Unit
 /// The units `unit` could attack from `dest` with the weapon in `slot`,
 /// ordered by `(y, x)` of their tiles.
 pub fn targets(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec<UnitId> {
+    targets_with(state, unit, dest, slot, None)
+}
+
+/// [`targets`] with the combat active `active` chosen: an active that adds
+/// range (Long Shot) reaches further (0426).
+pub fn targets_with(
+    state: &BattleState,
+    unit: UnitId,
+    dest: Pos,
+    slot: usize,
+    active: Option<&SkillId>,
+) -> Vec<UnitId> {
     let mut found: Vec<(Pos, UnitId)> = state
         .units()
         .iter()
         .filter(|u| {
-            state
-                .preview_attack(unit, dest, &attack(u.id, slot))
-                .is_ok()
+            let action = attack_with(u.id, slot, active.cloned());
+            state.preview_attack(unit, dest, &action).is_ok()
         })
         .map(|u| (u.pos, u.id))
         .collect();
@@ -43,12 +54,28 @@ pub fn targets(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec
     found.into_iter().map(|(_, id)| id).collect()
 }
 
+/// Everyone the weapon in `slot` could attack plain or with any combat
+/// active, in `(y, x)` order.
+fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec<UnitId> {
+    let mut found = targets(state, unit, dest, slot);
+    for id in combat_active_ids(state, unit) {
+        for t in targets_with(state, unit, dest, slot, Some(&id)) {
+            if !found.contains(&t) {
+                found.push(t);
+            }
+        }
+    }
+    found.sort_by_key(|&id| state.unit(id).map(|u| (u.pos.y, u.pos.x)));
+    found
+}
+
 /// A weapon that can attack someone from the destination.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WeaponChoice {
     /// Its loadout slot.
     pub slot: usize,
-    /// Who it can attack, in `(y, x)` order (never empty).
+    /// Who it can attack, plain or with a combat active, in `(y, x)` order
+    /// (never empty).
     pub targets: Vec<UnitId>,
 }
 
@@ -57,7 +84,7 @@ pub struct WeaponChoice {
 pub fn weapon_choices(state: &BattleState, sel: &Selection) -> Vec<WeaponChoice> {
     (0..WEAPON_SLOTS)
         .filter_map(|slot| {
-            let targets = targets(state, sel.unit, sel.dest(), slot);
+            let targets = reachable(state, sel.unit, sel.dest(), slot);
             (!targets.is_empty()).then_some(WeaponChoice { slot, targets })
         })
         .collect()
@@ -121,7 +148,8 @@ pub struct Targeting {
     pub sel: Selection,
     /// The attacking weapon's loadout slot.
     pub slot: usize,
-    /// Who it can attack, in `(y, x)` order (never empty).
+    /// Who it can attack with the chosen active, in `(y, x)` order (never
+    /// empty).
     pub targets: Vec<UnitId>,
     /// The target under the cursor.
     pub index: usize,
@@ -143,16 +171,29 @@ impl Targeting {
         choice: &WeaponChoice,
         weapons: Option<(Menu, Vec<WeaponChoice>)>,
     ) -> Option<Self> {
-        let first = *choice.targets.first()?;
+        choice.targets.first()?;
+        let (unit, dest) = (sel.unit, sel.dest());
+        // Plain if the weapon reaches anyone; else the first active that
+        // extends its reach to someone.
+        let plain = targets(state, unit, dest, choice.slot);
+        let (active, targets) = if plain.is_empty() {
+            combat_active_ids(state, unit).into_iter().find_map(|id| {
+                let t = targets_with(state, unit, dest, choice.slot, Some(&id));
+                (!t.is_empty()).then_some((Some(id), t))
+            })?
+        } else {
+            (None, plain)
+        };
+        let first = *targets.first()?;
         let preview = state
-            .preview_attack(sel.unit, sel.dest(), &attack(first, choice.slot))
+            .preview_attack(unit, dest, &attack_with(first, choice.slot, active.clone()))
             .ok()?;
         Some(Self {
             sel,
             slot: choice.slot,
-            targets: choice.targets.clone(),
+            targets,
             index: 0,
-            active: None,
+            active,
             preview,
             weapons,
         })
@@ -211,16 +252,28 @@ impl Targeting {
         ring.extend(self.actives(state).into_iter().map(Some));
         let n = ring.len();
         let at = ring.iter().position(|a| *a == self.active).unwrap_or(0);
-        let next = ring[if forward {
-            (at + 1) % n
-        } else {
-            (at + n - 1) % n
-        }]
-        .clone();
-        let action = attack_with(self.target(), self.slot, next.clone());
-        if let Ok(p) = state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
+        // The next entry the core accepts against the current target (plain
+        // is refused when only an active reaches it).
+        for step in 1..n {
+            let next = ring[if forward {
+                (at + step) % n
+            } else {
+                (at + n - step) % n
+            }]
+            .clone();
+            let action = attack_with(self.target(), self.slot, next.clone());
+            let Ok(p) = state.preview_attack(self.sel.unit, self.sel.dest(), &action) else {
+                continue;
+            };
+            // An active that adds range reaches other targets than plain.
+            let (unit, dest) = (self.sel.unit, self.sel.dest());
+            let found = targets_with(state, unit, dest, self.slot, next.as_ref());
+            let current = self.target();
+            self.index = found.iter().position(|&t| t == current).unwrap_or(0);
+            self.targets = found;
             self.active = next;
             self.preview = p;
+            return;
         }
     }
 
@@ -358,5 +411,101 @@ mod tests {
             targets: vec![],
         };
         assert_eq!(Targeting::new(&s, at(&s, p(7, 2)), &none, None), None);
+    }
+
+    /// Cycles `t` through its actives (at most a few) until `active` is
+    /// chosen.
+    fn pick(t: &mut Targeting, s: &BattleState, active: Option<&SkillId>) {
+        for _ in 0..8 {
+            if t.active.as_ref() != active {
+                t.cycle_skill(true, s);
+            }
+        }
+        assert_eq!(t.active.as_ref(), active);
+    }
+
+    /// The skirmish with the archer (unit 3) knowing Long Shot at (8, 4) and
+    /// brigand 4 moved to `brigand`.
+    fn archer_vs(c: &crate::screen::Ctx, brigand: Pos) -> BattleState {
+        let s = skirmish(c, 20);
+        let mut units = s.units().to_vec();
+        units[2].pos = p(8, 4);
+        units[3].pos = brigand;
+        assert!(units[2].learn_skill(&SkillId::new("long_shot"), &c.content.skills));
+        battle_with(
+            c,
+            s.map().clone(),
+            units,
+            Objective::Rout { turn_limit: None },
+        )
+    }
+
+    #[test]
+    fn long_shot_offers_a_target_just_beyond_the_bows_range() {
+        let c = ctx();
+        // Three tiles up: past the bow's two, within Long Shot's extra one.
+        let s = archer_vs(&c, p(8, 1));
+        let (archer, brigand) = (UnitId(3), UnitId(4));
+        let long = SkillId::new("long_shot");
+        assert!(!targets(&s, archer, p(8, 4), 0).contains(&brigand));
+        assert!(targets_with(&s, archer, p(8, 4), 0, Some(&long)).contains(&brigand));
+        // The weapon is a choice only because of the active; targeting
+        // starts with Long Shot on and can attack with it.
+        let mut sel = Selection::new(&s, archer).unwrap();
+        sel.path = vec![sel.origin()];
+        let choices = weapon_choices(&s, &sel);
+        assert!(choices[0].targets.contains(&brigand));
+        let mut t = Targeting::new(&s, sel, &choices[0], None).unwrap();
+        assert_eq!(t.active, Some(long.clone()));
+        assert!(t.targets.contains(&brigand));
+        for _ in 0..t.targets.len() {
+            if t.target() != brigand {
+                t.cycle(true, &s);
+            }
+        }
+        assert_eq!(t.target(), brigand);
+        // The only way to attack it is with the active: cycling skills
+        // never lands on the plain attack.
+        for _ in 0..4 {
+            t.cycle_skill(true, &s);
+            assert_eq!(t.target(), brigand);
+            assert!(t.active.is_some());
+        }
+        pick(&mut t, &s, Some(&long));
+        let mut after = s.clone();
+        let events = after.apply(&t.command()).unwrap();
+        assert!(!events.is_empty());
+    }
+
+    #[test]
+    fn choosing_long_shot_adds_targets_and_dropping_it_removes_them() {
+        let c = ctx();
+        // Brigand 4 is two tiles up (in plain reach); Long Shot adds reach
+        // without dropping it.
+        let s = archer_vs(&c, p(8, 2));
+        let mut sel = Selection::new(&s, UnitId(3)).unwrap();
+        sel.path = vec![sel.origin()];
+        let choice = &weapon_choices(&s, &sel)[0];
+        let mut t = Targeting::new(&s, sel, choice, None).unwrap();
+        assert_eq!((t.target(), t.active.clone()), (UnitId(4), None));
+        let plain = t.targets.clone();
+        let long = Some(SkillId::new("long_shot"));
+        pick(&mut t, &s, long.as_ref());
+        assert_eq!(t.target(), UnitId(4));
+        assert!(t.targets.len() > plain.len());
+        pick(&mut t, &s, None);
+        assert_eq!(t.targets, plain);
+        // Without Long Shot known, a target beyond range isn't offered.
+        let s = skirmish(&c, 20);
+        let mut units = s.units().to_vec();
+        units[2].pos = p(8, 4);
+        units[3].pos = p(8, 1);
+        let s = battle_with(
+            &c,
+            s.map().clone(),
+            units,
+            Objective::Rout { turn_limit: None },
+        );
+        assert!(!targets(&s, UnitId(3), p(8, 4), 0).contains(&UnitId(4)));
     }
 }

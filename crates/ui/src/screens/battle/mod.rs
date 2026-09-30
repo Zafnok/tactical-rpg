@@ -29,6 +29,7 @@ pub mod playback;
 pub mod progress;
 pub mod rewind;
 pub mod skills;
+mod sounds;
 pub mod tips;
 pub mod units;
 
@@ -59,6 +60,7 @@ use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
 use super::dialogue::DialogueScreen;
 use super::draw_debug_hint;
+use crate::audio::{CURSOR_MOVE, MenuSound};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -782,11 +784,26 @@ impl BattleScreen {
     }
 
     /// Handles one action on the open rewind screen.
-    fn rewind_step(&mut self, action: Action) {
+    fn rewind_step(&mut self, ctx: &mut Ctx, action: Action) {
         let Some(screen) = self.rewind.as_mut() else {
             return;
         };
-        match screen.step(action) {
+        let before = (screen.focused().map(|e| e.point), screen.is_confirming());
+        let effect = screen.step(action);
+        let after = (screen.focused().map(|e| e.point), screen.is_confirming());
+        let sound = match effect {
+            RewindEffect::None if before == after => None,
+            // Up and down move the highlight; Confirm and Cancel open and
+            // close the prompt.
+            RewindEffect::None if before.1 == after.1 => Some(MenuSound::Move),
+            RewindEffect::None if after.1 => Some(MenuSound::Select),
+            RewindEffect::None | RewindEffect::Close => Some(MenuSound::Cancel),
+            RewindEffect::Rewind(_) => Some(MenuSound::Select),
+        };
+        if let Some(sound) = sound {
+            ctx.audio.menu(sound);
+        }
+        match effect {
             RewindEffect::None => {}
             RewindEffect::Close => self.rewind = None,
             RewindEffect::Rewind(point) => {
@@ -806,16 +823,40 @@ impl BattleScreen {
         }
     }
 
+    /// Gives `action` to the mode ([`mode::step`]), plays its menu sound
+    /// and carries out its effect.
+    fn step_mode(&mut self, ctx: &mut Ctx, action: Action) {
+        let before = self.mode.clone();
+        let mode = std::mem::take(&mut self.mode);
+        let (mode, effect) = mode::step(mode, action, self.cursor.pos, &self.state);
+        if let Some(sound) = sounds::step_sound(action, &before, &mode, &effect) {
+            ctx.audio.menu(sound);
+        }
+        self.mode = mode;
+        match effect {
+            Effect::None => {}
+            Effect::Apply(cmd) => self.apply(&cmd),
+            Effect::ApplyStay(cmd, sel) => self.apply_stay(&cmd, *sel),
+            Effect::Cursor(to) => {
+                self.cursor.jump(to);
+                self.follow(to);
+            }
+        }
+    }
+
     /// Moves the cursor one tile for a cursor key; the camera and a
-    /// selected unit's path follow.
-    fn move_cursor(&mut self, action: Action) {
+    /// selected unit's path follow. Returns whether it moved (not at the
+    /// map's edge).
+    fn move_cursor(&mut self, action: Action) -> bool {
         let tiles = &self.state.map().tiles;
         let (w, h) = (tiles.width(), tiles.height());
-        if self.cursor.step(action, w, h) {
+        let moved = self.cursor.step(action, w, h);
+        if moved {
             let to = self.cursor.pos;
             self.follow(to);
             self.mode.cursor_moved(to, &self.state);
         }
+        moved
     }
 
     /// Whether `unit` can still act this phase: its faction's phase and it
@@ -1364,14 +1405,19 @@ impl Screen for BattleScreen {
                 continue;
             }
             match action {
-                _ if self.rewind.is_some() => self.rewind_step(action),
+                _ if self.rewind.is_some() => self.rewind_step(ctx, action),
                 Action::Rewind if self.can_open_rewind() => {
                     let charges = self.state.rewind_charges();
                     self.rewind = Some(RewindScreen::new(&self.history, charges));
+                    ctx.audio.menu(MenuSound::Select);
                 }
                 Action::DangerZone if self.mode.cursor_free() => self.toggle_danger(),
                 Action::NextUnit | Action::PrevUnit if matches!(self.mode, Mode::Idle { .. }) => {
+                    let from = self.cursor.pos;
                     self.cycle(action == Action::NextUnit);
+                    if self.cursor.pos != from {
+                        ctx.audio.play_sound(CURSOR_MOVE);
+                    }
                 }
                 Action::CursorLeft
                 | Action::CursorRight
@@ -1379,22 +1425,11 @@ impl Screen for BattleScreen {
                 | Action::CursorDown
                     if self.mode.cursor_free() =>
                 {
-                    self.move_cursor(action);
-                }
-                _ => {
-                    let mode = std::mem::take(&mut self.mode);
-                    let (mode, effect) = mode::step(mode, action, self.cursor.pos, &self.state);
-                    self.mode = mode;
-                    match effect {
-                        Effect::None => {}
-                        Effect::Apply(cmd) => self.apply(&cmd),
-                        Effect::ApplyStay(cmd, sel) => self.apply_stay(&cmd, *sel),
-                        Effect::Cursor(to) => {
-                            self.cursor.jump(to);
-                            self.follow(to);
-                        }
+                    if self.move_cursor(action) {
+                        ctx.audio.play_sound(CURSOR_MOVE);
                     }
                 }
+                _ => self.step_mode(ctx, action),
             }
         }
         let mode = std::mem::take(&mut self.mode);
@@ -2006,6 +2041,29 @@ mod tests {
             .max_by_key(|r| (r.x, -r.y))
             .expect("no cursor on screen");
         ((r.x + 1) / cw - layout::TILE_W_CELLS, r.y / ch)
+    }
+
+    /// Holding a cursor key ticks once per tile moved, and not at the
+    /// map's edge (ticket 0425).
+    #[test]
+    fn held_cursor_ticks_once_per_tile() {
+        let ticks = |h: &Harness| h.sounds().iter().filter(|c| *c == CURSOR_MOVE).count();
+        let mut h = big_battle_harness();
+        // The lord at (3, 5); the camera scrolls as the cursor goes right.
+        h.hold("Right", 1.0);
+        let right = ticks(&h);
+        assert!(right > 5, "{right} ticks: the key should repeat");
+        assert_eq!(h.sounds().len(), right, "{:?}", h.sounds());
+        // Held left for much longer than it takes to reach x = 0: one tick
+        // per tile back, none once at the edge.
+        h.clear_audio().hold("Left", 6.0);
+        assert_eq!(ticks(&h), right + 3);
+        assert_eq!(cursor_cell(h.game().buffer()).0, 0, "at the left edge");
+        h.clear_audio().keys("Left Up Up Up Up Up Up");
+        assert_eq!(ticks(&h), 5, "only the five steps up to y = 0");
+        // Next unit jumps: one tick.
+        h.clear_audio().keys("s");
+        assert_eq!(h.sounds(), [CURSOR_MOVE]);
     }
 
     #[test]

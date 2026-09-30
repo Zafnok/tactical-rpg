@@ -8,6 +8,7 @@ mod portrait_viewer;
 
 pub use portrait_viewer::PortraitViewerScreen;
 
+use crate::audio::MenuSound;
 use crate::color::{Palette, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -69,7 +70,7 @@ impl Screen for DebugMenuScreen {
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         for &action in &input.actions {
-            match self.menu.handle(action) {
+            match self.menu.handle_with_sound(action, &mut ctx.audio) {
                 Some(MenuEvent::Cancelled) => return Transition::Pop,
                 Some(MenuEvent::Chosen(0)) => {
                     return Transition::Push(Box::new(GlyphSamplerScreen::new(ctx)));
@@ -159,8 +160,9 @@ impl Screen for GlyphSamplerScreen {
         Self::NAME
     }
 
-    fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
+    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         if input.actions.contains(&Action::Cancel) {
+            ctx.audio.menu(MenuSound::Cancel);
             Transition::Pop
         } else {
             Transition::None
