@@ -227,8 +227,9 @@ up to the Chapter 1 roster/enemies (0803).
 - **Combat Arts** cost durability: each art has its own cost, higher for
   stronger effects (Nick). **Class actives** cost durability too (Nick,
   0014). The arts, their costs and the active costs are in
-  [`combat-arts.md`](combat-arts.md). An art or active can be used only if
-  `durability_left ≥ cost` (*Claude's starting rule*).
+  [`combat-arts.md`](combat-arts.md). An art or active can be used while the weapon
+  isn't broken, even with less left than its cost: it spends what is left
+  and the weapon breaks after the action (Nick, 0414 review).
 - At `durability_left == 0` the weapon is **broken**: it still attacks and
   counters, with **might halved** (rounded down) and **−20 hit** (*tunable*),
   and cannot use Combat Arts. Its type trait still applies.

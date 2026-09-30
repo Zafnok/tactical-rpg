@@ -71,7 +71,7 @@ pub fn art_name(state: &BattleState, id: &ArtId) -> String {
 pub struct ArtChoice {
     /// What the line attacks with.
     pub technique: Technique,
-    /// Why it can't be chosen now (`broken`, `3 dur left`); `None` if it
+    /// Why it can't be chosen now (`broken`, `out of range`); `None` if it
     /// can.
     pub reason: Option<String>,
 }
@@ -80,7 +80,6 @@ pub struct ArtChoice {
 pub fn reason_text(error: &CostError) -> String {
     match error {
         CostError::WeaponBroken => "broken".to_owned(),
-        CostError::NotEnoughDurability { left, .. } => format!("{left} dur left"),
         CostError::NotEnoughUses { left } => format!("{left} uses left"),
         CostError::NoWeapon | CostError::WrongSource => "can't pay".to_owned(),
     }
@@ -295,8 +294,6 @@ mod tests {
     #[test]
     fn reasons_say_what_is_missing() {
         assert_eq!(reason_text(&CostError::WeaponBroken), "broken");
-        let short = CostError::NotEnoughDurability { left: 3, cost: 4 };
-        assert_eq!(reason_text(&short), "3 dur left");
         assert_eq!(
             reason_text(&CostError::NotEnoughUses { left: 1 }),
             "1 uses left"

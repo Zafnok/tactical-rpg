@@ -172,8 +172,8 @@
 //!   attack uses one art **or** one combat active
 //!   ([`CommandError::ArtWithActive`]). The art must be one of the unit's
 //!   [arts for](Unit::arts_for) the attacking weapon, and its cost payable
-//!   from that weapon ([`CommandError::CannotPayArt`]: broken, or
-//!   `durability_left < cost`). Events: [`Event::ArtUsed`], the payment
+//!   from that weapon ([`CommandError::CannotPayArt`]: a broken
+//!   weapon; with less left than the cost it spends the rest). Events: [`Event::ArtUsed`], the payment
 //!   ([`Event::DurabilitySpent`]), a stance ([`Event::EffectApplied`], on
 //!   the user until the start of its next phase; it counts in this combat,
 //!   once), then the combat, with the art's bonuses on **every** attacker

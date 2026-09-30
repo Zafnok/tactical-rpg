@@ -73,7 +73,7 @@ pick an art, and can you tell what it will do and what it costs?
 ## Acceptance criteria
 
 - [x] Harness: a Swordsman picks Guard Break against a Brigand; the forecast shows `Guard Break (20 → 16)`, hit 100 and `no counter`, matching `core`'s forecast; after committing, the weapon shows `16/20`.
-- [x] Harness: with the weapon at 3/20, Guard Break is dimmed and can't be chosen.
+- [x] ~~Harness: with the weapon at 3/20, Guard Break is dimmed and can't be chosen.~~ Changed by Nick during review: Guard Break at 3/20 goes through (`Guard Break (3 → 0)`) and the sword breaks after the fight (harness test). A broken weapon dims every art.
 - [x] Snapshots: arts list, forecast with an art, forecast with a note-only art (Pinning Shot), broken weapon line.
 - [x] All gates in the `run-gates` skill pass.
 
@@ -127,6 +127,15 @@ pick an art, and can you tell what it will do and what it costs?
     the lists show `broken`.
   - The stance note reads `stance: +20 avo`, the wording the info screen
     already uses for skills, not `stance: avoid +20`.
+- **Rule change from Nick during review:** "you should be able to select a
+  combat art even when it would break your weapon … it has 3 dur left and
+  the art costs 5, ok, art goes thru, then weapon is broken". Asked whether
+  class actives work the same: "Yes, all of them". So `core` no longer
+  needs `durability_left ≥ cost`: any art or durability-costing active
+  (combat or not) can be used while the weapon isn't broken; it spends
+  what is left and the weapon breaks after the action, which is still
+  fought with the unbroken weapon. `CostError::NotEnoughDurability` is
+  gone. `combat-arts.md` and `weapons-and-items.md` record it.
 - **0426 merged while this was open** (per-active target lists for Long
   Shot). It is folded into the list flow here: a weapon's targets are
   everyone *any* line of the list reaches (`attack::reachable`), so Close
@@ -148,7 +157,7 @@ pick an art, and can you tell what it will do and what it costs?
   - On a target only an art or active reaches (Close Shot beside the
     archer, Long Shot beyond the bow's range), `Attack` is dimmed
     `out of range` and that art is chosen for you.
-  - Dimmed reasons read `broken`, `3 dur left` (or `1 uses left` for
+  - Dimmed reasons read `broken`, `out of range` (or `1 uses left` for
     spells).
   - Only a boss's or a green unit's art gets the playback banner, since you
     already know which art your own units use.

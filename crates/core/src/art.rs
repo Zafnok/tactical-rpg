@@ -18,8 +18,8 @@
 //!   a loadout slot, which the unit must be able to wield (so its **current
 //!   class** has the kind): the rank arts of its kind up to the unit's rank
 //!   in it, then the weapon's own arts. [`Unit::usable_arts`] keeps those it
-//!   can pay for: the weapon isn't broken and has `durability_left ≥ cost`
-//!   ([`check_cost`]).
+//!   can pay for: the weapon isn't broken, even with less left than the
+//!   cost (it then breaks after the combat; [`check_cost`]).
 //! - **Effects** ([`ArtEffect`]) are data: bonuses and changes to the
 //!   attacker's numbers for the whole combat ([`ArtEffect::apply`], so the
 //!   forecast shows them), a debuff on the target's first hit, a stance on
@@ -237,7 +237,7 @@ impl Unit {
     }
 
     /// [`Unit::arts_for`] the weapon in `slot`, keeping those it can pay for
-    /// now (the weapon isn't broken and has at least the cost left).
+    /// now (the weapon isn't broken; less left than the cost is fine).
     pub fn usable_arts<'a>(
         &self,
         slot: usize,

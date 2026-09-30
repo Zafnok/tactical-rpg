@@ -197,26 +197,30 @@ fn guard_break_shows_cores_forecast_and_is_paid_when_attacking() {
 }
 
 #[test]
-fn guard_break_is_dimmed_and_skipped_when_the_weapon_has_three_left() {
+fn guard_break_with_three_left_goes_through_and_breaks_the_sword() {
+    // Nick (0414 review): "it has 3 dur left and the art costs 5, ok, art
+    // goes thru, then weapon is broken".
     let mut c = ctx();
     let state = swordsman(&c, 3);
     let mut s = lord_on_brigand(&mut c, state);
     let shown = lines(&s);
     let gb = shown.iter().find(|l| l.0 == "Guard Break").unwrap();
-    assert_eq!((gb.1, gb.2.as_deref()), (false, Some("3 dur left")));
-    // Flowing Cut costs 2: it can be chosen.
-    let fc = shown.iter().find(|l| l.0 == "Flowing Cut").unwrap();
-    assert_eq!((fc.1, fc.2.as_deref()), (true, None));
-    // Down: Flowing Cut, then past Guard Break back to Attack.
-    let mut seen = vec![];
-    for _ in 0..4 {
-        step(&mut s, &mut c, &[Action::CursorDown]);
-        seen.push(targeting(&s).technique().name(s.state()));
+    assert_eq!((gb.1, gb.2.as_deref()), (true, None));
+    choose(&mut s, &mut c, "Guard Break");
+    let buf = render(&s, &c);
+    assert_eq!(text(&buf, LEFT_X, SKILL_ROW, 26), "Guard Break (3 → 0)");
+    // Fought with the unbroken sword: the same hit as at 20/20.
+    assert_eq!(text(&buf, LEFT_X + 5, HP_ROW + 1, 3), "100");
+    step(&mut s, &mut c, &[Action::Confirm]);
+    for _ in 0..40 {
+        wait(&mut s, &mut c, 0.5);
+        step(&mut s, &mut c, &[Action::Confirm]);
     }
-    assert!(!seen.iter().any(|n| n == "Guard Break"), "{seen:?}");
-    // Confirm on Attack: a plain attack, nothing paid but the swing.
-    choose(&mut s, &mut c, "Attack");
-    assert_eq!(targeting(&s).preview.art, None);
+    assert_eq!(durability(s.state(), UnitId(1)), 0);
+    let after = s.state().clone();
+    let buf = info(&mut c, &after, UnitId(1));
+    let weapons = text(&buf, 56, 2, 43);
+    assert!(weapons.ends_with("broken"), "{weapons}");
 }
 
 #[test]

@@ -191,11 +191,12 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
 #[test]
 fn a_skill_menu_entry_needs_a_usable_non_combat_active() {
     let mut c = ctx();
-    // The Guard's Brace, weapon at 3: it can be paid (3 dur).
-    let s = knight_menu(&mut c, 3);
+    // The Guard's Brace (3 dur), weapon at 2: usable, it spends the rest
+    // and the weapon breaks (Nick, 0414 review).
+    let s = knight_menu(&mut c, 2);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(true));
-    // At 2 it can't: the entry is dimmed, and choosing it opens nothing.
-    let mut s = knight_menu(&mut c, 2);
+    // Broken: the entry is dimmed, and choosing it opens nothing.
+    let mut s = knight_menu(&mut c, 0);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(false));
     step(&mut s, &mut c, &[Action::Cancel]);
     // A unit that knows no non-combat active has no entry at all: the

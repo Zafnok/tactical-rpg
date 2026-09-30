@@ -881,22 +881,12 @@ fn an_art_is_refused_when_it_cant_be_used_or_paid() {
     ]);
     refused_act(
         &mut worn,
-        1,
-        p(0, 0),
-        art_attack(3, "guard_break"),
-        cannot_pay(
-            "guard_break",
-            CostError::NotEnoughDurability { left: 3, cost: 4 },
-        ),
-    );
-    refused_act(
-        &mut worn,
         2,
         p(0, 2),
         art_attack(4, "flowing_cut"),
         cannot_pay("flowing_cut", CostError::WeaponBroken),
     );
-    // A cheaper art still fits.
+    // Unit 1 has 3 left: Flowing Cut (2) is paid in full.
     act(&mut worn, 1, p(0, 0), art_attack(3, "flowing_cut"));
     assert_eq!(left(&worn, 1), 1);
 }
@@ -951,6 +941,34 @@ fn a_weapon_brought_to_zero_by_an_art_breaks_after_the_combat() {
             item: item("blade"),
         }
     );
+    assert_eq!(left(&s, 1), 0);
+}
+
+#[test]
+fn an_art_costing_more_than_is_left_spends_the_rest_and_breaks_the_weapon() {
+    // Guard Break costs 4; the blade has 3 left (Nick, 0414 review).
+    let mut s = battle(vec![
+        set_durability(artist(1, p(0, 0), "blade"), 3),
+        unit(3, Faction::Enemy, p(1, 0)),
+        unit(4, Faction::Enemy, p(7, 4)),
+    ]);
+    let action = art_attack(3, "guard_break");
+    assert_eq!(preview(&s, 1, p(0, 0), &action).durability, Some((3, 0)));
+    let events = act(&mut s, 1, p(0, 0), action);
+    let (_, forecast, _) = &combats(&events)[0];
+    assert!(!forecast.attacker.broken);
+    assert!(forecast.defender.is_none());
+    assert!(events.contains(&Event::DurabilitySpent {
+        unit: UnitId(1),
+        slot: 0,
+        item: item("blade"),
+        amount: 3,
+        left: 0,
+    }));
+    assert!(events.contains(&Event::ItemBroke {
+        unit: UnitId(1),
+        item: item("blade"),
+    }));
     assert_eq!(left(&s, 1), 0);
 }
 
