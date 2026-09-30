@@ -38,7 +38,7 @@ use super::playback::Playback;
 use super::skills::{
     SkillChoice, SkillTargeting, can_use_skill, has_skill_menu, skill_choices, skill_menu,
 };
-use crate::input::Action;
+use crate::input::{Action, Keymap};
 use crate::widgets::menu::{Menu, MenuEvent, MenuItem};
 
 /// Walking speed, in tiles per second. *Tunable.*
@@ -321,7 +321,8 @@ pub enum Mode {
     /// The objective and turn are shown.
     Objective,
     /// `End turn with N units ready?`: `EndTurn` again or Confirm ends the
-    /// phase, Cancel backs out.
+    /// phase (or Confirm end turn instead of `EndTurn`, once it has a key;
+    /// see [`Mode::route`]), Cancel backs out.
     EndTurnPrompt {
         /// Units still ready.
         ready: usize,
@@ -375,6 +376,45 @@ impl Mode {
             self,
             Mode::Idle { .. } | Mode::Selected(_) | Mode::MoveAfter { .. }
         )
+    }
+
+    /// Whether this mode picks something on the map with the cursor (a
+    /// unit, its tile, a heal/item/talk target), which the Select key does
+    /// once it has one; menus, prompts and the attack forecast stay on
+    /// Confirm (`docs/design/controls.md`, *Optional split keys*).
+    pub fn picks_on_map(&self) -> bool {
+        self.cursor_free()
+            || matches!(
+                self,
+                Mode::SkillTarget(_) | Mode::ItemTarget(_) | Mode::TalkTarget { .. }
+            )
+    }
+
+    /// The action [`step`] sees for `action` in this mode with the player's
+    /// `keymap`, or `None` to ignore it. [`step`] reads a pick on the map
+    /// and accepting the end-turn prompt as Confirm; this makes the
+    /// optional split keys do them instead: on the map
+    /// [`Keymap::select_action`] picks (and Confirm does nothing once Select
+    /// has a key), and in the prompt [`Keymap::end_turn_accept_actions`]
+    /// accept (and End turn does nothing once Confirm end turn has a key).
+    pub fn route(&self, action: Action, keymap: &Keymap) -> Option<Action> {
+        if self.picks_on_map() {
+            if action == keymap.select_action() {
+                return Some(Action::Confirm);
+            }
+            if action == Action::Confirm {
+                return None;
+            }
+        }
+        if matches!(self, Mode::EndTurnPrompt { .. }) {
+            if keymap.end_turn_accept_actions().contains(&action) {
+                return Some(Action::Confirm);
+            }
+            if action == Action::EndTurn {
+                return None;
+            }
+        }
+        Some(action)
     }
 
     /// The cursor moved to `to`: a selected unit's path follows it.
@@ -1297,6 +1337,61 @@ mod tests {
 
     fn p(x: i32, y: i32) -> Pos {
         Pos::new(x, y)
+    }
+
+    /// A keymap with `pairs` bound.
+    fn keys(pairs: &[(&str, Action)]) -> Keymap {
+        let bindings = pairs
+            .iter()
+            .filter_map(|&(c, a)| trpg_content::Chord::parse(c).ok().map(|c| (c, a)));
+        Keymap::new(bindings, trpg_content::RepeatDef::default())
+    }
+
+    #[test]
+    fn route_applies_the_optional_split_keys() {
+        use Action::{Cancel, Confirm, ConfirmEndTurn, EndTurn, Select};
+        let plain = keys(&[("f", Confirm), ("Space", EndTurn)]);
+        let split = keys(&[
+            ("f", Confirm),
+            ("Space", EndTurn),
+            ("g", Select),
+            ("Enter", ConfirmEndTurn),
+        ]);
+        let map = [
+            Mode::default(),
+            Mode::MoveAfter {
+                unit: UnitId(1),
+                tiles: vec![],
+            },
+        ];
+        for mode in &map {
+            assert!(mode.picks_on_map());
+            assert_eq!(mode.route(Confirm, &plain), Some(Confirm));
+            assert_eq!(mode.route(Confirm, &split), None);
+            assert_eq!(mode.route(Select, &split), Some(Confirm));
+            assert_eq!(mode.route(Cancel, &split), Some(Cancel));
+            assert_eq!(mode.route(EndTurn, &split), Some(EndTurn));
+        }
+        // Menus keep Confirm; Select does nothing there.
+        let menu = Mode::Objective;
+        assert!(!menu.picks_on_map());
+        assert_eq!(menu.route(Confirm, &split), Some(Confirm));
+        assert_eq!(menu.route(Select, &split), Some(Select));
+        let (menu, _) = step(
+            menu,
+            Select,
+            p(0, 0),
+            &quick_battle(&ctx().content).unwrap(),
+        );
+        assert_eq!(menu, Mode::Objective);
+        // The end-turn prompt.
+        let prompt = Mode::EndTurnPrompt { ready: 2 };
+        assert_eq!(prompt.route(EndTurn, &plain), Some(Confirm));
+        assert_eq!(prompt.route(Confirm, &plain), Some(Confirm));
+        assert_eq!(prompt.route(EndTurn, &split), None);
+        assert_eq!(prompt.route(ConfirmEndTurn, &split), Some(Confirm));
+        assert_eq!(prompt.route(Confirm, &split), Some(Confirm));
+        assert_eq!(prompt.route(Cancel, &split), Some(Cancel));
     }
 
     /// The Quick Battle: lord 1 at (3, 5), knight 2 at (4, 6), archer 3 at

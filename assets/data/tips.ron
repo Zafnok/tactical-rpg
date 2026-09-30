@@ -1,8 +1,10 @@
 // One-time tips (ticket 0406, docs/design/chapter-1.md "Teaching"): each is
 // shown once per profile, the first time its trigger happens in a battle.
 // Text is at most 3 lines of 60 characters; {Action} is replaced with the
-// key bound to that action (e.g. {Confirm}), and {Cursor} with the keys that
-// move the cursor, so rebinding stays correct.
+// key bound to that action (e.g. {Confirm}), {Cursor} with the keys that
+// move the cursor, and {Select} with the key that picks on the map (Confirm's
+// while Select has no key; controls.md, Optional split keys), so rebinding
+// stays correct.
 //
 // Triggers: FirstBattleStart, FirstUnitSelected, FirstEnemyInRange,
 // FirstForecast, FirstLowHp, FirstLevelUp, FirstEnemyPhase,
@@ -13,13 +15,13 @@
             id: "battle_start",
             trigger: FirstBattleStart,
             title: "Your move",
-            text: "Steer the cursor with {Cursor}. Press {Confirm} on one of\nyour units to select it. {NextUnit} jumps to the next unit\nthat can still act; {Info} shows a unit's details.",
+            text: "Steer the cursor with {Cursor}. Press {Select} on one of\nyour units to select it. {NextUnit} jumps to the next unit\nthat can still act; {Info} shows a unit's details.",
         ),
         (
             id: "unit_selected",
             trigger: FirstUnitSelected,
             title: "Moving a unit",
-            text: "Blue tiles are where it can move, red where it can\nattack. Steer to a blue tile and press {Confirm} to move;\n{Cancel} backs out.",
+            text: "Blue tiles are where it can move, red where it can\nattack. Steer to a blue tile and press {Select} to move;\n{Cancel} backs out.",
         ),
         (
             id: "enemy_in_range",
@@ -55,7 +57,7 @@
             id: "danger_zone",
             trigger: DangerZoneAvailable,
             title: "Danger zone",
-            text: "Press {DangerZone} to tint every tile the enemy could hit\nnext turn. Press it again to hide it. {Confirm} on an enemy\nshows just its range.",
+            text: "Press {DangerZone} to tint every tile the enemy could hit\nnext turn. Press it again to hide it. {Select} on an enemy\nshows just its range.",
         ),
     ],
 )

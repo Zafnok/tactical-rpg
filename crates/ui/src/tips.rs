@@ -61,7 +61,9 @@ pub fn reset_tips(storage: &mut dyn Storage) -> Result<(), StorageError> {
 }
 
 /// `text` with each `{Action}` replaced by the key `keymap` binds to that
-/// action (its primary key), `{Cursor}` by the cursor keys, and
+/// action (its primary key), `{Cursor}` by the cursor keys, `{Select}` by
+/// the key that picks on the map ([`Keymap::select_action`]: Confirm's
+/// while Select has no key), and
 /// [`NOT_MAPPED`](crate::widgets::help::NOT_MAPPED) for one with no key.
 /// Anything else in braces is left alone.
 pub fn fill_placeholders(text: &str, keymap: &Keymap) -> String {
@@ -69,6 +71,8 @@ pub fn fill_placeholders(text: &str, keymap: &Keymap) -> String {
     for name in placeholders(text) {
         let keys = if name == CURSOR_PLACEHOLDER {
             cursor_keys_name(keymap)
+        } else if name == Action::Select.name() {
+            key_name(keymap, keymap.select_action())
         } else if let Some(action) = Action::from_name(name) {
             key_name(keymap, action)
         } else {
@@ -212,6 +216,53 @@ bb",
             fill_placeholders("{Cursor} {Confirm}", &no_cursor),
             "! not mapped f"
         );
+    }
+
+    #[test]
+    fn select_shows_confirms_key_until_it_has_its_own() {
+        let km = keymap(&[("f", Action::Confirm)]);
+        assert_eq!(fill_placeholders("{Select} {Confirm}", &km), "f f");
+        let split = keymap(&[("f", Action::Confirm), ("g", Action::Select)]);
+        assert_eq!(fill_placeholders("{Select} {Confirm}", &split), "g f");
+    }
+
+    #[test]
+    fn the_map_pick_tips_name_the_select_key() {
+        let content = trpg_content::load_embedded().unwrap();
+        let tip = |id: &str| {
+            let tip = content.tips.tips.iter().find(|t| t.id == id);
+            tip.map(|t| t.text.replace('\n', " ")).unwrap_or_default()
+        };
+        let default = Keymap::for_layout(&content.keymap, Layout::RightHanded);
+        let mut split = content
+            .keymap
+            .layouts
+            .get(&Layout::RightHanded)
+            .into_iter()
+            .flatten()
+            .flat_map(|(&a, chords)| chords.iter().map(move |&c| (c, a)))
+            .collect::<Vec<_>>();
+        split.push((Chord::parse("g").unwrap(), Action::Select));
+        let split = Keymap::new(split, RepeatDef::default());
+        for (id, phrase) in [
+            ("battle_start", "Press {} on one of your units"),
+            ("unit_selected", "press {} to move"),
+            ("danger_zone", "{} on an enemy shows just its range"),
+        ] {
+            let text = tip(id);
+            let with = |key| phrase.replace("{}", key);
+            assert!(
+                fill_placeholders(&text, &default).contains(&with("f")),
+                "{id}"
+            );
+            assert!(
+                fill_placeholders(&text, &split).contains(&with("g")),
+                "{id}"
+            );
+        }
+        // Menu and forecast wording stays on Confirm.
+        let forecast = fill_placeholders(&tip("forecast"), &split);
+        assert!(forecast.contains("f attacks"), "{forecast}");
     }
 
     #[test]

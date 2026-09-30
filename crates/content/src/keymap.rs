@@ -272,11 +272,18 @@ pub enum Action {
     ToggleAutoEnd,
     /// Open the turn rewind (`docs/design/death-and-difficulty.md`).
     Rewind,
+    /// Pick a unit, tile or target on the map with the cursor. Optional:
+    /// with no key, Confirm does it (`docs/design/controls.md`, *Optional
+    /// split keys*).
+    Select,
+    /// Accept the end-turn prompt. Optional: with no key, End turn pressed
+    /// again does it (`docs/design/controls.md`, *Optional split keys*).
+    ConfirmEndTurn,
 }
 
 impl Action {
     /// Every action, in declaration order.
-    pub const ALL: [Action; 15] = [
+    pub const ALL: [Action; 17] = [
         Self::CursorLeft,
         Self::CursorDown,
         Self::CursorUp,
@@ -292,11 +299,13 @@ impl Action {
         Self::Debug,
         Self::ToggleAutoEnd,
         Self::Rewind,
+        Self::Select,
+        Self::ConfirmEndTurn,
     ];
 
     /// The name used in keymap files (the variant name).
     pub fn name(self) -> &'static str {
-        const NAMES: [&str; 15] = [
+        const NAMES: [&str; 17] = [
             "CursorLeft",
             "CursorDown",
             "CursorUp",
@@ -312,6 +321,8 @@ impl Action {
             "Debug",
             "ToggleAutoEnd",
             "Rewind",
+            "Select",
+            "ConfirmEndTurn",
         ];
         NAMES[self as usize]
     }
@@ -1193,7 +1204,12 @@ mod tests {
         let k = KeymapDef::load().unwrap_or_default();
         for layout in Layout::ALL {
             assert_eq!(k.bindings(layout).map(|b| b.len()), Some(14), "{layout}");
-            assert_eq!(k.layouts.get(&layout).map(BTreeMap::len), Some(15));
+            assert_eq!(k.layouts.get(&layout).map(BTreeMap::len), Some(17));
+            // The optional split keys start with no key (controls.md).
+            for split in [Action::Select, Action::ConfirmEndTurn] {
+                assert_eq!(k.chords(layout, split), [], "{layout} {split}");
+                assert!(!split.is_required());
+            }
         }
         assert_eq!(k.layouts.len(), 2);
         // Before a layout is chosen: either hand's up/down and confirm keys.
