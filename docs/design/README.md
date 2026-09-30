@@ -21,7 +21,7 @@ here.
 | Chapter 1 scope | [`chapter-1.md`](chapter-1.md) | 0009 | ✅ decided 2026-09-25 |
 | The lord's unique class line | [`progression.md`](progression.md) (*The lord's line*) | 0016 | ✅ decided 2026-09-25 |
 | Supports & relationships | [`supports.md`](supports.md) | 0010 | ✅ decided 2026-09-25 |
-| Look & feel | [`look-and-feel.md`](look-and-feel.md) | 0011, 0404 (forecast) | ✅ decided 2026-09-25 (forecast 2026-09-27) |
+| Look & feel | [`look-and-feel.md`](look-and-feel.md) | 0011, 0404 (forecast), 0021 (bought art) | ✅ decided 2026-09-25 (forecast 2026-09-27; bought portraits and battle art 2026-09-30) |
 | Music & sound effects | [`audio.md`](audio.md) | 0020 | ✅ decided 2026-09-28 (banter track, plain-spell crit, fliers and later places still open) |
 | Title | [`title.md`](title.md) | 0012 | ✅ decided 2026-09-29 (*Visions of Shuyi*) |
 | Title screen: web "Press any key" | [`title-screen.md`](title-screen.md) | 0034 | ✅ decided 2026-09-30 (web only, for now) |

@@ -5,10 +5,10 @@ type: design-decision
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-30
 ---
 
 # 0021 — Decide the bought character art: portraits and battle sprites
@@ -171,13 +171,13 @@ anything.
 
 ## Acceptance criteria
 
-- [ ] Nick saw mockups for each option in question 0 and picked one.
-- [ ] `look-and-feel.md` § Portraits describes the bought style (artist,
+- [x] Nick saw mockups for each option in question 0 and picked one.
+- [x] `look-and-feel.md` § Portraits describes the bought style (artist,
       size) and Nick's answers, including the battle-sprite source.
-- [ ] If the artist isn't CaptainSkolot: 0706 and 0711 updated to match.
-- [ ] New ADR accepted; ADR-0013 and ADR-0018 status lines point to it.
-- [ ] `ascii-art` skill updated.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] If the artist isn't CaptainSkolot: 0706 and 0711 updated to match.
+- [x] New ADR accepted; ADR-0013 and ADR-0018 status lines point to it.
+- [x] `ascii-art` skill updated.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -185,3 +185,44 @@ anything.
 
 ## Completion notes
 
+- **Search:** itch.io, 2026-09-30. There's no original, commercially licensed
+  Fire Emblem GBA-style class pack; FE-style art is fan-ripped (disqualified)
+  or AI-made. Nothing mounted (Rider) exists in any candidate. Mockups
+  (store previews in the 0704 dialogue screen plus a stand-in combat
+  scene) were rendered in the scratchpad and not committed: A1 SolaarNoble,
+  A2 Tiny Tales (Mega Tiles), A3 Time Fantasy, B1/B2 CaptainSkolot faces
+  plus Time Fantasy or SolaarNoble battlers. C (commission CaptainSkolot)
+  was named without a mockup. Not mocked up: Holder (free, credit
+  required), HEROES 99 (32×32 faces).
+- **Nick's answers:**
+  - Artist: **A2, Mega Tiles' Tiny Tales**.
+  - After being shown that the big Tiny Tales fighters are still images and
+    only the small ones animate: **big still images moved by the game**
+    (1A).
+  - AI-assisted art is OK only with a human touch.
+  - No price ceiling: he decides each purchase.
+  - Gaps: Character Generator EX or Claude's small edits.
+  - Classes with no hero art: still images as stand-ins.
+
+  Recorded in `look-and-feel.md` § *Portraits and battle art (bought)*.
+- **ADR-0032** (bought art allowed, audio stays free, private files,
+  `THIRD_PARTY_ASSETS.md` rows, credit everything). ADR-0013 and ADR-0018
+  status lines point to it.
+- **Tickets updated:**
+  - 0706: new mapping table for Tiny Tales.
+  - 0711: renamed to `0711-png-portraits.md`; 48×48 faces at 5 px per
+    pixel; importer slices the 4×2 face set.
+  - 0413: still images moved by code; the scene's remaining questions.
+  - 0110, 0029, 1006: point to the new packs.
+- **Claude's decisions (technical):** dialogue uses the face set faces (8
+  expressions), not the one-expression large portraits. Faces are drawn at
+  the largest whole scale that fits the existing frame.
+- **Claude's starting rule** (gameplay-facing, for Nick to veto): the
+  Brigand stand-in is the orc axe fighter, but Chapter 1's bandits **stay
+  human in the story**. Nick accepted "3A" without choosing between that
+  and making the bandits orcs.
+- **Before buying:** recheck prices and licence text (nothing was on sale on
+  2026-09-30; the Mega Tiles bundle is $99.99 for 37 packs), and check the
+  Character Generator's licence for generated characters.
+- No follow-up tickets created: the open questions belong to 0413, 0706
+  and 1006, which were updated.
