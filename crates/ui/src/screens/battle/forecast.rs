@@ -6,10 +6,12 @@
 //! numbers come from [`AttackPreview`]; nothing is computed here.
 
 use trpg_core::{
-    AttackPreview, BattleState, Equipped, PlannedStrike, Side, SideForecast, StatValue, Unit,
+    ArtNote, AttackPreview, BattleState, Equipped, PlannedStrike, Side, SideForecast, StatValue,
+    Unit,
 };
 
-use super::attack::{Targeting, weapon_name};
+use super::art_list::{art_name, durability_text, note_text};
+use super::attack::{Targeting, weapon_durability, weapon_name};
 use super::layout::SIDE_PANEL;
 use super::panel::TEXT_X;
 use super::skills::skill_name;
@@ -129,40 +131,67 @@ pub fn draw_forecast(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleSta
         return;
     };
     let p = &t.preview;
+    let durability = |unit: &Unit, slot: Option<usize>| {
+        let (_, left, max) = weapon_durability(state, unit.id, slot?)?;
+        Some((left, max))
+    };
     let sides = [
-        (
-            LEFT_X,
-            attacker,
-            weapon_name(state, attacker.id, t.slot),
-            Some(p.forecast.attacker),
-            p.plan.attacker_hp,
-        ),
-        (
-            RIGHT_X,
-            target,
-            equipped_name(state, target),
-            p.forecast.defender,
-            p.plan.defender_hp,
-        ),
+        Column {
+            x: LEFT_X,
+            unit: attacker,
+            weapon: weapon_name(state, attacker.id, t.slot),
+            durability: durability(attacker, Some(t.slot)),
+            numbers: Some(p.forecast.attacker),
+            hp_after: p.plan.attacker_hp,
+        },
+        Column {
+            x: RIGHT_X,
+            unit: target,
+            weapon: equipped_name(state, target),
+            durability: durability(target, target.loadout.equipped_slot()),
+            numbers: p.forecast.defender,
+            hp_after: p.plan.defender_hp,
+        },
     ];
-    for (x, unit, weapon, numbers, after) in sides {
-        draw_side(buf, palette, x, unit, &weapon, numbers, after);
+    for side in &sides {
+        draw_side(buf, palette, side);
     }
     draw_skill(buf, palette, state, t);
-    draw_strikes(buf, palette, p);
+    let total_row = draw_strikes(buf, palette, p);
+    draw_notes(buf, palette, p, total_row + 2);
 }
 
-/// The chosen combat active's line: its name and the weapon's durability
-/// before and after (`Keen Edge (20 → 17)`).
+/// The art's effects that aren't numbers, one per row from `row`
+/// (`pierces`, `pins: Mov −3`…). `no counter` already shows in the
+/// target's column, so it isn't repeated.
+fn draw_notes(buf: &mut GlyphBuffer, palette: &Palette, p: &AttackPreview, row: i32) {
+    let notes = p.notes.iter().filter(|n| **n != ArtNote::NoCounter);
+    let bottom = SIDE_PANEL.y + SIDE_PANEL.h - 1;
+    for (y, note) in (row..bottom).zip(notes) {
+        put(
+            buf,
+            LEFT_X,
+            y,
+            &note_text(note),
+            palette.get(UiColor::Effect),
+            SKILL_W,
+        );
+    }
+}
+
+/// The chosen art's or combat active's line: its name and the weapon's
+/// durability before and after (`Guard Break (20 → 16)`).
 fn draw_skill(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, t: &Targeting) {
-    let Some(id) = &t.preview.active else {
-        return;
+    let p = &t.preview;
+    let name = match (&p.art, &p.active) {
+        (Some(art), _) => art_name(state, art),
+        (None, Some(skill)) => skill_name(state, skill),
+        (None, None) => return,
     };
-    let cost = t
-        .preview
+    let cost = p
         .durability
         .map_or_else(String::new, |(from, to)| format!(" ({from} → {to})"));
-    let text = format!("{}{cost}", skill_name(state, id));
+    let text = format!("{name}{cost}");
     put(
         buf,
         LEFT_X,
@@ -173,18 +202,28 @@ fn draw_skill(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, t: 
     );
 }
 
-/// One side's block: name, weapon, `(broken)`, HP with its bar, hit, crit.
-fn draw_side(
-    buf: &mut GlyphBuffer,
-    palette: &Palette,
+/// One side of the forecast, as [`draw_side`] draws it.
+struct Column<'a> {
+    /// Its column.
     x: i32,
-    unit: &Unit,
-    weapon: &str,
+    /// The unit.
+    unit: &'a Unit,
+    /// What it fights with.
+    weapon: String,
+    /// That weapon's durability left and max (none for a spell).
+    durability: Option<(u32, u32)>,
+    /// Its numbers (`None`: it can't strike back).
     numbers: Option<SideForecast>,
+    /// Its HP if every strike hit.
     hp_after: StatValue,
-) {
+}
+
+/// One side's block: name, weapon, its durability (`20/20`, or
+/// `(broken)`), HP with its bar, hit, crit.
+fn draw_side(buf: &mut GlyphBuffer, palette: &Palette, side: &Column<'_>) {
     let c = |u| palette.get(u);
     let (text, dim) = (c(UiColor::Text), c(UiColor::TextDim));
+    let (x, unit, numbers) = (side.x, side.unit, side.numbers);
     put(
         buf,
         x,
@@ -193,10 +232,21 @@ fn draw_side(
         c(faction_color(unit.faction)),
         COLUMN_W,
     );
-    put(buf, x, NAME_ROW + 1, weapon, dim, COLUMN_W);
-    if numbers.is_some_and(|n| n.broken) {
+    put(buf, x, NAME_ROW + 1, &side.weapon, dim, COLUMN_W);
+    let broken = numbers.is_some_and(|n| n.broken) || side.durability.is_some_and(|d| d.0 == 0);
+    if broken {
         put(buf, x, BROKEN_ROW, "(broken)", c(UiColor::HpLow), COLUMN_W);
+    } else if let Some((left, max)) = side.durability {
+        put(
+            buf,
+            x,
+            BROKEN_ROW,
+            &durability_text(left, max),
+            dim,
+            COLUMN_W,
+        );
     }
+    let hp_after = side.hp_after;
     put(buf, x, HP_ROW, "HP", dim, 2);
     put(buf, x + 3, HP_ROW, &format!("{:>2}", unit.hp), text, 3);
     draw_bar(buf, palette, x + 6, unit.hp, hp_after, unit.stats.hp);
@@ -250,8 +300,9 @@ fn draw_bar(
 /// The strike list: one row per strike in combat order, numbered in the
 /// middle; the attacker's on the left (`8 dmg →`), the target's on the
 /// right (`← 9 dmg`), `!` after an effective strike's `dmg`, a skull on
-/// the kill and strikes after it dimmed; then each side's total.
-fn draw_strikes(buf: &mut GlyphBuffer, palette: &Palette, p: &AttackPreview) {
+/// the kill and strikes after it dimmed; then each side's total. Returns
+/// the totals' row.
+fn draw_strikes(buf: &mut GlyphBuffer, palette: &Palette, p: &AttackPreview) -> i32 {
     let c = |u| palette.get(u);
     let (text, dim) = (c(UiColor::Text), c(UiColor::TextDim));
     let rule = c(UiColor::PanelBorder);
@@ -298,6 +349,7 @@ fn draw_strikes(buf: &mut GlyphBuffer, palette: &Palette, p: &AttackPreview) {
     if p.forecast.defender.is_some() {
         put(buf, RIGHT_X + 2, total_row, &total(Side::Defender), text, 7);
     }
+    total_row
 }
 
 /// A strike's damage as listed: `8 dmg`, or `+9 hp` for an Absorb heal.
@@ -385,7 +437,8 @@ mod tests {
         let mut t = targeting(&state);
         let plain = render(&state, &t);
         assert_eq!(text(&plain, LEFT_X + 6, STRIKE_ROW, 1), " ");
-        assert_eq!(text(&plain, LEFT_X, NAME_ROW + 2, 8), "        ");
+        // Under the weapon: its durability, until it is broken.
+        assert_eq!(text(&plain, LEFT_X, NAME_ROW + 2, 8), "20/20   ");
         t.preview.forecast.attacker.effective = true;
         t.preview.forecast.attacker.broken = true;
         let marked = render(&state, &t);

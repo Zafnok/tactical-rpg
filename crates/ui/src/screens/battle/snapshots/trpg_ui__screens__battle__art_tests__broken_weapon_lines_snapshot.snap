@@ -1,0 +1,206 @@
+---
+source: crates/ui/src/screens/battle/art_tests.rs
+expression: "format!(\"{list}\\n=== forecast ===\\n{forecast}\")"
+---
+                                                                      ╔════════════════════════════╗
+                                                                      ║ Road                       ║
+                                                                      ║ DEF +0  AVO +0             ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║ Test Lord                  ║
+                                                                      ║ Swordsman  Lv 1            ║
+                                                                      ║ HP 19/19   ██████████      ║
+                                                                      ║ Player                     ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║                            ║
+┌─────────────────────────────────────────────────────┐               ║                            ║
+│ Iron Sword   Mt  5  Hit  90  Crit  0  Rng 1  broken │               ║                            ║
+│ Steel Sword  Mt  8  Hit  75  Crit  0  Rng 1  25/25  │               ║                            ║
+└─────────────────────────────────────────────────────┘               ║                            ║
+                    ..♣♣··....╦╦......▓▓░░╦╦▓▓..                      ║                            ║
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ╚════════════════════════════╝
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ arrows choose · f confirm · d back                                                        F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcddddcccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabceeeeeeeeeccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccffffffffffccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcggggggcccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+booooooooooooooooooooooooooooooooooooooooooooooooooooobaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+bcccccccccccccccccccccccccccccccccccccccccccccggggggccbaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjkkppjjjjqqjjjjjjrrssqqrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkkkppjjttjjjjjjjjrrssssrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkllppjjjjjjjjjjjjrrrruurrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaavvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvva
+avvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaavvvvvvvva
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:hp_high bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:water bg:sea
+i = fg:water bg:water_bg
+j = fg:grass bg:grass_bg
+k = fg:forest bg:forest_bg
+l = fg:thicket bg:thicket_bg
+m = fg:mountain bg:mountain_bg
+n = fg:peak bg:peak_bg
+o = fg:panel_bg bg:panel_border_focus
+p = fg:road bg:road_bg
+q = fg:fort bg:fort_bg
+r = fg:stone bg:stone_bg
+s = fg:floor bg:floor_bg
+t = fg:player bg:grass_bg
+u = fg:wood bg:stone_bg
+v = fg:text_dim bg:black
+--- overlays ---
+over  224,286 16x2  hp_high
+
+=== forecast ===
+                                                                      ╔═════════ Forecast ═════════╗
+                                                                      ║                            ║
+                                                                      ║ Test Lord     Brigand      ║
+                                                                      ║ Iron Sword    Iron Axe     ║
+                                                                      ║ (broken)      20/20        ║
+                                                                      ║ HP 19 ███▒▒   HP 20 ██▒▒▒  ║
+                                                                      ║ Hit  76       Hit  65      ║
+                                                                      ║ Crit 3        Crit 0       ║
+                                                                      ║                            ║
+                                                                      ║ ────────────────────────── ║
+                                                                      ║  5 dmg   →  1              ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║             2 ←  9 dmg     ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║  6 dmg   →  3              ║
+                    ≈≈≈≈≈≈====····LoBr..♣♣♣♣....                      ║ ────────────────────────── ║
+                    ..≈≈≈≈..··..............╦╦..                      ║ 11 ×2     Total  9 ×1      ║
+                    ....······....BrAr▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ..♣♣··....╦╦......▓▓░░╦╦▓▓..                      ║                            ║
+                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                            ┌─ Iron Sword broken ────────────────────┐║                            ║
+                            │ Attack                                 │║                            ║
+                            │ Flowing Cut     −2 dur  E       broken │║                            ║
+                            │ Guard Break     −4 dur  D       broken │║                            ║
+                            │ Keen Edge       −3 dur  active  broken │║                            ║
+                            └────────────────────────────────────────┘╚════════════════════════════╝
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ Left/Right target · Up/Down art · f attack · d back                                       F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbccccccccccbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdeeeeeeeeedddddfffffffddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggggggggddddggggggggdddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhhhhhhddddddgggggddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggddddiiihhdddggddddiihhhddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdgggdddddddddddgggddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdggggddddddddddggggdddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjjjkkkkllllmmmmnnnnooooppaaaaaaaaaaaaaaaaaaaaaabdddddddddddddgdgddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjkkkkllllqqrrqqmmmmooooooaaaaaaaaaaaaaaaaaaaaaabddddddddddgddgddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjkkkkssssqqqqttuullmmmmllllaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaallkkkkllqqllllllllllllllvvllaaaaaaaaaaaaaaaaaaaaaabdddddddddddgggggddddddddddddb
+aaaaaaaaaaaaaaaaaaaallllqqqqqqllllwwxxyyyyyyyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaallmmqqllllvvllllllyyzzvvyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammmmqqllxxllllllllyyzzzzyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammnnqqllllllllllllyyyyAAyyllaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabbcccccccccccchhhhhhhbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabgggggggggggggggggggggggggggggggghhhhhhhgbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabgggggggggggggggggggggggggggggggghhhhhhhgbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabgggggggggggggggggggggggggggggggghhhhhhhgbbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCa
+aCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:enemy bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:hp_low bg:panel_bg
+i = fg:hp_mid bg:panel_bg
+j = fg:water bg:sea
+k = fg:water bg:water_bg
+l = fg:grass bg:grass_bg
+m = fg:forest bg:forest_bg
+n = fg:thicket bg:thicket_bg
+o = fg:mountain bg:mountain_bg
+p = fg:peak bg:peak_bg
+q = fg:road bg:road_bg
+r = fg:enemy bg:#50281d
+s = fg:wood bg:water_bg
+t = fg:player bg:road_bg
+u = fg:enemy bg:#4c271c
+v = fg:fort bg:fort_bg
+w = fg:enemy bg:grass_bg
+x = fg:player bg:grass_bg
+y = fg:stone bg:stone_bg
+z = fg:floor bg:floor_bg
+A = fg:wood bg:stone_bg
+B = fg:panel_bg bg:panel_border_focus
+C = fg:text_dim bg:black
+--- overlays ---
+over  272,222 16x2  hp_high
+over  224,286 16x2  hp_high
+over  288,254 16x2  hp_high
+over  288,222 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  287,208 3x1  cursor
+over  287,208 1x3  cursor
+over  301,208 3x1  cursor
+over  303,208 1x3  cursor
+over  287,221 3x1  cursor
+over  287,219 1x3  cursor
+over  301,221 3x1  cursor
+over  303,219 1x3  cursor

@@ -4,26 +4,18 @@
 //! [`BattleState::preview_attack`], the same validation the attack command
 //! gets, so the UI never decides what is legal itself (ADR-0004).
 
-use trpg_core::{AttackPreview, BattleState, Pos, SkillId, UnitAction, UnitId, WEAPON_SLOTS};
+use trpg_core::{AttackPreview, BattleState, Pos, UnitAction, UnitId, WEAPON_SLOTS};
 
+use super::art_list::{ArtChoice, Technique, art_choices, art_menu, durability_text};
 use super::mode::Selection;
-use super::skills::combat_actives;
+use crate::color::UiColor;
+use crate::input::Action;
 use crate::widgets::menu::{Menu, MenuItem};
 
 /// The weapon attack with the weapon in `slot` on `target`: no art, no
-/// active (arts come with 0414).
+/// active.
 pub fn attack(target: UnitId, slot: usize) -> UnitAction {
-    attack_with(target, slot, None)
-}
-
-/// [`attack`] with the combat active `active` (0412).
-pub fn attack_with(target: UnitId, slot: usize, active: Option<SkillId>) -> UnitAction {
-    UnitAction::Attack {
-        target,
-        slot,
-        active,
-        art: None,
-    }
+    Technique::Attack.action(target, slot)
 }
 
 /// The units `unit` could attack from `dest` with the weapon in `slot`,
@@ -84,6 +76,17 @@ pub fn weapon_label(state: &BattleState, unit: UnitId, slot: usize, name_w: usiz
     )
 }
 
+/// The weapon in `unit`'s `slot`: its name, durability left and max.
+pub fn weapon_durability(
+    state: &BattleState,
+    unit: UnitId,
+    slot: usize,
+) -> Option<(String, u32, u32)> {
+    let copy = state.unit(unit)?.loadout.weapon(slot)?;
+    let def = state.items().weapon(&copy.def)?;
+    Some((def.name.clone(), copy.durability_left, def.durability))
+}
+
 /// The name of the weapon in `unit`'s `slot` (empty if none).
 pub fn weapon_name(state: &BattleState, unit: UnitId, slot: usize) -> String {
     state
@@ -94,8 +97,9 @@ pub fn weapon_name(state: &BattleState, unit: UnitId, slot: usize) -> String {
         .unwrap_or_default()
 }
 
-/// The weapon list: one line per choice, focused on the equipped weapon if
-/// it is one of them.
+/// The weapon list: one line per choice with the weapon's durability after
+/// it (`20/20`, `broken` at 0), focused on the equipped weapon if it is one
+/// of them.
 pub fn weapon_menu(state: &BattleState, sel: &Selection, choices: &[WeaponChoice]) -> Menu {
     let name_w = choices
         .iter()
@@ -104,7 +108,20 @@ pub fn weapon_menu(state: &BattleState, sel: &Selection, choices: &[WeaponChoice
         .unwrap_or(0);
     let items = choices
         .iter()
-        .map(|c| MenuItem::new(weapon_label(state, sel.unit, c.slot, name_w)))
+        .map(|c| {
+            let item = MenuItem::new(weapon_label(state, sel.unit, c.slot, name_w));
+            match weapon_durability(state, sel.unit, c.slot) {
+                Some((_, left, max)) => {
+                    let color = if left == 0 {
+                        UiColor::HpLow
+                    } else {
+                        UiColor::TextDim
+                    };
+                    item.with_suffix(format!(" {}", durability_text(left, max)), color)
+                }
+                None => item,
+            }
+        })
         .collect();
     let equipped = state.unit(sel.unit).and_then(|u| u.loadout.equipped_slot());
     let focus = choices
@@ -114,7 +131,8 @@ pub fn weapon_menu(state: &BattleState, sel: &Selection, choices: &[WeaponChoice
     Menu::new(items).focused(focus)
 }
 
-/// Picking a target for an attack with one weapon.
+/// Picking a target for an attack with one weapon, and what to attack it
+/// with: `Attack`, a Combat Art or a combat active (the arts list, 0414).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Targeting {
     /// The attacker and its path (it stands at the path's end).
@@ -125,9 +143,12 @@ pub struct Targeting {
     pub targets: Vec<UnitId>,
     /// The target under the cursor.
     pub index: usize,
-    /// The combat active chosen for this attack, if any (0412).
-    pub active: Option<SkillId>,
-    /// The forecast against it, with the active applied.
+    /// The arts list's lines against the target (`Attack` first, so never
+    /// empty).
+    pub choices: Vec<ArtChoice>,
+    /// The arts list; its focus is the line the attack uses.
+    pub list: Menu,
+    /// The forecast against the target, with the chosen line applied.
     pub preview: AttackPreview,
     /// The weapon list it was opened from (Cancel goes back to it), if the
     /// unit had several weapons to choose from.
@@ -135,8 +156,9 @@ pub struct Targeting {
 }
 
 impl Targeting {
-    /// Targeting the first of `choice`'s targets. `None` if its forecast
-    /// can't be made (the battle changed; never while choosing).
+    /// Targeting the first of `choice`'s targets with a plain attack.
+    /// `None` if its forecast can't be made (the battle changed; never
+    /// while choosing).
     pub fn new(
         state: &BattleState,
         sel: Selection,
@@ -147,12 +169,15 @@ impl Targeting {
         let preview = state
             .preview_attack(sel.unit, sel.dest(), &attack(first, choice.slot))
             .ok()?;
+        let choices = art_choices(state, sel.unit, sel.dest(), choice.slot, first);
+        let list = art_menu(state, &choices, 0);
         Some(Self {
             sel,
             slot: choice.slot,
             targets: choice.targets.clone(),
             index: 0,
-            active: None,
+            choices,
+            list,
             preview,
             weapons,
         })
@@ -164,8 +189,23 @@ impl Targeting {
         self.targets[self.index]
     }
 
+    /// What the attack is made with: the list's focused line.
+    pub fn technique(&self) -> Technique {
+        self.choices
+            .get(self.list.focus())
+            .map(|c| c.technique.clone())
+            .unwrap_or_default()
+    }
+
+    /// Whether the list has a line besides `Attack` (usable or not); if
+    /// not, it isn't shown and Up/Down pick targets.
+    pub fn has_list(&self) -> bool {
+        self.choices.len() > 1
+    }
+
     /// Moves to the next target (or the previous one), wrapping, and
-    /// updates the forecast.
+    /// updates the list and the forecast. The chosen line stays if it can
+    /// still be chosen against the new target, else the attack is plain.
     pub fn cycle(&mut self, forward: bool, state: &BattleState) {
         let n = self.targets.len();
         if n == 0 {
@@ -176,51 +216,51 @@ impl Targeting {
         } else {
             (self.index + n - 1) % n
         };
-        // The active stays if the core still accepts it against the new
-        // target, else the attack is plain.
-        let with = |active: Option<SkillId>| {
-            let action = attack_with(self.target(), self.slot, active);
-            state
-                .preview_attack(self.sel.unit, self.sel.dest(), &action)
-                .ok()
-        };
-        if let Some(p) = with(self.active.clone()) {
-            self.preview = p;
-        } else if let Some(p) = with(None) {
-            self.active = None;
-            self.preview = p;
-        }
-    }
-
-    /// The combat actives usable against the target under the cursor.
-    pub fn actives(&self, state: &BattleState) -> Vec<SkillId> {
-        combat_actives(
+        let kept = self.technique();
+        self.choices = art_choices(
             state,
             self.sel.unit,
             self.sel.dest(),
             self.slot,
             self.target(),
-        )
+        );
+        let at = self
+            .choices
+            .iter()
+            .position(|c| c.technique == kept && c.usable())
+            .unwrap_or(0);
+        self.list = art_menu(state, &self.choices, at);
+        if !self.refresh(state) {
+            self.list = art_menu(state, &self.choices, 0);
+            self.refresh(state);
+        }
     }
 
-    /// Moves to the next combat active (or the previous one) in the ring
-    /// `none → Keen Edge → … → none` and updates the forecast. Actives that
-    /// can't be paid for are skipped.
-    pub fn cycle_skill(&mut self, forward: bool, state: &BattleState) {
-        let mut ring: Vec<Option<SkillId>> = vec![None];
-        ring.extend(self.actives(state).into_iter().map(Some));
-        let n = ring.len();
-        let at = ring.iter().position(|a| *a == self.active).unwrap_or(0);
-        let next = ring[if forward {
-            (at + 1) % n
+    /// Moves the list's focus down (or up) to the next line that can be
+    /// chosen, wrapping, and updates the forecast.
+    pub fn move_list(&mut self, down: bool, state: &BattleState) {
+        let before = self.list.clone();
+        let key = if down {
+            Action::CursorDown
         } else {
-            (at + n - 1) % n
-        }]
-        .clone();
-        let action = attack_with(self.target(), self.slot, next.clone());
-        if let Ok(p) = state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
-            self.active = next;
-            self.preview = p;
+            Action::CursorUp
+        };
+        self.list.handle(key);
+        if !self.refresh(state) {
+            self.list = before;
+        }
+    }
+
+    /// The forecast for the target with the chosen line; `false` (and the
+    /// forecast unchanged) if the core refuses it.
+    fn refresh(&mut self, state: &BattleState) -> bool {
+        let action = self.technique().action(self.target(), self.slot);
+        match state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
+            Ok(p) => {
+                self.preview = p;
+                true
+            }
+            Err(_) => false,
         }
     }
 
@@ -229,7 +269,7 @@ impl Targeting {
         trpg_core::Command::Act {
             unit: self.sel.unit,
             dest: self.sel.dest(),
-            action: attack_with(self.target(), self.slot, self.active.clone()),
+            action: self.technique().action(self.target(), self.slot),
         }
     }
 }

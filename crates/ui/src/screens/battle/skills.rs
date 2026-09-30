@@ -1,7 +1,7 @@
 //! Skills in the battle UI (ticket 0412): the text that describes a skill
-//! (its cost and one-line effect), the combat actives the attack flow can
-//! cycle through, and the `Skill` menu of non-combat actives with the
-//! target mode of Shove. Legality is the core's: the attack forecast and
+//! (its cost and one-line effect), and the `Skill` menu of non-combat
+//! actives with the target mode of Shove (combat actives are chosen in the
+//! attack flow's arts list, [`super::art_list`]). Legality is the core's: the attack forecast and
 //! the commands refuse what a unit can't do, and this module only asks (a
 //! command applied to a copy of the battle), so the player is never offered
 //! a skill that would be refused (ADR-0004).
@@ -12,7 +12,6 @@ use trpg_core::{
     WeaponReq,
 };
 
-use super::attack::attack_with;
 use super::info::stat_name;
 use super::mode::Selection;
 use crate::widgets::menu::{Menu, MenuItem};
@@ -197,30 +196,6 @@ pub fn skill_name(state: &BattleState, id: &SkillId) -> String {
 /// When a timed effect ends, e.g. `until Player phase`.
 pub fn until_text(effect: &TimedEffect) -> String {
     format!("until {:?} phase", effect.until)
-}
-
-/// The combat actives `unit` could use attacking `target` from `dest` with
-/// the weapon in `slot`, in the order of its skills: only those the
-/// forecast accepts, so one that can't be paid for is skipped.
-pub fn combat_actives(
-    state: &BattleState,
-    unit: UnitId,
-    dest: Pos,
-    slot: usize,
-    target: UnitId,
-) -> Vec<SkillId> {
-    let Some(u) = state.unit(unit) else {
-        return vec![];
-    };
-    u.usable_skills(state.classes(), state.skills())
-        .into_iter()
-        .filter(|s| s.is_combat())
-        .filter(|s| {
-            let action = attack_with(target, slot, Some(s.id.clone()));
-            state.preview_attack(unit, dest, &action).is_ok()
-        })
-        .map(|s| s.id.clone())
-        .collect()
 }
 
 /// The non-combat actives `unit` knows, in the order of its skills.
