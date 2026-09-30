@@ -58,9 +58,10 @@ None.
    - `outcome: Option<Outcome>` (from `Event::BattleEnded`), `None` if the
      turn cap was hit;
    - `turns: u32` (highest turn seen in `Event::PhaseStarted`);
-   - `player_fallen: Vec<UnitId>` (`Event::UnitFell` for units whose faction
-     in the state is `Faction::Player`; look them up in
-     `state_after.fallen()`);
+   - `player_fallen: Vec<(UnitId, u32)>`: each fallen player unit and the
+     turn it fell (`Event::UnitFell` for units whose faction in the state is
+     `Faction::Player`; look them up in `state_after.fallen()`). Nick wants
+     who fell and when for every try (`docs/design/playtest-bots.md`);
    - `items_used: BTreeMap<ItemId, u32>` and a total (`Event::ItemUsed` by
      player units);
    - `commands: u32` applied (player side and total).
@@ -85,7 +86,11 @@ None.
 6. **Report** (text to stdout; the same data as JSON with `--json`): battle,
    mode, bot, tries, wins / losses / turn-cap, win %, turns (median, min,
    max), player units fallen (mean, max), items used (mean, per item),
-   commands per second. Example layout to keep:
+   the distribution of fallen units per try (`0: 55  1: 30  2: 12  3+: 3`)
+   and which units fell most often, commands per second, then **one line per
+   try** (result, who fell and on which turn, items, turns). Nick asked for
+   these per-try statistics in 0033 (`docs/design/playtest-bots.md`, *What the
+   report shows*). Example layout to keep:
 
    ```
    ch01 · Classic · baseline · 100 tries (seeds 1–100)
@@ -93,8 +98,17 @@ None.
    turns     median 14  min 11  max 22
    fallen    mean 1.8   max 5
    items     mean 3.1   (vulnerary 2.9, antidote 0.2)
+   fallen/try 0: 55  1: 30  2: 12  3+: 3   most: Mira 22×
    speed     41 200 commands/s
+
+   try 17 · lost (lord fell T9) · fell: Mira T6, Kael T8 · items 2 · turns 9
+   …
    ```
+6b. **History** (0033: "each epoch", read as each batch of runs): with
+   `--history <dir>` (default `target/playtest-history/`), append the run's
+   JSON summary with the date and the git commit, and print the previous
+   run's headline numbers next to the new ones (`won 63% (was 58%)`). The
+   history folder is not committed.
 7. Document the command in the xtask's `--help` and in a new
    `docs/playtesting.md` (what the bots are, how to run them, what each
    number means). Link it from `docs/ROADMAP.md`'s playtest-bots line.
@@ -103,7 +117,11 @@ None.
 
 - [ ] `cargo xtask playtest <a battle in assets/battles> --runs 20` prints the
       report above and exits 0.
-- [ ] Same arguments twice → identical report except the speed line.
+- [ ] Same arguments twice → identical report except the speed line (and the
+      history comparison).
+- [ ] The report lists every try with who fell and on which turn, and the
+      fallen-per-try distribution; a second run shows the first run's numbers
+      next to its own.
 - [ ] `--runs 20` with 1 thread and with all threads → identical report
       except speed (test with an env var or flag for the thread count).
 - [ ] Unit tests in `trpg-bots`: `measures_count_fallen_player_units_only`,
