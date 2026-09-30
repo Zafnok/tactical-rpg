@@ -58,7 +58,7 @@ only some of the faces, small, so recheck everything on the real files.
 | `lead_f` | Female Fighter "Child of Destiny" | Good; check it matches `lead_m`'s costume and colours |
 | `poacher` Aske | Archer "Forest Protector" | Partial: check he doesn't read as an elf |
 | `rival` Dace | Samurai (dark hair) or the dark elf mercenary | Partial |
-| `heretic` Rue | Thief | Partial: a rogue's face, not hunched in a big coat |
+| `heretic` Rue | **Witch** (decided in 0021: face and combat picture match) | Rewrite her portrait brief to the Witch's look, hair recoloured as needed |
 | `retainer` Hollis | none (old, broad, mail coif) | **Gap** |
 | `red_captain` Harl | none (big, bearded, kettle helm) | **Gap** |
 | `keeper` Piers | none (round, balding, grey hood) | **Gap** |
@@ -70,8 +70,15 @@ only some of the faces, small, so recheck everything on the real files.
 once Nick has bought it (its licence was checked in 0021: commercial use is
 fine); in combat a generated character uses its class's still image;
 otherwise, or on top, Claude's small
-edits to a bought face. Commissioning, or changing a character's look to fit
-a face (a story change), needs asking Nick first.
+edits to a bought face. Nick also allows **rewriting a character's written
+look to fit the bought art** (his words: "we can rewrite Rue's physical
+description as needed once we buy the art"): update the character sheet's
+portrait brief in the same PR, and list each rewrite in the PR for Nick.
+No commissions (Nick vetoed them).
+
+**Face and combat picture match** (0021): a character with their own hero art
+uses it for both; everyone else uses their class's combat picture,
+recoloured to their colours (0413).
 
 **What Claude can and can't do to bought faces:** recolour hair, clothes and
 eyes (a palette swap of a few exact colours), and small pixel edits (a scar,

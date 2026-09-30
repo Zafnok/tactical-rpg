@@ -87,7 +87,15 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > seems best" [the big still images, moved by the game] … [characters no
 > face fits:] "probably A or D" [the Character Generator, or Claude's small
 > edits] … [classes with no animated fighter:] "since I am ok with 1A then 3A
-> seems fine?" [still images as stand-ins]
+> seems fine?" [still images as stand-ins] … [named characters without
+> their own combat picture use their class's picture, recoloured:] "sure" …
+> [Rue: the Witch's face and combat picture, or a generated face and a class
+> picture:] "I think we can rewrite Rue's physical description as needed once
+> we buy the art... I would rather have visual consistency at this time
+> between portrait and battler" … [on commissions:] "this is where I veto --
+> this would be expensive for just a single asset" … [Harl:] "let's just have
+> a follow up for this Harl character I can shop around and find more
+> contenders"
 
 ## Rules
 
@@ -248,8 +256,10 @@ sprites.
   battle image**, so in combat a generated character uses its class's
   still image. It's early access (few outfits; casters, helmets and glasses
   still promised), so some faces may not be possible yet. Otherwise, or on
-  top, Claude's small edits. Commissioning, or changing a character's look
-  to fit a face (a story change), needs asking Nick first.
+  top, Claude's small edits, or rewriting the character's written look to
+  fit a bought face (see *Combat screen* below; Nick allows it, done in
+  0706 after purchase). **No commissions**: Nick vetoed them as too
+  expensive for single assets.
 - **Where portraits appear** (unchanged):
   - **Conversations:** two full portraits, speaker on the left at full
     brightness with a double-line frame, listener dimmed on the right, name
@@ -273,10 +283,25 @@ sprites.
     bandits stay human in the story *(Claude's starting rule: Nick accepted
     the stand-in without choosing between it and making the bandits orcs)*.
   - **Rider:** no pack has anything mounted; an on-foot lance fighter
-    stands in until real art exists. Commissioning a Rider is Nick's call
-    later.
+    stands in until real art exists (no commissions).
   0413 picks the exact images. None of these have faces; they're generic
   enemies or get a face from the Character Generator.
+- **Named characters use their class's picture, recoloured to their own
+  colours** when they have no picture of their own (like Fire Emblem GBA,
+  where most named units share their class's battle animation in their own
+  palette). Characters with their own hero art use it for both face and
+  combat picture.
+- **Face and combat picture should match** (Nick prefers visual
+  consistency). Where a character's written look doesn't fit the art we
+  can buy, the written look is rewritten to fit the art after purchase
+  (0706), not the other way round. First case: **Rue** uses the Tiny Tales
+  **Witch** for both, hair recoloured as needed.
+- **Harl** (Chapter 1 boss) has no fitting picture in the Mega Tiles
+  catalogue: the axe fighters are orcs, beasts or a minotaur, and a human
+  knight would change his weapon (weapon type is a rule, so the picture must
+  match it). Nick is shopping around for candidates (ticket 0035). The
+  orc, the Dragon Knight and the Magitek dark knight were shown and not
+  chosen.
 
 ### Screen layout
 

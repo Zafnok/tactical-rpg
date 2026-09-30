@@ -38,6 +38,12 @@ no hero art use a still image as a stand-in in Chapter 1: church cleric
 (Cleric) and church knight (Guard) from *Vol.5 Faith and Evil*, the orc axe
 fighter (Brigand) from *Vol.1 Monstrous Uprising*, and an on-foot lance
 fighter for the Rider (nothing mounted exists in the catalogue).
+Named characters without their own hero art use their class's picture
+recoloured to their colours (Nick: "sure"); a character's face and combat
+picture must match (Rue uses the Witch for both). The boss **Harl** has no
+picture yet: ticket 0035 (Nick shops around); until it's answered, he uses
+a public placeholder. The picture's weapon must match the unit's weapon
+type (weapon types have their own rules).
 
 ## Nick input
 
@@ -51,6 +57,7 @@ sprites). Ask only what 0021 didn't settle and the packs allow:
 - per-class art vs per-character where both exist (the heroes have their
   own still image; generic classes share one);
 - which still image stands in for the Rider;
+- how the recolours look for named characters (show two or three);
 - on/off setting (0805 already has `combat_animations`).
 
 Record the answers in `look-and-feel.md` before implementing.

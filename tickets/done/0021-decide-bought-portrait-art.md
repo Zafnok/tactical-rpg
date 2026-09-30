@@ -241,5 +241,15 @@ anything.
       permission, and the page says nothing about allowing it.
     - Updates are slow; the developer went silent for about a year in
       2024–25.
-- No follow-up tickets created: the open questions belong to 0413, 0706
-  and 1006, which were updated.
+- **Later answers (same day), recorded in `look-and-feel.md`:**
+  - Named characters without their own art use their class's combat
+    picture, recoloured ("sure").
+  - A character's face and combat picture must match. **Rue uses the Witch**
+    for both; her written look is rewritten to fit after purchase (0706).
+  - **No commissions** (Nick vetoed them as too expensive for single
+    assets).
+  - **Harl** (Chapter 1 boss) has no fitting picture: the orc (as sold and
+    recoloured), the Dragon Knight and the Magitek dark knight were shown;
+    Nick will shop around.
+- **Follow-up ticket:** 0035 (Harl's combat picture). The other open
+  questions belong to 0413, 0706 and 1006, which were updated.
