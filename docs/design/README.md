@@ -28,6 +28,7 @@ here.
 | Terrain: movement costs & bonuses | [`terrain.md`](terrain.md) | 0301 | ✅ decided 2026-09-26 (capturing & healing tiles deferred) |
 | Controls, key layouts & controller | [`controls.md`](controls.md) | 0015, 0030, 0032 | ✅ decided 2026-09-25 (rebinding keys 0030, 2026-09-29; controller 0032, 2026-09-30) |
 | Battle scenes, talking & recruitment | [`battle-scenes-and-recruitment.md`](battle-scenes-and-recruitment.md) | 0705 | ✅ decided 2026-09-29 (quest recruitment later) |
+| Playtest bots: player types, targets, autobalancing | [`playtest-bots.md`](playtest-bots.md) | 0033 | ✅ decided 2026-09-30 |
 | Number scale & strike thresholds | [`stats-and-combat.md`](stats-and-combat.md) | 0013 | ⏳ after playtest 0804 |
 
 Each file starts with `Decided: YYYY-MM-DD`, `Source: ticket NNNN`, and Nick's

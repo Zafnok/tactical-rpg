@@ -15,7 +15,7 @@ folders: `tickets/open/` vs `tickets/done/`.
 | `02xx` | M1 Engine | Coloured glyph console in a window and browser, keyboard input with right/left-handed layouts, screens + test harness | 0201–0208 |
 | `03xx` | M2 Core rules | Maps, units, pathfinding, combat, turns, items, rewind, gold/shops, spells, terrain magic, class skills, Combat Arts — pure and heavily tested | 0301–0312 |
 | `04xx` | M3 Battle UI | Cursor, move/attack loop, forecast, combat playback, info screens, tips, item menus, preparations, shops, spell menus, battle notes, skill menus, combat scene art, arts menu | 0401–0414 |
-| `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase, boss arts; automated playtest bots | 0501–0508 |
+| `05xx` | M4 Enemy AI | Enemies that fight back, animated enemy phase, boss arts; automated playtest bots, autobalancing | 0501–0509 |
 | `06xx` | M5 Progression | EXP and class points, level-up screen, promotion and reclass, level-up sounds | 0601–0605 |
 | `07xx` | M6 Story & dialogue | Story bible, dialogue engine, two-portrait scenes, Chapter 1 art + script, lead reply choices | 0701–0708 |
 | `08xx` | M7 Chapter 1 | Full flow, saves, Chapter 1 content, **Nick's playtest**, options, colour themes, music, credits, end-of-battle music, results, title art, chapter card, transitions | 0801–0813 |
@@ -40,7 +40,7 @@ Design answers unblock most of the rules work. Suggested order:
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
 4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (CaptainSkolot sale ends ~2026-10-03) · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
-5. Anytime, low priority: **0012** title (then **0811** title art) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions · **0033** playtest bot player types
+5. Anytime, low priority: **0012** title (then **0811** title art) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
@@ -91,5 +91,7 @@ early so every later PR is checked by them.
   types and targets → 0504 legal moves and luck reseeding in `core` → 0505
   `cargo xtask playtest` runner (after 0801) → 0506 Casual/Normal/Hardcore
   bots (after 0803) → 0507 trained AlphaZero-style bot (research) and 0508
-  recording Nick's play to calibrate the bots (after 0802). Not on the
-  Chapter 1 critical path; 0033 and 0504 can start any time.
+  recording Nick's play to calibrate the bots (after 0802) → 0509
+  autobalancing battles with the bots → 0510 generating skirmishes to order
+  (after 1007, 1008). Targets: `docs/design/playtest-bots.md`. Not on the
+  Chapter 1 critical path; 0504 can start any time.
