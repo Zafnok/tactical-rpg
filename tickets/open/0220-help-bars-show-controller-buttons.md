@@ -54,11 +54,12 @@ PlayStation glyphs first.
 - New font glyphs for the PlayStation shapes: `□` and `△` are missing
   from Terminus (`✕` / `○` may need bolder versions to match). Mockup in
   `docs/screenshots/0032-button-names.png`.
-- First-launch "Pick your layout": skipped when the first press is a pad
-  button; shown once, the first time a key is pressed (0032 Q5).
+- `InputState::device()` must be usable by 0226, which opens "Pick your
+  layout" when the device switches from pad to keyboard.
 
 **Out (do not do):**
 - Rebinding buttons (0816). Steam Input glyph images (0903).
+- The title prompt and when "Pick your layout" opens (0226).
 - Any change to which button does what.
 
 ## Implementation steps
@@ -79,10 +80,7 @@ PlayStation glyphs first.
    (`THIRD_PARTY_ASSETS.md`), mockups to Nick first (`ascii-art` skill).
 5. Update every caller the compiler flags; screens still never name a
    key or button themselves.
-6. **Layout picker**: on first launch, a pad press skips "Pick your
-   layout" (the default layout's keys apply meanwhile), and the picker
-   appears once at the first key press; saved so it isn't asked again.
-7. `keyboard-input` skill: add the button rules (names through the same
+6. `keyboard-input` skill: add the button rules (names through the same
    helpers, device-aware text).
 
 ## Acceptance criteria
@@ -93,8 +91,8 @@ PlayStation glyphs first.
       (or per 0032's rule).
 - [ ] A tip with `{Confirm}` shows the button name on a pad (test).
 - [ ] An action with no button shows `! not mapped` on a pad (test).
-- [ ] Harness: on first launch a pad press skips the layout picker; the
-      first key press later shows it once.
+- [ ] Unit test: `device()` switches Keyboard → Pad → Keyboard with the
+      presses.
 - [ ] Snapshots of a help bar and a tip for keyboard and each pad style used.
 - [ ] All gates in the `run-gates` skill pass.
 

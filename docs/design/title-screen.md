@@ -53,3 +53,41 @@ screen before the title), web only or Windows too (A web only / B both):
   controls).
 - The prompt shows once per page load. Going back to the title later shows
   the menu straight away.
+
+## Every build, keys and buttons (changed 2026-09-30, ticket 0032)
+
+With controller support (ticket 0032, `controls.md` *Controller*), Nick
+revisited the "for now":
+
+> "pick your layout is after the screen that grabs audio focus whcih says
+> press any button... so I guess we can add that screen to native build as
+> well... and then use it to also infer which control style plaeyr is
+> using."
+>
+> Wording (A `Press any key or button` / B keep `Press any key`): "A - but
+> also display a keyboard and controller glyph or sprite to make it
+> obvious"
+
+Changes to the rules above:
+
+- **Rule 1 is replaced:** the prompt shows on **every build** (web,
+  Windows, Linux, later Steam), once per launch.
+- **Rule 2 is extended:** any key **or any controller button** starts.
+- The line reads **`Press any key or button`**, shown with a small
+  **keyboard picture and controller picture** so it's obvious either works.
+  How they look is mocked up for Nick first (ticket 0226).
+- The first press also tells the game which the player is using: a key
+  opens "Pick your layout" if no layout has been chosen yet; a button
+  skips it (`controls.md`, *Pick your layout with a controller*).
+- The web build still needs the first press to unlock sound; a controller
+  press may not unlock it in every browser. If it doesn't, the music starts
+  at the first key press instead (*Claude's starting rule*, checked in
+  0226).
+
+```
+                Visions of Shuyi
+             an ASCII tactics game
+
+
+          [keyboard]  Press any key or button  [pad]
+```

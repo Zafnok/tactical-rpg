@@ -332,11 +332,36 @@ Help bars and tips name buttons the way **the pad in use** labels them:
 - Help bars and tips show **whatever was pressed last**: press a pad
   button and they name buttons; press a key and they name keys again.
   No setting.
-- **"Pick your layout" on first launch:** if the player's first press is a
-  pad button, the screen is **skipped** (the right/left-handed choice only
-  matters for the keyboard). It appears once, the first time they touch the
-  keyboard. *(Recommended option, recorded because Nick didn't pick; he
-  may veto.)*
+
+### Pick your layout with a controller
+
+Nick (2026-09-30):
+
+> "If they press keyboard key --> show the layout picker if they have not
+> already decided. If they press controller --> skip the layout picker.
+> Also skip it if the player pressed keyboard then presses controller
+> after. But if they go back and forth, then until they select the layout
+> they prefer, it should pop up once they press a keyboard key."
+>
+> When a key is pressed mid-battle while undecided (A straight away, over
+> the battle / B at the next quiet moment): "A"
+
+Every build now starts with `Press any key or button` (`title-screen.md`).
+
+1. **That first press decides.** A **key** opens "Pick your layout" (if
+   no layout has been chosen yet). A **controller button** skips it.
+2. **A button while "Pick your layout" is open closes it** and play goes
+   on with the controller.
+3. **Until a layout is picked**, pressing a key after using the controller
+   opens "Pick your layout" **straight away, wherever the player is**
+   (over a battle too; the battle waits behind it). The key that opened
+   it does nothing else.
+4. **Once a layout is picked** it is saved and never asked again, however
+   often the player switches.
+
+Example: Mia presses `A` on her pad at the title, so no layout screen. Two
+battles later she presses `F` and "Pick your layout" opens over the map.
+She picks right-handed, and it never shows again.
 
 ### Rebinding buttons (Q6)
 

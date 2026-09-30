@@ -69,7 +69,7 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
   those two). Needs the pad kind, detected here (step 5b); 0220 reuses it
   for button names.
 - Pads keep working on the first-launch layout picker (Confirm / cursor).
-  Skipping the picker for controller players is 0220's job.
+  When the picker shows for controller players is 0226's job.
 - Linux CI and release builds install `libudev-dev`.
 - ADR for the controller input approach.
 

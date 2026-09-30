@@ -11,6 +11,8 @@ pn = "pn"
 # Verbatim quote of Nick's spoken words in docs/design/magic.md; preserved
 # as said, not a real typo to fix.
 beginnning = "beginnning"
+# Verbatim quote of Nick in docs/design/title-screen.md (ticket 0032).
+whcih = "whcih"
 # Two-letter runs of colour keys in snapshot colour grids (ADR-0007),
 # e.g. `Iy` in the portrait snapshots.
 iy = "iy"

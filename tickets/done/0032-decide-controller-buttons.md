@@ -103,10 +103,12 @@ Game comparisons only quote layouts a source confirmed (Three Houses,
 Wargroove, Triangle Strategy, XCOM 2 console). Rumble and stick speed in
 those games couldn't be confirmed, so no claims were made.
 
-*Recorded without an explicit answer:* the "Pick your layout" screen is
-skipped for someone whose first press is a pad button, and shown once when
-they first touch the keyboard (my recommendation; Nick answered 5A without
-the sub-question).
+"Pick your layout" for controller players was asked again in the PR
+round (Nick had missed it as a sub-bullet). Nick's answer goes further:
+`Press any key or button` (with keyboard and controller pictures) on every
+build, and that first press decides whether the picker shows; recorded in
+`title-screen.md` and `controls.md`. New ticket **0226** builds it (0220
+no longer handles the picker).
 
 Claude's six proposed small rules went to Nick in the PR round and are
 now decided (`controls.md`, *Follow-up answers*): Switch pads swap only
