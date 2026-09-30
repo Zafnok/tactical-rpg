@@ -3,10 +3,16 @@
 //! the `lead_m` and `lead_f` portraits, and first name (default
 //! [`DEFAULT_NAME`]; the family name [`FAMILY_NAME`] is fixed).
 //!
-//! Keys never type letters (the `keyboard-input` skill: letters are other
-//! actions' keys, and players rebind them), so the name is spelled on a
-//! grid of letters with the cursor keys and Confirm, like a console
-//! game's naming screen (*Claude's starting design*).
+//! The name (Nick, PR #127: "C"): on a keyboard the player **types** it
+//! ([`NameBox`]). While the box is open the game's keys do nothing (Select
+//! and the rest are letters then), and a hint says to type; the text box's
+//! own fixed keys finish, delete and cancel ([`crate::input::text_key`]).
+//! For controller players (0219) the name is spelled on a letter grid
+//! ([`NameEntry`]) with the cursor and Confirm, like a console naming
+//! screen; 0219 opens it when the name is chosen with a controller.
+//!
+//! Name rules for both: letters (A-Z, a-z), `-`, `'` and single spaces
+//! between words, at most [`MAX_NAME_LEN`] characters, not blank.
 
 use trpg_core::lead::{DEFAULT_NAME, FAMILY_NAME, MAX_NAME_LEN};
 use trpg_core::{LeadGender, LeadProfile};
@@ -15,7 +21,7 @@ use super::print_centred;
 use crate::audio::MenuSound;
 use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
-use crate::input::Action;
+use crate::input::{Action, TextKey, text_key, text_keys_help};
 use crate::portrait::draw_portrait;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
@@ -49,6 +55,89 @@ const NAME_ROW: i32 = 24;
 const START_ROW: i32 = 27;
 /// The name grid's box.
 const GRID_BOX: Rect = Rect::new(27, 8, 46, 14);
+/// The typing box.
+const TYPE_BOX: Rect = Rect::new(27, 10, 46, 7);
+/// The typing box's hint.
+pub const TYPE_HINT: &str = "Type a name on your keyboard.";
+
+/// Adds `c` to `name` if the name rules allow it (see the module docs).
+fn add_char(name: &mut String, c: char) -> bool {
+    let full = name.chars().count() >= MAX_NAME_LEN;
+    let ok = match c {
+        _ if full => false,
+        ' ' => !name.is_empty() && !name.ends_with(' '),
+        c => c.is_ascii_alphabetic() || c == '-' || c == '\'',
+    };
+    if ok {
+        name.push(c);
+    }
+    ok
+}
+
+/// `name` finished: trimmed, or `None` if blank.
+fn finished(name: &str) -> Option<String> {
+    let name = name.trim();
+    (!name.is_empty()).then(|| name.to_owned())
+}
+
+/// The name being typed on the keyboard.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NameBox {
+    /// The name typed so far.
+    name: String,
+    /// The name before the box opened (Cancel brings it back).
+    before: String,
+}
+
+impl NameBox {
+    /// The box for `name`, which the player types on from.
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            before: name.to_owned(),
+        }
+    }
+
+    /// The name typed so far.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// One frame: the characters typed, then the text box's keys. Actions
+    /// are ignored. A character the rules refuse sounds denied; typing
+    /// makes no sound.
+    fn handle(&mut self, input: &FrameInput, ctx: &mut Ctx) -> EntryEvent {
+        for &c in input.text() {
+            if !add_char(&mut self.name, c) {
+                ctx.audio.menu(MenuSound::Denied);
+            }
+        }
+        for &chord in input.pressed_chords() {
+            match text_key(chord) {
+                Some(TextKey::Done) => match finished(&self.name) {
+                    Some(name) => {
+                        self.name = name;
+                        ctx.audio.menu(MenuSound::Select);
+                        return EntryEvent::Closed;
+                    }
+                    None => ctx.audio.menu(MenuSound::Denied),
+                },
+                Some(TextKey::Delete) => {
+                    if self.name.pop().is_some() {
+                        ctx.audio.menu(MenuSound::Cancel);
+                    }
+                }
+                Some(TextKey::Cancel) => {
+                    self.name.clone_from(&self.before);
+                    ctx.audio.menu(MenuSound::Cancel);
+                    return EntryEvent::Closed;
+                }
+                None => {}
+            }
+        }
+        EntryEvent::Open
+    }
+}
 
 /// The letters of the name grid, one row each.
 const LETTER_ROWS: [&str; 4] = [
@@ -141,11 +230,6 @@ impl NameEntry {
         self.at
     }
 
-    /// The name's length in characters.
-    fn len(&self) -> usize {
-        self.name.chars().count()
-    }
-
     /// Handles `action`: the cursor keys move over the grid (wrapping along
     /// a row, keeping to the last cell of a shorter row), Confirm uses the
     /// focused cell, Cancel deletes the last character (on an empty name it
@@ -187,23 +271,18 @@ impl NameEntry {
     /// Confirm on `cell`. A character past [`MAX_NAME_LEN`], a space at
     /// the start or after another, and Done on a blank name are refused.
     fn confirm(&mut self, cell: GridCell, ctx: &mut Ctx) -> EntryEvent {
-        let full = self.len() >= MAX_NAME_LEN;
         let ok = match cell {
-            GridCell::Char(c) if !full => {
-                self.name.push(c);
-                true
-            }
-            GridCell::Space if !full && !self.name.is_empty() && !self.name.ends_with(' ') => {
-                self.name.push(' ');
-                true
-            }
+            GridCell::Char(c) => add_char(&mut self.name, c),
+            GridCell::Space => add_char(&mut self.name, ' '),
             GridCell::Delete => self.name.pop().is_some(),
-            GridCell::Done if !self.name.trim().is_empty() => {
-                self.name = self.name.trim().to_owned();
-                ctx.audio.menu(MenuSound::Select);
-                return EntryEvent::Closed;
+            GridCell::Done => {
+                if let Some(name) = finished(&self.name) {
+                    self.name = name;
+                    ctx.audio.menu(MenuSound::Select);
+                    return EntryEvent::Closed;
+                }
+                false
             }
-            _ => false,
         };
         ctx.audio.menu(if ok {
             MenuSound::Select
@@ -219,7 +298,7 @@ impl NameEntry {
 pub enum Row {
     /// The two portraits: Left and Right pick the gender.
     Gender,
-    /// The first name: Confirm opens the grid.
+    /// The first name: Confirm opens the typing box.
     Name,
     /// Confirm starts the game.
     Start,
@@ -237,6 +316,9 @@ pub struct LeadSelectScreen {
     gender: LeadGender,
     name: String,
     row: Row,
+    /// The typing box, while open.
+    typing: Option<NameBox>,
+    /// The letter grid, while open (controller players, 0219).
     entry: Option<NameEntry>,
     result: Option<LeadProfile>,
 }
@@ -252,6 +334,7 @@ impl LeadSelectScreen {
             gender: LeadGender::Male,
             name: DEFAULT_NAME.to_owned(),
             row: Row::Gender,
+            typing: None,
             entry: None,
             result: None,
         }
@@ -268,9 +351,18 @@ impl LeadSelectScreen {
         self.gender
     }
 
-    /// The first name so far (the grid's, while it is open).
+    /// The first name so far (the typing box's or the grid's, while open).
     pub fn first_name(&self) -> &str {
-        self.entry.as_ref().map_or(&self.name, |e| e.name())
+        match (&self.typing, &self.entry) {
+            (Some(t), _) => t.name(),
+            (None, Some(e)) => e.name(),
+            (None, None) => &self.name,
+        }
+    }
+
+    /// The typing box, while open.
+    pub fn typing(&self) -> Option<&NameBox> {
+        self.typing.as_ref()
     }
 
     /// The focused row.
@@ -289,6 +381,9 @@ impl LeadSelectScreen {
         let keys = Some(cursor_keys_name(km));
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
+        if self.typing.is_some() {
+            return text_keys_help();
+        }
         if self.entry.is_some() {
             return help_line(&[(keys, "choose"), confirm("type"), cancel("delete")]);
         }
@@ -327,7 +422,7 @@ impl LeadSelectScreen {
                 ctx.audio.menu(MenuSound::Select);
             }
             (Row::Name, Action::Confirm) => {
-                self.entry = Some(NameEntry::new(&self.name));
+                self.typing = Some(NameBox::new(&self.name));
                 ctx.audio.menu(MenuSound::Select);
             }
             (Row::Start, Action::Confirm) => {
@@ -390,7 +485,7 @@ impl LeadSelectScreen {
         let c = |u| ctx.palette.get(u);
         let black = c(UiColor::Black);
         let lit = |row| {
-            if self.row == row && self.entry.is_none() {
+            if self.row == row && self.entry.is_none() && self.typing.is_none() {
                 UiColor::TextHighlight
             } else {
                 UiColor::Text
@@ -406,6 +501,36 @@ impl LeadSelectScreen {
         buf.print(family_x, NAME_ROW, FAMILY_NAME, c(UiColor::TextDim), black);
         let start = format!("[ {START} ]");
         print_centred(buf, START_ROW, &start, c(lit(Row::Start)), black);
+    }
+
+    /// The typing box: the name so far with a cursor, and the hint to type.
+    fn draw_typing(ctx: &Ctx, buf: &mut GlyphBuffer, typing: &NameBox) {
+        let c = |u| ctx.palette.get(u);
+        let bg = c(UiColor::PanelBg);
+        buf.fill_rect(TYPE_BOX, Cell::new(' ', c(UiColor::Text), bg));
+        buf.draw_box(TYPE_BOX, BoxStyle::Double, c(UiColor::PanelBorder), bg);
+        let title = " First name ";
+        buf.print(
+            TYPE_BOX.x + 2,
+            TYPE_BOX.y,
+            title,
+            c(UiColor::TextHighlight),
+            bg,
+        );
+        let centred = |text: &str| {
+            let w = i32::try_from(text.chars().count()).unwrap_or(0);
+            TYPE_BOX.x + (TYPE_BOX.w - w) / 2
+        };
+        let shown = format!("{}_", typing.name());
+        buf.print(
+            centred(&shown),
+            TYPE_BOX.y + 2,
+            &shown,
+            c(UiColor::Text),
+            bg,
+        );
+        let hint_fg = c(UiColor::TextDim);
+        buf.print(centred(TYPE_HINT), TYPE_BOX.y + 4, TYPE_HINT, hint_fg, bg);
     }
 
     /// The name grid's box: the name so far with a cursor, then the grid,
@@ -461,6 +586,14 @@ impl Screen for LeadSelectScreen {
     }
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        // While typing, the game's keys do nothing: they are letters.
+        if let Some(typing) = &mut self.typing {
+            if typing.handle(input, ctx) == EntryEvent::Closed {
+                self.name = typing.name().to_owned();
+                self.typing = None;
+            }
+            return Transition::None;
+        }
         for &action in &input.actions {
             if let Some(entry) = &mut self.entry {
                 if entry.handle(action, ctx) == EntryEvent::Closed {
@@ -471,6 +604,11 @@ impl Screen for LeadSelectScreen {
             }
             if self.step(action, ctx) {
                 return Transition::Pop;
+            }
+            // The key that opened the typing box types nothing, and the
+            // rest of this frame's keys wait for the box.
+            if self.typing.is_some() {
+                break;
             }
         }
         Transition::None
@@ -487,6 +625,9 @@ impl Screen for LeadSelectScreen {
         self.draw_rows(ctx, buf);
         if let Some(entry) = &self.entry {
             Self::draw_entry(ctx, buf, entry);
+        }
+        if let Some(typing) = &self.typing {
+            Self::draw_typing(ctx, buf, typing);
         }
         let bottom = i32::from(buf.height()) - 1;
         print_centred(buf, bottom, &self.help(ctx), c(UiColor::TextDim), black);

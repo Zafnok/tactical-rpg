@@ -188,8 +188,9 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 - Playtime is counted (`Ctx::clock_s`), ready for 0802's slots.
 
 **Claude's starting rules** (Nick's answers on PR #127 are in
-`death-and-difficulty.md`: 1 and 3 agreed, 2 changed, 7 → `Retry Battle`,
-8 fine with a credits screen later, 0808; 4-6 explained on the PR)
+`death-and-difficulty.md` and `setting-and-tone.md`: 1, 3, 4, 6 agreed, 2
+changed, 5 → type on keyboard / grid on controller, 7 → `Retry Battle`, 8
+fine with a credits screen later, 0808)
 
 1. After a won battle, every unit is back at full HP for the next one, not
    only Casual retreats (as in Fire Emblem).
@@ -200,9 +201,12 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 4. A battle without Preparations gives its default pack for free (Chapter 1:
    3 Potions with an empty stock); unused items go to the stock after a
    win. Gold picked up in battle is kept on a win, lost on a defeat.
-5. The lead's name: up to 12 characters picked on a letter grid (A-Z, a-z,
-   `-`, `'`, a space, Delete, Done); Cancel deletes a letter. The lead's
-   two map letters are the first two of the chosen name.
+5. The lead's name (Nick, PR #127: "C"): typed on the keyboard, with a
+   "Type a name on your keyboard." hint; while typing, the game's keys do
+   nothing, and Enter / Backspace / Escape finish, delete and cancel. On a
+   controller (0219) it is spelled on a letter grid (built here, opened by
+   0219). Up to 12 characters: letters, `-`, `'` and single spaces. The
+   lead's two map letters are the first two of the chosen name.
 6. Mode screen lines: "Classic: a unit that falls in battle dies and is
    gone for good." / "Casual: a unit that falls retreats, and is back for
    the next battle."

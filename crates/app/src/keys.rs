@@ -1,7 +1,9 @@
 //! Translation from macroquad key codes to `trpg-ui`'s hardware-agnostic
 //! [`Key`], and collecting a frame's keyboard events as [`RawKeyEvent`]s.
 
-use macroquad::prelude::{KeyCode, get_keys_pressed, get_keys_released, is_key_down};
+use macroquad::prelude::{
+    KeyCode, get_char_pressed, get_keys_pressed, get_keys_released, is_key_down,
+};
 use trpg_ui::RawKeyEvent;
 use trpg_ui::input::{Chord, Key};
 
@@ -105,7 +107,8 @@ pub fn to_key(code: KeyCode) -> Option<Key> {
     })
 }
 
-/// This frame's key releases, then presses (with the current Shift state).
+/// This frame's key releases, then presses (with the current Shift state),
+/// then the characters typed (for text boxes, with the keyboard's layout).
 pub fn poll() -> Vec<RawKeyEvent> {
     let shift = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
     let released = get_keys_released()
@@ -116,7 +119,8 @@ pub fn poll() -> Vec<RawKeyEvent> {
         .into_iter()
         .filter_map(to_key)
         .map(|key| RawKeyEvent::Down(Chord { key, shift }));
-    released.chain(pressed).collect()
+    let typed = std::iter::from_fn(get_char_pressed).map(RawKeyEvent::Text);
+    released.chain(pressed).chain(typed).collect()
 }
 
 #[cfg(test)]

@@ -119,17 +119,17 @@ fn new_game_plays_the_test_chapter_to_the_end() {
     assert_eq!(h.screens(), ["title"]);
 }
 
-/// Acceptance: New Game → the female lead → the intro shows her name and
+/// Acceptance: New Game → the female lead, her name typed → the intro shows her name and
 /// pronouns (0708 tokens).
 #[test]
 fn the_intro_speaks_of_the_lead_the_player_made() {
-    // Female; the name: "Ellery" deleted, M (0, 12), a (2, 0), Done
-    // (4, 4); Start.
+    // Female; the name box: "Ellery" deleted, "Ma" typed, Enter; Start.
     let mut h = new_game(
         true,
-        "Right Down f d d d d d d Left f Down Down Right f Down Down Left f Down f",
+        "Right Down f Backspace Backspace Backspace Backspace Backspace Backspace",
     );
-
+    h.type_text("Ma");
+    h.keys("Enter Down f");
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
     assert_eq!(campaign.mode, GameMode::Casual);

@@ -60,6 +60,15 @@ scenes and a battle, carrying the army from one battle to the next. Forces:
    opt in (`FlowScreen` does); `ScreenStack::find`/`Game::screen` downcast
    it, so Harness tests play a battle with scripted commands
    (`BattleScreen::send`, test and `harness` builds only).
+5. **Typing text** (the lead's name; Nick, PR #127: type on a keyboard, a
+   letter grid on a controller). `app` passes the platform's typed
+   characters as `RawKeyEvent::Text` (macroquad `get_char_pressed`, so the
+   keyboard's own layout and Shift apply); `Game` gives a screen this
+   frame's printable characters (`FrameInput::text`) and pressed chords
+   (`FrameInput::pressed_chords`). A text box ignores actions while open
+   (every letter key is a letter then) and finishes, deletes and cancels on
+   fixed Enter / Backspace / Escape (`input::text_key`, named in help text
+   only by `input::text_keys_help`, like the fixed Escape for Cancel).
 
 ## Consequences
 

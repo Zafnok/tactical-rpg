@@ -58,6 +58,10 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - Hot-plug: pads connected or removed while playing; several pads at once
   all drive the game.
 - Default button bindings from 0032 in `assets/data/keymap.ron`.
+- The lead's name at New Game (0801): a player on a controller spells it on
+  the letter grid (`screens::lead_select::NameEntry`, built and tested in
+  0801 but not opened yet); open it instead of the typing box when the name
+  is chosen with a controller button (Nick, PR #127: "C").
 - Held buttons repeat like held keys (same `repeat` timings).
 - Left stick to 4-way cursor with a dead zone, one tile per step with the
   held-key repeat (0032: D-pad and left stick both move; how far the stick

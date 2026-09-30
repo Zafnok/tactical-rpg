@@ -71,13 +71,153 @@ fn rows_wrap_and_cancel_goes_back() {
     assert!(s.result().is_none());
 }
 
-/// The screen with the name grid open on "Ellery".
+/// The screen with the name grid (controller players) open on "Ellery".
 fn spelling(c: &mut Ctx) -> LeadSelectScreen {
     let mut s = LeadSelectScreen::new();
-    update(&mut s, c, &[CursorDown, Confirm]);
-    assert!(s.entry().is_some());
+    update(&mut s, c, &[CursorDown]);
+    s.entry = Some(NameEntry::new(&s.name));
+    c.audio.take();
     s
 }
+
+// ---- Typing the name ----------------------------------------------------
+
+/// One frame of typing: `keys` pressed (with their actions, as the game
+/// sends them) and `text` typed.
+fn typed(
+    s: &mut LeadSelectScreen,
+    c: &mut Ctx,
+    actions: &[Action],
+    keys: &[Key],
+    text: &str,
+) -> String {
+    let pressed = keys
+        .iter()
+        .map(|&k| crate::input::Chord::plain(k))
+        .collect();
+    let input =
+        FrameInput::new(actions.to_vec(), 0.0, vec![]).with_typing(pressed, text.chars().collect());
+    format!("{:?}", s.update(c, &input))
+}
+
+/// The sounds of one frame of typing.
+fn typed_sounds(s: &mut LeadSelectScreen, c: &mut Ctx, keys: &[Key], text: &str) -> Vec<String> {
+    c.audio.take();
+    typed(s, c, &[], keys, text);
+    c.audio
+        .take()
+        .iter()
+        .filter(|r| matches!(r, AudioRequest::PlaySound { .. }))
+        .filter_map(|r| r.cue().map(str::to_owned))
+        .collect()
+}
+
+/// The screen with the typing box open on "Ellery": Confirm on the name
+/// (its key's `f` isn't typed).
+fn typing(c: &mut Ctx) -> LeadSelectScreen {
+    let mut s = LeadSelectScreen::new();
+    update(&mut s, c, &[CursorDown]);
+    typed(&mut s, c, &[Confirm], &[Key::F], "f");
+    assert!(s.typing().is_some());
+    assert_eq!(s.first_name(), "Ellery");
+    s
+}
+
+use crate::input::Key;
+
+#[test]
+fn type_a_new_name() {
+    let mut c = ctx();
+    let mut s = typing(&mut c);
+    typed(&mut s, &mut c, &[], &[Key::Backspace; 6], "");
+    assert_eq!(s.first_name(), "");
+    // The game's keys do nothing while typing: `d` (Cancel) and `f`
+    // (Confirm) are letters.
+    let out = typed(
+        &mut s,
+        &mut c,
+        &[Cancel, Confirm],
+        &[Key::D, Key::F],
+        "Mara d-f'",
+    );
+    assert_eq!(out, "None");
+    assert_eq!(s.first_name(), "Mara d-f'");
+    assert_eq!(s.row(), Row::Name);
+    typed(&mut s, &mut c, &[], &[Key::Backspace; 5], "");
+    // Enter keeps it (trimmed); Start then uses it.
+    assert_eq!(
+        typed_sounds(&mut s, &mut c, &[Key::Enter], ""),
+        ["menu_select"]
+    );
+    assert!(s.typing().is_none());
+    assert_eq!(s.first_name(), "Mara");
+    update(&mut s, &mut c, &[CursorDown]);
+    assert_eq!(update(&mut s, &mut c, &[Confirm]), "Pop");
+    assert_eq!(
+        s.result(),
+        Some(&LeadProfile::new("Mara", LeadGender::Male))
+    );
+}
+
+#[test]
+fn typed_names_have_rules() {
+    let mut c = ctx();
+    let mut s = typing(&mut c);
+    // Digits and letters outside A-Z are refused; typing is silent.
+    assert_eq!(typed_sounds(&mut s, &mut c, &[], "1é"), ["menu_cancel"; 2]);
+    assert!(typed_sounds(&mut s, &mut c, &[], "abcdef").is_empty());
+    assert_eq!(s.first_name(), "Elleryabcdef");
+    assert_eq!(typed_sounds(&mut s, &mut c, &[], "g"), ["menu_cancel"]);
+    assert_eq!(s.first_name().chars().count(), MAX_NAME_LEN);
+    // Backspace sounds; with nothing left it does nothing.
+    let mut s = typing(&mut c);
+    typed(&mut s, &mut c, &[], &[Key::Backspace; 5], "");
+    assert_eq!(
+        typed_sounds(&mut s, &mut c, &[Key::Backspace], ""),
+        ["menu_cancel"]
+    );
+    assert!(typed_sounds(&mut s, &mut c, &[Key::Backspace], "").is_empty());
+    // No space first, or twice; Enter on a blank name is refused.
+    assert_eq!(typed_sounds(&mut s, &mut c, &[], " "), ["menu_cancel"]);
+    assert_eq!(
+        typed_sounds(&mut s, &mut c, &[Key::Enter], ""),
+        ["menu_cancel"]
+    );
+    assert!(s.typing().is_some());
+    typed(&mut s, &mut c, &[], &[], "A ");
+    assert_eq!(typed_sounds(&mut s, &mut c, &[], " "), ["menu_cancel"]);
+    assert_eq!(s.first_name(), "A ");
+}
+
+#[test]
+fn escape_closes_the_box_and_keeps_the_old_name() {
+    let mut c = ctx();
+    let mut s = typing(&mut c);
+    typed(&mut s, &mut c, &[], &[], "xyz");
+    // Escape is also Cancel: the screen stays, only the box closes.
+    let out = typed(&mut s, &mut c, &[Cancel], &[Key::Escape], "");
+    assert_eq!(out, "None");
+    assert!(s.typing().is_none());
+    assert_eq!(s.first_name(), "Ellery");
+}
+
+#[test]
+fn typing_help_names_the_text_keys() {
+    let mut c = ctx();
+    let s = typing(&mut c);
+    assert_eq!(s.help(&c), "Enter done · Backspace delete · Escape cancel");
+}
+
+/// The typing box open over the screen with "Mara" typed.
+#[test]
+fn typing_snapshot() {
+    let mut h = Harness::with_screen(Box::new(LeadSelectScreen::new()));
+    h.keys("Down f Backspace Backspace Backspace Backspace Backspace Backspace");
+    h.type_text("Mara");
+    assert_snapshot!(h.snapshot());
+}
+
+// ---- The letter grid (controller players) --------------------------------
 
 #[test]
 fn spell_a_new_name() {
@@ -193,7 +333,8 @@ fn menu_sounds() {
     assert_eq!(sounds(&mut s, &mut c, &[CursorRight]), ["menu_move"]);
     assert_eq!(sounds(&mut s, &mut c, &[CursorDown]), ["menu_move"]);
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_select"]);
-    assert_eq!(sounds(&mut s, &mut c, &[CursorRight]), ["menu_move"]);
+    // The typing box is open: the game's keys play nothing.
+    assert!(sounds(&mut s, &mut c, &[CursorRight, Confirm, Cancel]).is_empty());
     // An action with nothing to do plays nothing.
     let mut s = LeadSelectScreen::new();
     assert!(sounds(&mut s, &mut c, &[Action::Info]).is_empty());
@@ -214,6 +355,7 @@ fn help_names_the_keys() {
     update(&mut s, &mut c, &[CursorDown]);
     assert_eq!(s.help(&c), "arrows choose · f start · d back");
     let s = spelling(&mut c);
+    assert!(s.typing().is_none());
     assert_eq!(s.help(&c), "arrows choose · f type · d delete");
     c.use_layout(crate::input::Layout::LeftHanded);
     assert_eq!(s.help(&c), "wasd choose · j type · k delete");
@@ -242,7 +384,11 @@ fn lead_select_snapshot() {
 
 #[test]
 fn name_grid_snapshot() {
-    let mut h = Harness::with_screen(Box::new(LeadSelectScreen::new()));
-    h.keys("Right Down f d d d Down");
+    let mut s = LeadSelectScreen::new();
+    s.gender = LeadGender::Female;
+    s.row = Row::Name;
+    s.entry = Some(NameEntry::new("Ell"));
+    let mut h = Harness::with_screen(Box::new(s));
+    h.keys("Down");
     assert_snapshot!(h.snapshot());
 }

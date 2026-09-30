@@ -18,6 +18,10 @@ pub enum RawKeyEvent {
     Down(Chord),
     /// A key went up.
     Up(Key),
+    /// A character was typed (the platform's text input: the keyboard's own
+    /// layout and Shift applied), for text boxes such as the lead's name.
+    /// Comes with the key's own `Down`.
+    Text(char),
 }
 
 /// The result of one frame.
@@ -143,13 +147,22 @@ impl Game {
     fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
         // Bindings changed between frames (a test rebinding keys).
         self.sync_keymap();
+        let mut pressed = Vec::new();
+        let mut text = Vec::new();
         for &event in events {
             if matches!(event, RawKeyEvent::Down(_)) && self.ctx.key_prompt == KeyPrompt::Waiting {
                 self.ctx.key_prompt = KeyPrompt::Pressed;
             }
             match event {
-                RawKeyEvent::Down(chord) => self.input.key_down(chord),
+                RawKeyEvent::Down(chord) => {
+                    self.input.key_down(chord);
+                    pressed.push(chord);
+                }
                 RawKeyEvent::Up(key) => self.input.key_up(key),
+                // Control characters (Enter, Backspace, Escape on some
+                // platforms) are keys, not text.
+                RawKeyEvent::Text(c) if !c.is_control() => text.push(c),
+                RawKeyEvent::Text(_) => {}
             }
         }
         if dt.is_finite() && dt > 0.0 {
@@ -169,7 +182,7 @@ impl Game {
         if opens_debug_menu {
             self.stack.push(Box::new(DebugMenuScreen::new()));
         } else {
-            let input = FrameInput::new(actions, dt, held);
+            let input = FrameInput::new(actions, dt, held).with_typing(pressed, text);
             self.quit = self.stack.update(&mut self.ctx, &input);
             self.sync_keymap();
         }

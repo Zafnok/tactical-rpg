@@ -17,7 +17,7 @@ use trpg_core::{LeadGender, LeadProfile};
 use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Keymap, Layout, LayoutBindings, PlayerKeys};
+use crate::input::{Action, Chord, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
 
@@ -101,12 +101,43 @@ pub struct FrameInput {
     pub dt: f32,
     /// Actions whose key is currently held down.
     held: Vec<Action>,
+    /// The chords pressed this frame, in order.
+    pressed: Vec<Chord>,
+    /// The characters typed this frame, in order.
+    text: Vec<char>,
 }
 
 impl FrameInput {
     /// Input for one frame; `held` lists the actions whose keys are down.
     pub fn new(actions: Vec<Action>, dt: f32, held: Vec<Action>) -> Self {
-        Self { actions, dt, held }
+        Self {
+            actions,
+            dt,
+            held,
+            pressed: Vec::new(),
+            text: Vec::new(),
+        }
+    }
+
+    /// The same input with the chords `pressed` and the characters `text`
+    /// typed this frame.
+    #[must_use]
+    pub fn with_typing(mut self, pressed: Vec<Chord>, text: Vec<char>) -> Self {
+        self.pressed = pressed;
+        self.text = text;
+        self
+    }
+
+    /// The chords pressed this frame, for the few screens that read keys
+    /// themselves: a text box's fixed keys ([`crate::input::text_key`]).
+    /// Anything else reacts to [`actions`](Self::actions).
+    pub fn pressed_chords(&self) -> &[Chord] {
+        &self.pressed
+    }
+
+    /// The characters typed this frame (printable only), for text boxes.
+    pub fn text(&self) -> &[char] {
+        &self.text
     }
 
     /// Whether a key bound to `action` is held (e.g. hold Confirm to

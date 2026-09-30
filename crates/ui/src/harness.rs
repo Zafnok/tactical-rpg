@@ -118,6 +118,26 @@ impl Harness {
         self
     }
 
+    /// Types `text` one character per frame as the app reports typing: the
+    /// key's press (Shift for capitals) with the character, then its
+    /// release. A character without a key of its own is typed alone.
+    pub fn type_text(&mut self, text: &str) -> &mut Self {
+        for c in text.chars() {
+            let name = match c {
+                ' ' => "Space".to_owned(),
+                c if c.is_ascii_uppercase() => format!("Shift+{}", c.to_ascii_lowercase()),
+                c => c.to_string(),
+            };
+            let Ok(chord) = Chord::parse(&name) else {
+                self.frame(&[RawKeyEvent::Text(c)], FRAME_DT);
+                continue;
+            };
+            self.frame(&[RawKeyEvent::Down(chord), RawKeyEvent::Text(c)], FRAME_DT);
+            self.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
+        }
+        self
+    }
+
     /// Holds `chord` for `seconds` of frames (so held keys repeat), then
     /// releases it in one more frame.
     ///
