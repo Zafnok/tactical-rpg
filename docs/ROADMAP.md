@@ -75,7 +75,10 @@ early so every later PR is checked by them.
   chapters): 1007 nodes/travel/towns/save/camp, 1008 fixed and random skirmishes.
 - Supports (FE GBA-style, earned in battle) and camp events: 1002, 1003.
   Parked far-future ideas: hub activities (1004), pair abilities (1005).
-- Controller support (needed for Steam Deck) — created by 0903.
+- Controller support on every build (web, Windows, Linux, macOS; needed for
+  Steam Deck): 0031 decide buttons → 0219 input → 0220 button names in help
+  bars → 0816 rebinding (after 0815). Not on the Chapter 1 critical path;
+  0219 can land any time after 0031. Steam-specific gaps: 0903.
 - Class tiers 4 and up; tier-3 class skills (1001).
 - Custom 16×16 class icons vs name initials on the map (1006).
 - Audio still open after 0020: a banter conversation track, the crit sound of
