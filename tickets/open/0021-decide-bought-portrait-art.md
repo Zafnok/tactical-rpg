@@ -1,6 +1,6 @@
 ---
 id: "0021"
-title: Record the switch to bought portrait art (CaptainSkolot bundle)
+title: "Decide the bought character art: portraits and battle sprites"
 type: design-decision
 milestone: M6 Story & dialogue
 model: opus-5.5
@@ -11,7 +11,7 @@ nick_input: decision
 completed:
 ---
 
-# 0021 — Record the switch to bought portrait art
+# 0021 — Decide the bought character art: portraits and battle sprites
 
 ## Context
 
@@ -66,15 +66,51 @@ otherwise. Nick also wants **every third-party work credited**, even where
 the licence doesn't require it. So the bundle goes on the credits screen
 (0808), although its licence makes credit optional.
 
+**Changed 2026-09-30: battle sprites too.** Nick expects full-body art of
+the two fighters on the combat screen (0011, `look-and-feel.md`; ticket
+0413). Since he doesn't want Claude-drawn character art, that art has to be
+bought as well. His words: "I guess we need an itch artist who has a pack
+with portraits and battle sprites". **CaptainSkolot sells no full-body,
+battle or map sprites** (checked on <https://captainskolot.itch.io/>,
+2026-09-30: portraits, backgrounds, icons and item art only). So the
+portrait choice above is open again: either one artist whose packs have both
+portraits and matching battle sprites, or CaptainSkolot's portraits next to
+someone else's sprites. Portraits and sprites appear on the same combat and
+dialogue flow, so a style clash would show.
+
 Technical follow-ups (not decided here): 0110 keeps bought files out of the
-public repo, 0711 draws 64×64 PNG portraits, 0706 assigns the portraits to
-the cast.
+public repo, 0711 draws PNG portraits (64×64 if the art stays CaptainSkolot's),
+0706 assigns the portraits to the cast, 0413 draws the battle sprites.
 
 ## Nick input
 
-**Decision** (via the `ask-nick` skill). His style choice above is already
-made. Ask only what's still open:
+**Decision** (via the `ask-nick` skill). Ask:
 
+0. **Which artist.** First search itch.io (and note the store and licence of
+   each hit) for artists or packs that sell **portraits and full-body battle
+   sprites of the same characters or classes, in one style**. Fire Emblem
+   GBA-style packs (portrait, map sprite and battle animation per class) are
+   the closest match to what Nick described; say whether a pack has map
+   sprites too (ticket 1006). For each candidate, check: medieval fantasy;
+   licence allows a sold game (ADR-0013 rules for art, plus this ticket's
+   answers); price; which Chapter 1 classes it covers (lord, Rider, Archer,
+   Cleric, Guard, Mage, Brigand, Raider, per 0413); how many animation frames
+   the battle sprites have; portrait size and expressions (the dialogue
+   screen needs `neutral`, `happy`, `angry`, `sad`, `surprised`). Render real
+   mockups (dialogue screen and a combat scene, with the store previews
+   scaled into our frames) for:
+   - **A.** One artist with both portraits and battle sprites (one mockup
+     per strong candidate).
+   - **B.** CaptainSkolot's portraits (his pick of 2026-09-28) plus the best
+     separate battle-sprite pack. Show the two side by side honestly, style
+     clash and all.
+   - **C.** CaptainSkolot's portraits plus battle sprites commissioned from
+     CaptainSkolot (he takes commissions; ask for nothing, just name it as an
+     option with an unknown price).
+   - **D.** Describe your own.
+
+   Remind Nick that the CaptainSkolot sale ($13.99 for the bundle) ends
+   around 2026-10-03, and don't press him to buy.
 1. Is **AI-assisted art** acceptable? (He chose the bundle knowing this, but
    didn't answer it directly.) The seller says it was. Some players
    and reviewers object. Steam asks developers to disclose AI-generated
@@ -83,33 +119,41 @@ made. Ask only what's still open:
 2. **Paid assets in general:** answered above ("OK as long as it's not super
    expensive"). Ask only for a rough price ceiling per purchase, so "super
    expensive" can be checked without asking him each time.
-3. **Characters the bundle doesn't cover** (Tamsin and Crane in Chapter 1;
-   see 0706): options are commissioning the same artist (CaptainSkolot takes
-   commissions, which keeps the style consistent), changing the character's
+3. **Characters the chosen packs don't cover** (with CaptainSkolot: Tamsin
+   and Crane in Chapter 1, see 0706; redo the check for another artist):
+   options are commissioning the same artist (keeps the style consistent), changing the character's
    portrait brief to fit a bought face (a story change), or having Claude
    make small pixel edits to a bought face (recolours, a scar, a changed
    expression; not new hair or clothes).
 
-Nick buys the bundle himself (Claude doesn't make purchases) and puts the
+Nick buys the packs himself (Claude doesn't make purchases) and puts the
 downloaded zips where 0110 says.
 
 ## Scope
 
-**In:** record the answers; update the design doc and supersede the parts of
-ADR-0013 above.
+**In:** the artist search and mockups; record the answers; update the
+design doc and supersede the parts of ADR-0013 above. If the artist changes
+from CaptainSkolot, rewrite 0706's mapping table for the new packs and fix
+the 64×64 numbers in 0711 (with the `write-ticket` skill's rules), and
+update the portrait memory note.
 
 **Out (do not do):** code, importing any art, the private-assets setup
-(0110), the renderer change (0711).
+(0110), the renderer change (0711), the combat scene (0413), buying
+anything.
 
 ## Implementation steps
 
-1. Run `ask-nick` with the three questions above.
-2. `docs/design/look-and-feel.md` § Portraits: replace the "32×32, drawn per
-   character with Nick" rules with the bought style (64×64, the bundle, the
-   answers above). Quote Nick's words in § Nick's words. Keep the speaker
+1. Search itch.io for question 0 and build the mockups (`ascii-art` skill
+   for the frames; store preview images only as mockup input, never
+   committed).
+2. Run `ask-nick` with questions 0–3.
+3. `docs/design/look-and-feel.md` § Portraits: replace the "32×32, drawn per
+   character with Nick" rules with the bought style (size, artist, packs,
+   the answers above). Add the battle-sprite choice next to the "Combat
+   screen" bullet (the scene's own details stay with 0413). Quote Nick's words in § Nick's words. Keep the speaker
    and listener rules. Keep the rule that there's no portrait in the battle
    panel.
-3. New ADR (`write-adr` skill), superseding ADR-0013's asset rules: paid
+4. New ADR (`write-adr` skill), superseding ADR-0013's asset rules: paid
    **art** is allowed when its licence permits use in a sold game (audio
    stays free, per `audio.md`). Bought art is credited like everything
    else (`audio.md` rule 3, credits screen 0808).
@@ -119,16 +163,18 @@ ADR-0013 above.
    whether it's private). Add a "superseded in part by" note to ADR-0013's
    status line (the only edit allowed on an accepted ADR) and to
    `docs/adr/README.md`.
-4. Update ADR-0018's status line the same way for its portrait section, and
+5. Update ADR-0018's status line the same way for its portrait section, and
    point it to 0711's ADR.
-5. Update the `ascii-art` skill's portrait section: portraits are bought, and
-   Claude doesn't draw them any more (except small edits if Nick allows them
+6. Update the `ascii-art` skill's portrait section: portraits and battle
+   sprites are bought, and Claude doesn't draw them any more (except small edits if Nick allows them
    in question 3).
 
 ## Acceptance criteria
 
-- [ ] `look-and-feel.md` § Portraits describes the bought 64×64 style and
-      Nick's answers.
+- [ ] Nick saw mockups for each option in question 0 and picked one.
+- [ ] `look-and-feel.md` § Portraits describes the bought style (artist,
+      size) and Nick's answers, including the battle-sprite source.
+- [ ] If the artist isn't CaptainSkolot: 0706 and 0711 updated to match.
 - [ ] New ADR accepted; ADR-0013 and ADR-0018 status lines point to it.
 - [ ] `ascii-art` skill updated.
 - [ ] All gates in the `run-gates` skill pass.

@@ -15,7 +15,7 @@ completed:
 
 ## Context
 
-Nick is buying portrait art (0021) whose licence allows it in a sold game but
+Nick is buying portrait and battle-sprite art (0021, 0413) whose licence allows it in a sold game but
 forbids redistributing the files on their own. This repo is public (ADR-0013),
 so the bought files can't be committed here. They go in a **private** GitHub
 repo and are pulled in only when a build is made. The shipped game (exe,
@@ -29,7 +29,7 @@ Assets are embedded with `include_dir!` over `assets/`
 
 **Setup** (Claude can't make purchases or create repos for him):
 
-1. Buy the bundle on itch.io and download every zip.
+1. Buy the packs 0021 picked on itch.io and download every zip.
 2. Create a **private** GitHub repo `Zafnok/tactical-rpg-assets`. Upload the
    zips as they are (the importer in 0711 reads them), plus a copy of each
    licence text from the store pages.

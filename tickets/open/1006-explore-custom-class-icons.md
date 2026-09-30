@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0401"]
+blocked_by: ["0401", "0021"]
 nick_input: decision
 completed:
 ---
@@ -23,10 +23,16 @@ tiles, were offered as a later experiment: one small single-colour picture per
 class (a helmeted head, a horse head, a drawn bow…), 16×16 px, tinted by
 faction like any glyph.
 
+**Changed 2026-09-30:** Nick doesn't want Claude-drawn character art (0021),
+and the combat scene uses bought sprites (0413). If the pack 0021 picked
+has map sprites (Fire Emblem-style packs often do), offer those as well as
+Claude-drawn one-colour icons, and say honestly that Claude-drawn icons may
+clash in the same way the portraits did.
+
 ## Nick input
 
-**Decision:** Nick compares icons with initials on the real battle screen and
-picks one (or a mix, e.g. icon + HP bar, initials in the side panel).
+**Decision:** Nick compares icons (drawn, and the bought pack's map sprites
+if it has them) with initials on the real battle screen and picks one (or a mix, e.g. icon + HP bar, initials in the side panel).
 
 ## Scope
 
