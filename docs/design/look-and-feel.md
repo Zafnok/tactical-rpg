@@ -249,4 +249,5 @@ black.
 - Selection arrows `►Al◄` next to another unit: whole-glyph arrows would hide
   one of its letters (the 0416 bracket problem). Ask Nick before 0403 draws them.
 - Custom class icons vs initials (ticket 1006, after Chapter 1).
-- Combat screen full-body art: style, size, animation (ticket 0413).
+- Combat screen full-body art: bought, with the portraits (ticket 0021); size
+  and animation (ticket 0413).

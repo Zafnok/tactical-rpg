@@ -38,7 +38,9 @@ screen with a bought portrait on each option:
 - **B. Glyph-drawn backgrounds** (the `ascii-art` skill), dimmed so the
   portraits stand out.
 - **C. Bought background art** matching the portrait style (search for packs
-  under allowed licences; name the price and licence).
+  under allowed licences; name the price and licence). Look first at the
+  artist 0021 picked: CaptainSkolot sells background packs, and another
+  artist may too.
 - **D. No picture, just a place line** (for example "The old fort, at dusk") above
   the text box.
 - **E.** "Describe your own."
