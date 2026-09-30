@@ -15,14 +15,18 @@ use crate::input::Action;
 /// Cancel as `Cancel`; any other key sounds as `Select` if it issues a
 /// command, `Cancel` if it closes something (e.g. `Info` again), and `Move`
 /// if it moves within the same screen (a menu's focus, a target, the info
-/// screen's unit). Skipping a walk or a combat plays nothing.
+/// screen's unit). Skipping a walk or a combat, or anything during an AI
+/// action, plays nothing.
 pub fn step_sound(
     action: Action,
     before: &Mode,
     after: &Mode,
     effect: &Effect,
 ) -> Option<MenuSound> {
-    if matches!(before, Mode::Moving { .. } | Mode::Combat(_)) {
+    if matches!(
+        before,
+        Mode::Moving { .. } | Mode::Combat(_) | Mode::AiAction(_)
+    ) {
         return None;
     }
     if before == after && *effect == Effect::None {
@@ -43,7 +47,7 @@ pub fn step_sound(
 /// deeper, backing out shallower.
 fn depth(mode: &Mode) -> u8 {
     match mode {
-        Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Combat(_) => 0,
+        Mode::Idle { .. } | Mode::MoveAfter { .. } | Mode::Combat(_) | Mode::AiAction(_) => 0,
         Mode::Selected(_)
         | Mode::Moving { .. }
         | Mode::MapMenu { .. }

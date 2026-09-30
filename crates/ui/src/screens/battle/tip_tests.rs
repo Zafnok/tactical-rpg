@@ -6,7 +6,7 @@ use insta::assert_snapshot;
 use trpg_content::TipTrigger;
 use trpg_core::{Command, Event, Objective, Phase, StatGains, UnitId};
 
-use super::testing::{battle_with, skirmish, skirmish_charged};
+use super::testing::{battle_with, skirmish, skirmish_charged, through_ai_phases};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::input::Layout;
@@ -252,10 +252,9 @@ fn the_enemy_phase_tip_shows_over_its_banner_and_holds_it() {
     assert!(s.banner().is_some());
     press(&mut s, &mut c, &[Action::Confirm]);
     assert_eq!(s.shown_tip(), None);
-    // Then the banner runs its course and the player phase comes back.
-    for _ in 0..4 {
-        frame(&mut s, &mut c, &[], 30.0);
-    }
+    // Then the banner runs its course, the enemies act and the player
+    // phase comes back.
+    through_ai_phases(&mut s, &mut c, 30.0);
     assert_eq!(s.state().phase(), Phase::Player);
     assert_eq!(s.state().turn(), 2);
 }
@@ -274,7 +273,7 @@ fn tips_wait_for_the_player_phase_to_settle() {
     let shown = dismiss_all(&mut s, &mut c);
     assert_eq!(shown, [TipTrigger::FirstEnemyPhase]);
     // The player phase's banner comes first; the tip waits for it.
-    frame(&mut s, &mut c, &[], 30.0);
+    through_ai_phases(&mut s, &mut c, 30.0);
     assert_eq!(s.state().phase(), Phase::Player);
     assert!(s.banner().is_some());
     assert_eq!(s.shown_tip(), None);
@@ -336,12 +335,13 @@ fn the_start_tip_is_for_the_first_turn_of_the_player_phase_only() {
     let mut s = BattleScreen::new(state.clone());
     assert_eq!(dismiss_all(&mut s, &mut c), [TipTrigger::FirstEnemyPhase]);
     // Nor does a start tip wait behind it for the next player phase.
-    s.apply(&Command::EndPhase);
+    through_ai_phases(&mut s, &mut c, 30.0);
     for _ in 0..5 {
         frame(&mut s, &mut c, &[], 30.0);
     }
     assert_eq!(s.state().phase(), Phase::Player);
-    assert_eq!(dismiss_all(&mut s, &mut c), []);
+    let later = dismiss_all(&mut s, &mut c);
+    assert!(!later.contains(&TipTrigger::FirstBattleStart), "{later:?}");
     state.apply(&Command::EndPhase).unwrap();
     assert_eq!((state.turn(), state.phase()), (2, Phase::Player));
     let mut s = BattleScreen::new(state);

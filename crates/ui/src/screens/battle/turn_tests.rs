@@ -7,7 +7,7 @@ use trpg_content::FontAtlasDef;
 use trpg_core::{Objective, Outcome, UnitAction};
 
 use super::banner::{BannerKind, PHASE_BANNER_S};
-use super::testing::{battle_with, skirmish, wait};
+use super::testing::{battle_with, skirmish, through_ai_phases, wait};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::screen::tests::ctx;
@@ -167,9 +167,7 @@ fn the_danger_zone_follows_the_battle_and_stays_on_across_turns() {
     // Through the next turn: still shown.
     frame(&mut s, &mut c, &[], 30.0);
     press(&mut s, &mut c, &[Action::EndTurn, Action::EndTurn]);
-    for _ in 0..3 {
-        frame(&mut s, &mut c, &[], 1.0);
-    }
+    through_ai_phases(&mut s, &mut c, 1.0);
     assert_eq!(s.state().turn(), 2);
     assert_eq!(s.danger(), Some(&danger_tiles(s.state())));
 }
@@ -516,7 +514,10 @@ fn auto_end_is_off_by_default_and_toggles_on() {
     wait_unit(&mut s, 2);
     press(&mut s, &mut c, &[]);
     assert_eq!(s.state().phase(), Phase::Enemy);
-    // And back off.
+    // Not while the enemy plays (0502); back off in the player's turn.
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
+    assert!(s.auto_end());
+    through_ai_phases(&mut s, &mut c, 30.0);
     press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     assert!(!s.auto_end());
 }
@@ -564,9 +565,11 @@ fn phase_banners_close_after_a_second_or_on_confirm_and_the_enemy_phase_passes()
     assert_eq!(phase_banner(&s), Some((Phase::Enemy, 1)));
     frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.9);
     assert_eq!(phase_banner(&s), Some((Phase::Enemy, 1)));
-    // Closed: the enemy phase ends at once (no AI yet), the player's turn
-    // 2 starts.
+    // Closed: the enemies act, then the player's turn 2 starts.
     frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.2);
+    assert_eq!(phase_banner(&s), None);
+    assert!(matches!(s.mode(), Mode::AiAction(_)), "{:?}", s.mode());
+    through_ai_phases(&mut s, &mut c, 30.0);
     assert_eq!(phase_banner(&s), Some((Phase::Player, 2)));
     assert_eq!((s.state().turn(), s.state().phase()), (2, Phase::Player));
     let buf = render(&s, &c);
@@ -575,7 +578,14 @@ fn phase_banners_close_after_a_second_or_on_confirm_and_the_enemy_phase_passes()
     assert_in_font(&buf);
     press(&mut s, &mut c, &[Action::Confirm]);
     assert_eq!(s.banner(), None);
-    assert_eq!(s.ready_units().len(), 3);
+    assert_eq!(
+        s.ready_units().len(),
+        s.state()
+            .units()
+            .iter()
+            .filter(|u| u.faction == Faction::Player)
+            .count()
+    );
 }
 
 /// `PLAYER PHASE` on turn 2.
@@ -588,6 +598,7 @@ fn phase_banner_snapshot() {
         &mut c,
         &[Action::EndTurn, Action::EndTurn, Action::Confirm],
     );
+    through_ai_phases(&mut s, &mut c, 30.0);
     assert_eq!(phase_banner(&s), Some((Phase::Player, 2)));
     assert_snapshot!(render(&s, &c).to_snapshot(&c.palette));
 }
@@ -647,6 +658,7 @@ fn missing_the_turn_limit_is_a_defeat() {
     assert_eq!(phase_banner(&s), Some((Phase::Enemy, 1)));
     assert!(shows(&render(&s, &c), "Turn 1/1"));
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
+    through_ai_phases(&mut s, &mut c, 30.0);
     let lost = s.banner().map(|b| b.kind);
     assert_eq!(lost, Some(BannerKind::Outcome(Outcome::Defeat)));
     assert!(shows(&render(&s, &c), "DEFEAT"));

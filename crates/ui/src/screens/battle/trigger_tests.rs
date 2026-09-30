@@ -9,7 +9,7 @@ use trpg_core::{
 };
 
 use super::mode::{Effect, MenuEntry, Mode, Selection, menu_entries, step};
-use super::testing::{quick_units, setup};
+use super::testing::{quick_units, setup, through_ai_phases};
 use super::*;
 use crate::harness::Harness;
 use crate::screen::tests::ctx;
@@ -100,8 +100,9 @@ fn a_turn_start_scene_waits_for_its_phase_banner() {
     .0;
     let mut s = BattleScreen::new(state);
     s.apply(&Command::EndPhase);
-    // The enemy phase's banner closes and ends that phase (until 0502).
+    // The enemy phase's banner closes, the enemies act, the phase ends.
     assert_eq!(frame(&mut s, &mut c, &[Action::Confirm], 0.0), "None");
+    through_ai_phases(&mut s, &mut c, 30.0);
     assert!(matches!(
         s.banner().map(|b| b.kind),
         Some(banner::BannerKind::Phase {

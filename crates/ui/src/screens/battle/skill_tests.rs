@@ -4,7 +4,7 @@
 //! flow: `art_tests.rs`). The numbers are always `core`'s.
 
 use insta::assert_snapshot;
-use trpg_core::{BattleState, Command, Objective, Pos, SkillId, UnitAction, UnitId};
+use trpg_core::{BattleState, Command, Objective, Phase, Pos, SkillId, UnitAction, UnitId};
 
 use super::BattleScreen;
 use super::mode::{MenuEntry, Mode};
@@ -182,7 +182,8 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
     // Player, enemy and other phases pass: at the start of the knight's own
     // phase Brace has ended.
     let mut next = s.state().clone();
-    for _ in 0..3 {
+    next.apply(&Command::EndPhase).unwrap();
+    while next.phase() != Phase::Player {
         next.apply(&Command::EndPhase).unwrap();
     }
     assert_eq!(shown_def(&mut c, &next, UnitId(2)), before);
