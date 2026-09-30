@@ -2,7 +2,7 @@
 
 use super::battle::{BattleScreen, quick_battle};
 use super::{centre_x, draw_debug_hint, print_centred};
-use crate::audio::pick_from_pool;
+use crate::audio::{MenuSound, pick_from_pool};
 use crate::color::UiColor;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
@@ -74,7 +74,8 @@ impl TitleScreen {
 
     fn with_items(items: Vec<&'static str>) -> Self {
         Self {
-            menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()),
+            // Nothing to back out of on the title screen.
+            menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()).without_cancel(),
             items,
             music_on: false,
             battles_started: 0,
@@ -123,9 +124,8 @@ impl Screen for TitleScreen {
             self.music_on = true;
         }
         for &action in &input.actions {
-            let chosen = match self.menu.handle(action) {
+            let chosen = match self.menu.handle_with_sound(action, &mut ctx.audio) {
                 Some(MenuEvent::Chosen(i)) => self.items.get(i).copied(),
-                // Nothing to back out of on the title screen.
                 Some(MenuEvent::Cancelled) | None => None,
             };
             match chosen {
@@ -179,8 +179,9 @@ impl Screen for PlaceholderScreen {
         "placeholder"
     }
 
-    fn update(&mut self, _ctx: &mut Ctx, input: &FrameInput) -> Transition {
+    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         if input.actions.contains(&Action::Cancel) {
+            ctx.audio.menu(MenuSound::Cancel);
             Transition::Pop
         } else {
             Transition::None
@@ -204,6 +205,7 @@ impl Screen for PlaceholderScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio::AudioRequest;
     use crate::screen::tests::ctx;
 
     fn input(actions: &[Action]) -> FrameInput {
@@ -257,8 +259,37 @@ mod tests {
         c.audio
             .take()
             .iter()
+            .filter(|r| !matches!(r, AudioRequest::PlaySound { .. }))
             .map(|r| r.cue().unwrap_or("-").to_owned())
             .collect()
+    }
+
+    /// The sounds (not music) each update plays, as cue names.
+    fn sounds_of(s: &mut dyn Screen, c: &mut Ctx, actions: &[Action]) -> Vec<String> {
+        s.update(c, &input(actions));
+        c.audio
+            .take()
+            .iter()
+            .filter(|r| matches!(r, AudioRequest::PlaySound { .. }))
+            .filter_map(|r| r.cue().map(str::to_owned))
+            .collect()
+    }
+
+    #[test]
+    fn menu_sounds() {
+        use Action::{Cancel, Confirm, CursorDown, CursorUp};
+        let mut c = ctx();
+        let mut t = TitleScreen::new();
+        assert_eq!(
+            sounds_of(&mut t, &mut c, &[CursorDown, CursorUp]),
+            ["menu_move"; 2]
+        );
+        // Nothing to back out of: Cancel is silent.
+        assert!(sounds_of(&mut t, &mut c, &[Cancel]).is_empty());
+        assert_eq!(sounds_of(&mut t, &mut c, &[Confirm]), ["menu_select"]);
+        let mut p = PlaceholderScreen;
+        assert!(sounds_of(&mut p, &mut c, &[Confirm, CursorDown]).is_empty());
+        assert_eq!(sounds_of(&mut p, &mut c, &[Cancel]), ["menu_cancel"]);
     }
 
     #[test]

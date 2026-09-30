@@ -96,7 +96,7 @@ split movement for anyone.
 5. The unit is now **done** (`acted = true`, drawn dimmed) until the start of
    its side's next phase.
 
-**Pointing at an enemy** (Nick, 2026-09-29, ticket 0427). With a unit
+**Pointing at an enemy** (Nick, 2026-09-29, ticket 0428). With a unit
 selected, moving the cursor onto an enemy it can attack after moving aims the
 path at the tile it will attack from, and Confirm attacks straight away
 instead of going through the action menu.

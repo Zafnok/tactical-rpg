@@ -10,7 +10,7 @@
 //! the [`BattleState`] is untouched.
 //!
 //! Pointing the cursor at an enemy the selected unit can attack after moving
-//! (0427) aims the path at the tile it will attack from; Confirm walks
+//! (0428) aims the path at the tile it will attack from; Confirm walks
 //! there and goes straight to the weapon list / forecast on that enemy.
 //!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
@@ -60,7 +60,7 @@ pub struct Selection {
     pub attack: TileSet,
     /// The path arrow: the unit's tile first, never empty.
     pub path: Vec<Pos>,
-    /// The enemy under the cursor the path is aimed at (0427), if any.
+    /// The enemy under the cursor the path is aimed at (0428), if any.
     pub target: Option<UnitId>,
 }
 
@@ -477,7 +477,7 @@ fn aimed_at(sel: &Selection, cursor: Pos, state: &BattleState) -> Option<UnitId>
     (state.unit(t)?.pos == cursor).then_some(t)
 }
 
-/// A walk ended: the attack on the aimed enemy (0427), else the action menu.
+/// A walk ended: the attack on the aimed enemy (0428), else the action menu.
 fn walk_ended(sel: Selection, state: &BattleState) -> (Mode, Effect) {
     if sel.target.is_some() {
         open_attack(sel, state)
@@ -486,7 +486,7 @@ fn walk_ended(sel: Selection, state: &BattleState) -> (Mode, Effect) {
     }
 }
 
-/// The unit stands at the path's end, aimed at an enemy (0427): the weapons
+/// The unit stands at the path's end, aimed at an enemy (0428): the weapons
 /// that reach it (a list if several, its target first), then the forecast on
 /// it. The action menu if none does.
 fn open_attack(sel: Selection, state: &BattleState) -> (Mode, Effect) {

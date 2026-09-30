@@ -7,6 +7,7 @@
 
 use trpg_content::{Scene, Side};
 
+use crate::audio::MenuSound;
 use crate::color::UiColor;
 use crate::dialogue::{DialoguePlayer, Portrait, View};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -172,10 +173,21 @@ impl Screen for DialogueScreen {
         }
         for &action in &input.actions {
             let action = advance_key(action);
+            // Only the skip prompt sounds; reading on plays nothing.
             match (self.asking_skip, action) {
-                (true, Action::Confirm) => return Transition::Pop,
-                (true, Action::Cancel) => self.asking_skip = false,
-                (false, Action::Cancel) => self.asking_skip = true,
+                (true, Action::Confirm) => {
+                    ctx.audio.menu(MenuSound::Select);
+                    return Transition::Pop;
+                }
+                (true, Action::Cancel) => {
+                    ctx.audio.menu(MenuSound::Cancel);
+                    self.asking_skip = false;
+                }
+                // Opening the skip prompt sounds like opening a menu.
+                (false, Action::Cancel) => {
+                    ctx.audio.menu(MenuSound::Select);
+                    self.asking_skip = true;
+                }
                 (false, Action::Confirm) if !self.is_revealed() => {
                     self.shown = page_len(self.page_lines());
                 }

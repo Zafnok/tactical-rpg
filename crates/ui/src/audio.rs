@@ -92,6 +92,44 @@ impl AudioQueue {
     }
 }
 
+/// The menu sounds (`docs/design/audio.md`): the same three cues mean the
+/// same thing on every screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuSound {
+    /// The highlight moved (`menu_move`).
+    Move,
+    /// Something was confirmed or opened (`menu_select`).
+    Select,
+    /// Something was backed out of or closed (`menu_cancel`).
+    Cancel,
+    /// Confirm on something that can't be chosen, e.g. a greyed-out item.
+    /// Nick wants its own warning tone (ticket 0427); until then it is
+    /// `menu_cancel`.
+    Denied,
+}
+
+impl MenuSound {
+    /// The sound cue.
+    pub const fn cue(self) -> &'static str {
+        match self {
+            Self::Move => "menu_move",
+            Self::Select => "menu_select",
+            Self::Cancel | Self::Denied => "menu_cancel",
+        }
+    }
+}
+
+/// The map cursor's tick, once per tile it moves (the manifest plays it
+/// quieter than `menu_move`).
+pub const CURSOR_MOVE: &str = "cursor_move";
+
+impl AudioQueue {
+    /// Plays a menu sound.
+    pub fn menu(&mut self, sound: MenuSound) {
+        self.play_sound(sound.cue());
+    }
+}
+
 /// The music cue pool `pool` yields for `seed`: the same seed always gives
 /// the same cue. `None` if the manifest has no such pool or it is empty.
 /// This is not core's simulation RNG (ADR-0019), so a pick never changes a

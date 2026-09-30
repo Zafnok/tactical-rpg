@@ -11,6 +11,8 @@
         // Made in-house by `cargo xtask sfx` (ticket 0213) from the recipes
         // in assets-src/audio/sound-audition.html.
         (id: "menu_move", files: ["sfx/menu_move.wav"], volume: 100, credit: Own),
+        // The map cursor's tick: menu_move, quieter (audio.md, TUNABLE).
+        (id: "cursor_move", files: ["sfx/menu_move.wav"], volume: 60, credit: Own),
         (id: "menu_select", files: ["sfx/menu_select.wav"], volume: 100, credit: Own),
         (id: "menu_cancel", files: ["sfx/menu_cancel.wav"], volume: 100, credit: Own),
         (id: "miss", files: ["sfx/miss.wav"], volume: 100, credit: Own),

@@ -94,6 +94,12 @@ debug menu (unless a debug screen is already on top).
      ids come from `assets/audio/audio.ron`; an unknown one panics in debug
      builds. Asking for the music already playing does nothing, so a screen
      may ask every time it's shown.
+   - Menu sounds (0425): use `menu.handle_with_sound(action, &mut
+     ctx.audio)` for the menu widget (`Menu::without_cancel()` when there
+     is nothing to back out of); elsewhere `ctx.audio.menu(MenuSound::…)`
+     (`Move`, `Select` for confirming or opening, `Cancel` for backing
+     out, `Denied` for confirming what can't be chosen), and `play_sound(CURSOR_MOVE)` per map tile. Play nothing when
+     the key does nothing, and nothing for reading on through text.
 4. Ship at least one snapshot test and one Harness test (ADR-0007).
 
 ## Writing a Harness test
@@ -127,9 +133,9 @@ fn select_opens_the_placeholder() {
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
 - Audio: `audio_requests()` (every request of the run), `last_frame_audio()`
   (the last frame's; a `keys` press is the frame *before* the last),
-  `music_commands()`, `clear_audio()`. The real manifest has no cues until
-  tickets 0213/0214; a test of a made-up cue adds it to
-  `ctx.content.audio` and builds the Harness with `Harness::from_game`.
+  `music_commands()`, `clear_audio()`, `sounds()` (the sound cues played,
+  without music). A test of a made-up cue adds it to `ctx.content.audio`
+  and builds the Harness with `Harness::from_game`.
 - `Harness::new()` is a first launch (empty storage: the layout picker is on
   top). `Harness::with_layout(layout)` is a later launch with that layout
   saved. `into_storage()` + `Harness::with_storage(..)` restart with the same
