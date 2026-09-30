@@ -1880,4 +1880,15 @@ mod tests {
         let (mode, effect) = step(Mode::Selected(sel.clone()), Action::Confirm, far, &s);
         assert_eq!((mode, effect), (Mode::Selected(sel), Effect::None));
     }
+
+    #[test]
+    fn an_aim_no_weapon_reaches_from_the_path_end_falls_back_to_the_action_menu() {
+        let s = skirmish(&ctx(), 20);
+        // Aimed at the raider but still standing at (6, 2), out of reach.
+        let mut sel = pick(&s, p(6, 2));
+        sel.target = Some(UnitId(6));
+        let (mode, effect) = open_attack(sel, &s);
+        assert_eq!(effect, Effect::None);
+        assert!(matches!(mode, Mode::ActionMenu { .. }), "{mode:?}");
+    }
 }
