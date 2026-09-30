@@ -10,11 +10,18 @@
 //! HP bar drains, with a pause between strikes; then one fall per fallen
 //! unit and a short hold. Holding Confirm plays it [`Timings::fast`] times
 //! as fast; Cancel skips to the end (ticket 0418, `docs/design/controls.md`).
+//!
+//! [`Playback::with_sounds`] places the combat's sound cues (0424) on the
+//! timeline: a spell's cast sound as its caster's name starts flashing,
+//! each strike's sound as its result shows, a heal's as the outro starts.
+//! [`Playback::sounds`] hands out the ones a frame reaches; a skip plays
+//! none of those left.
 
 use std::collections::BTreeMap;
 
 use trpg_core::{Event, Faction, Side, StatValue, Strike, Unit, UnitId};
 
+use super::event_sounds::{Attack, cast_sound, sound_for_strike};
 use super::layout::MAP_VIEW;
 use super::units::{faction_color, hp_fill};
 use crate::color::{Palette, UiColor};
@@ -146,6 +153,9 @@ pub struct Playback {
     /// (0705).
     falls: Vec<Unit>,
     steps: Vec<Step>,
+    /// Sound cues and when they play, in seconds from the start, in
+    /// order.
+    cues: Vec<(f32, &'static str)>,
     timings: Timings,
     t: f32,
 }
@@ -211,9 +221,64 @@ impl Playback {
             bouts,
             falls,
             steps,
+            cues: Vec::new(),
             timings,
             t: 0.0,
         })
+    }
+
+    /// The playback with its sound cues: `attacks` says what each
+    /// combat's attacker and defender strike with
+    /// ([`combat_attacks`](super::event_sounds::combat_attacks)); `heal`: the
+    /// command healed a unit. Each strike made with a spell plays the
+    /// spell's cast sound as the striker's name starts flashing (a
+    /// follow-up or counter casts again); each strike plays
+    /// [`sound_for_strike`] as its result shows; a heal plays `heal` as
+    /// the outro starts.
+    #[must_use]
+    pub fn with_sounds(mut self, attacks: &[[Option<Attack>; 2]], heal: bool) -> Self {
+        let mut cues = Vec::new();
+        for step in &self.steps {
+            let cue = match step.beat {
+                Beat::Flash { bout, strike } | Beat::Result { bout, strike } => {
+                    let Some(s) = self.bouts.get(bout).and_then(|b| b.strikes.get(strike)) else {
+                        continue;
+                    };
+                    let side = usize::from(s.by == Side::Defender);
+                    let with = attacks.get(bout).and_then(|a| a[side]);
+                    if matches!(step.beat, Beat::Flash { .. }) {
+                        match with {
+                            Some(Attack::Spell(element)) => cast_sound(element),
+                            _ => None,
+                        }
+                    } else {
+                        sound_for_strike(s, with)
+                    }
+                }
+                Beat::Outro if heal => Some("heal"),
+                _ => None,
+            };
+            cues.extend(cue.map(|c| (step.start, c)));
+        }
+        self.cues = cues;
+        self
+    }
+
+    /// The sound cues and when they play, in seconds from the start.
+    pub fn cues(&self) -> &[(f32, &'static str)] {
+        &self.cues
+    }
+
+    /// The sound cues the next [`tick`](Self::tick) with the same
+    /// arguments reaches: those after the current time, up to and at the
+    /// new one.
+    pub fn sounds(&self, dt: f32, confirm_held: bool) -> Vec<&'static str> {
+        let to = self.advanced(dt, confirm_held);
+        self.cues
+            .iter()
+            .filter(|(at, _)| *at > self.t && *at <= to)
+            .map(|(_, cue)| *cue)
+            .collect()
     }
 
     /// The combats, in order.
@@ -266,9 +331,14 @@ impl Playback {
     /// this frame): [`Timings::fast`] times faster while held. A bad `dt`
     /// counts as 0.
     pub fn tick(&mut self, dt: f32, confirm_held: bool) {
+        self.t = self.advanced(dt, confirm_held);
+    }
+
+    /// The time [`tick`](Self::tick) would advance the clock to.
+    fn advanced(&self, dt: f32, confirm_held: bool) -> f32 {
         let dt = if dt.is_finite() { dt.max(0.0) } else { 0.0 };
         let speed = if confirm_held { self.timings.fast } else { 1.0 };
-        self.t = (self.t + dt * speed).min(self.total());
+        (self.t + dt * speed).min(self.total())
     }
 
     /// The combat the box shows now: the current one, or the last during
