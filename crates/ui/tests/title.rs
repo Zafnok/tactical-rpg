@@ -129,3 +129,47 @@ fn the_title_asks_for_its_music_once() {
     h.keys("Down Up f d");
     assert_eq!(music(&h), ["title"]);
 }
+
+/// Menu sounds (ticket 0425): the highlight moving, choosing, backing out;
+/// nothing when a key does nothing.
+#[test]
+fn menu_sounds() {
+    let mut h = title();
+    h.keys("Down Up");
+    assert_eq!(h.sounds(), ["menu_move", "menu_move"]);
+    // Nothing to back out of on the title screen.
+    h.clear_audio().keys("d");
+    assert!(h.sounds().is_empty());
+    h.keys("f");
+    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.sounds(), ["menu_select"]);
+    // The placeholder ignores Confirm and the cursor keys.
+    h.clear_audio().keys("f Down");
+    assert!(h.sounds().is_empty());
+    h.keys("d");
+    assert_eq!(h.sounds(), ["menu_cancel"]);
+    // Holding Down: one tick per step of the highlight.
+    h.clear_audio().hold("Down", 0.43);
+    assert_eq!(h.sounds(), ["menu_move"; 4]);
+}
+
+/// The debug tools sound like the other menus.
+#[test]
+fn debug_tool_sounds() {
+    let mut h = title();
+    h.keys("F2").clear_audio().keys("Down f Down Right d d");
+    assert_eq!(
+        h.sounds(),
+        [
+            "menu_move",
+            "menu_select",
+            "menu_move",
+            "menu_move",
+            "menu_cancel",
+            "menu_cancel"
+        ]
+    );
+    assert_eq!(h.top_screen(), "title");
+    h.keys("F2 f").clear_audio().keys("d");
+    assert_eq!(h.sounds(), ["menu_cancel"]);
+}

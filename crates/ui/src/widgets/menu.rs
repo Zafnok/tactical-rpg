@@ -1,5 +1,6 @@
 //! A vertical list menu: title menu now, action and map menus later.
 
+use crate::audio::{AudioQueue, MenuSound};
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -64,11 +65,14 @@ pub enum MenuEvent {
 
 /// A vertical list of items in a single-line box. `CursorDown`/`CursorUp`
 /// move the focus (wrapping, skipping disabled items), `Confirm` chooses the
-/// focused item, `Cancel` cancels.
+/// focused item, `Cancel` cancels (unless the menu is
+/// [`without_cancel`](Self::without_cancel)).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Menu {
     items: Vec<MenuItem>,
     focus: usize,
+    /// Whether `Cancel` reports [`MenuEvent::Cancelled`].
+    cancellable: bool,
 }
 
 impl Menu {
@@ -76,7 +80,19 @@ impl Menu {
     /// is enabled).
     pub fn new(items: Vec<MenuItem>) -> Self {
         let focus = items.iter().position(|i| i.enabled).unwrap_or(0);
-        Self { items, focus }
+        Self {
+            items,
+            focus,
+            cancellable: true,
+        }
+    }
+
+    /// The same menu where `Cancel` does nothing (and so plays nothing):
+    /// for menus with nothing to back out of.
+    #[must_use]
+    pub fn without_cancel(mut self) -> Self {
+        self.cancellable = false;
+        self
     }
 
     /// The same menu focused on item `index`, if it exists and is enabled.
@@ -112,10 +128,35 @@ impl Menu {
                     .filter(|i| i.enabled)
                     .map(|_| MenuEvent::Chosen(self.focus));
             }
-            Action::Cancel => return Some(MenuEvent::Cancelled),
+            Action::Cancel if self.cancellable => return Some(MenuEvent::Cancelled),
             _ => {}
         }
         None
+    }
+
+    /// [`handle`](Self::handle), playing the menu sounds on `audio`:
+    /// `menu_move` when the focus moves, `menu_select` when an item is
+    /// chosen, `menu_cancel` when cancelled, [`MenuSound::Denied`] for
+    /// Confirm on a disabled item. Any other action that does nothing (a
+    /// move with nowhere to go) plays nothing.
+    pub fn handle_with_sound(
+        &mut self,
+        action: Action,
+        audio: &mut AudioQueue,
+    ) -> Option<MenuEvent> {
+        let before = self.focus;
+        let event = self.handle(action);
+        let sound = match event {
+            Some(MenuEvent::Chosen(_)) => Some(MenuSound::Select),
+            Some(MenuEvent::Cancelled) => Some(MenuSound::Cancel),
+            None if self.focus != before => Some(MenuSound::Move),
+            None if action == Action::Confirm && !self.items.is_empty() => Some(MenuSound::Denied),
+            None => None,
+        };
+        if let Some(sound) = sound {
+            audio.menu(sound);
+        }
+        event
     }
 
     /// Moves the focus to the next (or previous) enabled item, wrapping.
@@ -201,6 +242,76 @@ mod tests {
                 })
                 .collect(),
         )
+    }
+
+    /// The sound cues `actions` play on `m`, in order.
+    fn sounds(m: &mut Menu, actions: &[Action]) -> Vec<String> {
+        let mut audio = AudioQueue::default();
+        for &a in actions {
+            m.handle_with_sound(a, &mut audio);
+        }
+        audio
+            .take()
+            .iter()
+            .filter_map(|r| r.cue().map(str::to_owned))
+            .collect()
+    }
+
+    #[test]
+    fn move_select_and_cancel_sound() {
+        let mut m = menu(&[true, true, true]);
+        assert_eq!(sounds(&mut m, &[CursorDown]), ["menu_move"]);
+        assert_eq!(sounds(&mut m, &[CursorUp, CursorUp]), ["menu_move"; 2]);
+        assert_eq!(m.focus(), 2, "wrapped");
+        assert_eq!(sounds(&mut m, &[Confirm]), ["menu_select"]);
+        assert_eq!(sounds(&mut m, &[Cancel]), ["menu_cancel"]);
+        assert_eq!(sounds(&mut m, &[CursorLeft, Info]), Vec::<String>::new());
+    }
+
+    #[test]
+    fn handle_with_sound_reports_the_same_events() {
+        let mut m = menu(&[true, true]);
+        let mut audio = AudioQueue::default();
+        assert_eq!(m.handle_with_sound(CursorDown, &mut audio), None);
+        assert_eq!(
+            m.handle_with_sound(Confirm, &mut audio),
+            Some(MenuEvent::Chosen(1))
+        );
+        assert_eq!(
+            m.handle_with_sound(Cancel, &mut audio),
+            Some(MenuEvent::Cancelled)
+        );
+    }
+
+    #[test]
+    fn a_disabled_item_is_denied() {
+        // Nothing is enabled, so a disabled item is focused.
+        let mut m = menu(&[false, false]);
+        assert_eq!(sounds(&mut m, &[Confirm]), ["menu_cancel"]);
+        assert_eq!(MenuSound::Denied.cue(), "menu_cancel", "until 0427");
+        // An empty menu has nothing to deny.
+        assert!(sounds(&mut Menu::new(vec![]), &[Confirm]).is_empty());
+    }
+
+    #[test]
+    fn doing_nothing_is_silent() {
+        let mut m = menu(&[false, false]);
+        assert!(sounds(&mut m, &[CursorDown, CursorUp]).is_empty());
+        // A single enabled item: the focus has nowhere to go.
+        let mut m = menu(&[false, true, false]);
+        assert_eq!(
+            sounds(&mut m, &[CursorDown, CursorUp]),
+            Vec::<String>::new()
+        );
+        assert_eq!(sounds(&mut m, &[Confirm]), ["menu_select"]);
+    }
+
+    #[test]
+    fn without_cancel_ignores_cancel() {
+        let mut m = menu(&[true, true]).without_cancel();
+        assert_eq!(m.handle(Cancel), None);
+        assert_eq!(sounds(&mut m, &[Cancel]), Vec::<String>::new());
+        assert_eq!(m.handle(Confirm), Some(MenuEvent::Chosen(0)));
     }
 
     fn focus_after(m: &mut Menu, actions: &[Action]) -> usize {
