@@ -400,7 +400,7 @@ impl BattleState {
         let fits = |when: &TriggerWhen| match when {
             TriggerWhen::CombatStart {
                 against: Some(_), ..
-            } => paired && pair_of(when),
+            } => pair_of(when),
             TriggerWhen::CombatStart {
                 unit,
                 against: None,

@@ -382,6 +382,52 @@ fn skipping_a_combat_still_stops_for_its_scenes() {
 }
 
 #[test]
+fn a_scene_waits_for_the_exp_bar() {
+    let mut c = ctx();
+    let (map, mut units) = quick_units(&c);
+    units[0].pos = Pos::new(6, 2);
+    units[0].hp = 5;
+    units[1].pos = Pos::new(6, 4);
+    units[1].learned.insert(trpg_core::SpellId::new("heal"));
+    let state = BattleState::new(BattleSetup {
+        triggers: vec![Trigger {
+            when: TriggerWhen::UnitEntersArea {
+                who: trpg_core::Who::Faction(Faction::Player),
+                area: trpg_core::TileRect {
+                    x: 6,
+                    y: 3,
+                    w: 1,
+                    h: 1,
+                },
+            },
+            scene: "test_fort".into(),
+            once: true,
+        }],
+        ..setup(&c, map, units, Objective::Rout { turn_limit: None })
+    })
+    .0;
+    let mut s = BattleScreen::new(state);
+    // The knight steps onto the area and heals the lord: the scene, then
+    // the knight's EXP bar.
+    s.apply(&Command::Act {
+        unit: UnitId(2),
+        dest: Pos::new(6, 3),
+        action: trpg_core::UnitAction::Cast {
+            spell: trpg_core::SpellId::new("heal"),
+            target: trpg_core::CastTarget::Unit(UnitId(1)),
+            active: None,
+        },
+    });
+    assert!(s.progress().is_some());
+    assert_eq!(s.queued_scene(), None, "after the EXP bar");
+    assert_eq!(frame(&mut s, &mut c, &[], 0.0), "None");
+    let bar = super::progress::PROGRESS_TIMINGS;
+    let after = frame(&mut s, &mut c, &[], bar.exp_fill + bar.exp_hold + 0.1);
+    assert!(s.progress().is_none());
+    assert_eq!(after, "Push(dialogue)");
+}
+
+#[test]
 fn the_rewind_list_names_a_talk() {
     let c = ctx();
     let mut s = BattleScreen::new(rogue_battle(&c, 22));

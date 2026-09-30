@@ -260,6 +260,21 @@ fn a_fight_plays_one_scene_the_first_listed() {
 }
 
 #[test]
+fn only_the_fighters_own_pair_scene_plays() {
+    // Unit 3 has scenes with unit 2 (listed first) and with the lord: the
+    // lord's fight plays the lord's.
+    let mut s = triggered(
+        near(),
+        vec![
+            trigger(combat_start(3, Some(2)), "3_and_2", true),
+            trigger(combat_start(3, Some(1)), "3_and_lord", true),
+        ],
+    );
+    assert_eq!(scenes(&act(&mut s, 1, p(1, 0), attack(3))), ["3_and_lord"]);
+    assert_eq!(scenes(&act(&mut s, 2, p(2, 1), attack(3))), ["3_and_2"]);
+}
+
+#[test]
 fn a_pairs_scene_plays_whoever_attacks_and_whoever_lists_it() {
     // Written as the lord's line against unit 3: unit 3 attacking the lord
     // plays it too, and not unit 3's general line.
