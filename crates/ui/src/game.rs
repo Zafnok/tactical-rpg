@@ -591,14 +591,19 @@ mod tests {
         stack.push(Box::new(BattleScreen::new(battle)));
         let mut game = Game::with_stack(c, stack);
         let mut music = Vec::new();
+        // The battle's sounds (0424) aside.
+        let music_of = |audio: &[AudioRequest]| {
+            let music = |r: &&AudioRequest| !matches!(r, AudioRequest::PlaySound { .. });
+            audio.iter().filter(music).cloned().collect::<Vec<_>>()
+        };
         // Select the lord, stay, Attack, the brigand, confirm the forecast.
         for key in [Key::F; 5] {
             let quit = game.frame(&[down(key)], 0.0).quit;
             assert!(!quit);
-            music.extend(game.frame(&[RawKeyEvent::Up(key)], 0.5).audio.to_vec());
+            music.extend(music_of(game.frame(&[RawKeyEvent::Up(key)], 0.5).audio));
         }
         for _ in 0..60 {
-            music.extend(game.frame(&[], 0.5).audio.to_vec());
+            music.extend(music_of(game.frame(&[], 0.5).audio));
         }
         assert!(music.is_empty(), "{music:?}");
         assert_eq!(game.screens(), ["title", "battle"]);

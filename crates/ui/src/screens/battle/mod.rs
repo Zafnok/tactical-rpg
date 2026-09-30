@@ -17,6 +17,7 @@ pub mod attack;
 pub mod banner;
 pub mod camera;
 pub mod cursor;
+pub mod event_sounds;
 pub mod forecast;
 pub mod info;
 pub mod items;
@@ -49,6 +50,7 @@ use self::banner::{Banner, BannerKind};
 use self::attack::Targeting;
 use self::camera::{Camera, tile_to_cell};
 use self::cursor::{Cursor, draw_cursor};
+use self::event_sounds::CueQueue;
 use self::layout::{
     HELP_BAR, HELP_ROW, MAP_VIEW, SIDE_PANEL, TILE_W_CELLS, VIEW_TILES_H, VIEW_TILES_W,
 };
@@ -355,6 +357,12 @@ pub struct BattleScreen {
     /// The EXP bar and level-up pages of the last command (0602), shown
     /// once its combat has played.
     progress: Option<Progress>,
+    /// Sounds of events that no playback or walk plays (0424), waiting
+    /// for their moment.
+    cues: CueQueue,
+    /// The unit whose walk was shown since the last command: its move's
+    /// steps have been heard.
+    walked: Option<UnitId>,
 }
 
 impl BattleScreen {
@@ -391,6 +399,8 @@ impl BattleScreen {
             tips: TipState::default(),
             popups: vec![],
             progress: None,
+            cues: CueQueue::default(),
+            walked: None,
         }
     }
 
@@ -684,6 +694,7 @@ impl BattleScreen {
     /// nothing.
     fn apply(&mut self, cmd: &Command) {
         let before = self.state.units().to_vec();
+        let walked = self.walked.take();
         // Refused: the battle is unchanged and the player browses again.
         let events = self.state.apply(cmd).ok();
         let playback = events
@@ -717,10 +728,39 @@ impl BattleScreen {
             self.end_armed = true;
             self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
         }
+        let playback = events.and_then(|events| {
+            let cues = event_sounds::event_cues(&events, walked, playback.is_some(), &self.state);
+            self.cues.extend(cues);
+            let attacks = event_sounds::combat_attacks(&events, &before, &self.state);
+            playback.map(|p| p.with_sounds(&attacks, event_sounds::heals(&events)))
+        });
         self.mode = match playback {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
         };
+    }
+
+    /// Plays this frame's sounds (0424): the combat playback's and the
+    /// walk's that the coming tick reaches, and the queued events' that
+    /// are due.
+    fn play_sounds(&mut self, ctx: &mut Ctx, input: &FrameInput) {
+        let held = input.is_held(Action::Confirm);
+        let mut due = match &self.mode {
+            Mode::Combat(playback) => playback.sounds(input.dt, held),
+            _ => Vec::new(),
+        };
+        if let Some((id, tiles)) = self.mode.tiles_entered(input.dt, held) {
+            self.walked = Some(id);
+            let step = self
+                .state
+                .unit(id)
+                .and_then(|u| event_sounds::unit_step_sound(&self.state, u));
+            due.extend(step.into_iter().cycle().take(tiles));
+        }
+        due.extend(self.cues.tick(input.dt));
+        for cue in due {
+            ctx.audio.play_sound(cue);
+        }
     }
 
     /// Applies `cmd`, which leaves the unit's action open (`Equip`), and
@@ -948,7 +988,13 @@ impl BattleScreen {
                 help_line(&[next, prev, cancel("close")])
             }
             Mode::Selected(sel) => {
-                if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
+                let aimed = sel
+                    .target
+                    .and_then(|t| self.state.unit(t))
+                    .is_some_and(|u| u.pos == self.cursor.pos);
+                if aimed {
+                    help_line(&[moves, confirm("attack"), cancel("cancel")])
+                } else if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
                     help_line(&[moves, confirm("move here"), cancel("cancel")])
                 } else {
                     help_line(&[moves, cancel("cancel")])
@@ -1432,8 +1478,18 @@ impl Screen for BattleScreen {
                 _ => self.step_mode(ctx, action),
             }
         }
+        self.play_sounds(ctx, input);
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        // A walk aimed at an enemy (0428) ends in its forecast: the cursor
+        // goes onto the target.
+        if let Mode::Targeting(t) = &self.mode
+            && let Some(at) = self.state.unit(t.target()).map(|u| u.pos)
+            && self.cursor.pos != at
+        {
+            self.cursor.jump(at);
+            self.follow(at);
+        }
         self.tick_progress(dt, input.is_held(Action::Confirm));
         let tip_up = self.shown_tip().is_some();
         if let Some(Queued::Banner(banner)) = self.queue.front_mut()
@@ -1683,6 +1739,9 @@ mod rewind_tests;
 
 #[cfg(test)]
 mod skill_tests;
+
+#[cfg(test)]
+mod sound_tests;
 
 #[cfg(test)]
 mod tip_tests;
