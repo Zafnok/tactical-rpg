@@ -101,15 +101,15 @@ and written down in [`docs/design/`](docs/design/README.md) and
 ## Roadmap
 
 ```mermaid
-flowchart LR
-    A["Engine & rules<br/>✅ mostly done"] --> B["Battle UI polish<br/>spells · enemy phase"]
+flowchart TD
+    A["✅ Engine & rules"] --> B["Battle UI polish<br/>spells · enemy phase"]
     A --> C["Story & art<br/>portraits · Chapter 1 script"]
     B --> D["Chapter 1<br/>map · flow · saves · results"]
     C --> D
     D --> E(["🎮 Nick plays Chapter 1"])
     E --> F["itch.io<br/>Windows + browser"]
-    F --> G["Steam"]
     E -.-> H["After Chapter 1<br/>world map · supports · more chapters"]
+    F --> G["Steam"]
 ```
 
 **Next: a complete, story-driven Chapter 1.** One battle (rout the enemy),
@@ -141,13 +141,12 @@ One unusual thing about this project: **Nick designs the game, Claude (an AI)
 writes the code**, and the tests are the code review.
 
 ```mermaid
-flowchart LR
-    N["Nick<br/>decides the design"] -->|"00xx decision tickets"| D["docs/design/"]
-    D --> T["tickets/open/"]
-    T -->|"one ticket = one PR"| C["Claude<br/>writes code + tests"]
-    C --> CI{"CI gates<br/>tests on 3 OSes · mutation<br/>coverage · security"}
-    CI -->|pass| M["main → Pages build"]
-    M -->|plays it| N
+flowchart TD
+    N["Nick decides the design"] -->|"00xx decision tickets"| T["docs/design/ → tickets/open/"]
+    T -->|"one ticket = one PR"| C["Claude writes code + tests"]
+    C --> CI{"CI gates: tests on 3 OSes,<br/>mutation, coverage, security"}
+    CI -->|pass| M["main → browser build"]
+    M -->|"Nick plays it"| N
 ```
 
 - **Rust**, rendered with [macroquad](https://macroquad.rs/) as a grid of
