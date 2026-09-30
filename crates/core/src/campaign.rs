@@ -29,9 +29,9 @@
 //!   2. Every deployed unit still in the roster (standing, or retreated in
 //!      Casual) gets the unused-charge bonus: [`UNUSED_CHARGE_PERCENT`]% of
 //!      one level's EXP ([`EXP_PER_LEVEL`]) per unused rewind charge, as one
-//!      award ([`grant_exp`]: at most [`MAX_AWARD`], level cap), in slot
-//!      order. Level ups roll on a copy of the battle's RNG, so the same
-//!      battle always gives the same result.
+//!      award ([`grant_exp`]: only the level cap limits it; no 100-EXP cap,
+//!      Nick), in slot order. Level ups roll on a copy of the battle's RNG,
+//!      so the same battle always gives the same result.
 //!   3. The battle's recruits ([`BattleState::recruited`]) join the roster,
 //!      as player units.
 //!   4. The stock becomes the battle's (with what was bought or found),
@@ -62,7 +62,7 @@ use crate::geom::Pos;
 use crate::item::{BattlePack, ItemId, ItemTable, Stock};
 use crate::lead::{LEAD_ID, LeadProfile};
 use crate::map::BattleMap;
-use crate::progression::{EXP_PER_LEVEL, MAX_AWARD, grant_exp};
+use crate::progression::{EXP_PER_LEVEL, grant_exp};
 use crate::shop::Gold;
 use crate::skill::SkillTable;
 use crate::spell::SpellTable;
@@ -341,7 +341,7 @@ impl Campaign {
         }
         deployed.sort_by_key(|u| u.id);
         let per_charge = EXP_PER_LEVEL * UNUSED_CHARGE_PERCENT / 100;
-        rewards.bonus_exp = (per_charge * u32::from(unused_charges)).min(MAX_AWARD);
+        rewards.bonus_exp = per_charge * u32::from(unused_charges);
         let mut rng = state.rng().clone();
         for mut u in deployed {
             let events = grant_exp(&mut u, rewards.bonus_exp, state.classes(), &mut rng);

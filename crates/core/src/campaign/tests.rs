@@ -327,13 +327,17 @@ fn unused_charges_give_exp_to_every_deployed_unit() {
     }
 }
 
+/// No cap on the bonus (Nick): past a level, the rest carries over.
 #[test]
-fn the_bonus_is_one_award_of_at_most_a_level() {
+fn the_bonus_is_one_award_with_no_cap() {
     let mut game = campaign(GameMode::Casual);
     let def = def();
     let s = won(&game, &def);
+    let lord = s.unit(UnitId(1)).unwrap().clone();
     let rewards = game.apply_result(&def, &s, 20).unwrap();
-    assert_eq!(rewards.bonus_exp, MAX_AWARD);
+    assert_eq!(rewards.bonus_exp, 140);
+    let total = |u: &Unit| u.level * EXP_PER_LEVEL + u.exp;
+    assert_eq!(total(&game.roster[0]), total(&lord) + 140);
 }
 
 #[test]

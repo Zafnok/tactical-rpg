@@ -181,18 +181,20 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 - Added `reinforcements:` to the battle format (the Quick Battle has one).
 - `apply_result(def, state, unused_charges)`: the charges left live in the
   battle's rewind history, and the clear gold in the battle file.
-- Game Over says `Retry` (the design doc's word) rather than `Retry chapter`;
-  it restarts the battle, as the design says.
+- Game Over says `Retry Battle` (Nick, PR #127: later chapters hold
+  several battles); it restarts the battle, as the design says.
 - The name grid's space cell reads `Blank`: the key checker refuses the word
   "Space" in UI text.
 - Playtime is counted (`Ctx::clock_s`), ready for 0802's slots.
 
-**Claude's starting rules (Nick can veto)**
+**Claude's starting rules** (Nick's answers on PR #127 are in
+`death-and-difficulty.md`: 1 and 3 agreed, 2 changed, 7 → `Retry Battle`,
+8 fine with a credits screen later, 0808; 4-6 explained on the PR)
 
 1. After a won battle, every unit is back at full HP for the next one, not
    only Casual retreats (as in Fire Emblem).
-2. The unused-rewind bonus is one EXP award per deployed unit (7 per
-   charge, at most one level), so it can level a unit up.
+2. ~~The unused-rewind bonus is capped at one level.~~ Nick (PR #127): no
+   cap; one award of 7 per charge, overflow into the next level is fine.
 3. A unit that dies in Classic sends its whole loadout to the stock:
    weapons (keeping their wear), armour and accessory.
 4. A battle without Preparations gives its default pack for free (Chapter 1:

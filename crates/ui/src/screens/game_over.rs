@@ -1,5 +1,5 @@
 //! The screens after a battle's end (ticket 0801): Game Over after a
-//! defeat (`Retry` / `Title`, `docs/design/death-and-difficulty.md`) and
+//! defeat (`Retry Battle` / `Title`, `docs/design/death-and-difficulty.md`) and
 //! "To be continued" after the last chapter there is.
 
 use super::print_centred;
@@ -13,7 +13,7 @@ use crate::widgets::{Menu, MenuEvent, MenuItem};
 /// Game Over's heading.
 pub const GAME_OVER: &str = "GAME OVER";
 /// Game Over's items.
-const RETRY: &str = "Retry";
+const RETRY: &str = "Retry Battle";
 /// Back to the title.
 const TITLE: &str = "Title";
 /// The last chapter's closing words.
@@ -49,7 +49,7 @@ fn draw_help(ctx: &Ctx, buf: &mut GlyphBuffer, help: &str) {
     print_centred(buf, bottom, help, c(UiColor::TextDim), c(UiColor::Black));
 }
 
-/// `GAME OVER` and a `Retry` / `Title` menu. Pops once one is chosen
+/// `GAME OVER` and a `Retry Battle` / `Title` menu. Pops once one is chosen
 /// ([`result`](Self::result)); there is nothing to back out of.
 #[derive(Debug, Clone)]
 pub struct GameOverScreen {
@@ -61,7 +61,7 @@ impl GameOverScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "game_over";
 
-    /// The screen with `Retry` focused.
+    /// The screen with `Retry Battle` focused.
     pub fn new() -> Self {
         let items = [RETRY, TITLE].map(MenuItem::new).to_vec();
         Self {
