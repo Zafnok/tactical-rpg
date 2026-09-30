@@ -1891,4 +1891,25 @@ mod tests {
         assert_eq!(effect, Effect::None);
         assert!(matches!(mode, Mode::ActionMenu { .. }), "{mode:?}");
     }
+
+    #[test]
+    fn the_forecast_opens_on_the_aimed_enemy_even_when_it_is_not_the_first_target() {
+        let s = skirmish(&ctx(), 20);
+        // From (7, 2) the raider (7, 1) comes first in (y, x) order; aim at
+        // the brigand (8, 2) instead.
+        let mut start = pick(&s, p(6, 2));
+        start.steer(p(7, 2), &s);
+        let sel = aim(start, p(8, 2), &s);
+        let (mode, _) = step(Mode::Selected(sel), Action::Confirm, p(8, 2), &s);
+        let walked = mode.tick(1.0, false, &s);
+        let Mode::WeaponMenu { weapons, .. } = &walked else {
+            panic!("{walked:?}");
+        };
+        assert!(weapons.iter().all(|c| c.targets[0] == UnitId(4)));
+        let (targeting, _) = step(walked, Action::Confirm, p(8, 2), &s);
+        let Mode::Targeting(t) = &targeting else {
+            panic!("{targeting:?}");
+        };
+        assert_eq!(t.target(), UnitId(4));
+    }
 }
