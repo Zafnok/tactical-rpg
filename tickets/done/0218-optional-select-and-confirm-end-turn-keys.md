@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0217"]
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0218 — Optional Select and Confirm end turn keys
@@ -81,19 +81,19 @@ None. (Nick signs off on the split behaviour when playing 0815.)
 
 ## Acceptance criteria
 
-- [ ] With default keys, every existing battle Harness test and snapshot
+- [x] With default keys, every existing battle Harness test and snapshot
       passes unchanged.
-- [ ] With `Select` bound to `g` (via `Ctx::set_layout_bindings`): `g`
+- [x] With `Select` bound to `g` (via `Ctx::set_layout_bindings`): `g`
       selects a unit and picks its tile; `f` does not select on the map but
       still picks from the action menu and accepts the forecast (Harness
       test).
-- [ ] With `ConfirmEndTurn` bound to `Enter`: `Space` opens the prompt,
+- [x] With `ConfirmEndTurn` bound to `Enter`: `Space` opens the prompt,
       `Space` again does nothing, `Enter` ends the turn, `f` also ends it,
       `d` backs out (Harness test).
-- [ ] Help bar and the three tips show `g` when Select is bound and `f`
+- [x] Help bar and the three tips show `g` when Select is bound and `f`
       when it isn't (tests).
-- [ ] `cargo xtask check-keys` passes.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `cargo xtask check-keys` passes.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -101,3 +101,40 @@ None. (Nick signs off on the split behaviour when playing 0815.)
 - Integration: Harness scripts above; existing snapshots unchanged.
 
 ## Completion notes
+
+- `Action::Select` and `Action::ConfirmEndTurn` added (optional, `[]` in
+  both layouts of `keymap.ron`, pinned by a test).
+- `Keymap::select_action` and `Keymap::end_turn_accept_actions` in
+  `crates/ui/src/input.rs`, unit-tested both ways.
+- **Deviation (mechanism, not behaviour):** instead of rewriting each
+  `Action::Confirm` arm in `mode.rs`, the battle screen routes a key before
+  the mode sees it: `Mode::route` (`mode.rs`), called at the top of
+  `BattleScreen::step_mode`. In map-pick modes it turns
+  `select_action()` into Confirm and drops Confirm once Select has a key; in
+  the end-turn prompt it turns any of `end_turn_accept_actions()` into
+  Confirm and drops End turn once Confirm end turn has a key. `mode::step`
+  and its unit tests are unchanged, and menu sounds stay the same.
+- Sites that now follow Select (`Mode::picks_on_map`): browsing (select a
+  ready unit, show an enemy's range, open the map menu on an empty tile),
+  a selected unit (attack an aimed-at enemy, move to its tile), moving after
+  an attack (stay / move here), and the skill, item and talk target pickers.
+  Kept on Confirm: every menu, the objective and info screens, the attack
+  forecast (`Targeting`), the walk skip, combat, tips, banners, EXP/level-up,
+  rewind, hold-to-fast-forward, dialogue.
+- Help bars: map-pick hints (`select`, `range`, `menu`, `attack`, `move
+  here`, `stay`, `use`, `talk` in the target pickers) name
+  `select_action()`; the end-turn prompt's help shows both accept keys
+  (`Space yes · f yes · d no` by default, `Enter yes · f yes · d no` with
+  Confirm end turn on Enter). The prompt box's own `f yes / d no` is
+  unchanged (Confirm still accepts).
+- Tips: new `{Select}` placeholder (Confirm's key while Select has no
+  key), used by `battle_start`, `unit_selected` and `danger_zone`.
+- Tests: `crates/ui/tests/split_keys.rs` (Harness), `Mode::route` unit test,
+  `{Select}` and shipped-tip tests in `tips.rs`. No existing snapshot or
+  test changed.
+
+*Claude's starting rules (reading of "on the map", already flagged in
+controls.md):* the skill, item and talk target pickers count as picking on
+the map (Select), but the attack target picker counts as the forecast
+(Confirm), because it shows the forecast panel. The Select key does nothing
+in menus, and Confirm end turn does nothing outside the prompt.

@@ -866,9 +866,13 @@ impl BattleScreen {
         }
     }
 
-    /// Gives `action` to the mode ([`mode::step`]), plays its menu sound
-    /// and carries out its effect.
+    /// Gives `action` to the mode ([`mode::step`], after [`Mode::route`]
+    /// applies the optional split keys), plays its menu sound and carries
+    /// out its effect.
     fn step_mode(&mut self, ctx: &mut Ctx, action: Action) {
+        let Some(action) = self.mode.route(action, &ctx.keymap) else {
+            return;
+        };
         let before = self.mode.clone();
         let mode = std::mem::take(&mut self.mode);
         let (mode, effect) = mode::step(mode, action, self.cursor.pos, &self.state);
@@ -962,6 +966,7 @@ impl BattleScreen {
         let km = &ctx.keymap;
         let keys = Some(cursor_keys_name(km));
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
+        let select = |label| (Some(key_name(km, km.select_action())), label);
         let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
         if let Some(r) = &self.rewind {
             return rewind_help(r, ctx);
@@ -983,8 +988,9 @@ impl BattleScreen {
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::EndTurnPrompt { .. } => {
-                let space = (Some(key_name(km, Action::EndTurn)), "yes");
-                help_line(&[space, confirm("yes"), cancel("no")])
+                let [accept, also] = km.end_turn_accept_actions();
+                let yes = |a| (Some(key_name(km, a)), "yes");
+                help_line(&[yes(accept), yes(also), cancel("no")])
             }
             Mode::Info { .. } => {
                 let prev = (Some(key_name(km, Action::PrevUnit)), "previous");
@@ -996,9 +1002,9 @@ impl BattleScreen {
                     .and_then(|t| self.state.unit(t))
                     .is_some_and(|u| u.pos == self.cursor.pos);
                 if aimed {
-                    help_line(&[moves, confirm("attack"), cancel("cancel")])
+                    help_line(&[moves, select("attack"), cancel("cancel")])
                 } else if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
-                    help_line(&[moves, confirm("move here"), cancel("cancel")])
+                    help_line(&[moves, select("move here"), cancel("cancel")])
                 } else {
                     help_line(&[moves, cancel("cancel")])
                 }
@@ -1016,10 +1022,10 @@ impl BattleScreen {
                 help_line(&[(keys, "choose"), confirm("equip"), cancel("back")])
             }
             Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
-                help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
+                help_line(&[(keys, "next target"), select("use"), cancel("back")])
             }
             Mode::TalkTarget { .. } => {
-                help_line(&[(keys, "next target"), confirm("talk"), cancel("back")])
+                help_line(&[(keys, "next target"), select("talk"), cancel("back")])
             }
             Mode::Targeting(t) => Self::help_targeting(ctx, t),
             Mode::Combat(_) => {
@@ -1029,9 +1035,9 @@ impl BattleScreen {
             Mode::MoveAfter { unit, tiles } => {
                 let here = self.state.unit(*unit).map(|u| u.pos);
                 if here == Some(self.cursor.pos) {
-                    help_line(&[moves, confirm("stay")])
+                    help_line(&[moves, select("stay")])
                 } else if tiles.contains(&self.cursor.pos) {
-                    help_line(&[moves, confirm("move here")])
+                    help_line(&[moves, select("move here")])
                 } else {
                     help_line(&[moves])
                 }
@@ -1065,7 +1071,7 @@ impl BattleScreen {
         back: (Option<String>, &str),
     ) -> String {
         let km = &ctx.keymap;
-        let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
+        let select = |label| (Some(key_name(km, km.select_action())), label);
         let next = (Some(key_name(km, Action::NextUnit)), "next unit");
         let moves = (Some(cursor_keys_name(km)), "move");
         let end = (Some(key_name(km, Action::EndTurn)), "end turn");
@@ -1075,13 +1081,13 @@ impl BattleScreen {
         );
         match self.hovered() {
             Some(u) if self.is_ready(u) && u.faction == Faction::Player => {
-                help_line(&[confirm("select"), info, next, rewind, back, end])
+                help_line(&[select("select"), info, next, rewind, back, end])
             }
             Some(u) if u.faction != Faction::Player => {
-                help_line(&[moves, confirm("range"), info, next, rewind, back, end])
+                help_line(&[moves, select("range"), info, next, rewind, back, end])
             }
             Some(_) => help_line(&[moves, info, next, rewind, back, end]),
-            None => help_line(&[moves, confirm("menu"), next, rewind, back, end]),
+            None => help_line(&[moves, select("menu"), next, rewind, back, end]),
         }
     }
 

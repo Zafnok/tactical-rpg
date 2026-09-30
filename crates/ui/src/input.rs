@@ -149,6 +149,29 @@ impl Keymap {
     pub fn primary(&self, action: Action) -> Option<Chord> {
         self.chords_for(action).into_iter().next()
     }
+
+    /// The action that picks on the map with the cursor (a unit, its tile,
+    /// a target): [`Action::Select`] once it has a key, else
+    /// [`Action::Confirm`] (`docs/design/controls.md`, *Optional split
+    /// keys*).
+    pub fn select_action(&self) -> Action {
+        if self.primary(Action::Select).is_some() {
+            Action::Select
+        } else {
+            Action::Confirm
+        }
+    }
+
+    /// The actions that accept the end-turn prompt, the one help text names
+    /// first: [`Action::ConfirmEndTurn`] and Confirm once it has a key,
+    /// else End turn (pressed again) and Confirm.
+    pub fn end_turn_accept_actions(&self) -> [Action; 2] {
+        if self.primary(Action::ConfirmEndTurn).is_some() {
+            [Action::ConfirmEndTurn, Action::Confirm]
+        } else {
+            [Action::EndTurn, Action::Confirm]
+        }
+    }
 }
 
 /// The repeat currently running for the most recently pressed repeatable key.
@@ -332,6 +355,25 @@ mod tests {
     /// Seconds for `ms` milliseconds.
     fn ms(ms: u32) -> f32 {
         Duration::from_millis(u64::from(ms)).as_secs_f32()
+    }
+
+    #[test]
+    fn select_falls_back_to_confirm_until_it_has_a_key() {
+        let km = test_keymap(170, 55);
+        assert_eq!(km.select_action(), Confirm);
+        let bound = Keymap::new([(chord("g"), Action::Select)], km.repeat());
+        assert_eq!(bound.select_action(), Action::Select);
+    }
+
+    #[test]
+    fn end_turn_is_accepted_by_end_turn_until_confirm_end_turn_has_a_key() {
+        let km = test_keymap(170, 55);
+        assert_eq!(km.end_turn_accept_actions(), [Action::EndTurn, Confirm]);
+        let bound = Keymap::new([(chord("Enter"), Action::ConfirmEndTurn)], km.repeat());
+        assert_eq!(
+            bound.end_turn_accept_actions(),
+            [Action::ConfirmEndTurn, Confirm]
+        );
     }
 
     #[test]
