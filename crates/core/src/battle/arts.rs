@@ -110,7 +110,7 @@ impl BattleState {
             slot,
             weapon: copy.def.clone(),
             cost: def.cost,
-            durability: (before, before - def.cost),
+            durability: (before, before.saturating_sub(def.cost)),
             effect: def.effect.clone(),
         })
     }
@@ -234,7 +234,7 @@ impl BattleState {
                 return None;
             };
             let left = self.unit(unit)?.loadout.weapon(*slot)?.durability_left;
-            Some((left, left - cost))
+            Some((left, left.saturating_sub(cost)))
         });
         let hp = |id| {
             self.unit(id)

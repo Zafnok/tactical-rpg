@@ -199,13 +199,6 @@ fn an_active_is_refused_when_it_cant_be_used_or_paid() {
     let refuse = |s: &mut BattleState, id, dest, action, err| refused_act(s, id, dest, action, err);
     refuse(
         &mut s,
-        1,
-        p(1, 0),
-        attack_with(3, "keen"),
-        cannot_pay("keen", CostError::NotEnoughDurability { left: 2, cost: 3 }),
-    );
-    refuse(
-        &mut s,
         2,
         p(1, 2),
         attack_with(4, "keen"),
@@ -284,6 +277,26 @@ fn a_weapon_brought_to_zero_breaks_after_the_combat() {
             item: weapon(1, 1, 3),
         }
     );
+    assert_eq!(durability(&s, 1), 0);
+}
+
+#[test]
+fn an_active_costing_more_than_is_left_spends_the_rest_and_breaks_the_weapon() {
+    // Keen Edge costs 3; the weapon has 2 left (Nick, 0414 review).
+    let mut s = start(setup(vec![
+        with_skill(wielding(lord(1, p(0, 0)), weapon(1, 1, 3), 2), "keen"),
+        unit(3, Faction::Enemy, p(2, 0)),
+    ]));
+    let events = act(&mut s, 1, p(1, 0), attack_with(3, "keen"));
+    assert!(!combat(&events).attacker.broken);
+    assert!(events.contains(&Event::DurabilitySpent {
+        unit: UnitId(1),
+        slot: 0,
+        item: weapon(1, 1, 3),
+        amount: 2,
+        left: 0,
+    }));
+    assert!(names(&events).iter().any(|n| n == "ItemBroke"));
     assert_eq!(durability(&s, 1), 0);
 }
 
@@ -866,13 +879,6 @@ fn non_combat_actives_need_an_equipped_weapon_and_are_actions() {
         p(0, 2),
         use_skill("keen", None),
         CommandError::WrongSkillKind(sk("keen")),
-    );
-    refused_act(
-        &mut s,
-        4,
-        p(0, 4),
-        use_skill("brace", None),
-        cannot_pay("brace", CostError::NotEnoughDurability { left: 2, cost: 3 }),
     );
     refused_act(
         &mut s,

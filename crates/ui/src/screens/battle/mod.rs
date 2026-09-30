@@ -10,6 +10,7 @@
 //! (0307). One-time [`tips`] pop up over it the first time something new
 //! happens (0406).
 
+pub mod art_list;
 pub mod attack;
 pub mod banner;
 pub mod camera;
@@ -544,7 +545,9 @@ impl BattleScreen {
             self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
         }
         let playback = events.and_then(|events| {
-            let playback = Playback::new(&events, &before, self.state.fallen(), TIMINGS);
+            let banner = art_list::playback_banner(&self.state, &events, &before);
+            let playback = Playback::new(&events, &before, self.state.fallen(), TIMINGS)
+                .map(|p| p.with_banner(banner));
             let cues = event_sounds::event_cues(&events, walked, playback.is_some(), &self.state);
             self.cues.extend(cues);
             let attacks = event_sounds::combat_attacks(&events, &before, &self.state);
@@ -834,7 +837,7 @@ impl BattleScreen {
             Mode::ItemTarget(_) | Mode::SkillTarget(_) => {
                 help_line(&[(keys, "next target"), confirm("use"), cancel("back")])
             }
-            Mode::Targeting(t) => self.help_targeting(ctx, t),
+            Mode::Targeting(t) => Self::help_targeting(ctx, t),
             Mode::Combat(_) => {
                 let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
                 help_line(&[cancel("skip"), (hold, "fast")])
@@ -853,18 +856,18 @@ impl BattleScreen {
     }
 
     /// The help line while picking an attack's target: left/right pick the
-    /// target and up/down the combat active, if the unit has any.
-    fn help_targeting(&self, ctx: &Ctx, t: &Targeting) -> String {
+    /// target and up/down the line of the arts list, if it is shown (0414).
+    fn help_targeting(ctx: &Ctx, t: &Targeting) -> String {
         let km = &ctx.keymap;
         let confirm = (key_name(km, Action::Confirm), "attack");
         let cancel = (key_name(km, Action::Cancel), "back");
-        if t.actives(&self.state).is_empty() {
+        if !t.has_list() {
             return help_line(&[(cursor_keys_name(km), "next target"), confirm, cancel]);
         }
         let pair = |a, b| Some(format!("{}/{}", key_name(km, a)?, key_name(km, b)?));
         help_line(&[
             (pair(Action::CursorLeft, Action::CursorRight), "target"),
-            (pair(Action::CursorUp, Action::CursorDown), "skill"),
+            (pair(Action::CursorUp, Action::CursorDown), "art"),
             confirm,
             cancel,
         ])
@@ -1037,6 +1040,15 @@ impl BattleScreen {
     /// Draws the action menu or the weapon list beside its unit, or the
     /// map menu beside the cursor, if open.
     fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        if let Mode::Targeting(t) = &self.mode {
+            // The arts list, beside the forecast panel (0414).
+            if t.has_list() {
+                let unit_y = tile_to_cell(t.sel.dest(), &self.camera).map_or(0, |(_, y)| y);
+                let weapon = (t.sel.unit, t.slot);
+                art_list::draw_list(buf, &ctx.palette, &self.state, weapon, &t.list, unit_y);
+            }
+            return;
+        }
         let (tile, menu) = match &self.mode {
             Mode::ActionMenu { sel, menu, .. }
             | Mode::WeaponMenu { sel, menu, .. }
@@ -1507,6 +1519,8 @@ pub(crate) mod testing {
     }
 }
 
+#[cfg(test)]
+mod art_tests;
 #[cfg(test)]
 mod attack_tests;
 

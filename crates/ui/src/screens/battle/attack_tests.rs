@@ -125,15 +125,16 @@ fn attack_offers_the_weapons_that_reach_then_cycles_targets_in_order() {
     assert_eq!(help(&h), "arrows choose · f confirm · d back");
     // Targets in (y, x) order: the raider at (7, 1), then the brigand.
     h.keys("f");
-    assert_eq!(help(&h), "arrows next target · f attack · d back");
+    assert_eq!(
+        help(&h),
+        "Left/Right target · Up/Down art · f attack · d back"
+    );
     assert_eq!(panel(&h, 2), "Test Lord     Raider");
     assert_eq!(panel(&h, 3), "Iron Sword    Steel Axe");
     for (keys, target) in [
         ("Right", "Brigand"),
         ("Right", "Raider"),
         ("Left", "Brigand"),
-        ("Down", "Raider"),
-        ("Up", "Brigand"),
         ("s", "Raider"),
         ("a", "Brigand"),
     ] {
@@ -216,10 +217,10 @@ fn forecast_with_no_counter_and_a_kill_snapshot() {
     h.keys("Right Right Down Down f f f");
     assert_eq!(panel(&h, 2), "Test Archer   Brigand");
     assert_eq!(text(&h, RIGHT_X + 2, STRIKE_ROW, 10), "no counter");
-    // The archer's Vault is a combat active: up/down pick it.
+    // The archer's arts and Vault: up/down pick one in the list.
     assert_eq!(
         help(&h),
-        "Left/Right target · Up/Down skill · f attack · d back"
+        "Left/Right target · Up/Down art · f attack · d back"
     );
     assert_snapshot!(h.snapshot());
 }
@@ -350,7 +351,10 @@ fn pointing_at_an_enemy_walks_there_and_opens_its_forecast() {
     h.keys("f").wait(0.5);
     assert_eq!(help(&h), "arrows choose · f confirm · d back");
     h.keys("f");
-    assert_eq!(help(&h), "arrows next target · f attack · d back");
+    assert_eq!(
+        help(&h),
+        "Left/Right target · Up/Down art · f attack · d back"
+    );
     assert_eq!(panel(&h, 2), "Test Lord     Raider");
     // Cancel goes back through the list and the menu to the path, the
     // cursor on the lord's tile.

@@ -1,13 +1,13 @@
 ---
-source: crates/ui/src/screens/battle/attack_tests.rs
-expression: h.snapshot()
+source: crates/ui/src/screens/battle/art_tests.rs
+expression: buf.to_snapshot(&c.palette)
 ---
                                     ┌─ Iron Bow 20/20 ───────────────┐╔═════════ Forecast ═════════╗
-                                    │ Attack                         │║                            ║
+                                    │ Attack                         │║ Pinning Shot (20 → 17)     ║
                                     │ Close Shot      −2 dur  E      │║ Test Archer   Brigand      ║
                                     │ Pinning Shot    −3 dur  D      │║ Iron Bow      Iron Axe     ║
                                     │ Vault           −1 dur  active │║ 20/20         20/20        ║
-                                    └────────────────────────────────┘║ HP 17 █████   HP 12 ▒▒▒░░  ║
+                                    └────────────────────────────────┘║ HP 17 █████   HP 20 █▒▒▒▒  ║
                                                                       ║ Hit  91       Hit  --      ║
                                                                       ║ Crit 3        Crit --      ║
                                                                       ║                            ║
@@ -17,7 +17,7 @@ expression: h.snapshot()
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║ ────────────────────────── ║
                     ≈≈≈≈≈≈====··Lo··Br..♣♣♣♣....                      ║ 16 ×2     Total            ║
                     ..≈≈≈≈..··..............╦╦..                      ║                            ║
-                    ....······....BrAr▓▓▓▓▓▓▓▓..                      ║                            ║
+                    ....······....BrAr▓▓▓▓▓▓▓▓..                      ║ pins: Mov −3               ║
                     ..♣♣··....╦╦......▓▓░░╦╦▓▓..                      ║                            ║
                     ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
                     ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
@@ -36,11 +36,11 @@ expression: h.snapshot()
  Left/Right target · Up/Down art · f attack · d back                                       F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbccccccccccddddddbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdfffffffffffdddgggggggddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdhhhhhhhhddddddhhhhhhhhdddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdccccccccccccccccccccccdddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdeeeeeeeeeeedddfffffffddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabggggggggggggggggggggggggggggggggbbdhhhhhhhhddddddhhhhhhhhdddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdhhhhhdddddddddhhhhhddddddddb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdhhddddiiiiidddhhddddjjjhhddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdhhddddiiiiidddhhddddjjjjjddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhdddddddddddhhhddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhhddddddddddhhhhdddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
@@ -50,10 +50,10 @@ aaaaaaaaaaaaaaaaaaaakkkkkkllllmmmmnnnnooooppppqqaaaaaaaaaaaaaaaaaaaaaabddddddddd
 aaaaaaaaaaaaaaaaaaaakkkkllllmmmmrrssrrnnnnppppppaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
 aaaaaaaaaaaaaaaaaaaakkllllttttrruurrvvmmnnnnmmmmaaaaaaaaaaaaaaaaaaaaaabdddddddddddhhhhhddddddddddddb
 aaaaaaaaaaaaaaaaaaaammllllmmrrmmmmmmmmmmmmmmwwmmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaammmmrrrrrrmmmmvvxxyyyyyyyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaammnnrrmmmmwwmmmmmmyyzzwwyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaannnnrrmmxxmmmmmmmmyyzzzzyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaannoorrmmmmmmmmmmmmyyyyAAyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammmmrrrrrrmmmmvvxxyyyyyyyymmaaaaaaaaaaaaaaaaaaaaaabdzzzzzzzzzzzzdddddddddddddddb
+aaaaaaaaaaaaaaaaaaaammnnrrmmmmwwmmmmmmyyAAwwyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaannnnrrmmxxmmmmmmmmyyAAAAyymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaannoorrmmmmmmmmmmmmyyyyBByymmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
@@ -65,16 +65,16 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddd
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBa
-aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCa
+aCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaCCCCCCCCa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
 c = fg:text_highlight bg:panel_bg
 d = fg:text bg:panel_bg
-e = fg:panel_bg bg:panel_border_focus
-f = fg:player bg:panel_bg
-g = fg:enemy bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:enemy bg:panel_bg
+g = fg:panel_bg bg:panel_border_focus
 h = fg:text_dim bg:panel_bg
 i = fg:hp_high bg:panel_bg
 j = fg:hp_low bg:panel_bg
@@ -93,15 +93,15 @@ v = fg:enemy bg:#4c271c
 w = fg:fort bg:fort_bg
 x = fg:player bg:grass_bg
 y = fg:stone bg:stone_bg
-z = fg:floor bg:floor_bg
-A = fg:wood bg:stone_bg
-B = fg:text_dim bg:black
+z = fg:effect bg:panel_bg
+A = fg:floor bg:floor_bg
+B = fg:wood bg:stone_bg
+C = fg:text_dim bg:black
 --- overlays ---
 over  256,222 16x2  hp_high
 over  224,286 16x2  hp_high
 over  288,254 16x2  hp_high
-over  288,222 10x2  hp_mid
-over  298,222 6x2  black
+over  288,222 16x2  hp_high
 over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
 over  287,208 3x1  cursor
@@ -112,19 +112,3 @@ over  287,221 3x1  cursor
 over  287,219 1x3  cursor
 over  301,221 3x1  cursor
 over  303,219 1x3  cursor
-over  634,180 4x1  hp_low
-over  633,181 6x1  hp_low
-over  632,182 8x1  hp_low
-over  632,183 1x1  hp_low
-over  635,183 2x1  hp_low
-over  639,183 1x1  hp_low
-over  632,184 1x1  hp_low
-over  635,184 2x1  hp_low
-over  639,184 1x1  hp_low
-over  632,185 3x1  hp_low
-over  637,185 3x1  hp_low
-over  633,186 6x1  hp_low
-over  633,187 1x1  hp_low
-over  635,187 2x1  hp_low
-over  638,187 1x1  hp_low
-over  634,188 4x1  hp_low

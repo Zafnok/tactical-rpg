@@ -7,6 +7,7 @@
 use trpg_core::skill::effect_bonuses;
 use trpg_core::{BattleState, EffectSource, StatKind, Stats, TimedEffect, Unit, WEAPON_SLOTS};
 
+use super::art_list::durability_text;
 use super::layout::MAP_VIEW;
 use super::skills::{cost_text, effect_text, skill_cost, skill_name, timed_text, until_text};
 use super::units::{faction_color, hp_fill};
@@ -306,8 +307,8 @@ fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     }
 }
 
-/// The three weapon slots (the equipped one marked `E`), armour, accessory
-/// and spells with uses left.
+/// The three weapon slots (the equipped one marked `E`, durability `20/20`
+/// or `broken`), armour, accessory and spells with uses left.
 fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let x = RIGHT_X;
     let items = state.items();
@@ -332,7 +333,11 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
                 };
                 pen.text(x, y, mark, UiColor::TextHighlight);
                 pen.cut(x + 2, y, &def.name, 28, color);
-                let dur = format!("{:>2}/{}", inst.durability_left, def.durability);
+                let dur = if inst.is_broken() {
+                    durability_text(0, def.durability)
+                } else {
+                    format!("{:>2}/{}", inst.durability_left, def.durability)
+                };
                 let dw = i32::try_from(dur.len()).unwrap_or(0);
                 let right = x + i32::try_from(RIGHT_W).unwrap_or(0);
                 pen.text(right - dw, y, &dur, color);

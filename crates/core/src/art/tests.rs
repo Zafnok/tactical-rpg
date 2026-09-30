@@ -354,7 +354,7 @@ fn known_arts_follow_recorded_ranks_only() {
 }
 
 #[test]
-fn only_affordable_arts_are_usable() {
+fn every_art_is_usable_until_the_weapon_breaks() {
     let mut u = swordsman(WeaponRank::D, &["sword"]);
     assert_eq!(usable(&u, 0), ["cut", "break"]);
     let set = |u: &mut Unit, left| {
@@ -362,14 +362,11 @@ fn only_affordable_arts_are_usable() {
             w.durability_left = left;
         }
     };
-    set(&mut u, 4);
-    assert_eq!(usable(&u, 0), ["cut", "break"]);
-    set(&mut u, 3);
-    assert_eq!(usable(&u, 0), ["cut"]);
-    set(&mut u, 2);
-    assert_eq!(usable(&u, 0), ["cut"]);
-    set(&mut u, 1);
-    assert_eq!(usable(&u, 0), Vec::<String>::new());
+    // Less left than the cost is fine: the rest is spent (Nick, 0414).
+    for left in [4, 3, 1] {
+        set(&mut u, left);
+        assert_eq!(usable(&u, 0), ["cut", "break"], "{left}");
+    }
     // Broken: none, though every art is still for this weapon.
     set(&mut u, 0);
     assert_eq!(usable(&u, 0), Vec::<String>::new());

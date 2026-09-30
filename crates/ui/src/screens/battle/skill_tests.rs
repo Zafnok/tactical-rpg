@@ -1,14 +1,12 @@
 //! Tests of skills in the battle UI (ticket 0412): the skills block and the
-//! timed effects on the info screen, the combat active cycled in the attack
-//! forecast, the `Skill` menu with its target mode, and the marker on a unit
-//! under an effect. The numbers are always `core`'s.
+//! timed effects on the info screen, the `Skill` menu with its target mode,
+//! and the marker on a unit under an effect (combat actives in the attack
+//! flow: `art_tests.rs`). The numbers are always `core`'s.
 
 use insta::assert_snapshot;
 use trpg_core::{BattleState, Command, Objective, Pos, SkillId, UnitAction, UnitId};
 
 use super::BattleScreen;
-use super::attack::attack_with;
-use super::forecast::{HP_ROW, LEFT_X, SKILL_ROW};
 use super::mode::{MenuEntry, Mode};
 use super::testing::{battle_with, quick_units};
 use super::units::EFFECT_BLEND;
@@ -48,11 +46,6 @@ fn text(buf: &GlyphBuffer, x: i32, y: i32, w: i32) -> String {
         .to_owned()
 }
 
-/// The side panel's row `y`, inside its border.
-fn panel(buf: &GlyphBuffer, y: i32) -> String {
-    text(buf, 71, y, 28).trim().to_owned()
-}
-
 /// The Quick Battle's units on a rout battle, `edit` applied to them first.
 fn battle(c: &Ctx, edit: impl FnOnce(&mut Vec<trpg_core::Unit>)) -> BattleState {
     let (map, mut units) = quick_units(c);
@@ -90,22 +83,6 @@ fn lord_menu(c: &mut Ctx, state: BattleState) -> BattleScreen {
         "{:?}",
         s.mode()
     );
-    s
-}
-
-/// The lord targeting the brigand (unit 4) with its iron sword.
-fn lord_on_brigand(c: &mut Ctx, state: BattleState) -> BattleScreen {
-    let mut s = lord_menu(c, state);
-    // Attack, then the iron sword; the raider is first, the brigand next.
-    step(
-        &mut s,
-        c,
-        &[Action::Confirm, Action::Confirm, Action::CursorRight],
-    );
-    let Mode::Targeting(t) = s.mode() else {
-        panic!("{:?}", s.mode());
-    };
-    assert_eq!(t.target(), UnitId(4));
     s
 }
 
@@ -214,11 +191,12 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
 #[test]
 fn a_skill_menu_entry_needs_a_usable_non_combat_active() {
     let mut c = ctx();
-    // The Guard's Brace, weapon at 3: it can be paid (3 dur).
-    let s = knight_menu(&mut c, 3);
+    // The Guard's Brace (3 dur), weapon at 2: usable, it spends the rest
+    // and the weapon breaks (Nick, 0414 review).
+    let s = knight_menu(&mut c, 2);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(true));
-    // At 2 it can't: the entry is dimmed, and choosing it opens nothing.
-    let mut s = knight_menu(&mut c, 2);
+    // Broken: the entry is dimmed, and choosing it opens nothing.
+    let mut s = knight_menu(&mut c, 0);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(false));
     step(&mut s, &mut c, &[Action::Cancel]);
     // A unit that knows no non-combat active has no entry at all: the
@@ -331,118 +309,6 @@ fn skill_menu_snapshot() {
 }
 
 #[test]
-fn s_cycles_the_combat_actives_and_the_forecast_follows_core() {
-    let mut c = ctx();
-    let state = keen_skirmish(&c);
-    let plain = state
-        .preview_attack(UnitId(1), p(7, 2), &attack_with(UnitId(4), 0, None))
-        .unwrap();
-    let keen = state
-        .preview_attack(
-            UnitId(1),
-            p(7, 2),
-            &attack_with(UnitId(4), 0, Some(SkillId::new("keen_edge"))),
-        )
-        .unwrap();
-    assert_ne!(plain.forecast, keen.forecast);
-    let mut s = lord_on_brigand(&mut c, state);
-    let numbers = |s: &BattleScreen, c: &Ctx| {
-        let buf = render(s, c);
-        let at = |dy| text(&buf, LEFT_X + 5, HP_ROW + dy, 3);
-        (at(1), at(2), panel(&buf, SKILL_ROW))
-    };
-    let shown = |p: &trpg_core::AttackPreview| {
-        (
-            p.forecast.attacker.hit.to_string(),
-            p.forecast.attacker.crit.to_string(),
-        )
-    };
-    let (hit, crit, line) = numbers(&s, &c);
-    assert_eq!((hit, crit), shown(&plain));
-    assert_eq!(line, "");
-    // One press: Keen Edge, its numbers and `(20 → 17)` under the title.
-    step(&mut s, &mut c, &[Action::CursorDown]);
-    let (hit, crit, line) = numbers(&s, &c);
-    assert_eq!((hit, crit), shown(&keen));
-    let (from, to) = keen.durability.unwrap();
-    assert_eq!(to, from - 3);
-    assert_eq!(line, format!("Keen Edge ({from} → {to})"));
-    let Mode::Targeting(t) = s.mode() else {
-        unreachable!()
-    };
-    assert_eq!(t.preview, keen);
-    assert_snapshot!(render(&s, &c).to_snapshot(&c.palette));
-    // Another: none again.
-    step(&mut s, &mut c, &[Action::CursorDown]);
-    let (hit, crit, line) = numbers(&s, &c);
-    assert_eq!((hit, crit), shown(&plain));
-    assert_eq!(line, "");
-}
-
-#[test]
-fn the_chosen_active_is_used_and_paid_for_when_attacking() {
-    let mut c = ctx();
-    let state = keen_skirmish(&c);
-    let mut s = lord_on_brigand(&mut c, state);
-    let before = s
-        .state()
-        .unit(UnitId(1))
-        .unwrap()
-        .loadout
-        .weapon(0)
-        .unwrap()
-        .durability_left;
-    step(&mut s, &mut c, &[Action::CursorDown, Action::Confirm]);
-    let after = s
-        .state()
-        .unit(UnitId(1))
-        .unwrap()
-        .loadout
-        .weapon(0)
-        .unwrap()
-        .durability_left;
-    assert_eq!(after, before - 3);
-}
-
-#[test]
-fn an_active_the_weapon_cannot_pay_for_is_skipped() {
-    let mut c = ctx();
-    let state = battle(&c, |units| {
-        units[0].pos = p(6, 2);
-        learn(&c, &mut units[0], "keen_edge");
-        units[0].loadout.weapons[0]
-            .as_mut()
-            .unwrap()
-            .durability_left = 2;
-    });
-    let mut s = lord_on_brigand(&mut c, state);
-    let Mode::Targeting(t) = s.mode() else {
-        unreachable!()
-    };
-    let first = t.target();
-    assert!(t.actives(s.state()).is_empty());
-    // With nothing to choose, Down cycles the targets like Right.
-    step(&mut s, &mut c, &[Action::CursorDown]);
-    let Mode::Targeting(t) = s.mode() else {
-        unreachable!()
-    };
-    assert_eq!(t.active, None);
-    assert_ne!(t.target(), first);
-}
-
-#[test]
-fn the_help_line_names_the_skill_key_only_when_an_active_can_be_chosen() {
-    let mut c = ctx();
-    let state = keen_skirmish(&c);
-    let with = lord_on_brigand(&mut c, state);
-    assert!(with.help(&c).contains("skill"), "{}", with.help(&c));
-    // A lord without Keen Edge (Inspire isn't a combat active).
-    let state = battle(&c, |units| units[0].pos = p(6, 2));
-    let without = lord_on_brigand(&mut c, state);
-    assert!(!without.help(&c).contains("skill"), "{}", without.help(&c));
-}
-
-#[test]
 fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     let mut c = ctx();
     let state = battle(&c, |units| {
@@ -516,44 +382,6 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     };
     expected.apply(&cmd).unwrap();
     assert_eq!(s.state(), &expected);
-}
-
-#[test]
-fn a_cycle_through_two_actives_returns_to_none() {
-    let mut c = ctx();
-    let state = battle(&c, |units| {
-        units[0].pos = p(6, 2);
-        learn(&c, &mut units[0], "keen_edge");
-        learn(&c, &mut units[0], "blade_flurry");
-    });
-    let mut s = lord_on_brigand(&mut c, state);
-    let active = |s: &BattleScreen| {
-        let Mode::Targeting(t) = s.mode() else {
-            panic!("{:?}", s.mode());
-        };
-        t.active.clone().map(|a| a.0)
-    };
-    assert_eq!(active(&s), None);
-    // Down goes forward: the first active in the unit's skill order first.
-    let Mode::Targeting(t) = s.mode() else {
-        unreachable!()
-    };
-    let order: Vec<String> = t.actives(s.state()).into_iter().map(|a| a.0).collect();
-    assert_eq!(order.len(), 2);
-    let mut seen = vec![];
-    for _ in 0..3 {
-        step(&mut s, &mut c, &[Action::CursorDown]);
-        seen.push(active(&s));
-    }
-    assert_eq!(seen.len(), 3);
-    assert!(seen[0].is_some() && seen[1].is_some() && seen[2].is_none());
-    assert_eq!(seen[0].as_deref(), Some(order[0].as_str()));
-    assert_eq!(seen[1].as_deref(), Some(order[1].as_str()));
-    // Up goes back around the ring: none, then the last active.
-    step(&mut s, &mut c, &[Action::CursorUp]);
-    assert_eq!(active(&s), seen[1]);
-    step(&mut s, &mut c, &[Action::CursorUp]);
-    assert_eq!(active(&s), seen[0]);
 }
 
 #[test]

@@ -1099,16 +1099,16 @@ fn step_equip(
 
 /// [`step`] while targeting: left, right and `NextUnit`/`PrevUnit` cycle the
 /// targets (right and next go forward, left and previous go back); up and
-/// down cycle the combat actives (0412) when there are any, else the
-/// targets too; Confirm attacks, Cancel goes back to the weapon list or the
-/// action menu with the cursor on the unit.
+/// down move through the arts list (0414) when it is shown, else cycle the
+/// targets too; Confirm attacks with the chosen line, Cancel goes back to
+/// the weapon list or the action menu with the cursor on the unit.
 fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mode, Effect) {
-    // Up and Down move a menu-style cursor over the skills, when the unit
-    // has any to choose from; else they cycle the targets like Left/Right.
-    let skills = !t.actives(state).is_empty();
+    // Up and Down move the arts list's cursor when there is a list; else
+    // they cycle the targets like Left/Right.
+    let list = t.has_list();
     let forward = match action {
-        Action::CursorUp | Action::CursorDown if skills => {
-            t.cycle_skill(action == Action::CursorDown, state);
+        Action::CursorUp | Action::CursorDown if list => {
+            t.move_list(action == Action::CursorDown, state);
             return (Mode::Targeting(Box::new(t)), Effect::None);
         }
         Action::CursorRight | Action::CursorDown | Action::NextUnit => true,
@@ -1672,12 +1672,22 @@ mod tests {
             Mode::Targeting(t) => t.target(),
             _ => panic!("{m:?}"),
         };
+        // The lord knows sword arts, so Up/Down move the arts list and
+        // keep the target.
+        let (listed, effect) = step(mode.clone(), Action::CursorDown, p(0, 0), &s);
+        assert_eq!((target(&listed), effect), (UnitId(6), Effect::None));
+        assert_ne!(listed, mode);
+        let Mode::Targeting(t) = &listed else {
+            unreachable!()
+        };
+        // Down goes forward: the first art after `Attack`.
+        assert_eq!(t.list.focus(), 1);
+        let (back, _) = step(listed, Action::CursorUp, p(0, 0), &s);
+        assert_eq!(back, mode);
         for (a, id, at) in [
             (Action::CursorRight, 4, p(8, 2)),
-            (Action::CursorDown, 6, p(7, 1)),
-            (Action::NextUnit, 4, p(8, 2)),
-            (Action::CursorLeft, 6, p(7, 1)),
-            (Action::CursorUp, 4, p(8, 2)),
+            (Action::NextUnit, 6, p(7, 1)),
+            (Action::CursorLeft, 4, p(8, 2)),
             (Action::PrevUnit, 6, p(7, 1)),
         ] {
             let (m, effect) = step(mode, a, p(0, 0), &s);
@@ -1733,9 +1743,10 @@ mod tests {
         let Mode::Targeting(t) = &mode else {
             panic!("{mode:?}");
         };
+        // The brigand two tiles up, and the one beside it (Close Shot).
         assert_eq!(
             (t.targets.clone(), t.weapons.is_none()),
-            (vec![UnitId(4)], true)
+            (vec![UnitId(4), UnitId(5)], true)
         );
         let (back, effect) = step(mode, Action::Cancel, p(8, 2), &s);
         assert_eq!(effect, Effect::Cursor(p(8, 4)));
