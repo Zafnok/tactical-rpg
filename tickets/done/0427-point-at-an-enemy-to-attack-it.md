@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: sign-off
-completed:
+completed: 2026-09-29
 ---
 
 # 0427 — Point at an enemy with a unit selected to attack it
@@ -176,5 +176,20 @@ whatever path is shown.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Pointing the cursor at an enemy with a unit selected now aims the path at the
+tile it will attack from (`attack::attack_tile`, the rule in the ticket), and
+Confirm walks there then opens the filtered weapon list / the forecast on that
+enemy (`mode::open_attack`). `Selection.target` carries the aimed enemy; it is
+cleared when Cancel returns from the action menu. Cancel backs out through the
+list and the action menu to the path. Help bar shows "attack". Decision
+recorded in `docs/design/turn-structure.md`. No `core` changes.
+
+Deviation: `tick` still returns only a `Mode`; the screen snaps the cursor onto
+the target whenever it is in `Mode::Targeting` after a tick (ticket step 6's
+second option).
+
+Gameplay rule I decided (*Claude's starting rule*): ties between equally cheap
+attack tiles go to the shortest path, then the topmost, then the leftmost tile.
+
+No follow-up tickets.
+

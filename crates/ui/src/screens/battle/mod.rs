@@ -727,7 +727,13 @@ impl BattleScreen {
                 help_line(&[next, prev, cancel("close")])
             }
             Mode::Selected(sel) => {
-                if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
+                let aimed = sel
+                    .target
+                    .and_then(|t| self.state.unit(t))
+                    .is_some_and(|u| u.pos == self.cursor.pos);
+                if aimed {
+                    help_line(&[moves, confirm("attack"), cancel("cancel")])
+                } else if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
                     help_line(&[moves, confirm("move here"), cancel("cancel")])
                 } else {
                     help_line(&[moves, cancel("cancel")])
@@ -1198,6 +1204,15 @@ impl Screen for BattleScreen {
         }
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        // A walk aimed at an enemy (0427) ends in its forecast: the cursor
+        // goes onto the target.
+        if let Mode::Targeting(t) = &self.mode
+            && let Some(at) = self.state.unit(t.target()).map(|u| u.pos)
+            && self.cursor.pos != at
+        {
+            self.cursor.jump(at);
+            self.follow(at);
+        }
         self.tick_progress(dt, input.is_held(Action::Confirm));
         let tip_up = self.shown_tip().is_some();
         if let Some(banner) = self.banners.front_mut()
