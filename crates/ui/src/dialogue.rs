@@ -216,7 +216,12 @@ impl DialoguePlayer {
     /// scene stops at each choice).
     pub fn skip_to_choice(&mut self) {
         while matches!(self.showing, Showing::Text(_)) {
+            let before = (self.next, self.reaction);
             self.step_on();
+            // Each text box moves the position on; never spin in place.
+            if (self.next, self.reaction) == before {
+                break;
+            }
         }
     }
 
@@ -232,35 +237,40 @@ impl DialoguePlayer {
 
     /// Applies steps up to the next text box or choice.
     fn step_on(&mut self) {
-        loop {
-            if let Some(r) = self.reaction.as_mut() {
+        if let Some(r) = self.reaction {
+            let steps = self
+                .options(r.choice)
+                .get(r.option)
+                .map_or(&[][..], |o| &o.steps[..]);
+            let rest: Vec<Step> = steps.iter().skip(r.next).cloned().collect();
+            for (i, step) in (r.next..).zip(rest) {
                 let at = At {
                     step: r.choice,
-                    reaction: Some((r.option, r.next)),
+                    reaction: Some((r.option, i)),
                 };
-                r.next += 1;
-                match self.step(at).cloned() {
-                    Some(step) => {
-                        if self.apply(&step, at) {
-                            return;
-                        }
-                    }
-                    // The reaction is over: on with the scene.
-                    None => self.reaction = None,
+                if self.apply(&step, at) {
+                    self.reaction = Some(Reaction { next: i + 1, ..r });
+                    return;
                 }
-                continue;
             }
-            let index = self.next;
-            let Some(step) = self.scene.steps.get(index).cloned() else {
-                self.showing = Showing::Finished;
-                return;
-            };
-            self.next = index + 1;
+            // The reaction is over: on with the scene.
+            self.reaction = None;
+        }
+        let rest: Vec<(usize, Step)> = self
+            .scene
+            .steps
+            .iter()
+            .cloned()
+            .enumerate()
+            .skip(self.next)
+            .collect();
+        for (index, step) in rest {
             if let Step::Choice { options } = &step {
                 // A choice without replies (which the validator rejects)
                 // is passed over rather than waiting forever.
                 if !options.is_empty() {
                     self.showing = Showing::Choice(index, self.last_text);
+                    self.next = index + 1;
                     return;
                 }
                 continue;
@@ -270,9 +280,11 @@ impl DialoguePlayer {
                 reaction: None,
             };
             if self.apply(&step, at) {
+                self.next = index + 1;
                 return;
             }
         }
+        self.showing = Showing::Finished;
     }
 
     /// Applies `step` (found at `at`). Returns whether it is a text box,

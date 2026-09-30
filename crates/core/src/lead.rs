@@ -222,24 +222,22 @@ pub fn split_tokens(text: &str) -> impl Iterator<Item = Part<'_>> {
         if rest.is_empty() {
             return None;
         }
-        let Some(open) = rest.find('{') else {
-            let t = rest;
-            rest = "";
-            return Some(Part::Text(t));
+        let part = match rest.split_once('{') {
+            None => Part::Text(rest),
+            Some(("", after)) => match after.split_once('}') {
+                Some((token, after)) => {
+                    rest = after;
+                    return Some(Part::Token(token));
+                }
+                None => Part::Unclosed(rest),
+            },
+            Some((before, _)) => {
+                rest = &rest[before.len()..];
+                return Some(Part::Text(before));
+            }
         };
-        if open > 0 {
-            let t = &rest[..open];
-            rest = &rest[open..];
-            return Some(Part::Text(t));
-        }
-        let Some(close) = rest.find('}') else {
-            let t = rest;
-            rest = "";
-            return Some(Part::Unclosed(t));
-        };
-        let t = &rest[1..close];
-        rest = &rest[close + 1..];
-        Some(Part::Token(t))
+        rest = "";
+        Some(part)
     })
 }
 

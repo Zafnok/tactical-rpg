@@ -139,9 +139,9 @@ impl Parser<'_> {
         if self.choice.is_some() {
             match indent {
                 0 => self.choice_line(n, line, body),
+                1..REACTION_INDENT => self.err(n, "reaction lines are indented by two spaces"),
                 REACTION_INDENT => self.statement(n, line, body),
-                i if i > REACTION_INDENT => self.continuation(n, line, body),
-                _ => self.err(n, "reaction lines are indented by two spaces"),
+                _ => self.continuation(n, line, body),
             }
             return;
         }

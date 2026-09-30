@@ -599,3 +599,36 @@ fn the_lead_shows_the_players_name_and_gendered_portrait() {
         }
     }
 }
+
+/// Only a press that opens a choice ends the frame's keys: two presses in
+/// one frame otherwise both count.
+#[test]
+fn two_presses_in_one_frame_both_count() {
+    let mut c = ctx();
+    let mut s = full(two_speakers("First."));
+    press(&mut s, &mut c, Action::Confirm);
+    s.update(
+        &mut c,
+        &frame(&[Action::Confirm, Action::Confirm], 0.0, false),
+    );
+    assert_eq!(s.page_lines(), ["Second."]);
+    assert!(s.is_revealed());
+}
+
+/// Replies with no line before them get no blank row above them.
+#[test]
+fn replies_without_a_question_start_at_the_top() {
+    let c = ctx();
+    let s = full(scene(vec![Step::Choice {
+        options: vec![
+            reply("A.", "a"),
+            reply("B.", "b"),
+            reply("C.", "c"),
+            reply("D.", "d"),
+        ],
+    }]));
+    assert_eq!(s.text_box(), (TEXT_BOX, TEXT_Y));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, TEXT_Y).starts_with("│   > A.  "));
+    assert!(row(&buf, TEXT_Y + 3).starts_with("│     D.  "));
+}
