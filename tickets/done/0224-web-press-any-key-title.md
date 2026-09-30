@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0034"]
 nick_input: sign-off
-completed:
+completed: 2026-09-30
 ---
 
 # 0224 — Web build shows "Press any key" on the title before the music
@@ -16,7 +16,7 @@ completed:
 ## Context
 
 Browsers block sound until the first key press or click, so the web build's
-title music can't start with the title (found by ticket 0223). Nick decided
+title music can't start with the title (found by ticket 0225). Nick decided
 (ticket 0034, [`docs/design/title-screen.md`](../../docs/design/title-screen.md))
 that on the web build the title shows a `Press any key` line where the menu
 goes; the first key press shows the menu and starts the music. The bundled
@@ -69,19 +69,19 @@ the title music. The Windows build is unchanged.
 
 ## Acceptance criteria
 
-- [ ] Snapshot: title in the waiting state (title, subtitle, `Press any
+- [x] Snapshot: title in the waiting state (title, subtitle, `Press any
       key`, no menu, no help line).
-- [ ] Scripted test: waiting title requests no music; after a frame with the
+- [x] Scripted test: waiting title requests no music; after a frame with the
       key flag set it requests `title` music and the menu shows with
       `New Game` still focused (the key didn't move or choose anything).
-- [ ] Scripted test: a Confirm action without the flag does nothing while
+- [x] Scripted test: a Confirm action without the flag does nothing while
       waiting. (The app always sets the flag with a key's actions; this
       pins that the screen reacts to the flag, not the action.)
-- [ ] Native builds build the title without the prompt (existing snapshots
+- [x] Native builds build the title without the prompt (existing snapshots
       unchanged).
-- [ ] Checked in a browser: local `cargo xtask web` shows the prompt; any
+- [ ] Checked in a browser (partly, see notes): local `cargo xtask web` shows the prompt; any
       key shows the menu and the title music plays.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -89,4 +89,34 @@ the title music. The Windows build is unchanged.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+- **Deviation from steps 1 and 2:** no new `FrameInput` flag and no
+  app-side key polling. `Game` already receives every raw key press, so it
+  moves a new `Ctx::key_prompt` (`KeyPrompt::Off / Waiting / Pressed`) from
+  `Waiting` to `Pressed` on the first one. `app` sets `Waiting` on wasm.
+  It's an enum rather than two `bool`s because clippy's
+  `struct_excessive_bools` rejects more bools on `Ctx`.
+- Because that state lives on `Ctx`, a key pressed on the first-launch
+  layout picker also counts: after picking a layout, the title shows its
+  menu and music straight away (test `picking_a_layout_first_skips_the_prompt`).
+- **Extra fix in `web/index.html`:** browsers don't treat Escape (or
+  modifier keys) as the player's gesture, and the bundle's own audio unlock
+  removes itself after the first key whether or not it worked. Pressing
+  Escape first would have dismissed the prompt and left the game silent
+  for the whole session. A small script now wraps `AudioContext` and
+  resumes it on every key press, click or touch until it runs; xtask test
+  `index_html_keeps_resuming_audio_until_it_runs` guards it. After Escape
+  the prompt is gone and the music starts on the next key.
+- Tests: snapshot `web_title_waits_for_a_key`; scripted
+  `any_key_shows_the_menu_and_starts_the_music` (an unbound key),
+  `the_key_that_ends_the_wait_does_nothing_else`,
+  `back_on_the_web_title_shows_the_menu_not_the_prompt`,
+  `picking_a_layout_first_skips_the_prompt`; unit
+  `a_key_press_moves_the_key_prompt_on` (covers the "Confirm without a key"
+  criterion: releases alone don't end the wait).
+- **Browser check, partly done:** the local web build loads with the
+  script in place and no new console errors. The in-app test browser
+  allows sound without a key press, so it can't show the
+  blocked-then-unlocked path. Nick's first run on Pages is the real check.
+- The F2 debug hint still shows in the corner while waiting (debug and
+  Pages builds only).
+- Claude's starting rules are in `docs/design/title-screen.md`.

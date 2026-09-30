@@ -227,6 +227,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn index_html_keeps_resuming_audio_until_it_runs() {
+        // Ticket 0224: the shim must wrap `AudioContext` before the bundle
+        // creates one, and retry on every key press.
+        let html =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/index.html"))
+                .unwrap();
+        let shim = html
+            .find("class TrackedAudioContext extends Base")
+            .expect("index.html wraps AudioContext");
+        let bundle = html
+            .find(r#"<script src="mq_js_bundle.js">"#)
+            .expect("index.html loads mq_js_bundle.js");
+        assert!(shim < bundle, "wrap AudioContext before the bundle loads");
+        assert!(html.contains(r#"for (const type of ["keydown", "mousedown", "touchend"])"#));
+    }
+
     /// A fresh scratch repo root under `env::temp_dir()`, with `web/`
     /// populated like the real one, per the pattern in `font_atlas::tests`.
     fn fixture(name: &str) -> PathBuf {
@@ -610,7 +627,7 @@ version = "1.2.3"
 
     #[test]
     fn index_html_declares_register_plugin_before_the_bundle() {
-        // Ticket 0223: the strict-mode bundle assigns to `register_plugin`,
+        // Ticket 0225: the strict-mode bundle assigns to `register_plugin`,
         // which throws unless the global already exists.
         let html = fs::read_to_string(real_repo_root().join("web/index.html")).unwrap();
         let declared = html
@@ -627,7 +644,7 @@ version = "1.2.3"
 
     #[test]
     fn quad_storage_js_version_matches_the_locked_crate() {
-        // Ticket 0223: the loader logs a version-mismatch error unless the JS
+        // Ticket 0225: the loader logs a version-mismatch error unless the JS
         // plugin's `version` equals `quad_storage_crate_version()`.
         let root = real_repo_root();
         let lock = fs::read_to_string(root.join("Cargo.lock")).unwrap();

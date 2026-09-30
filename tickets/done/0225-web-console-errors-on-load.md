@@ -1,5 +1,5 @@
 ---
-id: "0223"
+id: "0225"
 title: Fix the console errors the web build logs on load
 type: bug
 milestone: M1 Engine
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed: 2026-09-30
 ---
 
-# 0223 — Fix the console errors the web build logs on load
+# 0225 — Fix the console errors the web build logs on load
 
 ## Context
 
@@ -100,3 +100,5 @@ errors should be gone. The AudioContext warning remains (browser rule).
   input. Making it start with the title needs a player-facing "click to
   start" step. Nick chose "Press any key" on the title, web only: decision
   ticket 0034, built by ticket 0224.
+- Renumbered to 0225 after merge: #119 merged it as 0223, which PR #117
+  (quieter menu sounds) had also used; ticket ids must be unique.
