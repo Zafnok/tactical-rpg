@@ -33,7 +33,7 @@ pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_l
 pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
-pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, RepeatDef};
+pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, LayoutKeys, RepeatDef, SLOTS};
 pub use map::{MapDef, MapLegend};
 pub use palette::PaletteDef;
 pub use portrait::Portrait;

@@ -862,6 +862,7 @@ dependencies = [
  "insta",
  "proptest",
  "ron",
+ "serde",
  "thiserror",
  "trpg-content",
  "trpg-core",

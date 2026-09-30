@@ -121,18 +121,21 @@ impl LayoutPickerScreen {
     /// the layout picker's own keys).
     pub fn help(ctx: &Ctx) -> String {
         let km = &ctx.keymap;
-        let choose = all_key_names(km, Action::CursorUp)
-            .zip(all_key_names(km, Action::CursorDown))
-            .map(|(up, down)| format!("{up} {down}"));
+        let choose = Some(format!(
+            "{} {}",
+            all_key_names(km, Action::CursorUp),
+            all_key_names(km, Action::CursorDown)
+        ));
         help_line(&[
             (choose, "choose"),
-            (all_key_names(km, Action::Confirm), "pick"),
+            (Some(all_key_names(km, Action::Confirm)), "pick"),
         ])
     }
 
-    /// The legend for `km`: `(keys, what they do)`, unbound actions left out.
+    /// The legend for `km`: `(keys, what they do)`; an action with no key
+    /// shows `! not mapped`.
     pub fn legend(km: &Keymap) -> Vec<(String, &'static str)> {
-        let rows = [
+        vec![
             (cursor_keys_name(km), "move"),
             (all_key_names(km, Action::Confirm), "select"),
             (all_key_names(km, Action::Cancel), "back"),
@@ -143,10 +146,7 @@ impl LayoutPickerScreen {
             (key_name(km, Action::EndTurn), "end turn"),
             (key_name(km, Action::ToggleAutoEnd), "auto-end"),
             (key_name(km, Action::Rewind), "rewind"),
-        ];
-        rows.into_iter()
-            .filter_map(|(keys, what)| keys.map(|k| (k, what)))
-            .collect()
+        ]
     }
 
     /// Draws `layout`'s panel with its top-left corner at `(x, y)`.
@@ -176,7 +176,7 @@ impl LayoutPickerScreen {
         };
         buf.print(x + 2, y, &title, title_fg, bg);
 
-        let km = Keymap::for_layout(&ctx.content.keymap, layout);
+        let km = ctx.keymap_for(layout);
         let cap_fg = |key| c(key_role(&km, key));
         let dim = c(UiColor::TextDim);
         let mut cap = |cx: i32, cy: i32, key: Key, glyph: &str| {
@@ -280,6 +280,7 @@ mod tests {
     use super::*;
     use crate::console::{CONSOLE_H, CONSOLE_W};
     use crate::screen::tests::ctx;
+    use crate::widgets::help::NOT_MAPPED;
 
     fn input(actions: &[Action]) -> FrameInput {
         FrameInput::new(actions.to_vec(), 0.0, vec![])
@@ -379,13 +380,12 @@ mod tests {
                 "u rewind",
             ]
         );
-        assert!(
-            LayoutPickerScreen::legend(&Keymap::for_layout(
-                &trpg_content::KeymapDef::default(),
-                Layout::LeftHanded
-            ))
-            .is_empty()
-        );
+        let unbound = LayoutPickerScreen::legend(&Keymap::for_layout(
+            &trpg_content::KeymapDef::default(),
+            Layout::LeftHanded,
+        ));
+        assert_eq!(unbound.len(), 10);
+        assert!(unbound.iter().all(|(k, _)| k == NOT_MAPPED), "{unbound:?}");
     }
 
     #[test]

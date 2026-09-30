@@ -941,7 +941,7 @@ impl BattleScreen {
 
     /// The help line of a tip, EXP or level-up page, or banner on screen.
     fn overlay_help(&self, km: &crate::input::Keymap) -> Option<String> {
-        let confirm = |label| (key_name(km, Action::Confirm), label);
+        let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         if self.shown_tip().is_some() {
             return Some(help_line(&[confirm("close")]));
         }
@@ -960,14 +960,14 @@ impl BattleScreen {
     /// browsing. Key names come from the keymap.
     pub fn help(&self, ctx: &Ctx) -> String {
         let km = &ctx.keymap;
-        let keys = cursor_keys_name(km);
-        let confirm = |label| (key_name(km, Action::Confirm), label);
-        let cancel = |label| (key_name(km, Action::Cancel), label);
+        let keys = Some(cursor_keys_name(km));
+        let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
+        let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
         if let Some(r) = &self.rewind {
             return rewind_help(r, ctx);
         }
-        let info = (key_name(km, Action::Info), "info");
-        let next = (key_name(km, Action::NextUnit), "next unit");
+        let info = (Some(key_name(km, Action::Info)), "info");
+        let next = (Some(key_name(km, Action::NextUnit)), "next unit");
         let moves = (keys.clone(), "move");
         if let Some(line) = self.overlay_help(km) {
             return line;
@@ -983,11 +983,11 @@ impl BattleScreen {
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::EndTurnPrompt { .. } => {
-                let space = (key_name(km, Action::EndTurn), "yes");
+                let space = (Some(key_name(km, Action::EndTurn)), "yes");
                 help_line(&[space, confirm("yes"), cancel("no")])
             }
             Mode::Info { .. } => {
-                let prev = (key_name(km, Action::PrevUnit), "previous");
+                let prev = (Some(key_name(km, Action::PrevUnit)), "previous");
                 help_line(&[next, prev, cancel("close")])
             }
             Mode::Selected(sel) => {
@@ -1023,7 +1023,7 @@ impl BattleScreen {
             }
             Mode::Targeting(t) => Self::help_targeting(ctx, t),
             Mode::Combat(_) => {
-                let hold = key_name(km, Action::Confirm).map(|k| format!("hold {k}"));
+                let hold = Some(format!("hold {}", key_name(km, Action::Confirm)));
                 help_line(&[cancel("skip"), (hold, "fast")])
             }
             Mode::MoveAfter { unit, tiles } => {
@@ -1043,12 +1043,12 @@ impl BattleScreen {
     /// target and up/down the line of the arts list, if it is shown (0414).
     fn help_targeting(ctx: &Ctx, t: &Targeting) -> String {
         let km = &ctx.keymap;
-        let confirm = (key_name(km, Action::Confirm), "attack");
-        let cancel = (key_name(km, Action::Cancel), "back");
+        let confirm = (Some(key_name(km, Action::Confirm)), "attack");
+        let cancel = (Some(key_name(km, Action::Cancel)), "back");
         if !t.has_list() {
-            return help_line(&[(cursor_keys_name(km), "next target"), confirm, cancel]);
+            return help_line(&[(Some(cursor_keys_name(km)), "next target"), confirm, cancel]);
         }
-        let pair = |a, b| Some(format!("{}/{}", key_name(km, a)?, key_name(km, b)?));
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
         help_line(&[
             (pair(Action::CursorLeft, Action::CursorRight), "target"),
             (pair(Action::CursorUp, Action::CursorDown), "art"),
@@ -1065,12 +1065,12 @@ impl BattleScreen {
         back: (Option<String>, &str),
     ) -> String {
         let km = &ctx.keymap;
-        let confirm = |label| (key_name(km, Action::Confirm), label);
-        let next = (key_name(km, Action::NextUnit), "next unit");
-        let moves = (cursor_keys_name(km), "move");
-        let end = (key_name(km, Action::EndTurn), "end turn");
+        let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
+        let next = (Some(key_name(km, Action::NextUnit)), "next unit");
+        let moves = (Some(cursor_keys_name(km)), "move");
+        let end = (Some(key_name(km, Action::EndTurn)), "end turn");
         let rewind = (
-            key_name(km, Action::Rewind).filter(|_| self.can_open_rewind()),
+            self.can_open_rewind().then(|| key_name(km, Action::Rewind)),
             "rewind",
         );
         match self.hovered() {
@@ -1093,8 +1093,8 @@ impl BattleScreen {
         let danger = format!("danger zone: {}", on_off(self.danger.is_some()));
         let auto = format!("auto-end: {}", on_off(self.auto_end));
         help_line(&[
-            (key_name(km, Action::DangerZone), &danger),
-            (key_name(km, Action::ToggleAutoEnd), &auto),
+            (Some(key_name(km, Action::DangerZone)), &danger),
+            (Some(key_name(km, Action::ToggleAutoEnd)), &auto),
         ])
     }
 
@@ -1288,8 +1288,8 @@ impl BattleScreen {
             Mode::EndTurnPrompt { ready } => {
                 let km = &ctx.keymap;
                 let yes_no = help_line(&[
-                    (key_name(km, Action::Confirm), "yes"),
-                    (key_name(km, Action::Cancel), "no"),
+                    (Some(key_name(km, Action::Confirm)), "yes"),
+                    (Some(key_name(km, Action::Cancel)), "no"),
                 ])
                 .replace(SEPARATOR, " / ");
                 let lines = [
@@ -1376,9 +1376,9 @@ fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
 /// The help line on the rewind screen `r`.
 fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
     let km = &ctx.keymap;
-    let keys = cursor_keys_name(km);
-    let confirm = |label| (key_name(km, Action::Confirm), label);
-    let cancel = |label| (key_name(km, Action::Cancel), label);
+    let keys = Some(cursor_keys_name(km));
+    let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
+    let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
     if r.is_confirming() {
         help_line(&[confirm("rewind"), cancel("back")])
     } else if r.can_rewind() {
@@ -1395,10 +1395,10 @@ fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
 fn progress_help(p: &Progress, km: &crate::input::Keymap) -> String {
     let confirm = key_name(km, Action::Confirm);
     if p.page_played() {
-        help_line(&[(confirm, "continue")])
+        help_line(&[(Some(confirm), "continue")])
     } else {
-        let hold = confirm.as_ref().map(|k| format!("hold {k}"));
-        help_line(&[(confirm, "skip"), (hold, "fast")])
+        let hold = Some(format!("hold {confirm}"));
+        help_line(&[(Some(confirm), "skip"), (hold, "fast")])
     }
 }
 
@@ -1549,7 +1549,7 @@ impl Screen for BattleScreen {
             .and_then(|t| ctx.content.tips.for_trigger(t))
         {
             let text = fill_placeholders(&tip.text, &ctx.keymap);
-            let close = help_line(&[(key_name(&ctx.keymap, Action::Confirm), "close")]);
+            let close = help_line(&[(Some(key_name(&ctx.keymap, Action::Confirm)), "close")]);
             draw_tip(buf, &ctx.palette, &tip.title, &text, &close);
         }
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));
@@ -1961,6 +1961,20 @@ mod tests {
         assert_eq!(
             s.help(&c),
             "j select · i info · l next unit · u rewind · k menu · Space end turn"
+        );
+    }
+
+    #[test]
+    fn help_shows_not_mapped_for_an_action_with_no_key() {
+        let mut c = ctx();
+        let s = quick();
+        let mut keys = c.layout_bindings(crate::input::Layout::RightHanded);
+        keys.clear(Action::Info, 0);
+        c.set_layout_bindings(crate::input::Layout::RightHanded, keys)
+            .unwrap();
+        assert_eq!(
+            s.help(&c),
+            "f select · ! not mapped info · s next unit · r rewind · d menu · Space end turn"
         );
     }
 

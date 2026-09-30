@@ -53,6 +53,9 @@ music (0807) starts at once or after a short fade in.
 - The window title (`crates/app/src/main.rs`, `window_title`) and the web
   page `<title>` use the name from 0012.
 - Record the choice in `look-and-feel.md`.
+- The layout must leave room for the web build's `Press any key` line
+  where the menu goes (ticket 0034, `docs/design/title-screen.md`); show
+  it in the mockups too.
 
 **Out (do not do):**
 - The exe icon (0902).

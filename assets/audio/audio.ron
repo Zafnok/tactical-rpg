@@ -2,7 +2,8 @@
 // Format: assets/audio/README.md. Decisions: docs/design/audio.md (0020),
 // ADR-0026, ADR-0027. Loaded and validated by trpg_content::audio.
 // Third-party files are made by assets-src/audio/import.py (0214), which
-// also loudness-matches them, so every cue starts at volume 100.
+// also loudness-matches them. Music plays at volume 100; sounds at 40,
+// because Nick found them far too loud at 100 (ticket 0222).
 (
     // How long a track fades out before the next one starts (TUNABLE,
     // audio.md "Starting values").
@@ -10,31 +11,31 @@
     sounds: [
         // Made in-house by `cargo xtask sfx` (ticket 0213) from the recipes
         // in assets-src/audio/sound-audition.html.
-        (id: "menu_move", files: ["sfx/menu_move.wav"], volume: 100, credit: Own),
+        (id: "menu_move", files: ["sfx/menu_move.wav"], volume: 40, credit: Own),
         // The map cursor's tick: menu_move, quieter (audio.md, TUNABLE).
-        (id: "cursor_move", files: ["sfx/menu_move.wav"], volume: 60, credit: Own),
-        (id: "menu_select", files: ["sfx/menu_select.wav"], volume: 100, credit: Own),
-        (id: "menu_cancel", files: ["sfx/menu_cancel.wav"], volume: 100, credit: Own),
-        (id: "miss", files: ["sfx/miss.wav"], volume: 100, credit: Own),
-        (id: "heal", files: ["sfx/heal.wav"], volume: 100, credit: Own),
-        (id: "hit_sword", files: ["sfx/sword_sound_1.ogg"], volume: 100, credit: Credit("sword_sound_1")),
+        (id: "cursor_move", files: ["sfx/menu_move.wav"], volume: 24, credit: Own),
+        (id: "menu_select", files: ["sfx/menu_select.wav"], volume: 15, credit: Own),
+        (id: "menu_cancel", files: ["sfx/menu_cancel.wav"], volume: 15, credit: Own),
+        (id: "miss", files: ["sfx/miss.wav"], volume: 40, credit: Own),
+        (id: "heal", files: ["sfx/heal.wav"], volume: 40, credit: Own),
+        (id: "hit_sword", files: ["sfx/sword_sound_1.ogg"], volume: 40, credit: Credit("sword_sound_1")),
         // audio.md: the axe shares the spear's sound "for now".
-        (id: "hit_spear", files: ["sfx/knife_stab.ogg"], volume: 100, credit: Credit("knife_stab")),
-        (id: "hit_axe", files: ["sfx/knife_stab.ogg"], volume: 100, credit: Credit("knife_stab")),
-        (id: "hit_bow", files: ["sfx/arrow_impact.ogg"], volume: 100, credit: Credit("arrow_impact")),
-        (id: "hit_gauntlet", files: ["sfx/punch.ogg"], volume: 100, credit: Credit("punch")),
-        (id: "crit_physical", files: ["sfx/deep_cut.ogg"], volume: 100, credit: Credit("deep_cut")),
-        (id: "block", files: ["sfx/combat_punch_metal_armor.ogg"], volume: 100, credit: Credit("combat_punch_metal_armor")),
-        (id: "cast_fire", files: ["sfx/short_fireball_woosh.ogg"], volume: 100, credit: Credit("short_fireball_woosh")),
-        (id: "cast_ice", files: ["sfx/hard_glass_impact.ogg"], volume: 100, credit: Credit("hard_glass_impact")),
-        (id: "hit_magic", files: ["sfx/magic_earth_spell_impact.ogg"], volume: 100, credit: Credit("magic_earth_spell_impact")),
-        (id: "crit_fire", files: ["sfx/fireball_impact.ogg"], volume: 100, credit: Credit("fireball_impact")),
-        (id: "crit_ice", files: ["sfx/magic_ice_impact.ogg"], volume: 100, credit: Credit("magic_ice_impact")),
+        (id: "hit_spear", files: ["sfx/knife_stab.ogg"], volume: 40, credit: Credit("knife_stab")),
+        (id: "hit_axe", files: ["sfx/knife_stab.ogg"], volume: 40, credit: Credit("knife_stab")),
+        (id: "hit_bow", files: ["sfx/arrow_impact.ogg"], volume: 40, credit: Credit("arrow_impact")),
+        (id: "hit_gauntlet", files: ["sfx/punch.ogg"], volume: 40, credit: Credit("punch")),
+        (id: "crit_physical", files: ["sfx/deep_cut.ogg"], volume: 40, credit: Credit("deep_cut")),
+        (id: "block", files: ["sfx/combat_punch_metal_armor.ogg"], volume: 40, credit: Credit("combat_punch_metal_armor")),
+        (id: "cast_fire", files: ["sfx/short_fireball_woosh.ogg"], volume: 40, credit: Credit("short_fireball_woosh")),
+        (id: "cast_ice", files: ["sfx/hard_glass_impact.ogg"], volume: 40, credit: Credit("hard_glass_impact")),
+        (id: "hit_magic", files: ["sfx/magic_earth_spell_impact.ogg"], volume: 40, credit: Credit("magic_earth_spell_impact")),
+        (id: "crit_fire", files: ["sfx/fireball_impact.ogg"], volume: 40, credit: Credit("fireball_impact")),
+        (id: "crit_ice", files: ["sfx/magic_ice_impact.ogg"], volume: 40, credit: Credit("magic_ice_impact")),
         // audio.md: each step picks one of the three at random.
         (id: "step_foot", files: ["sfx/footstep_dirt_00.ogg", "sfx/footstep_dirt_gravel_4.ogg", "sfx/footstep_grass_5.ogg"],
-         volume: 100, credit: Credits(["footstep_dirt_00", "footstep_dirt_gravel_4", "footstep_grass_5"])),
-        (id: "step_armored", files: ["sfx/knight_footstep_gravel_5.ogg"], volume: 100, credit: Credit("knight_footstep_gravel_5")),
-        (id: "step_mounted", files: ["sfx/galloping_horse_step.ogg"], volume: 100, credit: Credit("galloping_horse")),
+         volume: 40, credit: Credits(["footstep_dirt_00", "footstep_dirt_gravel_4", "footstep_grass_5"])),
+        (id: "step_armored", files: ["sfx/knight_footstep_gravel_5.ogg"], volume: 40, credit: Credit("knight_footstep_gravel_5")),
+        (id: "step_mounted", files: ["sfx/galloping_horse_step.ogg"], volume: 40, credit: Credit("galloping_horse")),
     ],
     music: [
         (id: "title", file: "new_sunrise_v1.ogg", volume: 100, credit: Credit("new_sunrise")),

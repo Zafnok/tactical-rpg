@@ -410,8 +410,8 @@ impl DialogueScreen {
 
         if self.asking_skip {
             let yes_no = help_line(&[
-                (key_name(km, Action::Confirm), "yes"),
-                (key_name(km, Action::Cancel), "no"),
+                (Some(key_name(km, Action::Confirm)), "yes"),
+                (Some(key_name(km, Action::Cancel)), "no"),
             ])
             .replace(SEPARATOR, " / ");
             buf.print(TEXT_X, TEXT_Y, "Skip scene?", c(UiColor::Text), bg);
@@ -463,10 +463,9 @@ impl DialogueScreen {
         if self.is_revealed() && self.menu.is_none() {
             let right = TEXT_BOX.x + TEXT_BOX.w - 4;
             let bottom = TEXT_BOX.y + TEXT_BOX.h - 2;
-            if let Some(key) = key_name(km, Action::Confirm) {
-                let w = i32::try_from(key.chars().count()).unwrap_or(0);
-                buf.print(right - 1 - w, bottom, &key, c(UiColor::TextDim), bg);
-            }
+            let key = key_name(km, Action::Confirm);
+            let w = i32::try_from(key.chars().count()).unwrap_or(0);
+            buf.print(right - 1 - w, bottom, &key, c(UiColor::TextDim), bg);
             if self.waiting % (2.0 * BLINK_S) < BLINK_S {
                 buf.print(right, bottom, "▼", c(UiColor::TextHighlight), bg);
             }

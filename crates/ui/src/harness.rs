@@ -210,6 +210,13 @@ impl Harness {
         &self.game
     }
 
+    /// The shared context, to change it between key presses, e.g.
+    /// `h.ctx_mut().set_layout_bindings(…)` to rebind keys as the Key
+    /// bindings screen would. The next frame uses the new keys.
+    pub fn ctx_mut(&mut self) -> &mut Ctx {
+        self.game.ctx_mut()
+    }
+
     /// Turns the one-time tips on (they are off in tests by default).
     pub fn with_tips(&mut self) -> &mut Self {
         self.game.ctx_mut().tips_enabled = true;
