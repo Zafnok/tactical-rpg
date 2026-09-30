@@ -258,7 +258,13 @@ fn two_reply_choice_snapshot() {
         ],
     };
     let lead = LeadProfile::new("Isolde", LeadGender::Female);
-    let mut h = Harness::with_screen(Box::new(DialogueScreen::new(scene, lead)));
+    let mut h = Harness::with_screen(Box::new(DialogueScreen::new(
+        scene,
+        lead,
+        trpg_content::load_embedded()
+            .map(|c| c.names)
+            .unwrap_or_default(),
+    )));
     h.keys("f f f f");
     assert!(row(&h, 23).contains("Isolde, will you lead the charge?"));
     assert_snapshot!(h.snapshot());

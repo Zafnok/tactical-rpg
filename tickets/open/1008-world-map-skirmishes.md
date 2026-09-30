@@ -51,7 +51,9 @@ and (2) the random fights feel like useful training without being grindy.
   **4–6 enemies**, the map tier is **Easy**, and rewards are EXP plus
   sometimes a little gold or a common item (never unique items).
 - Random skirmish maps: pick from a small pool of authored skirmish maps per
-  act, with enemies built from templates at the capped level. Spawns use the
+  act, with enemies built from templates at the capped level. (Later, 0510's
+  generator can fill this pool with bot-balanced skirmishes; the pool format
+  should be plain battle files so it can.) Spawns use the
   campaign's deterministic RNG (0304), so they're saved and reproducible.
 - Skirmish music: every skirmish battle file uses `music: Pool("skirmish")`
   (0807; `docs/design/audio.md`: one track at random from the pool).

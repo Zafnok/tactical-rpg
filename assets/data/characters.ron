@@ -3,6 +3,8 @@
 // tickets (07xx) replace this whole file. Loaded by trpg_content::character.
 //
 // characters: named characters.
+//   id: also the character's name id: the display name is its entry in
+//     names.ron (ticket 0709), never written here.
 //   base is in stat order (HP, Str, Mag, Dex, Spd, Def, Res) (Mov comes from
 //   the class) and must be <= the hard ceilings (classes.ron).
 //   talent: the +20% growth stat (not Mov).
@@ -24,7 +26,7 @@
         // name at New Game, so dialogue shows the chosen name and the
         // portrait lead_m or lead_f. Stats are a copy of test_lord's.
         (
-            id: "lead", name: "Ellery", class: "exile", level: 1, is_lord: true,
+            id: "lead", class: "exile", level: 1, is_lord: true,
             map_label: Some("El"),
             talent: Spd,
             base: (19, 6, 1, 7, 7, 4, 3),
@@ -32,7 +34,7 @@
             loadout: (weapons: ["iron_sword", "steel_sword"], armour: Some("leather_vest")),
         ),
         (
-            id: "test_lord", name: "Test Lord", class: "exile", level: 1, is_lord: true,
+            id: "test_lord", class: "exile", level: 1, is_lord: true,
             map_label: Some("Lo"),
             talent: Spd,
             base: (19, 6, 1, 7, 7, 4, 3),
@@ -40,7 +42,7 @@
             loadout: (weapons: ["iron_sword", "steel_sword"], armour: Some("leather_vest")),
         ),
         (
-            id: "test_knight", name: "Test Knight", class: "guard", level: 1,
+            id: "test_knight", class: "guard", level: 1,
             map_label: Some("Kn"),
             talent: Def,
             base: (20, 7, 0, 4, 2, 9, 0),
@@ -48,7 +50,7 @@
             loadout: (weapons: ["iron_spear"], armour: Some("chain_mail")),
         ),
         (
-            id: "test_archer", name: "Test Archer", class: "archer", level: 1,
+            id: "test_archer", class: "archer", level: 1,
             map_label: Some("Ar"),
             talent: Dex,
             base: (17, 5, 0, 7, 5, 3, 1),
@@ -58,7 +60,7 @@
         // An enemy the lord can talk into joining: the debug Quick
         // Battle's trigger fixture (ticket 0705).
         (
-            id: "test_rogue", name: "Test Rogue", class: "raider", level: 2,
+            id: "test_rogue", class: "raider", level: 2,
             map_label: Some("Ro"),
             talent: Str,
             base: (22, 7, 0, 3, 4, 4, 0),

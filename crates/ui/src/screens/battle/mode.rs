@@ -29,6 +29,7 @@ use trpg_core::{
     path_cost, reachable, threat_area,
 };
 
+use super::ai_phase::AiAction;
 use super::attack::{Targeting, WeaponChoice, attack_tile, weapon_choices, weapon_menu};
 use super::items::{
     EquipChoice, ItemTargeting, PackGroup, can_equip, can_use_item, equip_choices, equip_command,
@@ -298,6 +299,9 @@ pub enum Mode {
     },
     /// An attack's combat plays out.
     Combat(Box<Playback>),
+    /// An AI unit's action is shown (0502): the camera pans to it, it
+    /// walks, then its combat plays.
+    AiAction(Box<AiAction>),
     /// A unit waits to move after its attack ([`BattleState::pending_move`]):
     /// Confirm on one of `tiles` moves it there, Confirm on the unit stays.
     MoveAfter {
@@ -458,6 +462,7 @@ impl Mode {
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Combat(_)
+            | Mode::AiAction(_)
             | Mode::MapMenu { .. }
             | Mode::UnitList { .. }
             | Mode::Objective
@@ -490,10 +495,14 @@ impl Mode {
         }
     }
 
-    /// During a walk, the walking unit and how many tiles it enters in the
-    /// next [`tick`](Self::tick) with the same arguments (none if the hold
-    /// skips the rest of the walk); `None` in other modes.
+    /// During a walk (the player's or an AI unit's), the walking unit and
+    /// how many tiles it enters in the next [`tick`](Self::tick) with the
+    /// same arguments (none if the hold skips the rest of the player's
+    /// walk); `None` in other modes.
     pub fn tiles_entered(&self, dt: f32, confirm_held: bool) -> Option<(UnitId, usize)> {
+        if let Mode::AiAction(a) = self {
+            return Some((a.unit(), a.tiles_entered(dt, confirm_held)));
+        }
         let Mode::Moving { sel, t, held } = self else {
             return None;
         };
@@ -511,7 +520,8 @@ impl Mode {
     /// Advances a walk by `dt` seconds (`confirm_held`: Confirm is down this
     /// frame). The walk ends, opening the action menu, once the unit
     /// reaches the path's end or Confirm has been held [`HOLD_SKIP_S`].
-    /// Other modes are unchanged.
+    /// A combat's playback and an AI action play on (the AI action then
+    /// goes on to its combat). Other modes are unchanged.
     #[must_use]
     pub fn tick(self, dt: f32, confirm_held: bool, state: &BattleState) -> Mode {
         if let Mode::Combat(mut playback) = self {
@@ -520,6 +530,14 @@ impl Mode {
                 Mode::after_command(state)
             } else {
                 Mode::Combat(playback)
+            };
+        }
+        if let Mode::AiAction(mut action) = self {
+            action.tick(dt, confirm_held);
+            return if action.done() {
+                action.into_then()
+            } else {
+                Mode::AiAction(action)
             };
         }
         let Mode::Moving { sel, t, held } = self else {
@@ -760,6 +778,7 @@ pub fn step(mode: Mode, action: Action, cursor: Pos, state: &BattleState) -> (Mo
             }
             (Mode::Combat(playback), Effect::None)
         }
+        action @ Mode::AiAction(_) => (action, Effect::None),
         Mode::MoveAfter { unit, tiles } => step_move_after(unit, tiles, action, cursor, state),
         other => step_around(other, action, state),
     }

@@ -11,8 +11,11 @@
 //! happens (0406). Scenes the battle's triggers fire (0705) play as a
 //! [`DialogueScreen`] overlay over the map, in order with the banners, or
 //! inside a combat's playback (a boss's line before the combat, a death
-//! quote before the fall).
+//! quote before the fall). In the Enemy and Other phases the AI acts
+//! ([`ai_phase`], 0502): each action is shown one at a time, and the player
+//! can only speed it up or skip fights.
 
+pub mod ai_phase;
 pub mod art_list;
 pub mod attack;
 pub mod banner;
@@ -41,9 +44,10 @@ use trpg_content::{Content, TipTrigger, battle_campaign};
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{
     BattleHistory, BattleState, Command, Event, Faction, GameMode, LeadGender, LeadProfile, Phase,
-    Pos, StatValue, TileSet, Unit, UnitId, danger_zone,
+    Pos, StatValue, TileSet, Unit, UnitId, danger_zone, next_command,
 };
 
+use self::ai_phase::{AiAction, PACING};
 use self::banner::{Banner, BannerKind};
 
 use self::attack::Targeting;
@@ -138,10 +142,9 @@ pub enum Queued {
 /// and moves units ([`Mode`]), opens the map menu, ends the turn; phase and
 /// outcome banners show as the battle goes on, and the outcome's closes the
 /// screen. Rewind while browsing in the player phase opens the
-/// [`RewindScreen`].
-///
-/// Until the enemy AI exists (0502), the Enemy and Other phases end as soon
-/// as their banner closes.
+/// [`RewindScreen`]. In the Enemy and Other phases, once their banner has
+/// closed, the AI's actions play one by one ([`AiAction`]), then the phase
+/// ends.
 #[derive(Debug, Clone)]
 pub struct BattleScreen {
     state: BattleState,
@@ -180,6 +183,9 @@ pub struct BattleScreen {
     /// The player chose `Restart Battle`: the screen closes, and the game
     /// flow starts the battle again.
     restart: bool,
+    /// Where the cursor and camera were when the player phase ended: they
+    /// go back there when the next one starts.
+    player_view: Option<(Pos, Camera)>,
 }
 
 impl BattleScreen {
@@ -219,6 +225,7 @@ impl BattleScreen {
             cues: CueQueue::default(),
             walked: None,
             restart: false,
+            player_view: None,
         }
     }
 
@@ -236,7 +243,7 @@ impl BattleScreen {
     /// The scene waiting to play next, once no combat is playing, no EXP or
     /// level up is shown and no banner is before it.
     pub fn queued_scene(&self) -> Option<&str> {
-        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
+        if self.playing() || self.progress.is_some() {
             return None;
         }
         match self.queue.front() {
@@ -263,7 +270,7 @@ impl BattleScreen {
     /// The EXP bar or level-up page on screen, if any: once the command's
     /// combat has played.
     pub fn progress(&self) -> Option<&Progress> {
-        if matches!(self.mode, Mode::Combat(_)) {
+        if self.playing() {
             return None;
         }
         self.progress.as_ref()
@@ -273,7 +280,7 @@ impl BattleScreen {
     /// (Confirm or Cancel finishes or closes a page; other keys wait). Returns
     /// whether it took it.
     fn progress_key(&mut self, action: Action) -> bool {
-        if matches!(self.mode, Mode::Combat(_)) {
+        if self.playing() {
             return false;
         }
         let Some(progress) = self.progress.as_mut() else {
@@ -290,7 +297,7 @@ impl BattleScreen {
 
     /// Plays the EXP bar or level-up page on screen for `dt` seconds.
     fn tick_progress(&mut self, dt: f32, confirm_held: bool) {
-        if matches!(self.mode, Mode::Combat(_)) {
+        if self.playing() {
             return;
         }
         if let Some(progress) = self.progress.as_mut() {
@@ -301,10 +308,16 @@ impl BattleScreen {
         }
     }
 
-    /// The banner on screen, if any: the first waiting, once no combat is
-    /// playing and no EXP or level up is shown.
+    /// Whether a combat's playback or an AI action is playing: banners,
+    /// scenes, tips and EXP wait for it.
+    fn playing(&self) -> bool {
+        matches!(self.mode, Mode::Combat(_) | Mode::AiAction(_))
+    }
+
+    /// The banner on screen, if any: the first waiting, once no combat or
+    /// AI action is playing and no EXP or level up is shown.
     pub fn banner(&self) -> Option<&Banner> {
-        if matches!(self.mode, Mode::Combat(_)) || self.progress.is_some() {
+        if self.playing() || self.progress.is_some() {
             return None;
         }
         match self.queue.front() {
@@ -386,7 +399,7 @@ impl BattleScreen {
     /// the others once a player phase is browsing without a banner.
     pub fn shown_tip(&self) -> Option<TipTrigger> {
         if self.rewind.is_some()
-            || matches!(self.mode, Mode::Combat(_))
+            || self.playing()
             || self.progress.is_some()
             || self.queued_scene().is_some()
         {
@@ -398,8 +411,7 @@ impl BattleScreen {
         })
     }
 
-    /// Closes the banner on screen. An outcome's leaves the battle; an AI
-    /// phase's ends that phase (the stub until 0502).
+    /// Closes the banner on screen. An outcome's leaves the battle.
     fn close_banner(&mut self) -> Transition {
         let Some(&banner) = self.banner() else {
             return Transition::None;
@@ -407,14 +419,96 @@ impl BattleScreen {
         self.queue.pop_front();
         match banner.kind {
             BannerKind::Outcome(_) => Transition::Pop,
-            BannerKind::Phase { phase, .. } => {
-                let ai = phase != Phase::Player;
-                if ai && self.state.phase() == phase && self.state.outcome().is_none() {
-                    self.apply(&Command::EndPhase);
-                }
-                Transition::None
+            BannerKind::Phase { .. } => Transition::None,
+        }
+    }
+
+    /// Whether the AI is playing its phase (Enemy or Other): the player
+    /// can only speed it up or skip its fights.
+    pub fn ai_phase(&self) -> bool {
+        self.state.phase() != Phase::Player
+    }
+
+    /// In an AI phase, once nothing else is on screen (banner, scene, tip,
+    /// EXP, a previous action), shows the AI's next action, or ends the
+    /// phase when it has none.
+    fn drive_ai(&mut self, ctx: &Ctx) {
+        if !self.ai_phase() || self.state.outcome().is_some() {
+            return;
+        }
+        // An AI unit that may move after its attack: the AI decides that,
+        // not the player.
+        if matches!(self.mode, Mode::MoveAfter { .. }) {
+            self.mode = Mode::default();
+        }
+        if !matches!(self.mode, Mode::Idle { .. })
+            || !self.queue.is_empty()
+            || self.progress.is_some()
+            || self.shown_tip().is_some()
+        {
+            return;
+        }
+        match next_command(&self.state, &ctx.content.ai) {
+            Some(cmd) => self.apply_ai(&cmd),
+            None => {
+                self.apply(&Command::EndPhase);
             }
         }
+    }
+
+    /// During an AI action, the camera pans to its unit, then follows its
+    /// walk; the cursor (hidden) goes with it, so the side panel shows it.
+    fn follow_ai_action(&mut self) {
+        let Mode::AiAction(a) = &self.mode else {
+            return;
+        };
+        if a.walking() {
+            let at = a.walker_pos();
+            self.follow(at);
+            if self.cursor.pos != at {
+                self.cursor.jump(at);
+            }
+        } else {
+            self.camera.origin = a.camera();
+        }
+    }
+
+    /// Applies the AI's `cmd` and shows it ([`AiAction`]): the camera pans
+    /// to its unit, the cursor marks it, it walks its move, then the
+    /// command's combat plays, if any.
+    fn apply_ai(&mut self, cmd: &Command) {
+        let before = self.state.units().to_vec();
+        let unit = match cmd {
+            Command::Act { unit, .. } | Command::MoveAfter { unit, .. } => Some(*unit),
+            _ => None,
+        };
+        // Its steps are heard as the walk is shown.
+        self.walked = unit;
+        let Some(events) = self.apply(cmd) else {
+            return;
+        };
+        let Some(unit) = unit else {
+            return;
+        };
+        // An AI command moves only its own unit.
+        let path = events
+            .iter()
+            .find_map(|e| match e {
+                Event::UnitMoved { path, .. } => Some(path.clone()),
+                _ => None,
+            })
+            .unwrap_or_default();
+        let Some(start) = before.iter().find(|u| u.id == unit).map(|u| u.pos) else {
+            return;
+        };
+        let from = self.camera.origin;
+        self.follow(start);
+        let to = self.camera.origin;
+        self.camera.origin = from;
+        self.cursor.jump(start);
+        let then = std::mem::take(&mut self.mode);
+        let action = AiAction::new(unit, before, (from, to), path, then, PACING);
+        self.mode = Mode::AiAction(Box::new(action));
     }
 
     /// The scene to play now, taken from the combat's playback where its
@@ -521,10 +615,13 @@ impl BattleScreen {
     /// records it in the history, then plays its combat if it had one, and
     /// continues browsing (or with the unit's move after its attack); queues
     /// the banners of its events, and its scenes unless its combat plays
-    /// them, and updates the danger zone. A refused command changes
-    /// nothing.
-    fn apply(&mut self, cmd: &Command) {
+    /// them, and updates the danger zone. Leaving the player phase keeps
+    /// where the cursor and camera were; they go back there when it comes
+    /// round again. Returns the events; a refused command changes nothing
+    /// and returns `None`.
+    fn apply(&mut self, cmd: &Command) -> Option<Vec<Event>> {
         let before = self.state.units().to_vec();
+        let was_player = !self.ai_phase();
         let walked = self.walked.take();
         // Refused: the battle is unchanged and the player browses again.
         let events = self.state.apply(cmd).ok();
@@ -558,7 +655,17 @@ impl BattleScreen {
             // Checked (phase, units ready) once back to browsing.
             self.end_armed = true;
             self.progress = Progress::new(events, &before, &self.state, PROGRESS_TIMINGS);
+            if was_player && self.ai_phase() {
+                self.player_view = Some((self.cursor.pos, self.camera));
+            } else if !was_player
+                && !self.ai_phase()
+                && let Some((pos, camera)) = self.player_view.take()
+            {
+                self.cursor.jump(pos);
+                self.camera = camera;
+            }
         }
+        let played = events.clone();
         let playback = events.and_then(|events| {
             let banner = art_list::playback_banner(&self.state, &events, &before);
             let playback = playback.map(|p| p.with_banner(banner));
@@ -571,6 +678,7 @@ impl BattleScreen {
             Some(p) => Mode::Combat(Box::new(p)),
             None => Mode::after_command(&self.state),
         };
+        played
     }
 
     /// Plays this frame's sounds (0424): the combat playback's and the
@@ -619,8 +727,12 @@ impl BattleScreen {
     /// The units as drawn, each with how far it has faded out: the
     /// battle's units, except during a combat's playback, where its
     /// fighters show the HP it has reached (the attacker not dimmed yet)
-    /// and the units that fell stay until they have faded.
+    /// and the units that fell stay until they have faded; and during an
+    /// AI action, before its combat, the units as they were before it.
     pub fn shown_units(&self) -> Vec<(Unit, f32)> {
+        if let Mode::AiAction(a) = &self.mode {
+            return a.units().into_iter().map(|u| (u, 0.0)).collect();
+        }
         let Mode::Combat(pb) = &self.mode else {
             return self
                 .state
@@ -712,7 +824,9 @@ impl BattleScreen {
         self.mode = mode;
         match effect {
             Effect::None => {}
-            Effect::Apply(cmd) => self.apply(&cmd),
+            Effect::Apply(cmd) => {
+                self.apply(&cmd);
+            }
             Effect::ApplyStay(cmd, sel) => self.apply_stay(&cmd, *sel),
             Effect::Cursor(to) => {
                 self.cursor.jump(to);
@@ -865,6 +979,10 @@ impl BattleScreen {
                 let hold = Some(format!("hold {}", key_name(km, Action::Confirm)));
                 help_line(&[cancel("skip"), (hold, "fast")])
             }
+            Mode::AiAction(_) => {
+                let hold = Some(format!("hold {}", key_name(km, Action::Confirm)));
+                help_line(&[(hold, "fast")])
+            }
             Mode::MoveAfter { unit, tiles } => {
                 let here = self.state.unit(*unit).map(|u| u.pos);
                 if here == Some(self.cursor.pos) {
@@ -1007,7 +1125,7 @@ impl BattleScreen {
     }
 
     fn draw_units(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        if !matches!(self.mode, Mode::Combat(_)) {
+        if !self.playing() {
             for unit in self.state.units() {
                 if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
                     units::draw_unit(buf, &ctx.palette, unit, x, y);
@@ -1025,7 +1143,8 @@ impl BattleScreen {
     /// Draws the cursor for the mode (in the player's cursor style): on the
     /// tile while browsing or on a selected unit; with a unit selected and
     /// the cursor away from it, the path and its arrowhead, with no cursor
-    /// on the arrowhead's tile; none during a walk or in the menu.
+    /// on the arrowhead's tile; none during a walk or in the menu. During an
+    /// AI action, on its unit until it walks.
     fn draw_cursor_and_path(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let pos = self.cursor.pos;
         match &self.mode {
@@ -1041,6 +1160,7 @@ impl BattleScreen {
             | Mode::EndTurnPrompt { .. }
             | Mode::RestartPrompt
             | Mode::Info { .. } => return,
+            Mode::AiAction(a) if !a.shows_cursor() => return,
             Mode::Selected(sel) => {
                 let color = ctx.palette.get(UiColor::Path);
                 for overlay in path_overlays(&sel.path, self.camera, color) {
@@ -1056,6 +1176,7 @@ impl BattleScreen {
             | Mode::SkillTarget(_)
             | Mode::ItemTarget(_)
             | Mode::TalkTarget { .. }
+            | Mode::AiAction(_)
             | Mode::MapMenu { .. } => {}
         }
         if let Some((x, y)) = tile_to_cell(pos, &self.camera) {
@@ -1095,6 +1216,21 @@ impl BattleScreen {
                     ctx.palette.get(UiColor::PanelBg),
                 );
                 buf.print(x + 2, y, &header, fg, bg);
+            }
+        }
+    }
+
+    /// Ages the heal numbers and the message by `dt` seconds, dropping
+    /// those whose time is up.
+    fn tick_popups(&mut self, dt: f32) {
+        for p in &mut self.popups {
+            p.t += dt;
+        }
+        self.popups.retain(|p| p.t < TIMINGS.heal_popup);
+        if let Some((_, left)) = &mut self.toast {
+            *left -= dt;
+            if *left <= 0.0 {
+                self.toast = None;
             }
         }
     }
@@ -1201,7 +1337,7 @@ impl BattleScreen {
         };
         buf.draw_box(SIDE_PANEL, style, c(UiColor::PanelBorder), panel_bg);
         let pos = self.cursor.pos;
-        if matches!(self.mode, Mode::Combat(_)) {
+        if self.playing() {
             let shown = self.shown_units();
             let hovered = shown.iter().find(|(u, f)| u.pos == pos && *f < 1.0);
             panel::draw_hover(buf, &ctx.palette, &self.state, pos, hovered.map(|(u, _)| u));
@@ -1280,16 +1416,7 @@ impl Screen for BattleScreen {
         } else {
             0.0
         };
-        for p in &mut self.popups {
-            p.t += dt;
-        }
-        self.popups.retain(|p| p.t < TIMINGS.heal_popup);
-        if let Some((_, left)) = &mut self.toast {
-            *left -= dt;
-            if *left <= 0.0 {
-                self.toast = None;
-            }
-        }
+        self.tick_popups(dt);
         self.detect_tips();
         self.tips.absorb(ctx);
         for &action in &input.actions {
@@ -1298,6 +1425,11 @@ impl Screen for BattleScreen {
                 if matches!(action, Action::Confirm | Action::Cancel) {
                     self.tips.dismiss(tip);
                 }
+                continue;
+            }
+            // The AI's phase: only Confirm (hold: faster) and Cancel (skip
+            // a fight) do anything.
+            if self.ai_phase() && !matches!(action, Action::Confirm | Action::Cancel) {
                 continue;
             }
             if action == Action::ToggleAutoEnd {
@@ -1314,6 +1446,9 @@ impl Screen for BattleScreen {
                         return t;
                     }
                 }
+                continue;
+            }
+            if self.ai_phase() && !self.playing() {
                 continue;
             }
             match action {
@@ -1351,6 +1486,7 @@ impl Screen for BattleScreen {
         self.play_sounds(ctx, input);
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
+        self.follow_ai_action();
         // A walk aimed at an enemy (0428) ends in its forecast: the cursor
         // goes onto the target.
         if let Mode::Targeting(t) = &self.mode
@@ -1361,10 +1497,9 @@ impl Screen for BattleScreen {
             self.follow(at);
         }
         self.tick_progress(dt, input.is_held(Action::Confirm));
-        let tip_up = self.shown_tip().is_some();
+        let waiting = self.shown_tip().is_some() || self.playing();
         if let Some(Queued::Banner(banner)) = self.queue.front_mut()
-            && !matches!(self.mode, Mode::Combat(_))
-            && !tip_up
+            && !waiting
         {
             banner.t += dt;
             if banner.expired() {
@@ -1373,9 +1508,14 @@ impl Screen for BattleScreen {
             }
         }
         if let Some(scene) = self.next_scene(ctx) {
-            return Transition::Push(Box::new(DialogueScreen::overlay(scene, ctx.lead.clone())));
+            return Transition::Push(Box::new(DialogueScreen::overlay(
+                scene,
+                ctx.lead.clone(),
+                ctx.content.names.clone(),
+            )));
         }
         self.check_auto_end();
+        self.drive_ai(ctx);
         Transition::None
     }
 
@@ -1593,6 +1733,28 @@ pub(crate) mod testing {
             panic!("{e}");
         }
     }
+
+    /// Plays `s` through the AI's phases (0502) in frames of `dt` seconds
+    /// with no keys, until the player phase is back or the battle is over.
+    /// Returns how many frames that took.
+    ///
+    /// # Panics
+    ///
+    /// If that takes more than 1000 frames (e.g. a level-up page waiting
+    /// for Confirm).
+    pub fn through_ai_phases(s: &mut super::BattleScreen, c: &mut Ctx, dt: f32) -> usize {
+        for n in 0..1000 {
+            if !s.ai_phase() || s.state().outcome().is_some() {
+                return n;
+            }
+            crate::screen::Screen::update(
+                s,
+                c,
+                &crate::screen::FrameInput::new(vec![], dt, vec![]),
+            );
+        }
+        panic!("the AI phase never ended: {:?}", s.mode());
+    }
 }
 
 #[cfg(test)]
@@ -1620,6 +1782,9 @@ mod tip_tests;
 
 #[cfg(test)]
 mod turn_tests;
+
+#[cfg(test)]
+mod ai_phase_tests;
 
 #[cfg(test)]
 mod trigger_tests;

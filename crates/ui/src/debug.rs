@@ -85,11 +85,16 @@ impl Screen for DebugMenuScreen {
                     // The overlay replaces this menu so it plays over the
                     // screen the menu was opened from (e.g. the battle map).
                     return if tool == 2 {
-                        Transition::Push(Box::new(DialogueScreen::new(scene, ctx.lead.clone())))
+                        Transition::Push(Box::new(DialogueScreen::new(
+                            scene,
+                            ctx.lead.clone(),
+                            ctx.content.names.clone(),
+                        )))
                     } else {
                         Transition::Replace(Box::new(DialogueScreen::overlay(
                             scene,
                             ctx.lead.clone(),
+                            ctx.content.names.clone(),
                         )))
                     };
                 }

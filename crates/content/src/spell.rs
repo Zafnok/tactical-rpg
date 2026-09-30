@@ -511,7 +511,7 @@ mod tests {
             ..ClassTable::default()
         };
         let mut characters = CharacterTable::default();
-        let base = crate::character::load(None, None)
+        let base = crate::character::load(None, None, None)
             .unwrap_or_default()
             .characters
             .into_values()
@@ -558,7 +558,7 @@ mod tests {
     #[test]
     fn the_embedded_references_all_exist() {
         let classes = crate::class::load(None).unwrap_or_default();
-        let characters = crate::character::load(Some(&classes), None).unwrap_or_default();
+        let characters = crate::character::load(Some(&classes), None, None).unwrap_or_default();
         assert!(!classes.classes.is_empty());
         assert_eq!(check_references(&spells(), &classes, &characters), vec![]);
     }

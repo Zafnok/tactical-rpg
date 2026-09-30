@@ -17,6 +17,7 @@ pub mod font;
 pub mod item;
 pub mod keymap;
 pub mod map;
+pub mod names;
 pub mod palette;
 pub mod portrait;
 pub mod ron_loader;
@@ -43,6 +44,7 @@ pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, LayoutKeys, RepeatDef, SLOTS};
 pub use map::{MapDef, MapLegend};
+pub use names::Names;
 pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
@@ -72,6 +74,8 @@ pub struct Content {
     pub skills: SkillTable,
     /// Combat Arts.
     pub arts: ArtTable,
+    /// Display names by name id (ticket 0709).
+    pub names: Names,
     /// Named characters and generic unit templates.
     pub characters: CharacterTable,
     /// Character portraits by character id (file stem).
@@ -125,7 +129,12 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     );
     let items = item::load();
     let maps = check_map_features(maps, items.as_ref().ok(), terrain.as_ref().ok());
-    let characters = character::load(classes.as_ref().ok(), items.as_ref().ok());
+    let names = names::load();
+    let characters = character::load(
+        classes.as_ref().ok(),
+        items.as_ref().ok(),
+        names.as_ref().ok(),
+    );
     let spells = check_spell_references(
         spell::load(terrain.as_ref().ok().map(|t| &t.display)),
         classes.as_ref().ok(),
@@ -137,7 +146,11 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Ok(p) => portrait::load_all(p),
         Err(_) => Ok(BTreeMap::new()),
     };
-    let dialogue = dialogue::load(characters.as_ref().ok(), portraits.as_ref().ok());
+    let dialogue = dialogue::load(
+        characters.as_ref().ok(),
+        portraits.as_ref().ok(),
+        names.as_ref().ok(),
+    );
     let (battles, chapters, new_game) = load_story(
         maps.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -158,6 +171,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             spells,
             skills,
             arts,
+            names,
             characters,
             portraits,
             dialogue,
@@ -308,6 +322,7 @@ struct Loaded {
     spells: Result<SpellTable, Vec<ContentError>>,
     skills: Result<SkillTable, Vec<ContentError>>,
     arts: Result<ArtTable, Vec<ContentError>>,
+    names: Result<Names, Vec<ContentError>>,
     characters: Result<CharacterTable, Vec<ContentError>>,
     portraits: Result<BTreeMap<String, Portrait>, Vec<ContentError>>,
     dialogue: Result<DialogueTable, Vec<ContentError>>,
@@ -350,6 +365,7 @@ fn assemble(
         spells: take(units.spells, &mut errors),
         skills: take(units.skills, &mut errors),
         arts: take(units.arts, &mut errors),
+        names: take(units.names, &mut errors),
         characters: take(units.characters, &mut errors),
         portraits: take(units.portraits, &mut errors),
         dialogue: take(units.dialogue, &mut errors),
@@ -384,7 +400,11 @@ mod tests {
     }
 
     fn ok_characters() -> Result<CharacterTable, Vec<ContentError>> {
-        character::load(ok_classes().ok().as_ref(), item::load().ok().as_ref())
+        character::load(
+            ok_classes().ok().as_ref(),
+            item::load().ok().as_ref(),
+            names::load().ok().as_ref(),
+        )
     }
 
     fn ok_spells() -> Result<SpellTable, Vec<ContentError>> {
@@ -400,7 +420,11 @@ mod tests {
     }
 
     fn ok_dialogue() -> Result<DialogueTable, Vec<ContentError>> {
-        dialogue::load(ok_characters().ok().as_ref(), ok_portraits().ok().as_ref())
+        dialogue::load(
+            ok_characters().ok().as_ref(),
+            ok_portraits().ok().as_ref(),
+            names::load().ok().as_ref(),
+        )
     }
 
     fn ok_story() -> Story {
@@ -423,6 +447,7 @@ mod tests {
             spells: ok_spells(),
             skills: ok_skills(),
             arts: art::load(),
+            names: names::load(),
             characters: ok_characters(),
             portraits: ok_portraits(),
             dialogue: ok_dialogue(),
@@ -481,6 +506,10 @@ mod tests {
         );
         assert_eq!(content.as_ref().map(|c| &c.arts), art::load().ok().as_ref());
         assert_eq!(
+            content.as_ref().map(|c| &c.names),
+            names::load().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.characters),
             ok_characters().ok().as_ref()
         );
@@ -509,9 +538,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 19] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "u", "o", "d", "w", "y", "v", "b", "h",
-        "n",
+    const NAMES: [&str; 20] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "b",
+        "h", "g",
     ];
 
     #[test]
@@ -530,6 +559,7 @@ mod tests {
                     spells: Err(e("s")),
                     skills: Err(e("x")),
                     arts: Err(e("a")),
+                    names: Err(e("n")),
                     characters: Err(e("u")),
                     portraits: Err(e("o")),
                     dialogue: Err(e("d")),
@@ -538,7 +568,7 @@ mod tests {
                     audio: Err(e("v")),
                     battles: Err(e("b")),
                     chapters: Err(e("h")),
-                    new_game: Err(e("n")),
+                    new_game: Err(e("g")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -568,19 +598,20 @@ mod tests {
                     spells: if i == 7 { Err(e("s")) } else { ok_spells() },
                     skills: if i == 8 { Err(e("x")) } else { ok_skills() },
                     arts: if i == 9 { Err(e("a")) } else { art::load() },
-                    characters: if i == 10 {
+                    names: if i == 10 { Err(e("n")) } else { names::load() },
+                    characters: if i == 11 {
                         Err(e("u"))
                     } else {
                         ok_characters()
                     },
-                    portraits: if i == 11 { Err(e("o")) } else { ok_portraits() },
-                    dialogue: if i == 12 { Err(e("d")) } else { ok_dialogue() },
-                    ai: if i == 13 { Err(e("w")) } else { ai::load() },
-                    tips: if i == 14 { Err(e("y")) } else { tip::load() },
-                    audio: if i == 15 { Err(e("v")) } else { audio::load() },
-                    battles: if i == 16 { Err(e("b")) } else { ok_story().0 },
-                    chapters: if i == 17 { Err(e("h")) } else { ok_story().1 },
-                    new_game: if i == 18 { Err(e("n")) } else { ok_story().2 },
+                    portraits: if i == 12 { Err(e("o")) } else { ok_portraits() },
+                    dialogue: if i == 13 { Err(e("d")) } else { ok_dialogue() },
+                    ai: if i == 14 { Err(e("w")) } else { ai::load() },
+                    tips: if i == 15 { Err(e("y")) } else { tip::load() },
+                    audio: if i == 16 { Err(e("v")) } else { audio::load() },
+                    battles: if i == 17 { Err(e("b")) } else { ok_story().0 },
+                    chapters: if i == 18 { Err(e("h")) } else { ok_story().1 },
+                    new_game: if i == 19 { Err(e("g")) } else { ok_story().2 },
                 },
             )
         };

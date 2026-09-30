@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-09-30
 ---
 
 # 0033 — Decide: playtest bot player types and what each must achieve
@@ -143,12 +143,39 @@ has become unwinnable).
 
 ## Acceptance criteria
 
-- [ ] Nick answered Q1–Q9 (or chose "describe your own").
-- [ ] `docs/design/playtest-bots.md` records his words verbatim, then the
+- [x] Nick answered Q1–Q9 (or chose "describe your own").
+- [x] `docs/design/playtest-bots.md` records his words verbatim, then the
       rules in plain language with a worked example report.
-- [ ] `docs/design/README.md` links it.
-- [ ] Any change of scope for 0505–0508 that the answers imply is written into
+- [x] `docs/design/README.md` links it.
+- [x] Any change of scope for 0505–0508 that the answers imply is written into
       those tickets.
 
 ## Completion notes
 
+Nick answered Q1–Q9 plus two new questions (Q10, Q11) raised by his idea of
+autobalancing battles and generating skirmishes to order. Recorded in
+`docs/design/playtest-bots.md`, linked from `docs/design/README.md`.
+
+- Q1 A (Casual, Normal, Hardcore), Q2 A, Q3 A (first try only), plus
+  per-try statistics of who fell and when, and history across runs.
+- Targets: Casual wins ≥60%; Normal wins with nobody dead and ≤3 items ≥50%;
+  Hardcore wins with nobody dead and ≤1 item ≥50% ("where veterans would
+  end up"). Bands, not floors. Per tier (Q7 B). No bot knows reinforcements
+  (Q8 A). Only "unwinnable" blocks (Q9 C).
+- Autobalancing: anything for random skirmishes, enemy numbers only for
+  fixed skirmishes and side quests. "Lv 35" means a lv 35 battle.
+
+*Claude's starting rules* (Nick may veto):
+- Upper band edges are the lower edge +25 points; Easy/Hard/Finale rows of
+  the band table are proposed values.
+- "Hardcore is faster" is checked as Hardcore's median turns < Normal's; no
+  per-map par.
+- "Unwinnable" = Casual succeeds under 20% of tries.
+- "Each epoch" read as each batch of runs (report history).
+- Story battles get the same autobalance limits as fixed skirmishes.
+
+Tickets changed: 0505 (per-try who-fell-when list, history), 0506 (success
+rules, bands per tier, Casual ignores deaths, Hardcore stronger than Normal,
+no reinforcement knowledge, block only on Casual <20%, workflow now
+required), 1008 (pool can be filled by the generator). New: 0509
+(autobalance), 0510 (generate a skirmish to order).

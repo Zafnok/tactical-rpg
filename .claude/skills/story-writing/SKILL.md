@@ -19,11 +19,14 @@ the process; do not skip steps.
 ## Names are variables
 
 Nick may rename anything (`docs/story/names.md`). Every proper noun has a
-stable id there; add new names there first. In `.dlg` scripts, speakers are
-role ids and names in text are name tokens (format: ticket 0709); never write a
-registered display name literally. The story docs use display names; a
-rename is a find-and-replace across `docs/story/` in the same commit as the
-registry change.
+stable id there; add new names there first, then to the game's names table,
+`assets/data/names.ron`. In `.dlg` scripts, speakers are role ids and names
+in text are name tokens: `{n:king}` for "Emeric", `{N:place.thornmarch}` for
+"The Thornmarch" at the start of a sentence (`assets/dialogue/README.md`,
+"Names"). Never write a registered display name literally; the validator
+rejects it. The lead is `{lead}`, never a name token. The story docs use
+display names; a rename is a find-and-replace across `docs/story/` in the
+same commit as the registry change.
 
 ## Craft rules
 

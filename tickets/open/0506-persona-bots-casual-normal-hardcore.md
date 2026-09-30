@@ -16,7 +16,12 @@ completed:
 ## Context
 
 Third step of the automated playtesting bots. Nick's player types and their
-targets are in `docs/design/playtest-bots.md` (0033). The runner, measures
+targets are in `docs/design/playtest-bots.md` (0033). In short: Casual
+(Casual mode) succeeds by winning; Normal (Classic) by winning with nobody
+dead and ≤3 items; Hardcore (Classic) by winning with nobody dead and ≤1
+item, and must be faster than Normal. Each bot's success rate must land in a
+band set by the map's tier. No bot knows about reinforcements. Only "Casual
+succeeds under 20%" blocks a change. The runner, measures
 and `PlayerBot` trait exist (0505); legal moves and luck reseeding are in
 `core` (0504).
 
@@ -50,13 +55,17 @@ Sign-off never blocks the PR.
 - `SearchBot` in `trpg-bots` with a `Persona` settings struct; three presets
   from `docs/design/playtest-bots.md`.
 - Per-persona scoring of outcomes.
-- Target checks in the 0505 report; exit code per 0033's Q9 answer.
-- If 0033 chose to block on misses (Q9 B or C), a GitHub workflow that runs
-  it (see step 6).
+- Target checks in the 0505 report: success per try, the tier band
+  (✓ / ✗ too hard / ⚠ too easy), Hardcore faster than Normal.
+- Exit code: non-zero only when the Casual bot succeeds in under 20% of
+  tries (0033 Q9 C).
+- A GitHub workflow that runs it (step 6), since 0033 chose to block on the
+  unwinnable case.
 
 **Out (do not do):**
 - Neural networks or training (0507).
-- Rewind (never, Nick) and restarts unless 0033's Q3 chose restarts.
+- Rewind and restarts (never: Nick, 0033 Q3 = first try only).
+- Autobalancing and skirmish generation (0509, 0510).
 - Changing Chapter 1's balance. Misses are reported to Nick; any retuning is
   its own ticket.
 - Tuning persona settings to make Chapter 1 pass (see Context).
@@ -84,45 +93,62 @@ Sign-off never blocks the PR.
    - Score each rollout end state with the persona's scoring (step 3);
      average per candidate. Pick by softmax with `persona.temperature`
      (0 = always the best), drawing from the bot's own RNG.
-   - **Reinforcements** per 0033 Q8: when a persona must not know them,
-     rollouts are run on a copy whose not-yet-arrived reinforcements are
-     removed. Add a `core` method for this only if none exists; keep it
+   - **Reinforcements** (0033 Q8 A: no persona knows them): rollouts are
+     run on a copy whose not-yet-arrived reinforcements are removed. Add a `core` method for this only if none exists; keep it
      documented as bot-only like `reseed_luck`.
 3. **Scoring** (`crates/bots/src/persona.rs`): a weighted sum over the
    rollout end state and the measures so far: battle won/lost, lord alive,
    player units fallen, player HP lost, enemies defeated, objective progress
    (distance of the nearest eligible unit to a seize tile; boss HP), turns
    used, items used. Weights per persona, derived from the persona text:
-   - Casual: winning and the lord's safety dominate; fallen units cost
-     little (they retreat in Casual mode); items free.
-   - Normal: any fallen unit costs heavily; HP lost costs; items and turns
-     cost nothing.
-   - Hardcore: fallen units cost heavily; turns and items cost.
+   - Casual: winning and the lord's safety dominate; **non-lord fallen
+     units cost nothing** (Nick: "the # of deaths does not influence bot at
+     all"); items free.
+   - Normal: any fallen unit costs heavily; HP lost costs; items cost a
+     little (its success needs ≤3), turns cost nothing.
+   - Hardcore: fallen units cost heavily; turns and items cost (its success
+     needs ≤1 item).
    Search settings per persona (starting values, fixed after this ticket):
    Casual small budget, 1 phase ahead, some randomness; Normal medium
-   budget, 2 phases, little randomness; Hardcore large budget, 2–3 phases, no
-   randomness. They are dev tooling, not game content: put them in
+   budget, 2 phases, little randomness; Hardcore clearly larger budget than
+   Normal, 2–3 phases, no randomness (Nick: "hardcore should play better
+   than normal"; it stands in for veterans). They are dev tooling, not game content: put them in
    `crates/bots/personas.ron` (not `assets/`), loaded by the xtask.
 4. **Runner**: `cargo xtask playtest <battle> --bot casual|normal|hardcore|all`
-   uses each persona's game mode from 0033 Q2. The report adds, per target,
-   the value, the target, and ✓ / ✗. `all` prints the three tables, then one
-   summary line per persona.
+   uses each persona's game mode (Casual → Casual mode, the others →
+   Classic). Success per try and the bands per tier are exactly those in
+   `docs/design/playtest-bots.md`; the tier is read from the battle file and
+   the band table lives in `crates/bots/targets.ron` (dev tooling, like
+   `personas.ron`), with the values from the design doc. The report shows
+   the layout in the design doc's *What the report shows*: per bot the
+   success count, its band and ✓ / ✗ too hard / ⚠ too easy, the
+   deaths/retreats and items per try, and Hardcore's median turns against
+   Normal's (✓ when lower). `all` prints the three tables, then one summary
+   line per persona.
 5. **Speed**: report the wall time per try. If 100 tries of all three bots
    on Chapter 1 take more than 15 minutes on one machine, lower the default
    `--runs` for `all` and say so in the report header; don't cut the search
    quality.
-6. **Blocking** per 0033 Q9. If misses block anything, add
-   `.github/workflows/playtest.yml` running `cargo xtask playtest <each
-   battle in assets/battles> --bot all` on pushes to `main` and on PRs that
-   touch `assets/` or `crates/core/`, failing per the rule. Follow ADR-0008's
+6. **Blocking** (0033 Q9 C): add `.github/workflows/playtest.yml` running
+   `cargo xtask playtest <each battle in assets/battles> --bot all` on
+   pushes to `main` and on PRs that touch `assets/` or `crates/core/`,
+   failing only when some battle's Casual success rate is under 20%; ✗ and
+   ⚠ are printed in the job summary but pass. Follow ADR-0008's
    workflow conventions and ADR-0014's docs-only skip.
 7. **Docs**: extend `docs/playtesting.md` (0505) with the personas, their
    scoring and settings, and how to read ✓ / ✗.
 
 ## Acceptance criteria
 
-- [ ] `cargo xtask playtest ch01 --bot all` prints three tables with ✓ / ✗
-      per target from `docs/design/playtest-bots.md`, and exits per 0033 Q9.
+- [ ] `cargo xtask playtest ch01 --bot all` prints three tables with the
+      band check (✓ / ✗ / ⚠) per bot from `docs/design/playtest-bots.md`
+      and the Hardcore-faster-than-Normal check, and exits non-zero only
+      when Casual succeeds under 20%.
+- [ ] Unit test `success_rules_per_persona`: a won try with one death and
+      2 items is a success for Casual only; nobody dead with 3 items is a
+      success for Casual and Normal; nobody dead with 1 item for all three.
+- [ ] Unit test `band_check_flags_too_easy_and_too_hard`: for the Normal
+      tier, Casual 59% → ✗, 70% → ✓, 90% → ⚠.
 - [ ] Same seed → identical report (except speed lines), for each persona.
 - [ ] Unit test `hardcore_never_attacks_into_a_forecast_it_scores_worse`:
       given a scripted state where one attack is clearly better (kills with

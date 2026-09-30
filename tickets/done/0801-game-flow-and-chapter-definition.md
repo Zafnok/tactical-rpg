@@ -167,10 +167,9 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 
 **Deviations from the ticket**
 
-- Blocked by 0502 (enemy phase playback, PR #122 green but not merged):
-  built on `main`; nothing here depends on it (tests win and lose with
-  scripted commands). Until it lands, enemies still do nothing in their
-  phase.
+- Blocked by 0502 (enemy phase playback): built on `main` while its PR was
+  open; it landed before this merged and `main` was merged in (the flow's
+  tests win and lose with scripted commands either way).
 - `map:` names a map id (`"ch01"`), like the rest of the content, not a path.
 - No `consumable:` on enemies: `weapons-and-items.md` says enemies carry
   none (Nick, 0501).

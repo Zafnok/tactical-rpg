@@ -219,7 +219,8 @@ impl FlowScreen {
             .campaign
             .as_ref()
             .map_or_else(|| ctx.lead.clone(), |c| c.lead.clone());
-        self.stage = Stage::Scene(Box::new(DialogueScreen::new(scene, lead)));
+        let names = ctx.content.names.clone();
+        self.stage = Stage::Scene(Box::new(DialogueScreen::new(scene, lead, names)));
     }
 
     /// Starts the chapter's battle with the campaign's army.

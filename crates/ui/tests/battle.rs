@@ -4,7 +4,7 @@
 use insta::assert_snapshot;
 use trpg_content::FontAtlasDef;
 use trpg_ui::audio::AudioRequest;
-use trpg_ui::harness::Harness;
+use trpg_ui::harness::{FRAME_DT, Harness};
 use trpg_ui::input::Layout;
 
 /// At the title with the right-handed layout, then Quick Battle.
@@ -60,6 +60,21 @@ fn shows(h: &Harness, text: &str) -> bool {
     (0..32).any(|y| row(h, y).contains(text))
 }
 
+/// Lets frames pass with no keys until `text` shows (the enemies act one
+/// by one before the player's next phase).
+///
+/// # Panics
+///
+/// If it doesn't show within `max` seconds.
+fn wait_for(h: &mut Harness, text: &str, max: f32) {
+    let mut waited = 0.0;
+    while !shows(h, text) {
+        assert!(waited < max, "no {text:?} after {max} s:\n{}", h.snapshot());
+        h.wait(FRAME_DT);
+        waited += FRAME_DT;
+    }
+}
+
 /// Each player unit in turn (the one under the cursor, then the next ready
 /// one) selected, kept where it stands, and told to Wait (no enemy is in
 /// reach, so the menu opens on Wait).
@@ -81,12 +96,13 @@ fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     h.keys("Shift+Space");
     assert!(row(&h, 30).starts_with("Auto-end: ON"), "{}", row(&h, 30));
     wait_all(&mut h, 3);
-    // The enemy phase's banner, which (with no enemy AI yet) passes
-    // straight to the player's turn 2.
+    // The enemy phase's banner, then the enemies act, then the player's
+    // turn 2.
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
     assert!(shows(&h, "Turn 1"));
     h.wait(1.1);
-    assert!(shows(&h, "PLAYER PHASE"));
+    assert!(!shows(&h, "PHASE"));
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
     assert!(shows(&h, "Turn 2"));
     h.wait(1.1);
     assert!(!shows(&h, "PHASE"));
@@ -110,7 +126,8 @@ fn a_full_turn_of_waits_then_space_ends_the_turn() {
     assert!(shows(&h, "ENEMY PHASE"));
     // Confirm skips each banner.
     h.keys("f");
-    assert!(shows(&h, "PLAYER PHASE"));
+    assert!(!shows(&h, "ENEMY PHASE"));
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
     assert!(shows(&h, "Turn 2"));
     h.keys("f");
     assert!(!shows(&h, "PHASE"));
@@ -130,7 +147,9 @@ fn space_twice_ends_the_turn_with_units_ready() {
     // Double-tap Space.
     h.keys("Space Space");
     assert!(shows(&h, "ENEMY PHASE"));
-    h.keys("f f");
+    h.keys("f");
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
+    h.keys("f");
     assert!(!shows(&h, "PHASE"));
     // Turn 2: the objective says so.
     h.keys("d Down f");
@@ -408,13 +427,15 @@ fn the_rogue_arrives_and_turn_three_opens_with_a_scene() {
     // The fort at (12, 3), empty.
     assert_eq!(tile(&h, 44, 14), "╦╦");
     // Turn 1 ends with everyone ready; both banners skipped.
-    h.keys("Space Space f f");
+    h.keys("Space Space f");
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
+    h.keys("f");
     assert!(!shows(&h, "PHASE"));
     // Turn 2's enemy phase (the rogue arrives under its banner).
     h.keys("Space Space");
     assert!(shows(&h, "ENEMY PHASE"));
     h.keys("f");
-    assert!(shows(&h, "PLAYER PHASE"));
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
     assert!(shows(&h, "Turn 3"));
     assert_eq!(h.screens(), ["title", "battle"]);
     // Closing the banner plays the scene over the map.
@@ -462,11 +483,15 @@ fn quick_battle_keeps_one_skirmish_track() {
         .keys("f")
         .wait(0.5);
     h.keys("f").wait(0.5).keys("f").wait(30.0);
-    // Open rewind and back out, then end the turn through the enemy phase.
-    h.keys("r").wait(0.5).keys("d");
+    // Rewind the fight (the hurt lord would fall in the enemy phase), then
+    // end the turn through the enemy phase.
+    h.keys("r").wait(0.5).keys("f f");
+    assert!(!shows(&h, "Rewind"), "{}", h.snapshot());
     h.keys("Space Space");
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
-    h.keys("f f");
+    h.keys("f");
+    wait_for(&mut h, "PLAYER PHASE", 30.0);
+    h.keys("f");
     assert!(!shows(&h, "PHASE"));
     h.keys("d Down f");
     assert!(shows(&h, "Turn 2"));

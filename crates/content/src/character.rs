@@ -13,6 +13,7 @@ use trpg_core::{
 use crate::bundle;
 use crate::enums::{RawStatKind, RawWeaponKind, RawWeaponRank};
 use crate::error::ContentError;
+use crate::names::{NAMES_PATH, Names};
 use crate::ron_loader::parse_ron;
 use crate::terrain::line_of;
 
@@ -114,7 +115,6 @@ struct RawFile {
 #[serde(deny_unknown_fields)]
 struct RawCharacter {
     id: String,
-    name: String,
     class: String,
     level: Level,
     #[serde(default)]
@@ -166,10 +166,13 @@ struct RawGeneric {
 
 /// Loads and validates the embedded character file. Class references are
 /// checked against `classes` when given (skipped if the class file failed to
-/// load); loadouts against `classes` and `items` when both are given.
+/// load); loadouts against `classes` and `items` when both are given. A
+/// named character's display name is `names`' entry for its id (its id if
+/// the names table failed to load).
 pub fn load(
     classes: Option<&ClassTable>,
     items: Option<&ItemTable>,
+    names: Option<&Names>,
 ) -> Result<CharacterTable, Vec<ContentError>> {
     let display = bundle::display_path(CHARACTERS_PATH);
     let source = bundle::file(CHARACTERS_PATH).ok_or_else(|| {
@@ -178,7 +181,7 @@ pub fn load(
             "file not found in asset bundle",
         )]
     })?;
-    from_source(&display, source, classes, items)
+    from_source(&display, source, classes, items, names)
 }
 
 /// Parses and validates character `source`, attributing errors to `file`.
@@ -188,6 +191,7 @@ pub fn from_source(
     source: &str,
     classes: Option<&ClassTable>,
     items: Option<&ItemTable>,
+    names: Option<&Names>,
 ) -> Result<CharacterTable, Vec<ContentError>> {
     let raw: RawFile = parse_ron(file, source).map_err(|e| vec![e])?;
     let mut v = Validator {
@@ -195,6 +199,7 @@ pub fn from_source(
         source,
         classes,
         items,
+        names,
         errors: Vec::new(),
     };
     let mut table = CharacterTable::default();
@@ -245,6 +250,7 @@ struct Validator<'a> {
     source: &'a str,
     classes: Option<&'a ClassTable>,
     items: Option<&'a ItemTable>,
+    names: Option<&'a Names>,
     errors: Vec<ContentError>,
 }
 
@@ -278,6 +284,25 @@ impl<'a> Validator<'a> {
         if level < 1 || level > cap {
             self.err(id, format!("{what}: level {level} is outside 1..={cap}"));
         }
+    }
+
+    /// The display name of character `id`: its entry in the names table
+    /// (an error if it has none), or `id` without a names table.
+    fn name(&mut self, id: &str, what: &str) -> String {
+        let Some(names) = self.names else {
+            return id.to_owned();
+        };
+        if let Some(name) = names.get(id) {
+            return name.to_owned();
+        }
+        self.err(
+            id,
+            format!(
+                "{what} has no name: add \"{id}\": \"<name>\" to {}",
+                bundle::display_path(NAMES_PATH)
+            ),
+        );
+        id.to_owned()
     }
 
     /// Checks a map label override is exactly two letters.
@@ -320,7 +345,7 @@ impl<'a> Validator<'a> {
             .collect();
         let def = CharacterDef {
             id: CharacterId(c.id.clone()),
-            name: c.name.clone(),
+            name: self.name(&c.id, &what),
             class: ClassId(c.class.clone()),
             level: c.level,
             is_lord: c.is_lord,
@@ -413,7 +438,7 @@ mod tests {
 
     fn character(id: &str, class: &str, extra: &str) -> String {
         format!(
-            "        (\n            id: \"{id}\", name: \"N\", class: \"{class}\", level: 1, talent: Spd,\n            base: (18, 5, 0, 7, 8, 3, 1), weapon_ranks: [(Sword, D)], {extra}\n        ),\n"
+            "        (\n            id: \"{id}\", class: \"{class}\", level: 1, talent: Spd,\n            base: (18, 5, 0, 7, 8, 3, 1), weapon_ranks: [(Sword, D)], {extra}\n        ),\n"
         )
     }
 
@@ -429,7 +454,7 @@ mod tests {
     }
 
     fn load_src(src: &str) -> Result<CharacterTable, Vec<ContentError>> {
-        from_source("ch.ron", src, Some(&classes()), Some(&items()))
+        from_source("ch.ron", src, Some(&classes()), Some(&items()), None)
     }
 
     fn errors(src: &str) -> Vec<String> {
@@ -456,7 +481,7 @@ mod tests {
         let t = t.unwrap_or_default();
         let expected = CharacterDef {
             id: CharacterId("hero".into()),
-            name: "N".into(),
+            name: "hero".into(),
             class: ClassId("swordsman".into()),
             level: 1,
             is_lord: false,
@@ -480,13 +505,97 @@ mod tests {
         );
     }
 
+    fn names(entries: &[(&str, &str)]) -> Names {
+        Names {
+            names: entries
+                .iter()
+                .map(|&(id, name)| (id.to_owned(), name.to_owned()))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn names_come_from_the_names_table() {
+        let src = file(&[character("hero", "swordsman", "")], "");
+        let table = names(&[("hero", "Hollis Marr")]);
+        let t = from_source(
+            "ch.ron",
+            &src,
+            Some(&classes()),
+            Some(&items()),
+            Some(&table),
+        )
+        .unwrap_or_default();
+        let def = t.characters.get(&CharacterId("hero".into()));
+        assert_eq!(def.map(|d| d.name.as_str()), Some("Hollis Marr"));
+        // The character's unit carries the table's name.
+        let unit = def.and_then(|d| {
+            character_unit(
+                d,
+                UnitId(0),
+                &classes(),
+                &items(),
+                Faction::Player,
+                Pos::new(0, 0),
+            )
+            .ok()
+        });
+        assert_eq!(unit.map(|u| u.name), Some("Hollis Marr".to_owned()));
+    }
+
+    #[test]
+    fn a_character_without_a_name_is_an_error() {
+        let src = file(&[character("hero", "swordsman", "")], "");
+        let table = names(&[("other", "Aske")]);
+        let errors: Vec<String> = from_source(
+            "ch.ron",
+            &src,
+            Some(&classes()),
+            Some(&items()),
+            Some(&table),
+        )
+        .err()
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+        assert_eq!(
+            errors,
+            [
+                "ch.ron:4: character \"hero\" has no name: add \"hero\": \"<name>\" to \
+                 assets/data/names.ron"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_literal_name_field_is_rejected() {
+        let src = file(&[character("hero", "swordsman", "")], "").replace(
+            "class: \"swordsman\"",
+            "name: \"Hero\", class: \"swordsman\"",
+        );
+        let errs = load_src(&src).err().unwrap_or_default();
+        assert_eq!(errs.len(), 1);
+        assert!(errs[0].message.contains("name"), "{errs:?}");
+    }
+
+    #[test]
+    fn embedded_characters_are_named_by_the_table() {
+        let table = crate::names::load().unwrap_or_default();
+        let t = load(Some(&classes()), Some(&items()), Some(&table)).unwrap_or_default();
+        assert!(!t.characters.is_empty());
+        for (id, def) in &t.characters {
+            assert_eq!(Some(def.name.as_str()), table.get(&id.0));
+        }
+    }
+
     #[test]
     fn without_classes_references_are_not_checked() {
         let src = file(
             &[character("hero", "nope", "level: 0")].map(|c| c.replace("level: 1, ", "")),
             "(id: \"g\", class: \"nope\", level: 0)",
         );
-        let t = from_source("ch.ron", &src, None, Some(&items()));
+        let t = from_source("ch.ron", &src, None, Some(&items()), None);
         assert!(t.is_ok(), "{t:?}");
         assert_eq!(
             t.ok()
@@ -708,7 +817,7 @@ mod tests {
     fn map_label_clashes_between_named_units() {
         let classes = classes();
         let items = items();
-        let t = load(Some(&classes), Some(&items)).unwrap_or_default();
+        let t = load(Some(&classes), Some(&items), None).unwrap_or_default();
         let named = |label: &str, n: u32, faction| {
             let def = &t.characters[&CharacterId("test_knight".into())];
             Unit::from_character(UnitId(n), def, &classes, faction, Pos::new(0, 0))
@@ -778,7 +887,7 @@ mod tests {
             ]
         );
         // Without the item table, loadouts aren't checked.
-        assert!(from_source("ch.ron", &src, Some(&classes()), None).is_ok());
+        assert!(from_source("ch.ron", &src, Some(&classes()), None, None).is_ok());
         let t = load_src(&file(
             &[character(
                 "a",
@@ -817,7 +926,11 @@ mod tests {
     fn embedded_characters_load_and_make_units() {
         let classes = classes();
         let items = items();
-        let t = load(Some(&classes), Some(&items));
+        let t = load(
+            Some(&classes),
+            Some(&items),
+            Some(&crate::names::load().unwrap_or_default()),
+        );
         assert!(t.is_ok(), "{t:?}");
         let t = t.unwrap_or_default();
         let ids: Vec<&str> = t.characters.keys().map(|c| c.0.as_str()).collect();

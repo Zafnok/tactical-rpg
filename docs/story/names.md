@@ -10,8 +10,9 @@ any time.**
 - **Game scripts and data never write a registered name literally.** They use
   the id: speaker ids in `.dlg` files are the character ids below, and names
   inside text are name tokens resolved from the game's names table (format
-  and token syntax: ticket 0709). Renaming in the game = one line in that
-  table.
+  and token syntax: `assets/dialogue/README.md`, "Names"). Renaming in the
+  game = one line in that table, `assets/data/names.ron` (it holds every id
+  below; a test keeps the two in step).
 - **The story docs** (`bible.md`, `characters/`, `outline.md`, `chapters/`,
   `ledger.md`) use the display names so they stay readable. To rename: change
   the name in this file, then replace the old name across `docs/story/` in the
