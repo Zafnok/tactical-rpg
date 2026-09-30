@@ -6,7 +6,7 @@ Browser play via WASM ([ADR-0009](../docs/adr/0009-distribution.md)).
 
 - `index.html` — the page shell: a full-window black `<canvas id="glcanvas">`,
   no margins or scrollbars, focused on load and on click, loads the bundle
-  then `tactical-rpg.wasm`.
+  then `visions-of-shuyi.wasm`.
 - `mq_js_bundle.js` — macroquad's JS loader, vendored (see below). It already
   calls `preventDefault` on the sokol-mapped arrow/space/tab keys inside its
   own `canvas.onkeydown` handler; `index.html` adds a small backstop

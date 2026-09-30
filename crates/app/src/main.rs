@@ -15,7 +15,7 @@ use crate::render::Renderer;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "tactical-rpg".to_owned(),
+        window_title: "Visions of Shuyi".to_owned(),
         // The console at 2x (1600x1024) plus a small margin: the framebuffer
         // can come out a pixel smaller than asked, which would drop to 1x.
         window_width: 1640,

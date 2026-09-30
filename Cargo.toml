@@ -8,7 +8,7 @@ edition = "2024"
 rust-version = "1.98"
 publish = false
 license-file = "LICENSE"
-repository = "https://github.com/Zafnok/tactical-rpg"
+repository = "https://github.com/Zafnok/visions-of-shuyi"
 
 [workspace.dependencies]
 macroquad = { version = "0.4", features = ["audio"] }

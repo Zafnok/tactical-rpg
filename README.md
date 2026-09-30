@@ -18,7 +18,7 @@ ticket at a time; see the [roadmap](docs/ROADMAP.md).
 ## Play
 
 The latest `main` build runs in your browser, no install:
-**https://zafnok.github.io/tactical-rpg/**
+**https://zafnok.github.io/visions-of-shuyi/**
 
 ## Targets
 
@@ -51,7 +51,7 @@ Releases are cut by pushing a tag ([ADR-0009](docs/adr/0009-distribution.md)):
 3. The [release workflow](.github/workflows/release.yml) builds Windows,
    Linux, macOS (universal) and web packages — each with `LICENSE`,
    `THIRD_PARTY_LICENSES.html` and a `README.txt` — and attaches them to a new
-   [GitHub Release](https://github.com/Zafnok/tactical-rpg/releases) for the
+   [GitHub Release](https://github.com/Zafnok/visions-of-shuyi/releases) for the
    tag with auto-generated notes.
 
 To try the whole pipeline without cutting a real release, run it manually via
