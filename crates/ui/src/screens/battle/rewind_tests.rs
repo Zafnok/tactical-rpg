@@ -238,3 +238,66 @@ fn rewind_screen_snapshot() {
     assert_eq!(help(&h), "f rewind · d back");
     assert_snapshot!(h.snapshot());
 }
+
+/// The sound cues played since the last call.
+fn cues(c: &mut Ctx) -> Vec<String> {
+    c.audio
+        .take()
+        .iter()
+        .filter_map(|r| r.cue().map(str::to_owned))
+        .collect()
+}
+
+/// The rewind screen sounds like a menu; a move with nowhere to go and a
+/// Confirm with nothing to rewind play nothing (ticket 0425).
+#[test]
+fn rewind_screen_sounds() {
+    let mut c = ctx();
+    let mut s = BattleScreen::new(skirmish_charged(&c, 20, 3));
+    cues(&mut c);
+    press(&mut s, &mut c, &[Rewind, Confirm, CursorDown, Cancel], 0.0);
+    assert_eq!(cues(&mut c), ["menu_select", "menu_cancel"]);
+
+    let (mut s, _) = attacked(&mut c, 3);
+    // The archer (at (8, 4)) waits: two entries.
+    press(&mut s, &mut c, &[Action::NextUnit], 0.0);
+    press(&mut s, &mut c, &[Confirm, Confirm], 0.3);
+    press(&mut s, &mut c, &[CursorUp, Confirm], 0.0);
+    assert_eq!(s.history().len(), 2);
+    cues(&mut c);
+    press(
+        &mut s,
+        &mut c,
+        &[Rewind, CursorUp, CursorDown, CursorDown],
+        0.0,
+    );
+    assert_eq!(cues(&mut c), ["menu_select", "menu_move"]);
+    press(&mut s, &mut c, &[Confirm, Cancel, Rewind], 0.0);
+    assert_eq!(cues(&mut c), ["menu_select", "menu_cancel", "menu_cancel"]);
+    press(&mut s, &mut c, &[Rewind, Confirm, Confirm], 0.0);
+    assert_eq!(cues(&mut c), ["menu_select"; 3]);
+    assert!(s.rewind().is_none());
+    assert_eq!(s.history().len(), 1, "rewound the archer's wait");
+}
+
+/// Skipping a walk or a combat's playback plays nothing (ticket 0425).
+#[test]
+fn skipping_is_silent() {
+    let mut c = ctx();
+    let mut s = BattleScreen::new(skirmish_charged(&c, 20, 3));
+    // Select the lord, one step right, start the walk; Confirm skips it.
+    press(&mut s, &mut c, &[Confirm, CursorRight, Confirm], 0.0);
+    assert_eq!(cues(&mut c), ["menu_select", "cursor_move", "menu_select"]);
+    press(&mut s, &mut c, &[Confirm], 0.0);
+    assert!(cues(&mut c).is_empty());
+    // Attack, the iron sword, the brigand, attack; Cancel skips the combat.
+    press(
+        &mut s,
+        &mut c,
+        &[Confirm, Confirm, CursorRight, Confirm],
+        0.0,
+    );
+    assert_eq!(cues(&mut c).last().map(String::as_str), Some("menu_select"));
+    press(&mut s, &mut c, &[Cancel], 0.0);
+    assert!(cues(&mut c).is_empty());
+}

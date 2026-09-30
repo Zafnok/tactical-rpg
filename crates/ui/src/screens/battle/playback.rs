@@ -21,8 +21,8 @@ use std::collections::BTreeMap;
 
 use trpg_core::{Event, Faction, Side, StatValue, Strike, Unit, UnitId};
 
+use super::event_sounds::{Attack, cast_sound, sound_for_strike};
 use super::layout::MAP_VIEW;
-use super::sounds::{Attack, cast_sound, sound_for_strike};
 use super::units::{faction_color, hp_fill};
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -229,7 +229,7 @@ impl Playback {
 
     /// The playback with its sound cues: `attacks` says what each
     /// combat's attacker and defender strike with
-    /// ([`combat_attacks`](super::sounds::combat_attacks)); `heal`: the
+    /// ([`combat_attacks`](super::event_sounds::combat_attacks)); `heal`: the
     /// command healed a unit. Each strike made with a spell plays the
     /// spell's cast sound as the striker's name starts flashing (a
     /// follow-up or counter casts again); each strike plays

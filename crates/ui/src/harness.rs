@@ -154,6 +154,18 @@ impl Harness {
         self.audio.concat()
     }
 
+    /// The sound cues (not music) played so far, in order.
+    pub fn sounds(&self) -> Vec<String> {
+        self.audio
+            .iter()
+            .flatten()
+            .filter_map(|r| match r {
+                AudioRequest::PlaySound { cue, .. } => Some(cue.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// The audio requests of the last frame run (a key press runs two
     /// frames, press and release; this is the release).
     pub fn last_frame_audio(&self) -> &[AudioRequest] {

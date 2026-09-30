@@ -8,16 +8,17 @@ use trpg_core::{
 };
 
 use super::BattleScreen;
+use super::event_sounds::{Attack, sound_for_strike};
 use super::mode::{Mode, WALK_TILES_PER_S};
 use super::playback::{Beat, Playback, TIMINGS};
 use super::quick_battle;
-use super::sounds::{Attack, sound_for_strike};
 use super::testing::{battle_packed, battle_with, skirmish};
 use crate::audio::AudioRequest;
 use crate::harness::{FRAME_DT, Harness};
 use crate::screen::tests::ctx;
 
-/// The sound cues of `requests`, in order.
+/// The battle-event sound cues of `requests`, in order: the menu and
+/// cursor sounds (0425, tested there) left out.
 fn cues(requests: &[AudioRequest]) -> Vec<String> {
     requests
         .iter()
@@ -25,6 +26,7 @@ fn cues(requests: &[AudioRequest]) -> Vec<String> {
             AudioRequest::PlaySound { cue, .. } => Some(cue.clone()),
             _ => None,
         })
+        .filter(|cue| !cue.starts_with("menu_") && !cue.starts_with("cursor_"))
         .collect()
 }
 
@@ -407,7 +409,7 @@ fn a_heal_in_a_combat_command_plays_as_the_outro_starts() {
     assert_eq!(outro.beat, Beat::Outro);
     assert_eq!(playback.cues().last(), Some(&(outro.start, "heal")));
     // The screen leaves it to the playback.
-    let cues = super::sounds::event_cues(
+    let cues = super::event_sounds::event_cues(
         &[Event::Healed {
             target: UnitId(1),
             amount: 3,
@@ -435,11 +437,11 @@ fn a_spell_cast_outside_a_combat_plays_its_cast_sound_at_once() {
             target: trpg_core::CastTarget::Tile(Pos::new(3, 3)),
         }
     };
-    let cues = |e: Event| super::sounds::event_cues(&[e], None, false, &state);
+    let cues = |e: Event| super::event_sounds::event_cues(&[e], None, false, &state);
     assert_eq!(cues(by(Element::Fire)), [(0.0, "cast_fire")]);
     assert_eq!(cues(by(Element::Ice)), [(0.0, "cast_ice")]);
     assert_eq!(cues(by(Element::None)), []);
     // In a combat command the strikes cast instead.
     let fire = by(Element::Fire);
-    assert!(super::sounds::event_cues(&[fire], None, true, &state).is_empty());
+    assert!(super::event_sounds::event_cues(&[fire], None, true, &state).is_empty());
 }
