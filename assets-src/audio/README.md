@@ -14,6 +14,7 @@ Needs Python 3 and ffmpeg. On Windows, with MSYS2:
 C:/msys64/usr/bin/pacman.exe -S mingw-w64-x86_64-ffmpeg
 python assets-src/audio/import.py          # download, convert, loudness-match
 python assets-src/audio/import.py --check  # print each output's loudness
+python assets-src/audio/import.py new_sunrise_v1.ogg  # redo only the named outputs
 ```
 
 It writes `music/*.ogg` and `assets/audio/sfx/*.ogg`. Which cue uses which
@@ -29,8 +30,10 @@ For each **music** track (`MUSIC` in `import.py`):
 1. Takes the original, or the named file from its zip (the loop file where
    the source has one: `SV_loop.mp3`, `Father's Scabbard - Loop.wav`).
 2. Refuses anything over 4.5 minutes (ADR-0026's memory budget).
-3. Measures its loudness with `ffmpeg -af aresample=44100:resampler=soxr,apad=whole_dur=0.5,ebur128=peak=true:framelog=info -f null -`.
-4. Encodes: `ffmpeg -i <src> -map_metadata -1 -vn -af aresample=44100:resampler=soxr,volume=<gain>dB -ac 2 -ar 44100 -c:a libvorbis -q:a 5 music/<name>.ogg`.
+3. An optional cut (`MUSIC_CUTS`; only `new_sunrise_v1`: the original's first
+   3 s of near-silence, `atrim=start=3.0,asetpts=PTS-STARTPTS,afade=t=in:d=0.05`).
+4. Measures its loudness with `ffmpeg -af [<cut>,]aresample=44100:resampler=soxr,apad=whole_dur=0.5,ebur128=peak=true:framelog=info -f null -`.
+5. Encodes: `ffmpeg -i <src> -map_metadata -1 -vn -af [<cut>,]aresample=44100:resampler=soxr,volume=<gain>dB -ac 2 -ar 44100 -c:a libvorbis -q:a 5 music/<name>.ogg`.
 
 For each **sound** (`SFX`):
 
