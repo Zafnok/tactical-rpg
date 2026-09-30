@@ -59,8 +59,17 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
   all drive the game.
 - Default button bindings from 0032 in `assets/data/keymap.ron`.
 - Held buttons repeat like held keys (same `repeat` timings).
-- Stick to 4-way cursor with a dead zone, if 0032 asks for the stick.
-- Pads work on the first-launch layout picker too (Confirm / cursor).
+- Left stick to 4-way cursor with a dead zone, one tile per step with the
+  held-key repeat (0032: D-pad and left stick both move; how far the stick
+  is pushed doesn't change speed; right stick and stick presses have no
+  default job, but the right stick's directions are read like the left's
+  so 0816 can bind them).
+- **Confirm / Cancel follow the controller (0032 Q1 C):** bottom confirms
+  and right cancels, except on Switch-style pads where those two swap (only
+  those two). Needs the pad kind, detected here (step 5b); 0220 reuses it
+  for button names.
+- Pads keep working on the first-launch layout picker (Confirm / cursor).
+  When the picker shows for controller players is 0226's job.
 - Linux CI and release builds install `libudev-dev`.
 - ADR for the controller input approach.
 
@@ -68,20 +77,22 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - Button names in help bars and tips (0220).
 - Rebinding buttons, a controller page in Options (0816).
 - Steam Input API / action sets, Steam Deck glyphs (0903).
-- Rumble, mouse, touch (unless 0032 asks for rumble: then a follow-up ticket).
+- Rumble (0032: none for now, maybe a later ticket), mouse, touch.
 
 ## Implementation steps
 
 1. **Button type** (`crates/content/src/keymap.rs`): `pub enum Button`
    with position names (`South`, `East`, `West`, `North`, `LeftShoulder`,
    `RightShoulder`, `LeftTrigger`, `RightTrigger`, `Select`, `Start`,
-   `LeftStickPress`, `RightStickPress`, `DpadUp/Down/Left/Right`, and
-   `LeftStickUp/Down/Left/Right` for the stick's 4 directions), with
+   `LeftStickPress`, `RightStickPress`, `DpadUp/Down/Left/Right`,
+   `LeftStickUp/Down/Left/Right` and `RightStickUp/Down/Left/Right` for
+   each stick's 4 directions), with
    `Display`/`parse` names for RON. Round-trip test every variant.
 2. **`keymap.ron`**: a top-level `pad: { "Confirm": ["South"], … }` table
-   (or per layout, if 0032 decides that), validated like layouts: every
+   (one table for both layouts, 0032 Q6a), validated like layouts: every
    action listed (`[]` for none), a button bound to at most one action,
-   `Debug` must be `[]`. Values exactly as in 0032's table; extend the
+   `Debug` must be `[]`, at most 3 buttons per action. Values exactly as
+   in `controls.md` *Controller → Default buttons*; extend the
    keymap-matches-design test. Stick tuning next to `repeat`:
    `stick: (press: 0.5, release: 0.35)` (*tunable*), release below press so
    a stick resting on the edge doesn't flicker.
@@ -101,6 +112,13 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
    Vec<(Button, bool)>`, including the stick-to-direction hysteresis. Both
    platforms fill a `PadState` per pad each frame, so all the logic is
    shared and tested here.
+5b. **Pad kind and the Nintendo swap** (pure, `crates/ui/src/input.rs`):
+   `PadKind { Xbox, PlayStation, Nintendo, Generic }` from a vendor id
+   (Microsoft 045e, Sony 054c, Nintendo 057e; anything else `Generic`).
+   For `Nintendo` pads, swap `South` ↔ `East` before the keymap lookup, so
+   bindings stay in Xbox positions and a Switch pad's right button
+   confirms. `app` passes each pad's kind with its events (gilrs vendor
+   id; on web, the vendor id inside `Gamepad.id`).
 6. **Native polling** (`crates/app/src/pads.rs`, `cfg(not(wasm32))`):
    `Gilrs::new()` once (on failure, log and run without pads); each frame
    drain events (for connect / disconnect), read each connected pad's
@@ -135,6 +153,8 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - [ ] Nick played a Quick Battle on Pages with a controller (sign-off).
 - [ ] Harness test: `PadDown(South)` / `PadUp(South)` with the default pad
       bindings confirms; a held D-pad direction repeats with keyboard timings.
+- [ ] Unit test: on a `Nintendo` pad `East` confirms and `South` cancels,
+      other buttons unchanged; vendor id → `PadKind`, unknown → `Generic`.
 - [ ] Unit tests: `pad_events` press / release, stick dead zone and
       hysteresis (no flicker between `press` and `release`), a pad removed
       mid-press releases its buttons, two pads holding one button = one press.

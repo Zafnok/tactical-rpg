@@ -1,6 +1,6 @@
 ---
 name: ascii-art
-description: Author visual content — character portraits (32×32 shaded pixel art in half-block cells), map terrain glyphs, UI mockups, title screen art — following the project's visual style (ADR-0018, docs/design/look-and-feel.md). Use for portrait files, map files, and any mockup shown to Nick.
+description: Author visual content — map terrain glyphs, UI mockups, title screen art, and the small edits allowed on bought portraits and battle art — following the project's visual style (ADR-0018, ADR-0032, docs/design/look-and-feel.md). Use for map files, portrait edits, and any mockup shown to Nick.
 ---
 
 # ASCII art
@@ -15,40 +15,35 @@ mood D "Earthy painterly".
 
 Because cells are tall, a shape that looks square in a text editor looks
 **tall** in game. For glyph art (title screens, UI), make shapes about twice as
-many columns as rows. Portraits avoid the problem: they are pixel grids (below).
+many columns as rows. Bought portraits and battle images are PNGs with
+square pixels, drawn as overlays (0711), so the problem doesn't apply to them.
 
-## Portraits
+## Portraits and battle art: bought, not drawn
 
-Nick rejected both line-art ASCII and block-shaded ASCII faces as unexpressive.
-Portraits are **shaded pixel art**:
+Nick doesn't want Claude-drawn character art (ticket 0021). Dialogue faces
+and combat-screen battle images are **bought**: Mega Tiles' Tiny Tales
+packs (`docs/design/look-and-feel.md`, *Portraits and battle art*;
+ADR-0032). Claude **never draws** a portrait, a face or a battle image.
 
-- Canvas: a **32×32 grid of colour keys**, one per pixel, `.` = transparent.
-  The game draws it as 32×16 cells of `▀` (fg = top pixel, bg = bottom pixel),
-  so pixels are square. See the format in ticket 0703 / `assets/portraits/README.md`.
-- Composition: head and shoulders; face in the upper-middle (hair from row
-  ~1, brows ~12, eyes ~13–14, mouth ~20, chin ~23, shoulders from ~26); a dark
-  outline (`K`-like key) around hair and face.
-- **Shading:** light from the **upper left**. Mid-tone down the right side of the
-  face and jaw; shadow under the fringe, nose, lower lip and chin; soft highlight
-  on the left cheek and nose bridge; darker neck under the chin. Keep it
-  subtle, and **lighter still on young characters**. Nick said heavy shade
-  lines read as wrinkles and age the face.
-- **Expressive and human:** Nick wants clear emotion. Expressions change only
-  brows, eyes and mouth pixels so they read as the same person. Required:
-  `neutral`, `happy`, `angry`, `sad`, `surprised`. Useful moves: one brow
-  raised (confident), eyes squeezed into arcs + open smile with teeth (happy),
-  brows slammed down and in + bared teeth (angry), brows up in the middle +
-  downturned mouth + a tear (sad).
-- Distinguish characters by **silhouette first** (hair shape, headgear,
-  collar, weapon over the shoulder), colour second.
-- Keep to a small key set per portrait: outline, hair ×3 (base, highlight,
-  shadow), skin ×3–4 (base, mid, shadow, highlight), eyes, mouth ×2, clothes
-  ×3–4. Keys map to palette names.
+- **Allowed edits** on a bought image, and nothing more: recolour hair,
+  clothes or eyes (swap a few exact colours), and small pixel edits (a scar,
+  spectacles, a missing expression such as `surprised` made from an
+  existing face). New hairstyles, removing beards, new clothes or bodies are
+  redrawing: not allowed.
+- **Characters no bought face fits:** Mega Tiles' Character Generator (if
+  bought and its licence allows it), then small edits (0706). Anything else
+  goes to Nick.
+- **Bought files never go in this repo** (0110). Mockups made from store
+  previews stay in the scratchpad.
+- Required expressions stay `neutral`, `happy`, `angry`, `sad`,
+  `surprised`, mapped from the pack's 8 per character.
 - **No mini-portraits.** Portraits appear only in conversations (Nick dropped
   the battle-panel mini portrait: at 16×16 it looked like a meme face).
-- After authoring, render it (the portrait viewer from ticket 0703, or a
-  snapshot) and **look at it**. Don't commit art you haven't seen rendered.
-  Nick iterates character by character, so expect revisions.
+- After any edit, render it in the dialogue screen and **look at it**.
+  Don't commit art you haven't seen rendered.
+
+The old 32×32 text portraits (`assets/portraits/*.portrait`) are
+placeholders only, until 0711 and 0706 replace them.
 
 ## Map terrain
 

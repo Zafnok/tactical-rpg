@@ -141,7 +141,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 
 ## Completion notes
 
-**Done.** New Game now runs a real game flow; ADR-0032 records the design.
+**Done.** New Game now runs a real game flow; ADR-0033 records the design.
 
 - **Files** (data only, no code per battle): `assets/battles/*.ron` and
   `assets/chapters/*.ron`, plus `assets/data/new_game.ron` (first chapter,

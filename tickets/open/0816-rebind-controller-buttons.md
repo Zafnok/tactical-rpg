@@ -39,8 +39,17 @@ play a turn with the new button.
   (`bind`, `clear`, `defaults`, `unmapped_required`).
 - The Key bindings screen (0815) shows and edits buttons: a Keyboard /
   Controller switch or column, as mocked up for Nick.
-- The screen is usable with only a controller (capture a button press;
-  a fixed back-out and clear button chosen in 0032, never bindable).
+- The screen is usable with only a controller (0032 Q6b), with **no
+  fixed buttons**: while `Press a button…` shows, a button goes in the
+  slot when released; **holding any button ~1 s** (*tunable*) backs out
+  with no change. When the pad was used last, Confirm on a slot offers
+  **`Clear`** (with the keyboard, Confirm still goes straight to `Press a
+  key…` and `Delete` empties). A hint says so, e.g. `Press a button… ·
+  hold any button to cancel`.
+- Rules as for keys (0032 Q6a): 3 slots, a taken button moves,
+  `! not mapped`, leaving blocked while cursor ×4, Confirm, Cancel or End
+  turn has no button. **One button setup shared by both keyboard
+  layouts.**
 
 **Out (do not do):**
 - Changing default buttons (that's `keymap.ron` + 0032).
@@ -50,16 +59,18 @@ play a turn with the new button.
 
 1. Mockup the controller view of the Key bindings screen (`ascii-art`
    skill), 2–3 options, before building.
-2. Config: extend 0217's `PlayerKeys` with button slots (per layout or
-   shared, per 0032); `version: 2`; repair-on-load rules as for keys
-   (drop unknown / reserved / duplicate buttons, reset if a required action
-   is left unmapped).
+2. Config: extend 0217's `PlayerKeys` with one shared set of button
+   slots (not per layout); `version: 2`; repair-on-load rules as for keys
+   (drop unknown / duplicate buttons, reset if a required action is left
+   unmapped). Both sticks' directions can be bound, like buttons (Nick:
+   "right stick should be available to use if wanted").
 3. `PadBindings` model (pure), mirroring `LayoutBindings`; the "button
-   moves" rule and reserved buttons from 0032. Property test the
-   no-duplicate invariant.
+   moves" rule, no reserved buttons. Property test the no-duplicate
+   invariant.
 4. Screen: raw button presses in `FrameInput` (like 0815's
-   `pressed_chords`) for capture; controller back-out / clear via helpers in
-   `input.rs` (never named in the screen).
+   `pressed_chords`) for capture, with bind-on-release and
+   hold-to-back-out; the `Clear` choice on a slot when the pad was used
+   last. No button is named in the screen.
 5. Update the `keyboard-input` skill and 0217's ADR (or a new one) with the
    button config format.
 
@@ -67,11 +78,14 @@ play a turn with the new button.
 
 - [ ] Nick approved the look and played with a rebound button (sign-off).
 - [ ] Harness: move Confirm's button to Info; Confirm shows `! not mapped`
-      and leaving is blocked if Confirm is required for buttons (per 0032).
+      and leaving is blocked.
+- [ ] Harness: holding a button during `Press a button…` backs out with
+      nothing changed; a tap binds; `Clear` empties a slot.
+- [ ] Switching right/left-handed leaves the buttons unchanged (test).
 - [ ] The screen can be used start to finish with pad events only (Harness).
 - [ ] Old `version: 1` config loads with default buttons (test); edits
       persist across restart (MemoryStorage).
-- [ ] Property test: no button in two slots, no reserved button in any slot.
+- [ ] Property test: no button in two slots.
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required
