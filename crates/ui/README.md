@@ -98,7 +98,7 @@ debug menu (unless a debug screen is already on top).
      ctx.audio)` for the menu widget (`Menu::without_cancel()` when there
      is nothing to back out of); elsewhere `ctx.audio.menu(MenuSound::…)`
      (`Move`, `Select` for confirming or opening, `Cancel` for backing
-     out), and `play_sound(CURSOR_MOVE)` per map tile. Play nothing when
+     out, `Denied` for confirming what can't be chosen), and `play_sound(CURSOR_MOVE)` per map tile. Play nothing when
      the key does nothing, and nothing for reading on through text.
 4. Ship at least one snapshot test and one Harness test (ADR-0007).
 

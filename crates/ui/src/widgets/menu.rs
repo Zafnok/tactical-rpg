@@ -136,9 +136,9 @@ impl Menu {
 
     /// [`handle`](Self::handle), playing the menu sounds on `audio`:
     /// `menu_move` when the focus moves, `menu_select` when an item is
-    /// chosen, `menu_cancel` when cancelled. An action that does nothing
-    /// (Confirm on a disabled item, a move with nowhere to go) plays
-    /// nothing.
+    /// chosen, `menu_cancel` when cancelled, [`MenuSound::Denied`] for
+    /// Confirm on a disabled item. Any other action that does nothing (a
+    /// move with nowhere to go) plays nothing.
     pub fn handle_with_sound(
         &mut self,
         action: Action,
@@ -150,6 +150,7 @@ impl Menu {
             Some(MenuEvent::Chosen(_)) => Some(MenuSound::Select),
             Some(MenuEvent::Cancelled) => Some(MenuSound::Cancel),
             None if self.focus != before => Some(MenuSound::Move),
+            None if action == Action::Confirm && !self.items.is_empty() => Some(MenuSound::Denied),
             None => None,
         };
         if let Some(sound) = sound {
@@ -283,13 +284,19 @@ mod tests {
     }
 
     #[test]
-    fn doing_nothing_is_silent() {
-        // Confirm on a disabled item (nothing is enabled, so it's focused).
+    fn a_disabled_item_is_denied() {
+        // Nothing is enabled, so a disabled item is focused.
         let mut m = menu(&[false, false]);
-        assert_eq!(
-            sounds(&mut m, &[Confirm, CursorDown, CursorUp]),
-            Vec::<String>::new()
-        );
+        assert_eq!(sounds(&mut m, &[Confirm]), ["menu_cancel"]);
+        assert_eq!(MenuSound::Denied.cue(), "menu_cancel", "until 0427");
+        // An empty menu has nothing to deny.
+        assert!(sounds(&mut Menu::new(vec![]), &[Confirm]).is_empty());
+    }
+
+    #[test]
+    fn doing_nothing_is_silent() {
+        let mut m = menu(&[false, false]);
+        assert!(sounds(&mut m, &[CursorDown, CursorUp]).is_empty());
         // A single enabled item: the focus has nowhere to go.
         let mut m = menu(&[false, true, false]);
         assert_eq!(

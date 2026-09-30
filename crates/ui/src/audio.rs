@@ -102,6 +102,10 @@ pub enum MenuSound {
     Select,
     /// Something was backed out of or closed (`menu_cancel`).
     Cancel,
+    /// Confirm on something that can't be chosen, e.g. a greyed-out item.
+    /// Nick wants its own warning tone (ticket 0427); until then it is
+    /// `menu_cancel`.
+    Denied,
 }
 
 impl MenuSound {
@@ -110,7 +114,7 @@ impl MenuSound {
         match self {
             Self::Move => "menu_move",
             Self::Select => "menu_select",
-            Self::Cancel => "menu_cancel",
+            Self::Cancel | Self::Denied => "menu_cancel",
         }
     }
 }
