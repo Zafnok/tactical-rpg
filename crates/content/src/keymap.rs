@@ -39,7 +39,9 @@ macro_rules! keys {
             pub const ALL: &'static [Key] = &[$(Key::$variant),+];
 
             /// The name used in keymap files: lowercase letters (`h`), digits
-            /// (`0`), `;`, and capitalised names for the rest (`Left`, `F12`).
+            /// (`0`), punctuation as itself (`;`, `,`, `\`), numpad keys
+            /// prefixed `Kp` (`Kp0`, `Kp+`), and capitalised names for the
+            /// rest (`Left`, `F12`).
             pub fn name(self) -> &'static str {
                 match self {
                     $(Key::$variant => $name,)+
@@ -108,6 +110,37 @@ keys! {
     F10 => "F10",
     F11 => "F11",
     F12 => "F12",
+    Comma => ",",
+    Period => ".",
+    Slash => "/",
+    Apostrophe => "'",
+    LeftBracket => "[",
+    RightBracket => "]",
+    Backslash => "\\",
+    Minus => "-",
+    Equal => "=",
+    Backquote => "`",
+    Insert => "Insert",
+    Delete => "Delete",
+    Home => "Home",
+    End => "End",
+    PageUp => "PageUp",
+    PageDown => "PageDown",
+    Kp0 => "Kp0",
+    Kp1 => "Kp1",
+    Kp2 => "Kp2",
+    Kp3 => "Kp3",
+    Kp4 => "Kp4",
+    Kp5 => "Kp5",
+    Kp6 => "Kp6",
+    Kp7 => "Kp7",
+    Kp8 => "Kp8",
+    Kp9 => "Kp9",
+    KpAdd => "Kp+",
+    KpSubtract => "Kp-",
+    KpMultiply => "Kp*",
+    KpDivide => "Kp/",
+    KpDecimal => "Kp.",
 }
 
 impl Key {
@@ -115,7 +148,19 @@ impl Key {
     pub fn from_name(name: &str) -> Option<Self> {
         Self::ALL.iter().copied().find(|k| k.name() == name)
     }
+
+    /// Whether this key is fixed by the game and can never be bound
+    /// (`docs/design/controls.md`, *Rebinding keys*): `Escape` always
+    /// cancels and `Delete` empties a key slot, with or without `Shift`.
+    pub fn is_reserved(self) -> bool {
+        matches!(self, Self::Escape | Self::Delete)
+    }
 }
+
+/// Key slots per action: a layout lists at most this many chords for an
+/// action, and the player can give each action up to this many keys
+/// (`docs/design/controls.md`, *Rebinding keys*).
+pub const SLOTS: usize = 3;
 
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -282,6 +327,30 @@ impl Action {
             Self::CursorLeft | Self::CursorDown | Self::CursorUp | Self::CursorRight
         )
     }
+
+    /// Whether the player must always keep at least one key on this action:
+    /// the *Required* column of `docs/design/controls.md`'s *Rebinding keys*
+    /// table (the four cursor moves, Confirm, Cancel and End turn). The rest
+    /// may be left with no key.
+    pub fn is_required(self) -> bool {
+        matches!(
+            self,
+            Self::CursorLeft
+                | Self::CursorDown
+                | Self::CursorUp
+                | Self::CursorRight
+                | Self::Confirm
+                | Self::Cancel
+                | Self::EndTurn
+        )
+    }
+
+    /// Whether the player can rebind this action. Only the developer Debug
+    /// key can't (`docs/design/controls.md`: it is not on the Key bindings
+    /// screen).
+    pub fn is_rebindable(self) -> bool {
+        self != Self::Debug
+    }
 }
 
 impl fmt::Display for Action {
@@ -344,17 +413,25 @@ impl fmt::Display for Layout {
     }
 }
 
-/// One layout's validated bindings: each chord maps to exactly one action.
+/// Validated bindings as a lookup: each chord maps to exactly one action.
 /// Unbound chords are absent.
 pub type Bindings = BTreeMap<Chord, Action>;
 
-/// The validated keymap: every [`Layout`]'s bindings, the layout picker's
-/// bindings, plus the key-repeat timings they share.
+/// One layout's default keys: every [`Action`] with its chords in the order
+/// the keymap file lists them (at most [`SLOTS`], none [reserved]), no chord
+/// on two actions. The order matters: the first chord is the one help text
+/// names, and the chords fill the player's key slots in this order.
+///
+/// [reserved]: Key::is_reserved
+pub type LayoutKeys = BTreeMap<Action, Vec<Chord>>;
+
+/// The validated keymap: every [`Layout`]'s default keys, the layout
+/// picker's bindings, plus the key-repeat timings they share.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct KeymapDef {
-    /// Layout → its bindings. After [`load`](Self::load) every layout is
-    /// present.
-    pub layouts: BTreeMap<Layout, Bindings>,
+    /// Layout → its default keys. After [`load`](Self::load) every layout
+    /// is present, with every action.
+    pub layouts: BTreeMap<Layout, LayoutKeys>,
     /// The keys that work before any layout is chosen (the layout picker).
     /// Actions not listed are unbound there.
     pub layout_picker: Bindings,
@@ -384,18 +461,35 @@ impl KeymapDef {
         Self::from_source(&display, source)
     }
 
-    /// `layout`'s bindings (`None` only for a definition built by hand
-    /// without it; a loaded keymap has every layout).
-    pub fn bindings(&self, layout: Layout) -> Option<&Bindings> {
-        self.layouts.get(&layout)
+    /// `layout`'s default bindings as a chord lookup (`None` only for a
+    /// definition built by hand without it; a loaded keymap has every
+    /// layout).
+    pub fn bindings(&self, layout: Layout) -> Option<Bindings> {
+        let keys = self.layouts.get(&layout)?;
+        Some(
+            keys.iter()
+                .flat_map(|(&a, chords)| chords.iter().map(move |&c| (c, a)))
+                .collect(),
+        )
+    }
+
+    /// `action`'s default chords in `layout`, in file order; empty if the
+    /// layout or action is missing (only in a definition built by hand).
+    pub fn chords(&self, layout: Layout, action: Action) -> &[Chord] {
+        self.layouts
+            .get(&layout)
+            .and_then(|keys| keys.get(&action))
+            .map_or(&[], Vec::as_slice)
     }
 
     /// Parses and validates keymap `source`, attributing errors to `file`.
     /// Reports every unknown or missing layout, and within each layout every
-    /// unknown action, unparsable chord, chord bound more than once and
-    /// missing action (prefixed with the layout name), the same for the
-    /// `layout_picker` section (except that unlisted actions are unbound
-    /// there, not an error), plus bad repeat timing.
+    /// unknown action, unparsable chord, chord bound more than once,
+    /// [reserved](Key::is_reserved) key, action with more than [`SLOTS`]
+    /// chords and missing action (prefixed with the layout name), the same
+    /// for the `layout_picker` section (except that unlisted actions are
+    /// unbound there, and an action may have more than [`SLOTS`] chords:
+    /// the picker isn't rebindable), plus bad repeat timing.
     pub fn from_source(file: &str, source: &str) -> Result<Self, Vec<ContentError>> {
         let raw: RawKeymap = parse_ron(file, source).map_err(|e| vec![e])?;
         let mut errors = Vec::new();
@@ -416,8 +510,8 @@ impl KeymapDef {
             let from = start.map_or(0, |line| usize::try_from(line).unwrap_or(0));
             let label = format!("layout \"{layout}\"");
             match validate_bindings(file, source, from, &label, true, actions) {
-                Ok(bindings) => {
-                    layouts.insert(layout, bindings);
+                Ok(keys) => {
+                    layouts.insert(layout, keys);
                 }
                 Err(e) => errors.extend(e),
             }
@@ -440,7 +534,10 @@ impl KeymapDef {
             false,
             &raw.layout_picker,
         ) {
-            Ok(bindings) => bindings,
+            Ok(keys) => keys
+                .iter()
+                .flat_map(|(&a, chords)| chords.iter().map(move |&c| (c, a)))
+                .collect(),
             Err(e) => {
                 errors.extend(e);
                 Bindings::new()
@@ -466,18 +563,19 @@ impl KeymapDef {
 
 /// Validates one section's `actions` (action name → chord names): a layout
 /// or the layout picker. Messages start with `label`; lines are searched
-/// from line index `from` (just after the section's own line) on. With
-/// `require_all`, every [`Action`] must be listed.
+/// from line index `from` (just after the section's own line) on. For a
+/// `layout`, every [`Action`] must be listed, with at most [`SLOTS`] chords.
 fn validate_bindings(
     file: &str,
     source: &str,
     from: usize,
     label: &str,
-    require_all: bool,
+    layout: bool,
     actions: &BTreeMap<String, Vec<String>>,
-) -> Result<Bindings, Vec<ContentError>> {
+) -> Result<LayoutKeys, Vec<ContentError>> {
     let mut errors = Vec::new();
     let mut bindings = Bindings::new();
+    let mut keys = LayoutKeys::new();
     let err_at = |key: &str, message: String| {
         positioned(
             ContentError::new(file, format!("{label}: {message}")),
@@ -496,8 +594,25 @@ fn validate_bindings(
             ));
             continue;
         };
+        if layout && chords.len() > SLOTS {
+            errors.push(err_at(
+                action_name,
+                format!(
+                    "action \"{action}\" has {} keys; at most {SLOTS} are allowed",
+                    chords.len()
+                ),
+            ));
+        }
+        let listed = keys.entry(action).or_default();
         for text in chords {
             match Chord::parse(text) {
+                Ok(chord) if chord.key.is_reserved() => errors.push(err_at(
+                    action_name,
+                    format!(
+                        "action \"{action}\": \"{chord}\" can't be bound here: Esc and Delete \
+                         are fixed, see controls.md"
+                    ),
+                )),
                 Ok(chord) => {
                     if let Some(&other) = bindings.get(&chord) {
                         let message = if other == action {
@@ -510,6 +625,7 @@ fn validate_bindings(
                         errors.push(err_at(action_name, message));
                     } else {
                         bindings.insert(chord, action);
+                        listed.push(chord);
                     }
                 }
                 Err(why) => errors.push(err_at(
@@ -520,7 +636,7 @@ fn validate_bindings(
         }
     }
     for action in Action::ALL {
-        if require_all && !actions.contains_key(action.name()) {
+        if layout && !actions.contains_key(action.name()) {
             errors.push(ContentError::new(
                 file,
                 format!(
@@ -531,7 +647,7 @@ fn validate_bindings(
         }
     }
     if errors.is_empty() {
-        Ok(bindings)
+        Ok(keys)
     } else {
         Err(errors)
     }
@@ -615,7 +731,7 @@ mod tests {
 
     #[test]
     fn key_and_action_tables_line_up() {
-        assert_eq!(Key::ALL.len(), 26 + 10 + 1 + 4 + 5 + 12);
+        assert_eq!(Key::ALL.len(), 26 + 10 + 1 + 4 + 5 + 12 + 10 + 6 + 10 + 5);
         for (i, k) in Key::ALL.iter().enumerate() {
             assert_eq!(*k as usize, i);
             assert_eq!(Key::from_name(k.name()), Some(*k));
@@ -704,7 +820,7 @@ mod tests {
     }
 
     fn left(k: &KeymapDef) -> Bindings {
-        k.bindings(Layout::LeftHanded).cloned().unwrap_or_default()
+        k.bindings(Layout::LeftHanded).unwrap_or_default()
     }
 
     #[test]
@@ -715,7 +831,12 @@ mod tests {
         assert_eq!(b.get(&Chord::plain(Key::F)), Some(&Action::Confirm));
         assert_eq!(b.get(&Chord::plain(Key::Space)), Some(&Action::Confirm));
         assert_eq!(b.len(), 2);
-        assert_eq!(k.bindings(Layout::RightHanded).map(BTreeMap::len), Some(0));
+        assert_eq!(k.bindings(Layout::RightHanded).map(|b| b.len()), Some(0));
+        assert_eq!(
+            k.chords(Layout::LeftHanded, Action::Confirm),
+            [Chord::plain(Key::F), Chord::plain(Key::Space)]
+        );
+        assert_eq!(k.chords(Layout::RightHanded, Action::Confirm), []);
         assert_eq!(k.layouts.len(), 2);
         assert_eq!(k.repeat, RepeatDef::default());
     }
@@ -1017,7 +1138,7 @@ mod tests {
     fn embedded(layout: Layout) -> impl Fn(&str) -> Option<Action> {
         let bindings = KeymapDef::load()
             .ok()
-            .and_then(|k| k.bindings(layout).cloned())
+            .and_then(|k| k.bindings(layout))
             .unwrap_or_default();
         move |s| Chord::parse(s).ok().and_then(|c| bindings.get(&c).copied())
     }
@@ -1032,7 +1153,8 @@ mod tests {
         assert_eq!(get("Right"), Some(Action::CursorRight));
         assert_eq!(get("f"), Some(Action::Confirm));
         assert_eq!(get("d"), Some(Action::Cancel));
-        assert_eq!(get("Escape"), Some(Action::Cancel));
+        // Escape is a fixed key, not in the file (see trpg-ui's Keymap).
+        assert_eq!(get("Escape"), None);
         assert_eq!(get("a"), Some(Action::PrevUnit));
         assert_eq!(get("s"), Some(Action::NextUnit));
         assert_eq!(get("e"), Some(Action::Info));
@@ -1053,7 +1175,7 @@ mod tests {
         assert_eq!(get("d"), Some(Action::CursorRight));
         assert_eq!(get("j"), Some(Action::Confirm));
         assert_eq!(get("k"), Some(Action::Cancel));
-        assert_eq!(get("Escape"), Some(Action::Cancel));
+        assert_eq!(get("Escape"), None);
         assert_eq!(get(";"), Some(Action::PrevUnit));
         assert_eq!(get("l"), Some(Action::NextUnit));
         assert_eq!(get("i"), Some(Action::Info));
@@ -1066,10 +1188,11 @@ mod tests {
 
     #[test]
     fn embedded_keymap_has_exactly_the_design_bindings() {
-        // 15 chords per layout: nothing bound beyond the design table.
+        // 14 chords per layout: nothing bound beyond the design table.
         let k = KeymapDef::load().unwrap_or_default();
         for layout in Layout::ALL {
-            assert_eq!(k.bindings(layout).map(BTreeMap::len), Some(15), "{layout}");
+            assert_eq!(k.bindings(layout).map(|b| b.len()), Some(14), "{layout}");
+            assert_eq!(k.layouts.get(&layout).map(BTreeMap::len), Some(15));
         }
         assert_eq!(k.layouts.len(), 2);
         // Before a layout is chosen: either hand's up/down and confirm keys.
@@ -1094,6 +1217,172 @@ mod tests {
                 delay_ms: 300,
                 interval_ms: 55
             }
+        );
+    }
+
+    #[test]
+    fn more_than_three_chords_on_one_action_is_error() {
+        let src = source_with("Info", "        \"Info\": [\"a\", \"b\", \"c\", \"e\"],\n");
+        let errs = KeymapDef::from_source("k.ron", &src)
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1);
+        assert_eq!(
+            errs[0].message,
+            "layout \"LeftHanded\": action \"Info\" has 4 keys; at most 3 are allowed"
+        );
+        assert_eq!(errs[0].line, u32::try_from(Action::ALL.len() + 3).ok());
+        // Three is fine.
+        let src = source_with("Info", "        \"Info\": [\"a\", \"b\", \"c\"],\n");
+        let k = KeymapDef::from_source("k.ron", &src).unwrap_or_default();
+        assert_eq!(k.chords(Layout::LeftHanded, Action::Info).len(), 3);
+    }
+
+    #[test]
+    fn the_layout_picker_may_list_more_than_three_chords() {
+        let picker = "        \"Confirm\": [\"f\", \"j\", \"Enter\", \"Space\"],\n";
+        let src = source_with_picker(&empty_layouts(), picker);
+        let k = KeymapDef::from_source("k.ron", &src).unwrap_or_default();
+        assert_eq!(k.layout_picker.len(), 4);
+    }
+
+    #[test]
+    fn escape_and_delete_are_errors_anywhere() {
+        for chord in ["Escape", "Delete", "Shift+Escape", "Shift+Delete"] {
+            let extra = format!("        \"Cancel\": [\"d\", \"{chord}\"],\n");
+            let errs = errors(&source_with("Cancel", &extra));
+            assert_eq!(
+                errs,
+                vec![format!(
+                    "k.ron:{}: layout \"LeftHanded\": action \"Cancel\": \"{chord}\" can't be \
+                     bound here: Esc and Delete are fixed, see controls.md",
+                    Action::ALL.len() + 3
+                )],
+                "{chord}"
+            );
+            let picker = format!("        \"Cancel\": [\"{chord}\"],\n");
+            let errs = errors(&source_with_picker(&empty_layouts(), &picker));
+            assert_eq!(errs.len(), 1, "{chord}");
+            assert!(
+                errs[0].contains("layout_picker: action \"Cancel\""),
+                "{}",
+                errs[0]
+            );
+            assert!(errs[0].contains("Esc and Delete are fixed"), "{}", errs[0]);
+        }
+    }
+
+    #[test]
+    fn chords_keep_the_file_order() {
+        let src = source_with(
+            "Info",
+            "        \"Info\": [\"Space\", \"e\", \"Shift+a\"],\n",
+        );
+        let k = KeymapDef::from_source("k.ron", &src).unwrap_or_default();
+        let chords: Vec<String> = k
+            .chords(Layout::LeftHanded, Action::Info)
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        assert_eq!(chords, ["Space", "e", "Shift+a"]);
+        assert_eq!(k.chords(Layout::LeftHanded, Action::Debug), []);
+        assert_eq!(
+            KeymapDef::default().chords(Layout::LeftHanded, Action::Info),
+            []
+        );
+    }
+
+    #[test]
+    fn required_and_rebindable_actions_follow_the_design() {
+        // docs/design/controls.md, Rebinding keys.
+        use Action::{Cancel, Confirm, CursorDown, CursorLeft, CursorRight, CursorUp, EndTurn};
+        let required: Vec<Action> = Action::ALL
+            .into_iter()
+            .filter(|a| a.is_required())
+            .collect();
+        assert_eq!(
+            required,
+            [
+                CursorLeft,
+                CursorDown,
+                CursorUp,
+                CursorRight,
+                Confirm,
+                Cancel,
+                EndTurn
+            ]
+        );
+        let fixed: Vec<Action> = Action::ALL
+            .into_iter()
+            .filter(|a| !a.is_rebindable())
+            .collect();
+        assert_eq!(fixed, [Action::Debug]);
+    }
+
+    #[test]
+    fn reserved_keys() {
+        let reserved: Vec<Key> = Key::ALL
+            .iter()
+            .copied()
+            .filter(|k| k.is_reserved())
+            .collect();
+        assert_eq!(reserved, [Key::Escape, Key::Delete]);
+    }
+
+    #[test]
+    fn new_keys_have_readable_names() {
+        for (name, key) in [
+            (",", Key::Comma),
+            (".", Key::Period),
+            ("/", Key::Slash),
+            ("'", Key::Apostrophe),
+            ("[", Key::LeftBracket),
+            ("]", Key::RightBracket),
+            ("\\", Key::Backslash),
+            ("-", Key::Minus),
+            ("=", Key::Equal),
+            ("`", Key::Backquote),
+            ("Insert", Key::Insert),
+            ("Delete", Key::Delete),
+            ("Home", Key::Home),
+            ("End", Key::End),
+            ("PageUp", Key::PageUp),
+            ("PageDown", Key::PageDown),
+            ("Kp0", Key::Kp0),
+            ("Kp9", Key::Kp9),
+            ("Kp+", Key::KpAdd),
+            ("Kp-", Key::KpSubtract),
+            ("Kp*", Key::KpMultiply),
+            ("Kp/", Key::KpDivide),
+            ("Kp.", Key::KpDecimal),
+        ] {
+            assert_eq!(Chord::parse(name), Ok(Chord::plain(key)), "{name}");
+            let shifted = format!("Shift+{name}");
+            assert_eq!(Chord::parse(&shifted), Ok(Chord::shifted(key)), "{shifted}");
+        }
+    }
+
+    #[test]
+    fn every_key_round_trips_through_its_chord_name() {
+        for &key in Key::ALL {
+            for chord in [Chord::plain(key), Chord::shifted(key)] {
+                assert_eq!(Chord::parse(&chord.to_string()), Ok(chord));
+            }
+        }
+    }
+
+    #[test]
+    fn punctuation_chords_load_from_a_keymap_file() {
+        // RON strings need `\\` for a backslash; everything else is literal.
+        let extra = "        \"Info\": [\",\", \"\\\\\", \"Kp+\"],\n";
+        let k = KeymapDef::from_source("k.ron", &source_with("Info", extra)).unwrap_or_default();
+        assert_eq!(
+            k.chords(Layout::LeftHanded, Action::Info),
+            [
+                Chord::plain(Key::Comma),
+                Chord::plain(Key::Backslash),
+                Chord::plain(Key::KpAdd)
+            ]
         );
     }
 }

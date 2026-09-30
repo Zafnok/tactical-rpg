@@ -1,38 +1,52 @@
 //! Help text that names keys. Key names always come from the active
 //! [`Keymap`], never string literals, because each layout binds actions to
-//! different keys (ADR-0015).
+//! different keys (ADR-0015) and the player can rebind them (ADR-0031).
 
 use crate::input::{Action, Keymap};
 
 /// Separator between the parts of a help line.
 pub const SEPARATOR: &str = " · ";
 
+/// What help text and tips show for an action with no key
+/// (`docs/design/controls.md`, *Rebinding keys*).
+pub const NOT_MAPPED: &str = "! not mapped";
+
 /// The name of the key for `action` (its [`Keymap::primary`] chord), e.g.
-/// `f` or `Shift+Space`; `None` if unbound.
-pub fn key_name(keymap: &Keymap, action: Action) -> Option<String> {
-    keymap.primary(action).map(|c| c.to_string())
+/// `f` or `Shift+Space`; [`NOT_MAPPED`] if it has no key.
+pub fn key_name(keymap: &Keymap, action: Action) -> String {
+    keymap
+        .primary(action)
+        .map_or_else(|| NOT_MAPPED.to_owned(), |c| c.to_string())
 }
 
-/// Every key for `action`, joined with `/` (e.g. `f/j/Enter/Space`), in
-/// [`Keymap::chords_for`] order; `None` if unbound.
-pub fn all_key_names(keymap: &Keymap, action: Action) -> Option<String> {
-    let names: Vec<String> = keymap
-        .chords_for(action)
+/// Every key for `action`, joined with `/` (e.g. `f/j/Enter/Space`): its
+/// slots in [`Keymap::chords_for`] order, then its fixed keys
+/// ([`Keymap::fixed_chords_for`]). [`NOT_MAPPED`] if its slots are empty.
+pub fn all_key_names(keymap: &Keymap, action: Action) -> String {
+    let own = keymap.chords_for(action);
+    if own.is_empty() {
+        return NOT_MAPPED.to_owned();
+    }
+    let names: Vec<String> = own
         .iter()
+        .chain(&Keymap::fixed_chords_for(action))
         .map(ToString::to_string)
         .collect();
-    (!names.is_empty()).then(|| names.join("/"))
+    names.join("/")
 }
 
 /// What moves the cursor: `arrows` when the four cursor actions are on the
 /// arrow keys, otherwise their keys in up-left-down-right order (`wasd`).
-/// `None` if any cursor action is unbound. See [`Keymap::cursor_keys_name`].
-pub fn cursor_keys_name(keymap: &Keymap) -> Option<String> {
-    keymap.cursor_keys_name()
+/// [`NOT_MAPPED`] if any cursor action has no key. See
+/// [`Keymap::cursor_keys_name`].
+pub fn cursor_keys_name(keymap: &Keymap) -> String {
+    keymap
+        .cursor_keys_name()
+        .unwrap_or_else(|| NOT_MAPPED.to_owned())
 }
 
 /// Joins `key label` hints with [`SEPARATOR`], leaving out hints whose key
-/// is `None` (unbound).
+/// is `None` (hidden by the caller, e.g. a key that does nothing here).
 pub fn help_line(hints: &[(Option<String>, &str)]) -> String {
     hints
         .iter()
@@ -55,19 +69,18 @@ mod tests {
     }
 
     #[test]
-    fn all_key_names_lists_every_chord() {
+    fn all_key_names_lists_every_chord_in_slot_order_then_the_fixed_ones() {
         let km = keymap(&[
             ("Space", Action::Confirm),
             ("f", Action::Confirm),
             ("Enter", Action::Confirm),
             ("d", Action::Cancel),
         ]);
-        assert_eq!(
-            all_key_names(&km, Action::Confirm).as_deref(),
-            Some("f/Enter/Space")
-        );
-        assert_eq!(all_key_names(&km, Action::Cancel).as_deref(), Some("d"));
-        assert_eq!(all_key_names(&km, Action::Info), None);
+        assert_eq!(all_key_names(&km, Action::Confirm), "Space/f/Enter");
+        assert_eq!(all_key_names(&km, Action::Cancel), "d/Escape");
+        assert_eq!(all_key_names(&km, Action::Info), NOT_MAPPED);
+        // Esc alone doesn't count as a key of Cancel's own.
+        assert_eq!(all_key_names(&keymap(&[]), Action::Cancel), NOT_MAPPED);
     }
 
     #[test]
@@ -76,12 +89,11 @@ mod tests {
             ("f", Action::Confirm),
             ("Shift+Space", Action::ToggleAutoEnd),
         ]);
-        assert_eq!(key_name(&km, Action::Confirm).as_deref(), Some("f"));
-        assert_eq!(
-            key_name(&km, Action::ToggleAutoEnd).as_deref(),
-            Some("Shift+Space")
-        );
-        assert_eq!(key_name(&km, Action::Cancel), None);
+        assert_eq!(key_name(&km, Action::Confirm), "f");
+        assert_eq!(key_name(&km, Action::ToggleAutoEnd), "Shift+Space");
+        // Cancel shows its own keys, never the fixed Esc.
+        assert_eq!(key_name(&km, Action::Cancel), "! not mapped");
+        assert_eq!(key_name(&km, Action::Info), NOT_MAPPED);
     }
 
     #[test]
@@ -92,7 +104,7 @@ mod tests {
             ("Down", Action::CursorDown),
             ("Right", Action::CursorRight),
         ]);
-        assert_eq!(cursor_keys_name(&km).as_deref(), Some("arrows"));
+        assert_eq!(cursor_keys_name(&km), "arrows");
     }
 
     #[test]
@@ -103,7 +115,7 @@ mod tests {
             ("s", Action::CursorDown),
             ("d", Action::CursorRight),
         ]);
-        assert_eq!(cursor_keys_name(&wasd).as_deref(), Some("wasd"));
+        assert_eq!(cursor_keys_name(&wasd), "wasd");
         // One arrow out of place, or shifted arrows, is not "arrows".
         let mixed = keymap(&[
             ("Up", Action::CursorUp),
@@ -111,7 +123,7 @@ mod tests {
             ("Down", Action::CursorDown),
             ("l", Action::CursorRight),
         ]);
-        assert_eq!(cursor_keys_name(&mixed).as_deref(), Some("UpLeftDownl"));
+        assert_eq!(cursor_keys_name(&mixed), "UpLeftDownl");
         let shifted = keymap(&[
             ("Shift+Up", Action::CursorUp),
             ("Shift+Left", Action::CursorLeft),
@@ -119,19 +131,19 @@ mod tests {
             ("Shift+Right", Action::CursorRight),
         ]);
         assert_eq!(
-            cursor_keys_name(&shifted).as_deref(),
-            Some("Shift+UpShift+LeftShift+DownShift+Right")
+            cursor_keys_name(&shifted),
+            "Shift+UpShift+LeftShift+DownShift+Right"
         );
     }
 
     #[test]
-    fn unbound_cursor_key_gives_none() {
+    fn unbound_cursor_key_is_not_mapped() {
         let km = keymap(&[
             ("Up", Action::CursorUp),
             ("Left", Action::CursorLeft),
             ("Down", Action::CursorDown),
         ]);
-        assert_eq!(cursor_keys_name(&km), None);
+        assert_eq!(cursor_keys_name(&km), NOT_MAPPED);
     }
 
     #[test]

@@ -5,11 +5,27 @@
 //!
 //! [`Key`], [`Chord`], [`Action`] and [`Layout`] are defined in
 //! `trpg-content` (its keymap loader validates them) and re-exported here.
+//! The player's own bindings (3 slots per action, per layout) are in
+//! [`bindings`].
+//!
+//! **Fixed keys** (`docs/design/controls.md`, *Rebinding keys*; ADR-0031):
+//! plain `Escape` is Cancel in every keymap, and `Delete` does nothing in
+//! play (the Key bindings screen reads it to empty a slot). Neither can be
+//! bound; see [`Key::is_reserved`].
 
-use std::collections::HashMap;
+pub mod bindings;
+
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
-pub use trpg_content::keymap::{Action, Chord, Key, KeymapDef, Layout, RepeatDef};
+pub use bindings::{BindError, LayoutBindings, PlayerKeys, Slots};
+pub use trpg_content::keymap::{
+    Action, Chord, Key, KeymapDef, Layout, LayoutKeys, RepeatDef, SLOTS,
+};
+
+/// The keys every keymap has on top of its own bindings, whatever the
+/// player binds: plain `Escape` cancels.
+const FIXED: [(Chord, Action); 1] = [(Chord::plain(Key::Escape), Action::Cancel)];
 
 /// At most this many repeats are emitted by one [`InputState::update`], so a
 /// lag spike can't teleport the cursor across the map.
@@ -18,26 +34,47 @@ pub const MAX_REPEATS_PER_UPDATE: u64 = 5;
 /// Lookup from chord to action, plus repeat timings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Keymap {
+    /// Every chord that does something, fixed keys included.
     bindings: HashMap<Chord, Action>,
+    /// Each action's own chords (not the fixed keys), in the order given.
+    chords: BTreeMap<Action, Vec<Chord>>,
     repeat: RepeatDef,
 }
 
 impl Keymap {
-    /// A keymap with exactly `bindings`. A chord listed twice keeps its
-    /// last action.
+    /// A keymap with `bindings` plus the fixed keys (plain `Escape` is
+    /// Cancel). A chord listed twice keeps its last action; chords with a
+    /// [reserved](Key::is_reserved) key (`Escape`, `Delete`) are left out.
     pub fn new(bindings: impl IntoIterator<Item = (Chord, Action)>, repeat: RepeatDef) -> Self {
+        let mut lookup = HashMap::new();
+        let mut chords: BTreeMap<Action, Vec<Chord>> = BTreeMap::new();
+        for (chord, action) in bindings {
+            if chord.key.is_reserved() {
+                continue;
+            }
+            if let Some(old) = lookup.insert(chord, action)
+                && let Some(list) = chords.get_mut(&old)
+            {
+                list.retain(|&c| c != chord);
+            }
+            chords.entry(action).or_default().push(chord);
+        }
+        lookup.extend(FIXED);
         Self {
-            bindings: bindings.into_iter().collect(),
+            bindings: lookup,
+            chords,
             repeat,
         }
     }
 
-    /// `layout`'s bindings from a validated keymap definition, with its
-    /// repeat timings. A definition without that layout (only possible when
-    /// built by hand) gives a keymap with nothing bound.
+    /// `layout`'s default bindings from a validated keymap definition (no
+    /// player changes; for those see [`PlayerKeys`]), with its repeat
+    /// timings. A definition without that layout (only possible when built
+    /// by hand) gives a keymap with only the fixed keys.
     pub fn for_layout(def: &KeymapDef, layout: Layout) -> Self {
-        let bindings = def.bindings(layout).into_iter().flatten();
-        Self::new(bindings.map(|(&c, &a)| (c, a)), def.repeat)
+        let keys = def.layouts.get(&layout).into_iter().flatten();
+        let bindings = keys.flat_map(|(&a, chords)| chords.iter().map(move |&c| (c, a)));
+        Self::new(bindings, def.repeat)
     }
 
     /// The keys that work before any layout is chosen, from the keymap
@@ -60,17 +97,22 @@ impl Keymap {
         self.repeat
     }
 
-    /// Every chord bound to `action`, in [`Chord`] order (letters, digits,
-    /// then named keys; plain before shifted), so the result is stable.
+    /// Every chord bound to `action` (its key slots), in the order they
+    /// were given: slot order for the player's bindings, file order for
+    /// `keymap.ron`. Leaves out the fixed keys (see
+    /// [`fixed_chords_for`](Self::fixed_chords_for)).
     pub fn chords_for(&self, action: Action) -> Vec<Chord> {
-        let mut chords: Vec<Chord> = self
-            .bindings
+        self.chords.get(&action).cloned().unwrap_or_default()
+    }
+
+    /// The fixed chords that also trigger `action` in every keymap and
+    /// can't be rebound: plain `Escape` for Cancel, nothing for the rest.
+    pub fn fixed_chords_for(action: Action) -> Vec<Chord> {
+        FIXED
             .iter()
-            .filter(|&(_, &a)| a == action)
-            .map(|(&c, _)| c)
-            .collect();
-        chords.sort_unstable();
-        chords
+            .filter(|&&(_, a)| a == action)
+            .map(|&(c, _)| c)
+            .collect()
     }
 
     /// What moves the cursor, for help text: `arrows` when the four cursor
@@ -101,7 +143,7 @@ impl Keymap {
     }
 
     /// The chord help text names for `action`: the first of
-    /// [`chords_for`](Self::chords_for), or `None` if it is unbound.
+    /// [`chords_for`](Self::chords_for), or `None` if it has none.
     pub fn primary(&self, action: Action) -> Option<Chord> {
         self.chords_for(action).into_iter().next()
     }
@@ -343,6 +385,56 @@ mod tests {
         assert_eq!(right.chords_for(Confirm).len(), 1);
         let empty = Keymap::for_layout(&KeymapDef::default(), Layout::LeftHanded);
         assert_eq!(empty.primary(Confirm), None);
+    }
+
+    #[test]
+    fn escape_always_cancels_and_delete_does_nothing() {
+        let def = KeymapDef::load().unwrap_or_default();
+        let keymaps = [
+            Keymap::for_layout(&def, Layout::RightHanded),
+            Keymap::for_layout(&def, Layout::LeftHanded),
+            Keymap::layout_picker(&def),
+            Keymap::new([], RepeatDef::default()),
+            // Even a keymap that tries to bind them elsewhere.
+            Keymap::new(
+                [(chord("Escape"), Confirm), (chord("Delete"), Confirm)],
+                RepeatDef::default(),
+            ),
+        ];
+        for km in keymaps {
+            assert_eq!(km.action(chord("Escape")), Some(Action::Cancel));
+            assert_eq!(km.action(chord("Shift+Escape")), None);
+            assert_eq!(km.action(chord("Delete")), None);
+            assert!(!km.chords_for(Action::Cancel).contains(&chord("Escape")));
+            assert!(!km.chords_for(Confirm).contains(&chord("Escape")));
+        }
+        assert_eq!(
+            Keymap::fixed_chords_for(Action::Cancel),
+            vec![chord("Escape")]
+        );
+        assert!(
+            Action::ALL
+                .into_iter()
+                .filter(|&a| a != Action::Cancel)
+                .all(|a| Keymap::fixed_chords_for(a).is_empty())
+        );
+    }
+
+    #[test]
+    fn chords_keep_the_order_given_and_a_repeated_chord_its_last_action() {
+        let km = Keymap::new(
+            [
+                (chord("Space"), Confirm),
+                (chord("f"), Confirm),
+                (chord("e"), Info),
+                (chord("Space"), Info),
+            ],
+            RepeatDef::default(),
+        );
+        assert_eq!(km.chords_for(Confirm), vec![chord("f")]);
+        assert_eq!(km.chords_for(Info), vec![chord("e"), chord("Space")]);
+        assert_eq!(km.action(chord("Space")), Some(Info));
+        assert_eq!(km.primary(Info), Some(chord("e")));
     }
 
     #[test]

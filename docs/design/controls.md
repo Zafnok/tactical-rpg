@@ -69,7 +69,9 @@ needed). Key choices are Nick's; the defaults below are his.
 *Proposed by Claude, approved by Nick:*
 
 - `Esc` also works as Cancel in both layouts (and so opens the map menu when
-  there's nothing to cancel), since players reach for it by habit.
+  there's nothing to cancel), since players reach for it by habit. Since
+  ticket 0217 it is a *fixed* key (no rule change): it isn't one of
+  Cancel's key slots and can't be moved or removed; see *Rebinding keys*.
 - "Mirror" is taken literally, finger for finger, so in the left-handed
   layout *previous* unit is the right-most key (`;`) and *next* is `L`. If
   that feels backwards, swap them.

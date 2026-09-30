@@ -30,7 +30,7 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let ctx = match Ctx::embedded() {
+    let mut ctx = match Ctx::embedded() {
         Ok(mut ctx) => {
             ctx.tips_enabled = true;
             ctx.music_seed = miniquad::date::now().to_bits();
@@ -38,8 +38,10 @@ async fn main() {
         }
         Err(e) => return show_content_errors(&e.to_string()).await,
     };
-    #[cfg(debug_assertions)]
-    let mut ctx = ctx;
+    // E.g. saved key bindings that had to be repaired (ADR-0031).
+    for warning in ctx.take_warnings() {
+        warn!("{}", warning);
+    }
     #[cfg(debug_assertions)]
     storage::smoke_check(&mut *ctx.storage);
     let png = trpg_content::bundle::bytes(ATLAS_PNG_PATH).unwrap_or_default();

@@ -107,9 +107,9 @@ impl Screen for DebugMenuScreen {
         self.menu.draw(&ctx.palette, buf, x, MENU_TITLE_ROW + 2);
         let km = &ctx.keymap;
         let help = help_line(&[
-            (cursor_keys_name(km), "move"),
-            (key_name(km, Action::Confirm), "open"),
-            (key_name(km, Action::Cancel), "back"),
+            (Some(cursor_keys_name(km)), "move"),
+            (Some(key_name(km, Action::Confirm)), "open"),
+            (Some(key_name(km, Action::Cancel)), "back"),
         ]);
         let bottom = i32::from(buf.height()) - 1;
         print_centred(buf, bottom, &help, c(UiColor::TextDim), black);
