@@ -118,7 +118,7 @@ sign-off: "it should sound like a heal").
   music stays at 100 %. Nick found the sounds "way too loud" at 100 (ticket
   0222). The map cursor tick is still 60 % of the menu move sound, so 24 %.
 - The menu select/confirm and cancel sounds play at 15 %: at 40 % Nick
-  still found them "much too high" next to the rest (ticket 0225).
+  still found them "much too high" next to the rest (ticket 0223).
 
 ## Open sub-questions (not needed for Chapter 1; Nick: "we have enough sounds for ch1 atp")
 

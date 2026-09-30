@@ -18,7 +18,7 @@
 use crate::audio::{AudioRequest, MusicCommand};
 use crate::game::{Game, RawKeyEvent};
 use crate::input::{Chord, Layout};
-use crate::screen::{Ctx, LAYOUT_KEY, Screen};
+use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
 use crate::storage::{MemoryStorage, Storage};
 
 /// Simulated length of one frame, in seconds (60 fps).
@@ -57,6 +57,25 @@ impl Harness {
             panic!("saving the layout: {e}");
         }
         Self::with_storage(Box::new(storage))
+    }
+
+    /// Like [`new`](Self::new), as the web build launches: the title
+    /// waits for a key press ([`Ctx::key_prompt`]).
+    pub fn on_web() -> Self {
+        Self::new().web()
+    }
+
+    /// Like [`with_layout`](Self::with_layout), as the web build launches
+    /// ([`on_web`](Self::on_web)).
+    pub fn on_web_with_layout(layout: Layout) -> Self {
+        Self::with_layout(layout).web()
+    }
+
+    /// Sets [`KeyPrompt::Waiting`] and redraws.
+    fn web(mut self) -> Self {
+        self.game.ctx_mut().key_prompt = KeyPrompt::Waiting;
+        self.game.redraw();
+        self
     }
 
     /// A launch with `storage` (e.g. from [`into_storage`](Self::into_storage)

@@ -26,8 +26,36 @@
   // The bundle is strict-mode JS and its last plugin (`quad_net`, unused)
   // assigns to an undeclared global `register_plugin`, which throws an
   // uncaught ReferenceError. Declaring the global first lets it succeed
-  // (ticket 0223). Keep this before `mq_js_bundle.js`.
+  // (ticket 0225). Keep this before `mq_js_bundle.js`.
   var register_plugin;
+</script>
+<script>
+  // Browsers keep audio off until a key press or click counts as the
+  // player's gesture (Escape and modifier keys don't). The bundle's own
+  // unlock gives up after the first key either way, so the music could
+  // stay silent for good (ticket 0224). Track every AudioContext the bundle
+  // makes and resume it on each key press, click or touch until it runs.
+  (function () {
+    const Base = window.AudioContext || window.webkitAudioContext;
+    if (!Base) return;
+    const contexts = [];
+    class TrackedAudioContext extends Base {
+      constructor(...args) {
+        super(...args);
+        contexts.push(this);
+      }
+    }
+    window.AudioContext = TrackedAudioContext;
+    window.webkitAudioContext = TrackedAudioContext;
+    const resume = () => {
+      for (const context of contexts) {
+        if (context.state === "suspended") context.resume();
+      }
+    };
+    for (const type of ["keydown", "mousedown", "touchend"]) {
+      document.addEventListener(type, resume, true);
+    }
+  })();
 </script>
 <script src="mq_js_bundle.js"></script>
 <!-- Storage (0207): register the localStorage plugin before it's needed. -->

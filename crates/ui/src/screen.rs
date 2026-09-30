@@ -156,6 +156,24 @@ pub struct Ctx {
     /// tokens and the lead's portrait. A placeholder here until New Game
     /// (0801) asks the player and stores it in the campaign.
     pub lead: LeadProfile,
+    /// Whether the title waits for a key press before showing its menu
+    /// and playing its music (`docs/design/title-screen.md`). Off here;
+    /// `app` sets [`KeyPrompt::Waiting`] for the web build, and `Game`
+    /// moves it on to [`KeyPrompt::Pressed`] at the first key press.
+    pub key_prompt: KeyPrompt,
+}
+
+/// The web build's "press any key" title prompt ([`Ctx::key_prompt`]):
+/// browsers block sound until the player presses a key.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum KeyPrompt {
+    /// No prompt (native builds).
+    #[default]
+    Off,
+    /// No key pressed yet: the title shows the prompt.
+    Waiting,
+    /// A key has been pressed (on any screen).
+    Pressed,
 }
 
 /// [`Ctx::music_seed`] until `app` sets it.
@@ -183,6 +201,7 @@ impl Ctx {
             audio: AudioQueue::default(),
             music_seed: DEFAULT_MUSIC_SEED,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
+            key_prompt: KeyPrompt::Off,
         })
     }
 
