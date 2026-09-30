@@ -114,6 +114,9 @@ sign-off: "it should sound like a heal").
   the new one starts. A cue that's already playing doesn't restart.
 - Every third-party file is volume-matched on import, so no cue is much
   louder than the others.
+- Sound effects play at 40 % of that matched level (about 8 dB quieter);
+  music stays at 100 %. Nick found the sounds "way too loud" at 100 (ticket
+  0222). The map cursor tick is still 60 % of the menu move sound, so 24 %.
 
 ## Open sub-questions (not needed for Chapter 1; Nick: "we have enough sounds for ch1 atp")
 
