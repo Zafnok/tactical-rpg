@@ -445,3 +445,97 @@ fn a_spell_cast_outside_a_combat_plays_its_cast_sound_at_once() {
     let fire = by(Element::Fire);
     assert!(super::event_sounds::event_cues(&[fire], None, true, &state).is_empty());
 }
+
+#[test]
+fn a_weapon_or_spell_equipped_by_the_command_is_what_strikes() {
+    let state = skirmish(&ctx(), 20);
+    let combat = Event::CombatResolved {
+        attacker: UnitId(1),
+        defender: UnitId(4),
+        forecast: Forecast {
+            attacker: numbers(),
+            defender: Some(numbers()),
+        },
+        outcome: CombatOutcome {
+            strikes: vec![],
+            attacker_hp: 19,
+            defender_hp: 20,
+        },
+    };
+    let fire = trpg_core::SpellId("fire".into());
+    let equip = Event::Equipped {
+        unit: UnitId(1),
+        equipped: trpg_core::Equipped::Spell(fire),
+    };
+    let attacks =
+        |events: &[Event]| super::event_sounds::combat_attacks(events, state.units(), &state);
+    assert_eq!(attacks(&[combat.clone()]), [[SWORD, AXE]]);
+    assert_eq!(attacks(&[equip, combat]), [[FIRE, AXE]]);
+}
+
+#[test]
+fn a_unit_that_moved_then_fell_still_steps() {
+    // The brigand (a foot unit) falls to the lord's attack; a move of its
+    // earlier in the same events still sounds.
+    let mut state = skirmish(&ctx(), 1);
+    let cmd = Command::Act {
+        unit: UnitId(1),
+        dest: Pos::new(7, 2),
+        action: UnitAction::Attack {
+            target: UnitId(4),
+            slot: 0,
+            active: None,
+            art: None,
+        },
+    };
+    state.apply(&cmd).unwrap_or_else(|e| panic!("{e}"));
+    assert!(state.unit(UnitId(4)).is_none(), "fallen");
+    let moved = Event::UnitMoved {
+        unit: UnitId(4),
+        path: vec![Pos::new(10, 2), Pos::new(9, 2), Pos::new(8, 2)],
+    };
+    let cues = super::event_sounds::event_cues(&[moved], None, false, &state);
+    let names: Vec<&str> = cues.iter().map(|(_, c)| *c).collect();
+    assert_eq!(names, ["step_foot", "step_foot"]);
+}
+
+#[test]
+fn holding_confirm_mid_walk_skips_the_steps_but_not_the_last_one() {
+    let state = skirmish(&ctx(), 20);
+    let mut sel = super::mode::Selection::new(&state, UnitId(1)).unwrap();
+    let walk = |sel: &super::mode::Selection, t, held| Mode::Moving {
+        sel: sel.clone(),
+        t,
+        held,
+    };
+    let row = |n| (0..n).map(|x| Pos::new(x, 2)).collect::<Vec<_>>();
+    // Five tiles to go: held just past the limit skips them all.
+    sel.path = row(6);
+    assert_eq!(
+        walk(&sel, 0.0, 0.15).tiles_entered(0.1, true),
+        Some((UnitId(1), 0))
+    );
+    // Held, not yet long enough: the tile reached this frame sounds.
+    assert_eq!(
+        walk(&sel, 0.0, 0.0).tiles_entered(0.1, true),
+        Some((UnitId(1), 1))
+    );
+    // The hold would skip, but the walk ends this frame anyway: its last
+    // tile sounds.
+    sel.path = row(2);
+    assert_eq!(
+        walk(&sel, 0.05, 0.15).tiles_entered(0.1, true),
+        Some((UnitId(1), 1))
+    );
+    assert_eq!(Mode::default().tiles_entered(0.1, false), None);
+}
+
+#[test]
+fn a_cue_already_reached_does_not_play_again() {
+    let hit = vec![strike(Side::Attacker, true, false, 7, 13)];
+    let (_, mut playback) = scripted(hit, [SWORD, AXE]);
+    let (at, cue) = playback.cues()[0];
+    assert_eq!(playback.sounds(at, false), [cue]);
+    playback.tick(at, false);
+    assert!(playback.sounds(0.01, false).is_empty());
+}
