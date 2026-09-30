@@ -223,6 +223,19 @@ pub fn combat_actives(
         .collect()
 }
 
+/// The combat actives `unit` knows and can use, in the order of its skills,
+/// whatever the target.
+pub fn combat_active_ids(state: &BattleState, unit: UnitId) -> Vec<SkillId> {
+    let Some(u) = state.unit(unit) else {
+        return vec![];
+    };
+    u.usable_skills(state.classes(), state.skills())
+        .into_iter()
+        .filter(|s| s.is_combat())
+        .map(|s| s.id.clone())
+        .collect()
+}
+
 /// The non-combat actives `unit` knows, in the order of its skills.
 fn known_non_combat(state: &BattleState, unit: UnitId) -> Vec<&SkillDef> {
     let Some(u) = state.unit(unit) else {

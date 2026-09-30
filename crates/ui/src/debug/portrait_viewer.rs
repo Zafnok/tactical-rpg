@@ -2,6 +2,7 @@
 //! content, one expression at a time, plus its mirrored and dimmed
 //! "listener" look, for checking art (0706).
 
+use crate::audio::MenuSound;
 use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
@@ -77,10 +78,17 @@ impl Screen for PortraitViewerScreen {
         let portraits = &ctx.content.portraits;
         for &action in &input.actions {
             match action {
-                Action::Cancel => return Transition::Pop,
+                Action::Cancel => {
+                    ctx.audio.menu(MenuSound::Cancel);
+                    return Transition::Pop;
+                }
                 Action::CursorDown | Action::CursorUp => {
                     let delta = if action == Action::CursorDown { 1 } else { -1 };
-                    self.character = wrap(self.character, delta, portraits.len());
+                    let character = wrap(self.character, delta, portraits.len());
+                    if character != self.character {
+                        ctx.audio.menu(MenuSound::Move);
+                    }
+                    self.character = character;
                     self.expression = 0;
                 }
                 Action::CursorLeft | Action::CursorRight => {
@@ -89,7 +97,11 @@ impl Screen for PortraitViewerScreen {
                         .nth(self.character)
                         .map_or(0, |p| p.expressions.len());
                     let delta = if action == Action::CursorRight { 1 } else { -1 };
-                    self.expression = wrap(self.expression, delta, n);
+                    let expression = wrap(self.expression, delta, n);
+                    if expression != self.expression {
+                        ctx.audio.menu(MenuSound::Move);
+                    }
+                    self.expression = expression;
                 }
                 _ => {}
             }

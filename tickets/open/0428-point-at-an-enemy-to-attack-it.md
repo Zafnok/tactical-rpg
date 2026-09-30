@@ -1,5 +1,5 @@
 ---
-id: "0427"
+id: "0428"
 title: Point at an enemy with a unit selected to attack it
 type: feature
 milestone: M3 Battle UI
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0427 — Point at an enemy with a unit selected to attack it
+# 0428 — Point at an enemy with a unit selected to attack it
 
 ## Context
 
@@ -70,7 +70,7 @@ to a tile of your choice (it should keep it) and with an archer.
 - Help bar in `Mode::Selected` offers Confirm "attack" when the cursor is on
   such an enemy.
 - Record the decision in `docs/design/turn-structure.md` under "A unit's
-  action" (Nick's words + the rule), dated 2026-09-29, source ticket 0427.
+  action" (Nick's words + the rule), dated 2026-09-29, source ticket 0428.
 
 **Out (do not do):**
 - Combat arts (0414 adds them to `Targeting`; this flow gets them for free).
