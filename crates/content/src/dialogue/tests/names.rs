@@ -184,3 +184,18 @@ fn readme_names_example_is_valid() {
     assert!(readme.contains("\"The Thornmarch, dusk\""));
     assert!(readme.contains("\"Emeric wants you out of the Thornmarch.\""));
 }
+
+#[test]
+fn unknown_tokens_count_as_written() {
+    // "{x}" is 3 characters: 198 + 3 = 201.
+    let base = "a".repeat(MAX_TEXT_LEN - 2);
+    let errs = errors(&scene(&format!("> {base}{{x}}")));
+    assert_eq!(errs.len(), 2, "{errs:?}");
+    assert_eq!(
+        errs[1],
+        format!(
+            "t.dlg:4: text is {} characters; the limit is {MAX_TEXT_LEN}",
+            MAX_TEXT_LEN + 1
+        )
+    );
+}
