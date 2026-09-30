@@ -299,7 +299,9 @@ out. With no units ready, `Start` ends the turn at once.
   300 ms, then every 55 ms, *tunable*, shared with the keys). How far the
   stick is pushed doesn't change the speed.
 - The stick moves in 4 directions only (no diagonals), like the keys.
-- **The right stick does nothing.** No fast cursor button either (the
+- **The right stick does nothing by default**, but the player may bind
+  its 4 directions to any action (see *Rebinding buttons*). No fast
+  cursor button either (the
   keyboard's *Cursor speed* note applies to the pad too: revisit after the
   large-map playtest).
 
@@ -320,6 +322,10 @@ Help bars and tips name buttons the way **the pad in use** labels them:
   the font: they are drawn as new glyphs in its style (ticket 0220, mockup
   first).
 - An action with no button shows `! not mapped`, as for keys.
+- **Moving the cursor** names both the D-pad and the stick (Nick: "just
+  render both somehow"): `D-pad/stick move` with the defaults. If the
+  player rebinds the cursor, the help names whatever it's bound to,
+  like the keyboard's `arrows` / `wasd`.
 
 ### Switching between keyboard and controller (Q5 A)
 
@@ -352,29 +358,39 @@ Same rules as *Rebinding keys* above, on the same Key bindings screen:
   - **Emptying a slot**: Confirm on the slot offers **`Clear`**.
   - A **hint** on the screen says so while capturing, e.g. `Press a
     button… · hold any button to cancel`.
+- **Every button and both sticks' directions can be bound**: the left
+  stick's 4 directions and the right stick's 4 directions each count as a
+  button (the right stick starts with nothing on it).
+- **Rebinding by tapping:** a button goes into the slot when you let go of
+  it. Held for a second, it backs out instead (so a hold never binds).
+- The **`Clear`** choice appears only when the pad was used last. With the
+  keyboard, Confirm on a slot still goes straight to `Press a key…` and
+  `Delete` empties it, as decided in 0030.
 
 ### Rumble
 
 **None for now** (Q7). Nick: "we might add it later"; that would be its own
 ticket.
 
-*Claude's starting rules (Nick to veto at sign-off of 0219, 0220, 0816):*
+### Follow-up answers (2026-09-30)
 
-- **Switch-style pads swap only Confirm's and Cancel's buttons.** The other
-  buttons stay where they are: on a Switch pad, Unit info is still the top
-  button (labelled `X` there) and the danger zone the left one (`Y`). If
-  you rebind, the swap still applies: whatever you put on the bottom button
-  of an Xbox pad sits on the right button of a Switch pad.
-- **Rebinding by tapping:** a button goes into the slot when you let go of
-  it. Held for a second, it backs out instead (so a hold never binds).
-- **The `Clear` choice appears only when the pad was used last.** With the
-  keyboard, Confirm on a slot still goes straight to `Press a key…` and
-  `Delete` empties it, as decided in 0030.
-- **Left-stick directions are ordinary buttons**: they can be moved to
-  another action like any button. The right stick can't be bound (it does
-  nothing).
-- **Help bars name the D-pad** for moving the cursor (`D-pad move`), even
-  though the left stick also works.
+Claude proposed six small rules; Nick's replies:
+
+> - Switch pads swap only Confirm and Cancel: "as long as it's consistent
+>   with fire emblem that's ok"
+> - Rebinding by tapping (bind on release, hold to back out): "ok"
+> - `Clear` only when the pad was used last: "yes"
+> - Stick directions bindable: "ok for left stick, but right stick should
+>   be available to use if wanted"
+> - Help bar naming the D-pad only: "just render both somehow"
+> - Several pads at once: "sure"
+
+- **Switch-style pads swap only Confirm's and Cancel's buttons**, which is
+  exactly Fire Emblem on Switch (right `A` confirms, bottom `B` cancels).
+  The other buttons keep the 2A layout on every pad, so on a Switch pad
+  Unit info is the top button (labelled `X` there) and the danger zone the
+  left one (`Y`). If you rebind, the swap still applies: whatever is on the
+  bottom button of an Xbox pad sits on the right button of a Switch pad.
 - **Several pads at once** all drive the game, as one player.
 
 ## Open sub-questions

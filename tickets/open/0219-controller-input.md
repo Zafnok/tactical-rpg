@@ -61,7 +61,9 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - Held buttons repeat like held keys (same `repeat` timings).
 - Left stick to 4-way cursor with a dead zone, one tile per step with the
   held-key repeat (0032: D-pad and left stick both move; how far the stick
-  is pushed doesn't change speed; right stick and stick presses do nothing).
+  is pushed doesn't change speed; right stick and stick presses have no
+  default job, but the right stick's directions are read like the left's
+  so 0816 can bind them).
 - **Confirm / Cancel follow the controller (0032 Q1 C):** bottom confirms
   and right cancels, except on Switch-style pads where those two swap (only
   those two). Needs the pad kind, detected here (step 5b); 0220 reuses it
@@ -82,8 +84,9 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 1. **Button type** (`crates/content/src/keymap.rs`): `pub enum Button`
    with position names (`South`, `East`, `West`, `North`, `LeftShoulder`,
    `RightShoulder`, `LeftTrigger`, `RightTrigger`, `Select`, `Start`,
-   `LeftStickPress`, `RightStickPress`, `DpadUp/Down/Left/Right`, and
-   `LeftStickUp/Down/Left/Right` for the stick's 4 directions), with
+   `LeftStickPress`, `RightStickPress`, `DpadUp/Down/Left/Right`,
+   `LeftStickUp/Down/Left/Right` and `RightStickUp/Down/Left/Right` for
+   each stick's 4 directions), with
    `Display`/`parse` names for RON. Round-trip test every variant.
 2. **`keymap.ron`**: a top-level `pad: { "Confirm": ["South"], … }` table
    (one table for both layouts, 0032 Q6a), validated like layouts: every

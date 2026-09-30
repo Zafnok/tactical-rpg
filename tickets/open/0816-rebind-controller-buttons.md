@@ -62,7 +62,8 @@ play a turn with the new button.
 2. Config: extend 0217's `PlayerKeys` with one shared set of button
    slots (not per layout); `version: 2`; repair-on-load rules as for keys
    (drop unknown / duplicate buttons, reset if a required action is left
-   unmapped). Right-stick directions can't be bound.
+   unmapped). Both sticks' directions can be bound, like buttons (Nick:
+   "right stick should be available to use if wanted").
 3. `PadBindings` model (pure), mirroring `LayoutBindings`; the "button
    moves" rule, no reserved buttons. Property test the no-duplicate
    invariant.

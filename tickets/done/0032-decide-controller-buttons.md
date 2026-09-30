@@ -108,13 +108,9 @@ skipped for someone whose first press is a pad button, and shown once when
 they first touch the keyboard (my recommendation; Nick answered 5A without
 the sub-question).
 
-*Claude's starting rules* (in `controls.md`, Nick to veto at sign-off):
-- Switch-style pads swap only Confirm's and Cancel's buttons; on a Switch
-  pad Unit info stays on the top button, the danger zone on the left one.
-- Rebinding by tapping: a button goes in the slot when you let go of it;
-  held for a second it backs out instead.
-- The `Clear` choice appears only when the pad was used last; the keyboard
-  keeps Confirm → `Press a key…` and `Delete`.
-- Left-stick directions can be rebound like buttons; the right stick can't.
-- The help bar names the D-pad for moving (`D-pad move`).
-- Several pads at once all drive the game, as one player.
+Claude's six proposed small rules went to Nick in the PR round and are
+now decided (`controls.md`, *Follow-up answers*): Switch pads swap only
+Confirm/Cancel (as in Fire Emblem), bind on release / hold to back out,
+`Clear` only with the pad, both sticks bindable (right stick too, Nick's
+change), help bar shows `D-pad/stick move` (Nick's change), several pads
+act as one player.

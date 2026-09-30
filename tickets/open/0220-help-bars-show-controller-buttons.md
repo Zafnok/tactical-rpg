@@ -48,7 +48,9 @@ PlayStation glyphs first.
   letters (also Steam Deck and generic pads); PlayStation `✕ ○ □ △`,
   `L1 R1 L2 R2`, `Options`, `Create`; Switch `A B X Y`, `L R ZL ZR`, `+`,
   `−`. Tables in `controls.md` *Controller → Button names on screen*.
-  The cursor shows as `D-pad`.
+  The cursor names both D-pad and stick: `D-pad/stick move` with the
+  defaults, or whatever the cursor is bound to after rebinding (Nick:
+  "just render both somehow").
 - New font glyphs for the PlayStation shapes: `□` and `△` are missing
   from Terminus (`✕` / `○` may need bolder versions to match). Mockup in
   `docs/screenshots/0032-button-names.png`.
