@@ -1,5 +1,5 @@
 ---
-id: "0031"
+id: "0032"
 title: "Decide: controller buttons, button names on screen, rebinding buttons"
 type: design-decision
 milestone: Design decisions
@@ -11,7 +11,7 @@ nick_input: decision
 completed:
 ---
 
-# 0031 — Decide: controller buttons
+# 0032 — Decide: controller buttons
 
 ## Context
 

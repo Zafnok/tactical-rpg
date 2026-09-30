@@ -6,7 +6,7 @@ milestone: M1 Engine
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0031"]
+blocked_by: ["0032"]
 nick_input: sign-off
 completed:
 ---
@@ -22,7 +22,7 @@ Linux for players outside Steam). Steam will later offer Steam Input
 controller support of its own.
 
 Screens only see `Action`s (ADR-0015), so a controller is one more source
-of the same actions: no screen changes. Button defaults come from 0031
+of the same actions: no screen changes. Button defaults come from 0032
 (`docs/design/controls.md`, *Controller*). Follow the `keyboard-input`
 skill: buttons are treated exactly like keys (never named in game code or
 text, defaults only in `keymap.ron`).
@@ -45,7 +45,7 @@ Engine facts that shape the approach:
 
 ## Nick input
 
-**Answer first:** 0031 (default buttons, stick behaviour).
+**Answer first:** 0032 (default buttons, stick behaviour).
 
 **Sign-off:** on Pages, plug in a controller, press a button, and play a
 Quick Battle with it. Help bars still show keyboard keys in this ticket
@@ -57,9 +57,9 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - Native pads through gilrs; web pads through a new `web/gamepad.js` plugin.
 - Hot-plug: pads connected or removed while playing; several pads at once
   all drive the game.
-- Default button bindings from 0031 in `assets/data/keymap.ron`.
+- Default button bindings from 0032 in `assets/data/keymap.ron`.
 - Held buttons repeat like held keys (same `repeat` timings).
-- Stick to 4-way cursor with a dead zone, if 0031 asks for the stick.
+- Stick to 4-way cursor with a dead zone, if 0032 asks for the stick.
 - Pads work on the first-launch layout picker too (Confirm / cursor).
 - Linux CI and release builds install `libudev-dev`.
 - ADR for the controller input approach.
@@ -68,7 +68,7 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 - Button names in help bars and tips (0220).
 - Rebinding buttons, a controller page in Options (0816).
 - Steam Input API / action sets, Steam Deck glyphs (0903).
-- Rumble, mouse, touch (unless 0031 asks for rumble: then a follow-up ticket).
+- Rumble, mouse, touch (unless 0032 asks for rumble: then a follow-up ticket).
 
 ## Implementation steps
 
@@ -79,9 +79,9 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
    `LeftStickUp/Down/Left/Right` for the stick's 4 directions), with
    `Display`/`parse` names for RON. Round-trip test every variant.
 2. **`keymap.ron`**: a top-level `pad: { "Confirm": ["South"], … }` table
-   (or per layout, if 0031 decides that), validated like layouts: every
+   (or per layout, if 0032 decides that), validated like layouts: every
    action listed (`[]` for none), a button bound to at most one action,
-   `Debug` must be `[]`. Values exactly as in 0031's table; extend the
+   `Debug` must be `[]`. Values exactly as in 0032's table; extend the
    keymap-matches-design test. Stick tuning next to `repeat`:
    `stick: (press: 0.5, release: 0.35)` (*tunable*), release below press so
    a stick resting on the edge doesn't flicker.

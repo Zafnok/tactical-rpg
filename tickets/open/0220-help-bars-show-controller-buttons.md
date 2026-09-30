@@ -6,7 +6,7 @@ milestone: M1 Engine
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0031", "0217", "0219"]
+blocked_by: ["0032", "0217", "0219"]
 nick_input: sign-off
 completed:
 ---
@@ -17,7 +17,7 @@ completed:
 
 After 0219 a controller drives the game, but help bars and tips still name
 keyboard keys (`f confirm · d back`), which is wrong for someone holding a
-pad. 0031 (`docs/design/controls.md`, *Controller*) decided how buttons are
+pad. 0032 (`docs/design/controls.md`, *Controller*) decided how buttons are
 named on screen (letters, shapes, per controller type or by position) and
 when the text switches between keyboard and controller. Steam Deck Verified
 also requires controller prompts, not keyboard ones (0903).
@@ -30,23 +30,23 @@ the `keyboard-input` and `ascii-art` skills.
 
 ## Nick input
 
-**Answer first:** 0031 (button naming style, switching rule).
+**Answer first:** 0032 (button naming style, switching rule).
 
 **Sign-off:** on Pages, play a Quick Battle with the controller and check
 the help bar and a tip name buttons; press a key and check they switch back
-(or whatever 0031 decided). Mockups first if new glyphs are needed.
+(or whatever 0032 decided). Mockups first if new glyphs are needed.
 
 ## Scope
 
 **In:**
 - "Last used device" (keyboard or controller) tracked in `InputState`,
-  switched as 0031 decided.
+  switched as 0032 decided.
 - Help bars and tip placeholders name the action's button(s) when the
   controller is the current device; `! not mapped` when it has none.
-- The naming style from 0031, including controller-type detection
-  (Xbox / PlayStation / Nintendo / other) if 0031 asked for it.
+- The naming style from 0032, including controller-type detection
+  (Xbox / PlayStation / Nintendo / other) if 0032 asked for it.
 - New font glyphs if the style needs them (e.g. PlayStation shapes).
-- The layout-picker rule for controller players from 0031.
+- The layout-picker rule for controller players from 0032.
 
 **Out (do not do):**
 - Rebinding buttons (0816). Steam Input glyph images (0903).
@@ -63,7 +63,7 @@ the help bar and a tip name buttons; press a key and check they switch back
    (Microsoft 045e, Sony 054c, Nintendo 057e) and fall back to `Generic`.
 2. **Names** (`crates/ui/src/widgets/help.rs`): make `key_name`,
    `all_key_names` and `cursor_keys_name` take the device (or an
-   `&InputState`) and name buttons in the 0031 style when it's a pad
+   `&InputState`) and name buttons in the 0032 style when it's a pad
    (`cursor_keys_name` → the D-pad / stick name). Button names live in one
    table next to the `Button` type, never in screens.
 3. **Tips** (`crates/ui/src/tips.rs`): `fill_placeholders` uses the same
@@ -81,7 +81,7 @@ the help bar and a tip name buttons; press a key and check they switch back
 - [ ] Nick approved the look (note the option in Completion notes).
 - [ ] Harness test: after a pad press the battle help bar shows the
       Confirm button's name; after a key press it shows the key again
-      (or per 0031's rule).
+      (or per 0032's rule).
 - [ ] A tip with `{Confirm}` shows the button name on a pad (test).
 - [ ] An action with no button shows `! not mapped` on a pad (test).
 - [ ] Vendor-id → `PadKind` mapping unit-tested, unknown → `Generic`.

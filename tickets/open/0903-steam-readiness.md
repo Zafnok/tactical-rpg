@@ -40,7 +40,7 @@ Until then this ticket can do everything with Valve's test App ID 480.
    `steam_api64.dll`, `steamcmd` + `app_build.vdf` upload flow, Steam Cloud for
    saves (maps to our storage keys), achievements idea list (don't implement).
 3. **Steam Deck:** controller support already exists (0219 input, 0220
-   button names, 0816 rebinding; decided in 0031). Document what's still
+   button names, 0816 rebinding; decided in 0032). Document what's still
    needed for Deck Verified and ticket each gap: readable text at
    1280×800; controller prompts matching the Deck (0220's names or Steam
    Input glyphs); an on-screen keyboard where the player types (renaming
