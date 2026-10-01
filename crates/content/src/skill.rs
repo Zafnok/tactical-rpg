@@ -1,5 +1,10 @@
 //! Class skills (`assets/data/skills.ron`), from `docs/design/progression.md`
 //! and `docs/design/combat-arts.md`. The rules are in `trpg_core::skill`.
+//!
+//! Besides each skill's own shape, loading checks its cost (durability for
+//! combat actives, an extra spell use for spell actives, uses per battle for
+//! the others) and that every higher rank of a family is the rank below it
+//! with bigger numbers, nothing else (`ranks`).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -60,14 +65,16 @@ pub fn from_source(file: &str, source: &str) -> Result<SkillTable, Vec<ContentEr
     let mut errors = Vec::new();
     let mut skills = BTreeMap::new();
     let mut ranks = BTreeSet::new();
+    // An error at the line of skill `id`.
+    let at_skill = |id: &str, message: String| {
+        let e = ContentError::new(file, message);
+        match line_of(source, &format!("id: \"{id}\"")) {
+            Some(l) => e.at(l, None),
+            None => e,
+        }
+    };
     for s in raw.skills {
-        let at = |message: String| {
-            let e = ContentError::new(file, message);
-            match line_of(source, &format!("id: \"{}\"", s.id)) {
-                Some(l) => e.at(l, None),
-                None => e,
-            }
-        };
+        let at = |message: String| at_skill(&s.id, message);
         let what = format!("skill \"{}\"", s.id);
         if s.id.is_empty() {
             errors.push(at("a skill id is empty".into()));
@@ -103,6 +110,11 @@ pub fn from_source(file: &str, source: &str) -> Result<SkillTable, Vec<ContentEr
             errors.push(at(format!("duplicate skill id \"{}\"", s.id)));
         }
     }
+    errors.extend(
+        ranks::rank_problems(&skills)
+            .into_iter()
+            .map(|(id, problem)| at_skill(&id.0, problem)),
+    );
     if errors.is_empty() {
         Ok(SkillTable { skills })
     } else {
@@ -145,7 +157,13 @@ fn problems(kind: &SkillKind) -> Vec<String> {
                     ..
                 }
             );
+            let combat = matches!(effect, ActiveEffect::Strike { .. });
             match cost {
+                SkillCost::Uses(_) if combat => out.push(
+                    "only non-attack actives (Buff, Heal, Push) cost Uses; a combat active costs durability and a spell active ExtraSpellUse"
+                        .into(),
+                ),
+                SkillCost::Uses(0) => out.push("uses per battle must be at least 1".into()),
                 SkillCost::Durability(0) => out.push("a durability cost must be at least 1".into()),
                 SkillCost::Durability(_) if spell => {
                     out.push("a spell active costs ExtraSpellUse, not durability".into());
@@ -196,6 +214,8 @@ pub fn check_references(skills: &SkillTable, classes: &ClassTable) -> Vec<Conten
     }
     errors
 }
+
+mod ranks;
 
 #[cfg(test)]
 mod tests;

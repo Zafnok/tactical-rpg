@@ -311,13 +311,19 @@ one. At 0 the Shove is greyed out until the next battle.
   Nick may rename it.
 - Classes with **0 weapon slots** (tier-3 magic classes) can now have
   non-attack actives as well as spell actives (ticket 1001).
-- **Not in the game yet:** until ticket 0316 these actives still cost the
-  durability in the table below.
+- **On screen:** the Skill menu and the unit's info screen show the uses
+  left of the uses per battle, the way spell uses are shown (`Brace  2/3`).
+  A skill with none left is dimmed, with `no uses left` after it. Picking
+  who to Shove shows `Shove on Brigand (8 → 7 uses)`.
+- A unit that comes to know a non-attack active in the middle of a battle
+  has no uses of it until the next battle, like a spell learned in battle
+  (*Claude's starting rule*; nothing in the game teaches an active
+  mid-battle yet).
 
 ### Durability costs (*tunable*: 2/battle actives cost 3, 1/battle actives cost 5)
 
-The non-attack rows (marked *equipped*) are what the game does until ticket
-0316; after it they cost uses per battle, above.
+The combat actives. The non-attack actives (Brace, Sanctuary, Shove, War
+Cry, Fortify, Inspire, Rally) cost uses per battle, above.
 
 | Active | Class | Was | Now |
 | ------ | ----- | --- | --- |
@@ -325,29 +331,23 @@ The non-attack rows (marked *equipped*) are what the game does until ticket
 | Flurry | Brawler | 1/battle | 5 dur |
 | Heavy Blow | Raider | 2/battle | 3 dur |
 | Vault | Archer | (was the Skirmish passive) | 1 dur (Nick, 0311's PR) |
-| Brace | Guard | 2/battle | 3 dur (equipped) |
 | Lance Rush | Rider | 2/battle | 3 dur |
 | Swoop | Flier, Sky Lancer | 2/battle | 3 dur |
 | Overcast | Mage, Sorcerer | 1/battle | +1 spell use |
-| Sanctuary | Cleric | 1/battle | 5 dur (equipped) |
 | Blade Flurry | Duelist | 1/battle | 5 dur |
 | Deadly Blow | Shadowblade | 1/battle | 5 dur |
 | Hundred Fists | Striker | 1/battle | 5 dur |
-| Shove | Grappler | 2/battle | 3 dur (equipped) |
 | Rampage | Berserker | 1/battle | 5 dur |
-| War Cry | Vanguard | 1/battle | 5 dur (equipped) |
 | Long Shot | Marksman (was Archer; range +2) | 2/battle | 3 dur |
 | Volley | Outrider | 1/battle | 5 dur |
-| Fortify | Bulwark | 1/battle | 5 dur (equipped) |
 | Trample | Iron Rider | 2/battle | 3 dur |
 | Piercing Lance | Lancer | 2/battle | 3 dur |
 | Dive | Sky Warden | 1/battle | 5 dur |
 | Siphon | Mystic | 1/battle | +1 spell use |
-| Sanctuary 2 | Priest | 1/battle | 5 dur (equipped) |
 
 The Chapter 1 budget: iron weapons have 20 durability and Chapter 1 has no
-blacksmith, so each weapon's 20 is shared by its arts and actives for the
-whole battle.
+blacksmith, so each weapon's 20 is shared by its arts and combat actives for
+the whole battle.
 
 ### Overlap check (Nick: overlaps rare and sensible)
 
@@ -365,8 +365,10 @@ functions. The closest pairs, all judged in the playtest:
 ## Enemies: bosses only; combat green units too
 
 - Among enemies, only units marked **boss** in chapter data use arts and
-  actives. They follow the same rules and pay with their own weapon's
-  durability (Nick: "Bosses only").
+  actives. They follow the same rules and pay the same way: their own
+  weapon's durability, and their own uses per battle for non-attack actives
+  (Nick: "Bosses only"; "this should count for both the player and the
+  boss").
 - **Green (Other-phase) units** use arts and actives when they are **combat
   units** (allied soldiers, mercenaries…), with the same rules (Nick, 0312
   review). **Non-combat** green units, marked so in chapter data (villagers
@@ -390,9 +392,8 @@ functions. The closest pairs, all judged in the playtest:
     moves) and has nothing to attack uses its non-attack active (Brace, War
     Cry…) instead of waiting, when a hostile unit could reach and attack it
     on its coming turn (Nick, 2026-10-01: fine "if it is at least proximally
-    close to some enemies"). Until ticket 0316 these cost durability, and it
-    never spends its weapon's last durability that way; after it, it needs a
-    use left.
+    close to some enemies"). It needs a use left: a boss with Brace braces
+    on 3 such turns of a battle, then waits.
 
 ## Forecast display
 

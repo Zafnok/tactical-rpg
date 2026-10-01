@@ -1,7 +1,8 @@
 //! Every class skill in `assets/data/skills.ron`, used in a battle built from
 //! the real content tables (ticket 0311): one test per skill, each showing
 //! its effect on a forecast or on the battle state, against the numbers in
-//! `docs/design/progression.md`.
+//! `docs/design/progression.md`, and the uses per battle of the non-attack
+//! actives against `docs/design/combat-arts.md` (ticket 0316).
 //!
 //! Units are generic units of the skill's class with flat stats (HP 30, Str,
 //! Mag, Dex and Spd 5, Def and Res 2) and one iron weapon, on an all-plain
@@ -11,9 +12,9 @@ use std::sync::{Arc, OnceLock};
 
 use trpg_content::Content;
 use trpg_core::{
-    BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassId, Command, CommandError,
-    Event, Faction, Forecast, Grid, ItemId, LoadoutDef, Objective, Pos, SkillId, SpellId,
-    StatValue, Stats, Stock, Unit, UnitAction, UnitId,
+    BattleMap, BattlePack, BattleSetup, BattleState, CastTarget, ClassId, ClassRecord, Command,
+    CommandError, CostError, Event, Faction, Forecast, Grid, ItemId, LoadoutDef, Objective, Phase,
+    Pos, SkillId, SpellId, StatValue, Stats, Stock, Unit, UnitAction, UnitId,
 };
 
 fn content() -> &'static Content {
@@ -201,6 +202,23 @@ fn durability(s: &BattleState, id: u32) -> u32 {
         .map_or(0, |w| w.durability_left)
 }
 
+/// The uses unit `id` has left this battle of the non-attack active
+/// `skill`.
+fn uses(s: &BattleState, id: u32, skill: &str) -> u8 {
+    s.unit(UnitId(id))
+        .map_or(0, |u| u.skill_uses.uses_left(&SkillId::new(skill)))
+}
+
+/// Ends phases until the Player phase starts again.
+fn next_turn(s: &mut BattleState) {
+    let mut end = || {
+        s.apply(&Command::EndPhase)
+            .unwrap_or_else(|e| panic!("{e}"));
+        s.phase()
+    };
+    while end() != Phase::Player {}
+}
+
 fn healed(events: &[Event], id: u32) -> StatValue {
     events
         .iter()
@@ -380,16 +398,27 @@ fn enemy_damage(defender: Unit, setup: impl FnOnce(&mut BattleState)) -> StatVal
 }
 
 #[test]
-fn brace_def_and_res_5_until_its_next_phase_for_3_durability() {
+fn brace_def_and_res_5_until_its_next_phase_3_uses_a_battle() {
     let guard = player(1, "guard", p(0, 0), "iron_spear");
     // Str 5 + Iron Sword 5 − Def 2 = 8.
     assert_eq!(enemy_damage(guard.clone(), |_| {}), 8);
-    let mut left = 0;
+    let mut left = (0, 0);
+    let braced = enemy_damage(guard, |s| {
+        assert_eq!(uses(s, 1, "brace"), 3);
+        act(s, 1, p(0, 0), use_skill("brace", None));
+        left = (uses(s, 1, "brace"), durability(s, 1));
+    });
+    // No durability is spent (Nick, 2026-10-01).
+    assert_eq!((braced, left), (3, (2, 20)));
+}
+
+#[test]
+fn a_guard_with_no_weapon_can_brace() {
+    let guard = unit(1, "guard", Faction::Player, p(0, 0), None);
     let braced = enemy_damage(guard, |s| {
         act(s, 1, p(0, 0), use_skill("brace", None));
-        left = durability(s, 1);
     });
-    assert_eq!((braced, left), (3, 17));
+    assert_eq!(braced, 3);
 }
 
 #[test]
@@ -481,16 +510,17 @@ fn black_magic_1_attack_spells_might_1() {
 }
 
 #[test]
-fn sanctuary_heals_adjacent_allies_by_mag_plus_5_for_5_durability() {
+fn sanctuary_heals_adjacent_allies_by_mag_plus_5_3_uses_a_battle() {
     let mut s = battle(vec![
         player(1, "cleric", p(1, 1), "iron_gauntlets"),
         with(player(2, "swordsman", p(1, 0), "iron_sword"), |u| u.hp = 1),
         with(player(4, "swordsman", p(1, 3), "iron_sword"), |u| u.hp = 1),
         enemy(3, p(7, 4)),
     ]);
+    assert_eq!(uses(&s, 1, "sanctuary"), 3);
     let events = act(&mut s, 1, p(1, 1), use_skill("sanctuary", None));
     assert_eq!((healed(&events, 2), healed(&events, 4)), (10, 0));
-    assert_eq!(durability(&s, 1), 15);
+    assert_eq!((uses(&s, 1, "sanctuary"), durability(&s, 1)), (2, 20));
 }
 
 /// A caster of `class` healing a wounded ally with `spell`, without and
@@ -536,15 +566,16 @@ fn exile() -> Unit {
 }
 
 #[test]
-fn inspire_allies_within_2_hit_and_avoid_10_for_3_durability() {
+fn inspire_allies_within_2_hit_and_avoid_10_2_uses_a_battle() {
     let plain = lord_help(exile(), |_| {});
-    let mut left = 0;
+    let mut left = (0, 0);
     let inspired = lord_help(exile(), |s| {
+        assert_eq!(uses(s, 1, "inspire"), 2);
         act(s, 1, p(0, 0), use_skill("inspire", None));
-        left = durability(s, 1);
+        left = (uses(s, 1, "inspire"), durability(s, 1));
     });
     assert_eq!(inspired, (plain.0 + 10, plain.1 - 10));
-    assert_eq!(left, 17);
+    assert_eq!(left, (1, 20));
 }
 
 #[test]
@@ -613,14 +644,15 @@ fn light_feet_2_attack_speed_4_and_supersedes_1() {
 }
 
 #[test]
-fn shove_pushes_an_adjacent_enemy_for_3_durability() {
+fn shove_pushes_an_adjacent_enemy_8_uses_a_battle() {
     let mut s = battle(vec![
         player(1, "grappler", p(0, 0), "iron_gauntlets"),
         enemy(3, p(1, 0)),
     ]);
+    assert_eq!(uses(&s, 1, "shove"), 8);
     act(&mut s, 1, p(0, 0), use_skill("shove", Some(3)));
     assert_eq!(s.unit(UnitId(3)).map(|u| u.pos), Some(p(2, 0)));
-    assert_eq!(durability(&s, 1), 17);
+    assert_eq!((uses(&s, 1, "shove"), durability(&s, 1)), (7, 20));
 }
 
 #[test]
@@ -671,17 +703,18 @@ fn fury_crit_15_at_half_hp_or_less() {
 }
 
 #[test]
-fn war_cry_adjacent_allies_str_2_for_5_durability() {
+fn war_cry_adjacent_allies_str_2_2_uses_a_battle() {
     let mut s = battle(vec![
         player(1, "vanguard", p(0, 1), "iron_axe"),
         player(2, "swordsman", p(0, 2), "iron_sword"),
         enemy(3, p(1, 2)),
     ]);
     let plain = forecast(&s, 2, p(0, 2), attack(3, None));
+    assert_eq!(uses(&s, 1, "war_cry"), 2);
     act(&mut s, 1, p(0, 1), use_skill("war_cry", None));
     let cried = forecast(&s, 2, p(0, 2), attack(3, None));
     assert_eq!(cried.attacker.damage, plain.attacker.damage + 2);
-    assert_eq!(durability(&s, 1), 15);
+    assert_eq!((uses(&s, 1, "war_cry"), durability(&s, 1)), (1, 20));
 }
 
 #[test]
@@ -774,12 +807,15 @@ fn volley_one_more_strike_with_a_bow() {
 }
 
 #[test]
-fn fortify_def_and_res_8_until_its_next_phase_for_5_durability() {
+fn fortify_def_and_res_8_until_its_next_phase_2_uses_a_battle() {
     let bulwark = player(1, "bulwark", p(0, 0), "iron_spear");
+    let mut left = (0, 0);
     let fortified = enemy_damage(bulwark, |s| {
+        assert_eq!(uses(s, 1, "fortify"), 2);
         act(s, 1, p(0, 0), use_skill("fortify", None));
+        left = (uses(s, 1, "fortify"), durability(s, 1));
     });
-    assert_eq!(fortified, 0);
+    assert_eq!((fortified, left), (0, (1, 20)));
 }
 
 #[test]
@@ -846,14 +882,79 @@ fn siphon_heals_half_the_damage_dealt_for_an_extra_use() {
 }
 
 #[test]
-fn sanctuary_2_heals_allies_within_2() {
+fn benediction_heals_allies_within_2_once_a_battle() {
     let mut s = battle(vec![
         player(1, "priest", p(1, 1), "iron_gauntlets"),
         with(player(4, "swordsman", p(1, 3), "iron_sword"), |u| u.hp = 1),
         enemy(3, p(7, 4)),
     ]);
-    let events = act(&mut s, 1, p(1, 1), use_skill("sanctuary_2", None));
+    assert_eq!(uses(&s, 1, "benediction"), 1);
+    let events = act(&mut s, 1, p(1, 1), use_skill("benediction", None));
     assert_eq!(healed(&events, 4), 10);
+    assert_eq!((uses(&s, 1, "benediction"), durability(&s, 1)), (0, 20));
+    // The ally is still wounded next turn, but the one use is spent.
+    next_turn(&mut s);
+    assert_eq!(
+        try_act(&s, 1, p(1, 1), use_skill("benediction", None)),
+        Err(CommandError::CannotPay {
+            skill: SkillId::new("benediction"),
+            error: CostError::NoUsesLeft,
+        })
+    );
+    // A Priest that was never a Cleric has no Sanctuary.
+    assert_eq!(uses(&s, 1, "sanctuary"), 0);
+    assert!(try_act(&s, 1, p(1, 1), use_skill("sanctuary", None)).is_err());
+}
+
+/// Benediction is a skill of its own, not a rank of Sanctuary (Nick,
+/// `combat-arts.md`): a Priest promoted from a mastered Cleric keeps
+/// Sanctuary (3 uses, adjacent allies) and has Benediction too (1 use,
+/// allies within 2 tiles), and White Magic adds to both.
+#[test]
+fn a_priest_promoted_from_a_mastered_cleric_has_sanctuary_and_benediction() {
+    let c = content();
+    let mastered = ClassRecord {
+        class_level: c.classes.class_level_cap,
+        class_points: 0,
+    };
+    let priest = with(player(1, "priest", p(1, 1), "iron_gauntlets"), |u| {
+        u.class_records.insert(ClassId("cleric".into()), mastered);
+    });
+    // Mastering Cleric taught White Magic 1 (heals +2).
+    let priest = knowing(priest, "white_magic_1");
+    let actives: Vec<&str> = priest
+        .usable_skills(&c.classes, &c.skills)
+        .into_iter()
+        .filter(|s| s.is_active())
+        .map(|s| s.id.0.as_str())
+        .collect();
+    assert_eq!(actives, ["benediction", "sanctuary"]);
+    let wounded = |id, pos| with(player(id, "swordsman", pos, "iron_sword"), |u| u.hp = 1);
+    let mut s = battle(vec![
+        priest,
+        wounded(2, p(1, 0)),
+        wounded(4, p(1, 3)),
+        enemy(3, p(7, 4)),
+    ]);
+    assert_eq!(
+        (uses(&s, 1, "sanctuary"), uses(&s, 1, "benediction")),
+        (3, 1)
+    );
+    // Sanctuary: the adjacent ally only, by Mag 5 + 5 + 2.
+    let events = act(&mut s, 1, p(1, 1), use_skill("sanctuary", None));
+    assert_eq!((healed(&events, 2), healed(&events, 4)), (12, 0));
+    assert_eq!(
+        (uses(&s, 1, "sanctuary"), uses(&s, 1, "benediction")),
+        (2, 1)
+    );
+    // Benediction: both allies, by the same.
+    next_turn(&mut s);
+    let events = act(&mut s, 1, p(1, 1), use_skill("benediction", None));
+    assert_eq!((healed(&events, 2), healed(&events, 4)), (12, 12));
+    assert_eq!(
+        (uses(&s, 1, "sanctuary"), uses(&s, 1, "benediction")),
+        (2, 0)
+    );
 }
 
 #[test]
@@ -895,18 +996,19 @@ fn commander() -> Unit {
 }
 
 #[test]
-fn rally_allies_within_2_str_and_def_3_for_5_durability() {
+fn rally_allies_within_2_str_and_def_3_once_a_battle() {
     let mut s = battle(vec![
         commander(),
         player(2, "swordsman", p(0, 2), "iron_sword"),
         enemy(3, p(1, 2)),
     ]);
     let plain = forecast(&s, 2, p(0, 2), attack(3, None));
+    assert_eq!(uses(&s, 1, "rally"), 1);
     act(&mut s, 1, p(0, 0), use_skill("rally", None));
     let rallied = forecast(&s, 2, p(0, 2), attack(3, None));
     assert_eq!(rallied.attacker.damage, plain.attacker.damage + 3);
     assert_eq!(counter(&rallied).damage, counter(&plain).damage - 3);
-    assert_eq!(durability(&s, 1), 15);
+    assert_eq!((uses(&s, 1, "rally"), durability(&s, 1)), (0, 20));
 }
 
 #[test]

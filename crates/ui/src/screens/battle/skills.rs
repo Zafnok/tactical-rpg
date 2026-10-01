@@ -7,22 +7,34 @@
 //! a skill that would be refused (ADR-0004).
 
 use trpg_core::{
-    ActiveEffect, Area, BattleState, CombatMods, Command, Condition, PassiveEffect, Pos, SkillCost,
-    SkillDef, SkillId, SkillKind, StatKind, StatValue, TimedEffect, TimedMods, UnitAction, UnitId,
-    WeaponReq,
+    ActiveEffect, Area, BattleState, CombatMods, Command, CommandError, Condition, PassiveEffect,
+    Pos, SkillCost, SkillDef, SkillId, SkillKind, StatKind, StatValue, TimedEffect, TimedMods,
+    UnitAction, UnitId, WeaponReq,
 };
 
+use super::art_list::reason_text;
 use super::info::stat_name;
 use super::mode::Selection;
+use crate::color::UiColor;
 use crate::widgets::menu::{Menu, MenuItem};
 
-/// A skill's cost as text: `3 dur` (weapon durability) or `+1 use` (one
-/// more use of the spell).
-pub fn cost_text(cost: SkillCost) -> String {
+/// A skill's cost as text: `3 dur` (weapon durability), `+1 use` (one more
+/// use of the spell) or, for a non-attack active, its uses left this battle
+/// of its uses per battle, `2/3` (as a spell's uses are shown); `uses_left`
+/// is only read for those.
+pub fn cost_text(cost: SkillCost, uses_left: u8) -> String {
     match cost {
         SkillCost::Durability(n) => format!("{n} dur"),
         SkillCost::ExtraSpellUse => "+1 use".to_owned(),
+        SkillCost::Uses(max) => format!("{uses_left}/{max}"),
     }
+}
+
+/// The uses `unit` has left this battle of non-attack active `skill`.
+pub fn uses_left(state: &BattleState, unit: UnitId, skill: &SkillId) -> u8 {
+    state
+        .unit(unit)
+        .map_or(0, |u| u.skill_uses.uses_left(skill))
 }
 
 /// `+30 hit +10 crit`: the non-zero numbers and flags of `mods`.
@@ -227,6 +239,9 @@ pub struct SkillChoice {
     pub targets: Vec<UnitId>,
     /// Whether the core would accept it now; if not, the line is dimmed.
     pub usable: bool,
+    /// Why it can't be paid for (`no uses left`), when that is what stops
+    /// it: shown after its dimmed line.
+    pub reason: Option<String>,
 }
 
 /// The command that uses `skill` from `sel`'s path end on `target`.
@@ -274,11 +289,17 @@ pub fn skill_choices(state: &BattleState, sel: &Selection) -> Vec<SkillChoice> {
                 let usable = accepted(state, &use_command(sel, &def.id, None));
                 (vec![], usable)
             };
+            // The cost is the core's first check, whoever the target is.
+            let reason = match state.check(&use_command(sel, &def.id, None)) {
+                Err(CommandError::CannotPay { error, .. }) => Some(reason_text(&error)),
+                _ => None,
+            };
             SkillChoice {
                 skill: def.id.clone(),
                 needs_target,
                 targets,
                 usable,
+                reason,
             }
         })
         .collect()
@@ -297,32 +318,51 @@ fn equipped_durability(state: &BattleState, unit: UnitId) -> Option<(u32, u32)> 
     Some((copy.durability_left, def.durability))
 }
 
-/// The `Skill` menu: `Brace  3 dur  Wpn 20/20`, unusable lines dimmed.
+/// A line of the `Skill` menu: the name padded to `name_w`, then the cost
+/// ([`cost_text`]), and for a cost in durability the equipped weapon's
+/// durability `weapon` (left, max): `Brace     3/3`, or
+/// `Brace   3 dur  Wpn 20/20`.
+fn menu_line(
+    name: &str,
+    name_w: usize,
+    cost: Option<SkillCost>,
+    uses_left: u8,
+    weapon: Option<(u32, u32)>,
+) -> String {
+    let text = cost.map(|c| cost_text(c, uses_left)).unwrap_or_default();
+    let weapon = match (cost, weapon) {
+        (Some(SkillCost::Durability(_)), Some((left, max))) => format!("  Wpn {left}/{max}"),
+        _ => String::new(),
+    };
+    format!("{name:<name_w$}  {text:>6}{weapon}")
+}
+
+/// The `Skill` menu: each skill with its uses left this battle,
+/// `Brace     3/3`. Unusable lines are dimmed, with the reason after one
+/// that can't be paid for (`no uses left`).
 pub fn skill_menu(state: &BattleState, unit: UnitId, choices: &[SkillChoice]) -> Menu {
     let name_w = choices
         .iter()
         .map(|c| skill_name(state, &c.skill).chars().count())
         .max()
         .unwrap_or(0);
-    let weapon = equipped_durability(state, unit)
-        .map_or_else(String::new, |(left, max)| format!("  Wpn {left}/{max}"));
+    let weapon = equipped_durability(state, unit);
     let items = choices
         .iter()
         .map(|c| {
-            let cost = state
-                .skills()
-                .get(&c.skill)
-                .and_then(skill_cost)
-                .map(cost_text)
-                .unwrap_or_default();
-            let text = format!(
-                "{:<name_w$}  {cost:>6}{weapon}",
-                skill_name(state, &c.skill)
+            let text = menu_line(
+                &skill_name(state, &c.skill),
+                name_w,
+                state.skills().get(&c.skill).and_then(skill_cost),
+                uses_left(state, unit, &c.skill),
+                weapon,
             );
-            if c.usable {
-                MenuItem::new(text)
-            } else {
-                MenuItem::disabled(text)
+            match (&c.reason, c.usable) {
+                (_, true) => MenuItem::new(text),
+                (Some(why), false) => {
+                    MenuItem::disabled(text).with_suffix(format!(" {why}"), UiColor::HpLow)
+                }
+                (None, false) => MenuItem::disabled(text),
             }
         })
         .collect();
@@ -400,22 +440,27 @@ impl SkillTargeting {
         use_command(&self.sel, self.skill(), Some(self.target()))
     }
 
-    /// The preview line, e.g. `Shove on Brigand (20 → 17)`.
+    /// The preview line, e.g. `Shove on Brigand (8 → 7 uses)`.
     pub fn preview(&self, state: &BattleState) -> String {
         let name = skill_name(state, self.skill());
         let who = state
             .unit(self.target())
             .map_or(String::new(), |u| format!(" on {}", u.name));
-        let cost = durability_change(state, self.sel.unit, self.skill());
+        let cost = cost_change(state, self.sel.unit, self.skill());
         format!("{name}{who}{cost}")
     }
 }
 
-/// ` (20 → 17)`: the equipped weapon's durability before and after paying
-/// `skill`, empty if it costs none.
-pub fn durability_change(state: &BattleState, unit: UnitId, skill: &SkillId) -> String {
+/// What paying for `skill` changes: ` (8 → 7 uses)` for its uses this
+/// battle, ` (20 → 17)` for the equipped weapon's durability; empty if it
+/// costs neither.
+pub fn cost_change(state: &BattleState, unit: UnitId, skill: &SkillId) -> String {
     let cost = state.skills().get(skill).and_then(skill_cost);
     match (cost, equipped_durability(state, unit)) {
+        (Some(SkillCost::Uses(_)), _) => {
+            let left = uses_left(state, unit, skill);
+            format!(" ({left} → {} uses)", left.saturating_sub(1))
+        }
         (Some(SkillCost::Durability(n)), Some((left, _))) => {
             format!(" ({left} → {})", left.saturating_sub(n))
         }
@@ -436,9 +481,24 @@ mod tests {
     }
 
     #[test]
-    fn costs_read_as_durability_or_spell_uses() {
-        assert_eq!(cost_text(SkillCost::Durability(3)), "3 dur");
-        assert_eq!(cost_text(SkillCost::ExtraSpellUse), "+1 use");
+    fn costs_read_as_durability_spell_uses_or_uses_left() {
+        assert_eq!(cost_text(SkillCost::Durability(3), 9), "3 dur");
+        assert_eq!(cost_text(SkillCost::ExtraSpellUse, 9), "+1 use");
+        assert_eq!(cost_text(SkillCost::Uses(3), 2), "2/3");
+        assert_eq!(cost_text(SkillCost::Uses(8), 0), "0/8");
+    }
+
+    #[test]
+    fn menu_lines_show_uses_left_or_the_weapon_that_pays() {
+        let line = |cost, weapon| menu_line("Brace", 7, cost, 2, weapon);
+        let uses = Some(SkillCost::Uses(3));
+        assert_eq!(line(uses, Some((20, 20))), "Brace       2/3");
+        assert_eq!(line(uses, None), "Brace       2/3");
+        // A cost in durability names the weapon it is paid from.
+        let dur = Some(SkillCost::Durability(3));
+        assert_eq!(line(dur, Some((17, 20))), "Brace     3 dur  Wpn 17/20");
+        assert_eq!(line(dur, None), "Brace     3 dur");
+        assert_eq!(line(None, Some((17, 20))), "Brace          ");
     }
 
     #[test]
@@ -466,6 +526,34 @@ mod tests {
     }
 
     #[test]
+    fn the_cost_change_shows_uses_or_durability() {
+        let c = ctx();
+        let (map, mut units) = quick_units(&c);
+        for skill in ["shove", "keen_edge"] {
+            assert!(units[0].learn_skill(&SkillId::new(skill), &c.content.skills));
+        }
+        let rout = trpg_core::Objective::Rout { turn_limit: None };
+        let state = battle_with(&c, map, units, rout);
+        let change = |skill: &str| cost_change(&state, UnitId(1), &SkillId::new(skill));
+        assert_eq!(uses_left(&state, UnitId(1), &SkillId::new("shove")), 8);
+        assert_eq!(change("shove"), " (8 → 7 uses)");
+        // Keen Edge costs 3 of the equipped weapon's durability.
+        let (left, _) = equipped_durability(&state, UnitId(1)).unwrap();
+        assert_eq!(change("keen_edge"), format!(" ({left} → {})", left - 3));
+        // A passive, a skill the table lacks and a unit that isn't there.
+        assert_eq!(change("sword_focus_1"), "");
+        assert_eq!(change("nope"), "");
+        assert_eq!(uses_left(&state, UnitId(99), &SkillId::new("shove")), 0);
+        assert_eq!(
+            cost_change(&state, UnitId(99), &SkillId::new("shove")),
+            " (0 → 0 uses)"
+        );
+        // The knight has no Shove: none of its uses.
+        assert_eq!(uses_left(&state, UnitId(2), &SkillId::new("shove")), 0);
+        assert_eq!(uses_left(&state, UnitId(2), &SkillId::new("brace")), 3);
+    }
+
+    #[test]
     fn range_and_moves_after_show_only_when_set() {
         let c = ctx();
         let skills = &c.content.skills;
@@ -490,6 +578,7 @@ mod tests {
             needs_target: true,
             targets: vec![UnitId(4), UnitId(5), UnitId(6)],
             usable: true,
+            reason: None,
         };
         let menu = Menu::new(vec![]);
         let mut t = SkillTargeting::new(sel, menu, vec![choice], 0).unwrap();
