@@ -41,6 +41,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0030](0030-battle-dialogue-triggers.md) | Dialogue triggers are battle data; their scenes are events at their moment | Accepted |
 | [0031](0031-player-key-bindings.md) | Player key bindings: slots, per-layout config, fixed Esc/Delete | Accepted |
 | [0032](0032-bought-art.md) | Bought art is allowed; audio stays free | Accepted |
-| [0033](0033-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
+| [0033](0033-playtest-bots.md) | Playtest bots play through `core`'s commands, on reseeded copies, outside the game | Accepted |
+| [0034](0034-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

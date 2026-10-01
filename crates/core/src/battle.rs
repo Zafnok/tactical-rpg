@@ -1368,6 +1368,28 @@ pub struct BattleState {
     mode: GameMode,
 }
 
+/// A validated command, ready to carry out.
+enum Planned {
+    /// Unit `unit`'s move after its attack: `None` stays.
+    MoveAfter {
+        unit: UnitId,
+        path: Option<Vec<Pos>>,
+    },
+    EndPhase,
+    /// A talk, firing this trigger.
+    Talk(usize),
+    Equip {
+        unit: UnitId,
+        equipped: Equipped,
+    },
+    /// An `Act`: the move's path (ending at its `dest`) and the action.
+    Act {
+        unit: UnitId,
+        path: Vec<Pos>,
+        step: Box<Step>,
+    },
+}
+
 /// A validated action, ready to carry out.
 enum Step {
     Wait,
@@ -1792,21 +1814,54 @@ impl BattleState {
     /// Applies `cmd`: validates it, changes the state and returns what
     /// happened. On `Err` nothing changed.
     pub fn apply(&mut self, cmd: &Command) -> Result<Vec<Event>, CommandError> {
+        let planned = self.validate(cmd)?;
+        let mut events = Vec::new();
+        match planned {
+            Planned::MoveAfter { unit, path } => self.move_after(unit, path, &mut events),
+            Planned::EndPhase => self.end_phase(&mut events),
+            Planned::Talk(trigger) => self.talk(trigger, &mut events),
+            Planned::Equip { unit, equipped } => self.equip(unit, equipped, &mut events),
+            Planned::Act { unit, path, step } => self.act(unit, path, *step, &mut events),
+        }
+        Ok(self.fire_triggers(events))
+    }
+
+    /// Whether [`Self::apply`] would accept `cmd`, and if not why, without
+    /// changing anything: the same checks, in the same order. Rolls no
+    /// luck.
+    pub fn check(&self, cmd: &Command) -> Result<(), CommandError> {
+        self.validate(cmd).map(|_| ())
+    }
+
+    /// Replaces the battle's luck with a fresh [`SimRng`] seeded by `seed`;
+    /// nothing else changes. **For the playtest bots' planning copies
+    /// only** (ADR-0033): a bot tries moves on a copy of the battle, and a
+    /// copy with the real luck would tell it every hit and miss in advance.
+    /// The game never calls this: the real battle keeps its luck, so an
+    /// attack repeated after a rewind gives the same result
+    /// (`docs/design/death-and-difficulty.md`).
+    pub fn reseed_luck(&mut self, seed: u64) {
+        self.rng = SimRng::new(seed);
+    }
+
+    /// Validates `cmd` (see [`Self::apply`]): what to carry out.
+    fn validate(&self, cmd: &Command) -> Result<Planned, CommandError> {
         if self.outcome.is_some() {
             return Err(CommandError::BattleOver);
         }
-        let mut events = Vec::new();
         if let Some(pending) = self.pending_move
             && !matches!(cmd, Command::MoveAfter { .. })
         {
             return Err(CommandError::MoveAfterPending(pending.unit));
         }
-        match cmd {
-            Command::MoveAfter { unit, to } => self.move_after(*unit, *to, &mut events)?,
-            Command::EndPhase => self.end_phase(&mut events),
+        Ok(match cmd {
+            Command::MoveAfter { unit, to } => Planned::MoveAfter {
+                unit: *unit,
+                path: self.plan_move_after(*unit, *to)?,
+            },
+            Command::EndPhase => Planned::EndPhase,
             Command::Talk { unit, dest, target } => {
-                let trigger = self.plan_talk(*unit, *dest, *target)?;
-                self.talk(trigger, &mut events);
+                Planned::Talk(self.plan_talk(*unit, *dest, *target)?)
             }
             Command::Equip { unit, equipped } => {
                 let u = self.check_ready(*unit)?;
@@ -1818,14 +1873,20 @@ impl BattleState {
                         }
                     }
                 }
-                self.equip(*unit, equipped.clone(), &mut events);
+                Planned::Equip {
+                    unit: *unit,
+                    equipped: equipped.clone(),
+                }
             }
             Command::Act { unit, dest, action } => {
                 let (path, step) = self.plan(*unit, *dest, action)?;
-                self.act(*unit, path, step, &mut events);
+                Planned::Act {
+                    unit: *unit,
+                    path,
+                    step: Box::new(step),
+                }
             }
-        }
-        Ok(self.fire_triggers(events))
+        })
     }
 
     /// Validates an `Act`: the move's path and the action to carry out.
@@ -1847,8 +1908,34 @@ impl BattleState {
             .path_to(dest)
             .filter(|_| reach.is_stoppable(dest))
             .ok_or(CommandError::CannotStop(dest))?;
+        let step = self.plan_step(unit, dest, &path, action)?;
+        Ok((path, step))
+    }
+
+    /// Whether ready `unit`, moving along `path` (its tile first) to `dest`
+    /// (a tile it can stop on), may do `action` there: the rest of an
+    /// `Act`'s checks, after the unit and move checks. For
+    /// [`crate::legal`], which works each unit's moves out once.
+    pub(crate) fn check_action(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        path: &[Pos],
+        action: &UnitAction,
+    ) -> Result<(), CommandError> {
+        self.plan_step(unit, dest, path, action).map(|_| ())
+    }
+
+    /// Validates `unit`'s `action` at `dest`, reached along `path`.
+    fn plan_step(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        path: &[Pos],
+        action: &UnitAction,
+    ) -> Result<Step, CommandError> {
         let moved = u32::try_from(path.len().saturating_sub(1)).unwrap_or(u32::MAX);
-        let step = match *action {
+        Ok(match *action {
             UnitAction::Wait => Step::Wait,
             UnitAction::Attack {
                 target,
@@ -1904,8 +1991,7 @@ impl BattleState {
             UnitAction::UseSkill { ref skill, target } => {
                 self.plan_skill(unit, dest, skill, target)?
             }
-        };
-        Ok((path, step))
+        })
     }
 
     /// The living unit `id` if it may act now: its phase, not yet acted.

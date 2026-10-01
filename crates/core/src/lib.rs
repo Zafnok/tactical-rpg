@@ -10,6 +10,7 @@ pub mod geom;
 pub mod history;
 pub mod item;
 pub mod lead;
+pub mod legal;
 pub mod magic;
 pub mod map;
 pub mod movement;
@@ -51,6 +52,7 @@ pub use item::{
     WeaponInstance, WeaponRules,
 };
 pub use lead::{LEAD_ID, LeadGender, LeadProfile, Pronouns};
+pub use legal::legal_commands;
 pub use magic::{Affinity, Element};
 pub use map::{BattleMap, TileFeature};
 pub use movement::{

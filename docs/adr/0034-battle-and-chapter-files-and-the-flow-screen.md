@@ -1,4 +1,4 @@
-# ADR-0033: Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others
+# ADR-0034: Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others
 
 - **Status:** Accepted
 - **Date:** 2026-09-30

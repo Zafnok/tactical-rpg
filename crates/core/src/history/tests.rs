@@ -1,7 +1,8 @@
 use proptest::prelude::*;
 
 use super::*;
-use crate::battle::tests::{arb_setup, attack, cast, legal_commands, p, setup};
+use crate::battle::tests::{arb_setup, attack, cast, p, setup};
+use crate::legal_commands;
 use crate::{Pos, UnitAction, UnitId};
 
 fn ron(state: &BattleState) -> String {
@@ -70,6 +71,26 @@ fn doing_the_same_thing_after_a_rewind_gives_the_same_result() {
     let again = s.apply(&replayed[0].command).unwrap();
     assert_eq!(again, replayed[0].events);
     assert_eq!(s, replayed[1].before);
+}
+
+/// A bot planning on reseeded copies (ADR-0033) leaves the real battle's
+/// luck alone: the real attack still gives what it gave before, and so
+/// what a rewind repeats.
+#[test]
+fn the_real_battle_keeps_its_luck() {
+    let (h, before_attack, _) = fought();
+    let replayed = h.replay();
+    let mut real = before_attack.clone();
+    for seed in 0..16 {
+        let mut copy = real.clone();
+        copy.reseed_luck(seed);
+        copy.apply(&replayed[0].command).unwrap();
+    }
+    assert_eq!(real, before_attack);
+    assert_eq!(
+        real.apply(&replayed[0].command).unwrap(),
+        replayed[0].events
+    );
 }
 
 #[test]
