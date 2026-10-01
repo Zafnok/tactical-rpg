@@ -16,7 +16,8 @@ fn title() -> Harness {
 /// with the keyboard.
 fn quick_battle() -> Harness {
     let mut h = title();
-    h.keys("Down f");
+    // Quick Battle, then Preparations: Left wraps to `Fight!`.
+    h.keys("Down f Left f");
     h
 }
 
@@ -54,6 +55,8 @@ fn the_title_menu_works_with_a_pad() {
     assert_eq!(h.screens(), ["title"]);
     // The D-pad and the left stick both move the menu.
     h.pad("DpadDown South");
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    h.pad("DpadLeft South");
     assert_eq!(h.screens(), ["title", "battle"]);
     let mut h = title();
     h.pad("LeftStickDown LeftStickDown South");
@@ -63,7 +66,7 @@ fn the_title_menu_works_with_a_pad() {
 #[test]
 fn quick_battle_starts_the_same_from_a_pad() {
     let mut h = title();
-    h.pad("DpadDown South");
+    h.pad("DpadDown South DpadLeft South");
     assert_eq!(h.snapshot(), quick_battle().snapshot());
 }
 
@@ -171,7 +174,7 @@ fn holding_confirm_on_the_pad_fast_forwards_like_the_key() {
 #[test]
 fn keys_and_buttons_work_side_by_side() {
     let mut mixed = title();
-    mixed.pad("DpadDown").keys("f");
+    mixed.pad("DpadDown").keys("f").pad("DpadLeft").keys("f");
     assert_eq!(mixed.screens(), ["title", "battle"]);
     // Select the lord, move, drop the selection, open the map menu.
     mixed.keys("f").pad("DpadUp").keys("d").pad("East");

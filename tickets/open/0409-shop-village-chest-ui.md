@@ -37,7 +37,7 @@ added to `assets/audio/audio.ron`, `THIRD_PARTY_ASSETS.md` and the credits. On
 leaving, the previous track comes back (emit the battle's or scene's cue again).
 If 0028 recorded "no music here", skip this.
 
-**Out:** where between-chapter shopping sits in the game flow (0801 for linear chapters; town nodes on the world map, 1007).
+**Out:** where between-chapter shopping sits in the game flow (0801 for linear chapters; town nodes on the world map, 1007); the Preparations screen's Shop tab with the basic shop (0430, which reuses this ticket's `ShopScreen` lists).
 
 ## Implementation steps
 

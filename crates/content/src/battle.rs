@@ -25,9 +25,10 @@ pub const BATTLES_DIR: &str = "battles";
 /// Extension of a battle file.
 const EXTENSION: &str = ".ron";
 
-/// The message for a battle that asks for the Preparations screen, which
-/// doesn't exist yet (ticket 0408 removes this check).
-pub const NO_PREPARATIONS: &str = "Preparations screen not built yet, ticket 0408";
+/// The message for a battle with Preparations that also lists a default
+/// pack: there the player brings only what they own (Nick, 0408).
+pub const PACK_WITH_PREPARATIONS: &str =
+    "default_pack: a battle with Preparations has none; the player packs their own items";
 
 /// The content a battle file refers to.
 #[derive(Debug, Clone, Copy)]
@@ -63,6 +64,8 @@ struct RawBattle {
     pack_cap: Option<usize>,
     #[serde(default)]
     default_pack: Vec<String>,
+    #[serde(default)]
+    solo_stock: Vec<String>,
     #[serde(default)]
     clear_gold: u32,
     objective: RawObjective,
@@ -196,8 +199,8 @@ pub fn from_source(
         v.err(format!("no map \"{}\"", raw.map));
         return Err(v.errors);
     };
-    if raw.preparations {
-        v.err(NO_PREPARATIONS.to_owned());
+    if raw.preparations && !raw.default_pack.is_empty() {
+        v.err(PACK_WITH_PREPARATIONS.to_owned());
     }
     let slots = raw.player_slots.len();
     let mut next_id = BattleDef::first_enemy_id(slots);
@@ -238,6 +241,7 @@ pub fn from_source(
     let objective = v.objective(&raw.objective, &map, &everyone);
     let pack_cap = raw.pack_cap.unwrap_or(refs.items.rules.default_pack_cap);
     let default_pack = v.pack(&raw.default_pack, pack_cap);
+    let solo_stock = v.solo_stock(&raw.solo_stock);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
         file,
@@ -265,6 +269,7 @@ pub fn from_source(
         preparations: raw.preparations,
         pack_cap,
         default_pack,
+        solo_stock,
         clear_gold: raw.clear_gold,
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
@@ -513,6 +518,16 @@ impl Checker<'_, '_> {
                 Some(ItemDef::Consumable(_)) => {}
                 Some(_) => self.err(format!("default_pack: \"{item}\" isn't a consumable")),
                 None => self.err(format!("default_pack: no item \"{item}\"")),
+            }
+        }
+        items.iter().map(|i| ItemId::new(i)).collect()
+    }
+
+    /// The solo stock's items: any known items.
+    fn solo_stock(&mut self, items: &[String]) -> Vec<ItemId> {
+        for item in items {
+            if self.refs.items.get(&ItemId::new(item)).is_none() {
+                self.err(format!("solo_stock: no item \"{item}\""));
             }
         }
         items.iter().map(|i| ItemId::new(i)).collect()

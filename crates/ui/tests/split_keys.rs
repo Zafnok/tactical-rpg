@@ -17,7 +17,7 @@ fn quick_battle_with(action: Action, key: &str) -> Harness {
     if let Err(e) = h.ctx_mut().set_layout_bindings(Layout::RightHanded, b) {
         panic!("saving key bindings: {e}");
     }
-    h.keys("Down f");
+    h.keys("Down f Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     h
 }
@@ -138,7 +138,7 @@ fn confirm_still_accepts_the_prompt_with_confirm_end_turn_bound() {
 #[test]
 fn without_split_keys_end_turn_again_accepts_the_prompt() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down f");
+    h.keys("Down f Left f");
     one_wait(&mut h);
     h.keys("Space");
     assert_eq!(help(&h), "Space yes · f yes · d no");

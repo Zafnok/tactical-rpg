@@ -71,6 +71,11 @@ On 0801's starting rules (PR #127, 2026-09-30):
 (1: every unit is back at full HP for the next battle. 3: a unit that dies
 in Classic sends its whole loadout to the stock.)
 
+On retrying a battle that has Preparations (ticket 0408, 2026-10-01):
+
+> **After a defeat (Retry Battle) or Restart Battle: where do you land?**
+> "back on preparations, with another option to Rewind if charges are left"
+
 ## Falling units
 
 A unit falls when its HP reaches 0.
@@ -100,7 +105,9 @@ per `turn-structure.md`), in **both** modes:
 3. A map's turn limit runs out (`turn-structure.md`).
 
 Game over offers `Retry Battle` (restart the battle, not the chapter) or
-`Title` (Nick, PR #127).
+`Title` (Nick, PR #127). It will also offer **`Rewind`** while rewind
+charges are left (Nick, 0408), so a defeat can be undone without starting
+over: ticket 0821.
 
 **Between battles** (Nick, PR #127): every unit, standing or retreated, is
 back at **full HP** for the next battle. A unit that dies in Classic sends
@@ -130,7 +137,9 @@ standard FE "cancel your move before you choose an action".
   gives the same results. Doing something different changes the outcome.
 - **Restart:** `Restart battle` in the map menu (with a confirm), available at
   any time, and `Retry Battle` on Game Over both put the battle back at its first turn
-  and **refund every charge**.
+  and **refund every charge**. A battle with a Preparations screen goes
+  back to **Preparations** first (Nick, 0408), with the loadouts and pack
+  as the player left them.
 - Rewind works the same in Classic and Casual.
 
 ### Unused charges

@@ -596,7 +596,7 @@ mod tests {
         assert_eq!(names(release), ["title"]); // Down + f chose Quit.
         let mut debug = ctx();
         debug.debug_tools = true;
-        assert_eq!(names(debug), ["title", "battle"]);
+        assert_eq!(names(debug), ["title", "preparations"]);
     }
 
     /// Records what the screen saw.

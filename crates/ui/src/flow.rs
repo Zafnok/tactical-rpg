@@ -2,7 +2,7 @@
 //! scenes and battle to the result.
 //!
 //! ```text
-//! New Game → mode → lead → [chapter: intro scenes → battle
+//! New Game → mode → lead → [chapter: intro scenes → (Preparations) → battle
 //!     ├─ victory → apply the result → victory scenes → (0802: save prompt)
 //!     │            → next chapter, or "To be continued" → title
 //!     └─ defeat  → Game Over → Retry (the battle again) | Title]
@@ -16,8 +16,11 @@
 //! its [`BattleSetup`], kept so that `Restart Battle` (map menu) and
 //! `Retry` (Game Over) rebuild it exactly, every rewind charge back.
 //!
-//! No Preparations yet (0408): every battle uses its default pack (the
-//! content validator refuses `preparations: true`).
+//! A battle with `preparations: true` opens the Preparations screen (0408)
+//! first, which changes the setup's loadouts and pack; `Fight!` starts the
+//! battle with it. Both restarts go back to Preparations, as the player
+//! left it (Nick, 0408), so they can change their gear before trying again.
+//! Only the Quick Battle may leave Preparations (back to the title).
 
 use std::any::Any;
 use std::collections::VecDeque;
@@ -30,6 +33,7 @@ use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::game_over::{GameOverChoice, GameOverScreen, ToBeContinuedScreen};
 use crate::screens::lead_select::LeadSelectScreen;
 use crate::screens::mode_select::ModeSelectScreen;
+use crate::screens::preparations::{PrepOutcome, PreparationsScreen};
 use crate::screens::{BattleScreen, DialogueScreen};
 
 /// The chapter the debug Quick Battle plays (`assets/chapters/quick.ron`).
@@ -44,6 +48,8 @@ pub enum Stage {
     Lead(GameMode, LeadSelectScreen),
     /// A chapter's scene.
     Scene(Box<DialogueScreen>),
+    /// Loadouts and the pack, before a battle that has Preparations.
+    Preparations(Box<PreparationsScreen>),
     /// The chapter's battle.
     Battle(Box<BattleScreen>),
     /// After a defeat.
@@ -61,7 +67,8 @@ enum Then {
     NextChapter,
 }
 
-/// The chapter's battle, as it started.
+/// The chapter's battle, as it started (as last prepared, if it has
+/// Preparations).
 #[derive(Debug, Clone)]
 struct Fight {
     def: BattleDef,
@@ -82,6 +89,8 @@ pub struct FlowScreen {
     rewards: Option<BattleRewards>,
     /// [`Ctx::clock_s`] when the campaign began, for its playtime.
     started_at: f64,
+    /// Whether Preparations may be left (the Quick Battle: to the title).
+    can_leave: bool,
 }
 
 impl FlowScreen {
@@ -96,6 +105,7 @@ impl FlowScreen {
             then: Then::Battle,
             rewards: None,
             started_at: 0.0,
+            can_leave: false,
         }
     }
 
@@ -107,6 +117,7 @@ impl FlowScreen {
         let mut campaign = battle_campaign(&ctx.content, def, GameMode::Classic, ctx.lead.clone());
         QUICK_CHAPTER.clone_into(&mut campaign.chapter);
         let mut flow = Self::new_game();
+        flow.can_leave = true;
         flow.begin(ctx, campaign);
         Some(flow)
     }
@@ -134,6 +145,14 @@ impl FlowScreen {
         }
     }
 
+    /// The Preparations screen, while it is open.
+    pub fn preparations(&self) -> Option<&PreparationsScreen> {
+        match &self.stage {
+            Stage::Preparations(p) => Some(p),
+            _ => None,
+        }
+    }
+
     /// The battle screen, while the battle is on, for scripted tests.
     pub fn battle_mut(&mut self) -> Option<&mut BattleScreen> {
         match &mut self.stage {
@@ -153,6 +172,7 @@ impl FlowScreen {
             Stage::Mode(s) => s,
             Stage::Lead(_, s) => s,
             Stage::Scene(s) => s.as_ref(),
+            Stage::Preparations(s) => s.as_ref(),
             Stage::Battle(s) => s.as_ref(),
             Stage::GameOver(s) => s,
             Stage::ToBeContinued(s) => s,
@@ -164,6 +184,7 @@ impl FlowScreen {
             Stage::Mode(s) => s,
             Stage::Lead(_, s) => s,
             Stage::Scene(s) => s.as_mut(),
+            Stage::Preparations(s) => s.as_mut(),
             Stage::Battle(s) => s.as_mut(),
             Stage::GameOver(s) => s,
             Stage::ToBeContinued(s) => s,
@@ -241,13 +262,40 @@ impl FlowScreen {
         self.restart();
     }
 
-    /// (Re)starts the battle from its setup: turn 1, every rewind charge.
+    /// (Re)starts the battle: Preparations first if it has them (as the
+    /// player last left them), else straight to turn 1.
     fn restart(&mut self) {
+        let Some(fight) = &self.fight else {
+            return;
+        };
+        if fight.def.preparations {
+            let screen = PreparationsScreen::new(fight.setup.clone(), self.can_leave);
+            self.stage = Stage::Preparations(Box::new(screen));
+        } else {
+            self.fight();
+        }
+    }
+
+    /// Starts the battle from its setup: turn 1, every rewind charge.
+    fn fight(&mut self) {
         let Some(fight) = &self.fight else {
             return;
         };
         let (state, events) = BattleState::new(fight.setup.clone());
         self.stage = Stage::Battle(Box::new(BattleScreen::start(state, &events)));
+    }
+
+    /// Preparations closed: the battle with what the player set up, or
+    /// (`true`) the flow is over because they left.
+    fn prepared(&mut self, screen: &PreparationsScreen) -> bool {
+        if screen.outcome() != Some(PrepOutcome::Fight) {
+            return true;
+        }
+        if let Some(fight) = &mut self.fight {
+            fight.setup = screen.setup().clone();
+        }
+        self.fight();
+        false
     }
 
     /// The battle screen closed: a restart, or its outcome.
@@ -311,6 +359,7 @@ impl FlowScreen {
                 None => self.stage = Stage::Mode(ModeSelectScreen::new()),
             },
             Stage::Scene(_) => self.next_scene(ctx),
+            Stage::Preparations(p) => return self.prepared(&p),
             Stage::Battle(b) => self.battle_over(ctx, &b),
             Stage::GameOver(s) => match s.result() {
                 Some(GameOverChoice::Retry) => self.restart(),

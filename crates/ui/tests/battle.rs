@@ -10,7 +10,8 @@ use trpg_ui::input::Layout;
 /// At the title with the right-handed layout, then Quick Battle.
 fn quick_battle() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down f");
+    // Quick Battle, then Preparations: Left wraps to `Fight!`.
+    h.keys("Down f Left f");
     h
 }
 
@@ -411,7 +412,7 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
 #[test]
 fn tips_show_when_switched_on() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.with_tips().keys("Down f");
+    h.with_tips().keys("Down f Left f");
     assert!(shows(&h, "Your move"));
     assert_eq!(help(&h), "f close");
     h.keys("f");

@@ -915,4 +915,4 @@ fn check_kind(
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

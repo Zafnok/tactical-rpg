@@ -17,7 +17,8 @@
 //!   slot stays out of the battle. [`Campaign::battle_setup`] builds the
 //!   [`BattleSetup`]: slot `i`'s unit gets id `i + 1` (the battle file's
 //!   enemies are numbered after the slots, [`BattleDef::first_enemy_id`]),
-//!   the battle's default pack (no Preparations yet, 0408), the campaign's
+//!   the battle's default pack (empty in a battle with Preparations, where
+//!   the player fills it from the stock, [`crate::prep`]), the campaign's
 //!   gold, stock and mode, and the rewind charges of the battle's
 //!   [`Difficulty`].
 //! - **After a victory** ([`Campaign::apply_result`]), in this order:
@@ -131,13 +132,16 @@ pub struct BattleDef {
     pub enemies: Vec<Unit>,
     /// Units that arrive later, numbered after the enemies.
     pub reinforcements: Vec<Reinforcement>,
-    /// Whether the Preparations screen (0408) comes first. Not built yet:
-    /// the content validator refuses `true` for now.
+    /// Whether the Preparations screen (0408) comes first.
     pub preparations: bool,
     /// How many consumables the pack may hold.
     pub pack_cap: usize,
-    /// The pack brought in without Preparations.
+    /// The pack brought in without Preparations. Empty with Preparations:
+    /// there the player packs from the stock.
     pub default_pack: Vec<ItemId>,
+    /// The stock when the battle is played on its own (the debug Quick
+    /// Battle), one entry per item. The story uses the campaign's stock.
+    pub solo_stock: Vec<ItemId>,
     /// Gold for winning.
     pub clear_gold: Gold,
     /// How to win.
