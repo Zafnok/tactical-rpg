@@ -34,7 +34,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0023](0023-debug-tools-feature-for-pages-build.md) | A `debug-tools` cargo feature for the Pages build | Accepted |
 | [0024](0024-cursor-as-pixel-overlays.md) | Draw the battle cursor as pixel overlays, with selectable styles | Accepted |
 | [0025](0025-battle-event-playback-in-the-battle-screen.md) | Event playback runs inside the battle screen, as a mode | Accepted; playback keys changed in 0418 |
-| [0026](0026-audio-cues-and-music-files.md) | Audio cues as data, played by `app`; music files beside the game | Accepted; licenses and credits amended by ADR-0027; native music loading amended by ADR-0028 |
+| [0026](0026-audio-cues-and-music-files.md) | Audio cues as data, played by `app`; music files beside the game | Accepted; licenses and credits amended by ADR-0027; native music loading amended by ADR-0028; track lengths and the music clock added by ADR-0036 |
 | [0027](0027-audio-import-and-cc-by-3.md) | Importing third-party audio; CC BY 3.0 allowed | Accepted |
 | [0028](0028-native-music-decoded-off-the-main-thread.md) | Native music is decoded on a worker thread, in its own quad-snd context | Accepted |
 | [0029](0029-acted-units-keep-label-case.md) | Acted units are dimmed only; the label keeps its case | Accepted |
@@ -44,5 +44,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0033](0033-playtest-bots.md) | Playtest bots play through `core`'s commands, on reseeded copies, outside the game | Accepted |
 | [0034](0034-controller-input.md) | Controller input: gilrs on native, a Gamepad API plugin on web | Accepted |
 | [0035](0035-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
+| [0036](0036-music-clock.md) | A music clock: `app` reports what is sounding, `ui` wraps it at the track's length | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

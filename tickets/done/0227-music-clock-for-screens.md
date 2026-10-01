@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0212", "0214", "0215"]
 nick_input: none
-completed:
+completed: 2026-10-01
 ---
 
 # 0227 — Music clock: tell screens how far into its track the music is
@@ -105,21 +105,21 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `audio.ron` has `length_ms` for every music cue; the content test
+- [x] `audio.ron` has `length_ms` for every music cue; the content test
       fails with the right value if one is wrong.
-- [ ] `app` unit tests (fake backend, fake time): no report before the
+- [x] `app` unit tests (fake backend, fake time): no report before the
       track has loaded; a report from the moment it starts; none after
       `Stop`; after a switch the report follows the new track once it
       starts.
-- [ ] `ui` unit tests: `from_elapsed` wraps a looped track at its length,
+- [x] `ui` unit tests: `from_elapsed` wraps a looped track at its length,
       returns `None` past the end of a track that isn't looped and for an
       unknown cue.
-- [ ] Harness test: on the title, `ctx.music_clock` is `None` before the
+- [x] Harness test: on the title, `ctx.music_clock` is `None` before the
       music starts, then counts up with `wait`, and wraps at the title
       track's length. With `music_load_delay` it starts late; with
       `without_music` it stays `None`.
-- [ ] The ADR is written and listed in `docs/adr/README.md`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] The ADR is written and listed in `docs/adr/README.md`.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -131,5 +131,57 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**What was done**
+
+- `assets/audio/audio.ron`: every music cue has `length_ms` (25 tracks,
+  from each file's last Ogg page; the title is 133,743 ms, as the ticket
+  said). `MusicCue::length_ms`; the validator refuses 0.
+- `trpg_content::audio::ogg_length_ms(bytes)`: last page's granule position
+  over the header's sample rate, to the nearest millisecond.
+- `app`: `Audio::play(.., now)` records `started_at` at the real
+  `backend.play` call; `Audio::music_playing(now)` reports the cue and the
+  seconds since. `main.rs` passes `miniquad::date::now()` and calls
+  `game.set_music_playing(..)` before `game.frame`.
+- `ui`: `MusicClock { cue, position, length }` with `from_elapsed`,
+  `Ctx::music_clock`, `Game::set_music_playing`.
+- `Harness`: a small simulated player follows the music commands;
+  `music_load_delay(seconds)`, `without_music()`, and `music_clock()` to
+  read the result.
+- ADR-0036 (amends ADR-0026); READMEs for the manifest, the audio sources,
+  `music/` and `crates/ui`.
+
+**Deviations**
+
+- The length check is in the manifest validator, not in a separate test:
+  wherever the music files can be read (the existing
+  `every_music_file_is_in_the_music_folder` test), a `length_ms` more than
+  20 ms off its file is an error such as `music "title":
+  music/new_sunrise_v1.ogg: it plays for 133743 ms, but length_ms is
+  120000; write length_ms: 133743`. This way the message itself is unit
+  tested. Checked by hand too: setting the title to 120000 fails that test
+  with exactly this line.
+- `ogg_length_ms` divides by the sample rate in the file's header rather
+  than a fixed 44,100 (the same number for every file we ship).
+- Clock: `miniquad::date::now()`. macroquad's `get_time()` is the same
+  clock minus the launch time on both targets (read from their sources),
+  so there was nothing to choose between; the ADR has the table.
+- The Harness also ends the count on a `Load` of the sounding track (as
+  `app` replaces a track loaded again), and has a `music_clock()` reader
+  the ticket didn't list.
+
+**Not verified**
+
+- Nothing reads the clock on screen yet, so it was not watched against real
+  sound, natively or in a browser. The `app` logic is unit tested with the
+  fake backend and fake time; the cinematic tickets (0817, 0819) are where it
+  meets real audio.
+- The ADR's note that a hidden tab keeps playing is from how Web Audio is
+  specified, not from a test on a device.
+
+**Follow-up tickets:** none.
+
+**Gameplay rules decided by Claude:** none. Nothing a player sees or hears
+changes in this ticket.
+
+**For Nick:** nothing to try yet. This is the plumbing the title cinematic
+needs to stay in step with the song.

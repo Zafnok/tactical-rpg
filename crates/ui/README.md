@@ -11,7 +11,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
-| `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
+| `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026), `MusicClock` (how far into its track the music is, ADR-0036) |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
@@ -22,7 +22,9 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 
 ## How a frame runs
 
-1. `app` collects key and controller-button presses/releases as
+1. `app` tells the game what music is sounding
+   (`game.set_music_playing(..)`, which sets `ctx.music_clock`), collects
+   key and controller-button presses/releases as
    `RawInputEvent`s and calls `game.frame(&events, dt)`. Controllers go
    through `input::Pads` first, which turns each pad's raw state into
    button changes (ADR-0034).
@@ -99,6 +101,12 @@ debug menu (unless a debug screen is already on top).
      ids come from `assets/audio/audio.ron`; an unknown one panics in debug
      builds. Asking for the music already playing does nothing, so a screen
      may ask every time it's shown.
+   - Keeping time with the music: read `ctx.music_clock` (`cue`,
+     `position` and `length` in seconds; a looped track's position wraps
+     at its length). It is `None` until the track really sounds (its file
+     loads first, which can take seconds on the web) and stays `None` if
+     the file is missing, so never count from your own `play_music` call
+     and always handle `None` (ADR-0036).
    - Menu sounds (0425): use `menu.handle_with_sound(action, &mut
      ctx.audio)` for the menu widget (`Menu::without_cancel()` when there
      is nothing to back out of); elsewhere `ctx.audio.menu(MenuSound::…)`
@@ -144,6 +152,11 @@ fn select_opens_new_game() {
   `music_commands()`, `clear_audio()`, `sounds()` (the sound cues played,
   without music). A test of a made-up cue adds it to `ctx.content.audio`
   and builds the Harness with `Harness::from_game`.
+- Music clock: the Harness plays the part of `app`. A track sounds from
+  the frame after the game starts it and `music_clock()` counts up with
+  the frames. `music_load_delay(2.0)` makes tracks take 2 s to load (the
+  clock starts that much later); `without_music()` makes none ever sound
+  (missing files). Call them before the frames that start the music.
 - `Harness::new()` is a first launch (empty storage: the layout picker is on
   top). `Harness::with_layout(layout)` is a later launch with that layout
   saved. `into_storage()` + `Harness::with_storage(..)` restart with the same

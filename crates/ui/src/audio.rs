@@ -154,6 +154,71 @@ fn splitmix64(seed: u64) -> u64 {
     z ^ (z >> 31)
 }
 
+/// Where the music is in its track, for a screen that keeps time with it
+/// (ADR-0036), read from [`Ctx::music_clock`](crate::Ctx::music_clock).
+/// `app` reports what really sounds (a track starts only once its file has
+/// loaded); [`Game::set_music_playing`](crate::Game::set_music_playing)
+/// turns that into this.
+///
+/// ```
+/// # use trpg_ui::audio::MusicClock;
+/// let manifest = trpg_content::load_embedded().unwrap().audio;
+/// // The title track loops: 10 s into its second time round.
+/// let length = f64::from(manifest.music["title"].length_ms) / 1000.0;
+/// let clock = MusicClock::from_elapsed(&manifest, "title", length + 10.0).unwrap();
+/// assert_eq!(clock.cue, "title");
+/// assert!((clock.position - 10.0).abs() < 1e-3);
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct MusicClock {
+    /// The music cue sounding.
+    pub cue: String,
+    /// Seconds into the track: from 0 up to, never reaching, `length`. A
+    /// looped track is back at 0 each time it starts again.
+    pub position: f32,
+    /// The track's length in seconds (the manifest's `length_ms`).
+    pub length: f32,
+}
+
+impl MusicClock {
+    /// The clock of `cue`, which started `elapsed` seconds ago (a negative
+    /// time counts as 0). `None` if the cue is unknown, or isn't looped and
+    /// has ended (or `elapsed` isn't a number).
+    pub fn from_elapsed(
+        manifest: &trpg_content::AudioManifest,
+        cue: &str,
+        elapsed: f64,
+    ) -> Option<Self> {
+        let track = manifest.music.get(cue)?;
+        let length = f64::from(track.length_ms) / 1000.0;
+        if !elapsed.is_finite() || track.length_ms == 0 {
+            return None;
+        }
+        let elapsed = elapsed.max(0.0);
+        let position = if track.looped {
+            elapsed % length
+        } else {
+            elapsed
+        };
+        // Seconds into one track: f32 is exact to well under a millisecond.
+        #[allow(clippy::cast_possible_truncation)]
+        let (position, length) = (position as f32, length as f32);
+        let position = if position < length {
+            position
+        } else if track.looped {
+            // Rounded up onto the length: that is the loop point.
+            0.0
+        } else {
+            return None;
+        };
+        Some(Self {
+            cue: cue.to_owned(),
+            position,
+            length,
+        })
+    }
+}
+
 /// What `app` must do to the music this frame. A track is loaded, started,
 /// has its volume changed and is stopped, which also unloads it.
 #[derive(Debug, Clone, PartialEq)]
@@ -557,6 +622,106 @@ mod tests {
         assert_eq!(pick_from_pool(&m, "no_such_pool", 1), None);
         m.pools.insert("empty".into(), Vec::new());
         assert_eq!(pick_from_pool(&m, "empty", 1), None);
+    }
+
+    /// A manifest with one track, `looped` or not, 2.5 s long.
+    fn one_track(looped: bool) -> trpg_content::AudioManifest {
+        let mut m = trpg_content::AudioManifest::default();
+        let track = trpg_content::MusicCue {
+            file: "theme.ogg".into(),
+            volume: 100,
+            looped,
+            length_ms: 2500,
+            credit: trpg_content::CreditRef::Own,
+        };
+        m.music.insert("theme".into(), track);
+        m
+    }
+
+    /// The position of `theme`'s clock `elapsed` seconds after its start.
+    fn position(looped: bool, elapsed: f64) -> Option<f32> {
+        let clock = MusicClock::from_elapsed(&one_track(looped), "theme", elapsed)?;
+        assert_eq!(clock.cue, "theme");
+        assert!((clock.length - 2.5).abs() < f32::EPSILON, "{clock:?}");
+        Some(clock.position)
+    }
+
+    fn close(position: Option<f32>, expected: f32) -> bool {
+        position.is_some_and(|p| (p - expected).abs() < 1e-5)
+    }
+
+    #[test]
+    fn the_clock_of_a_looped_track_wraps_at_its_length() {
+        assert_eq!(position(true, 0.0), Some(0.0));
+        assert!(close(position(true, 1.25), 1.25));
+        assert!(close(position(true, 2.499), 2.499));
+        assert_eq!(position(true, 2.5), Some(0.0));
+        assert!(close(position(true, 3.0), 0.5));
+        assert!(close(position(true, 2.5 * 1000.0 + 2.0), 2.0));
+        // A hair before the loop point rounds onto the length as f32: that
+        // is the loop point, never a position equal to the length.
+        assert_eq!(position(true, 2.5 - 1e-12), Some(0.0));
+    }
+
+    #[test]
+    fn the_clock_of_a_track_played_once_ends_with_it() {
+        assert_eq!(position(false, 0.0), Some(0.0));
+        assert!(close(position(false, 2.499), 2.499));
+        assert_eq!(position(false, 2.5 - 1e-12), None);
+        assert_eq!(position(false, 2.5), None);
+        assert_eq!(position(false, 3.0), None);
+    }
+
+    #[test]
+    fn the_clock_needs_a_known_cue_a_length_and_a_real_time() {
+        let m = one_track(true);
+        assert_eq!(MusicClock::from_elapsed(&m, "nope", 1.0), None);
+        // A start in the future (the system clock stepped back) is 0.
+        assert_eq!(position(true, -3.0), Some(0.0));
+        assert_eq!(position(false, -3.0), Some(0.0));
+        for looped in [true, false] {
+            for elapsed in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+                assert_eq!(position(looped, elapsed), None, "{looped} {elapsed}");
+            }
+            // The validator refuses a length of 0; a hand-made manifest
+            // with one has no clock.
+            let mut m = one_track(looped);
+            if let Some(t) = m.music.get_mut("theme") {
+                t.length_ms = 0;
+            }
+            assert_eq!(MusicClock::from_elapsed(&m, "theme", 0.0), None);
+            assert_eq!(MusicClock::from_elapsed(&m, "theme", 1.0), None);
+        }
+    }
+
+    #[test]
+    fn the_embedded_title_track_has_a_clock() {
+        let m = manifest();
+        let clock = MusicClock::from_elapsed(&m, "title", 140.0);
+        let clock = clock.unwrap();
+        assert!((clock.length - 133.743).abs() < 1e-3, "{clock:?}");
+        assert!((clock.position - 6.257).abs() < 1e-3, "{clock:?}");
+    }
+
+    proptest::proptest! {
+        /// A looped track's position is always inside the track, however
+        /// long it has played and whatever its length.
+        #[test]
+        fn a_looped_position_is_always_inside_the_track(
+            length_ms in 1u32..=600_000,
+            elapsed in 0.0f64..1.0e7,
+        ) {
+            let mut m = one_track(true);
+            if let Some(t) = m.music.get_mut("theme") {
+                t.length_ms = length_ms;
+            }
+            let clock = MusicClock::from_elapsed(&m, "theme", elapsed);
+            let clock = clock.unwrap();
+            proptest::prop_assert!(
+                (0.0..clock.length).contains(&clock.position),
+                "{clock:?}"
+            );
+        }
     }
 
     proptest::proptest! {
