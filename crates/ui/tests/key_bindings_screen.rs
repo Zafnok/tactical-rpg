@@ -242,8 +242,18 @@ fn restore_defaults_leaves_the_other_layout_alone() {
         defaults(&h, Layout::RightHanded)
     );
     reopen(&mut h);
-    // One Up from the first row is Restore defaults.
+    // One Up from the first row is Restore defaults. It asks first, and
+    // Cancel there answers no without leaving the screen.
     h.keys("Up f");
+    assert!(
+        h.snapshot()
+            .contains("Restore the default keys for Right-handed?")
+    );
+    assert_snapshot!(h.snapshot());
+    h.keys("d");
+    assert_eq!(h.top_screen(), "key_bindings");
+    assert!(row(&h, "Confirm").contains(" g "));
+    h.keys("f f");
     assert!(!row(&h, "Confirm").contains(" g "));
     h.keys("d d");
     assert_eq!(

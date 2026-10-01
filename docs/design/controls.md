@@ -202,6 +202,12 @@ red for a required action and dim for an optional one. Screenshots:
 [`0815-key-bindings.png`](../screenshots/0815-key-bindings.png),
 [`0815-key-bindings-blocked.png`](../screenshots/0815-key-bindings-blocked.png).
 
+**Restore defaults asks first** (Nick, 2026-09-30, on the 0815 build:
+"have a confirmation screen for restore defaults"). Confirm on Restore
+defaults opens `Restore the default keys for Right-handed?`; Confirm
+answers yes, Cancel answers no and stays on the Key bindings screen with
+nothing changed.
+
 *Claude's starting rules (Nick to veto at sign-off of 0815):*
 
 - `Esc` doesn't count as Cancel's required key: Cancel still needs one of
@@ -230,8 +236,9 @@ red for a required action and dim for an optional one. Screenshots:
   and they keep it held, the highlight stays put until they let go.
 - When two required actions have no key, the blocked-leave message names
   the one listed higher on the screen.
-- Restore defaults happens at once, with no "are you sure?". Like every
-  other change it only counts once the player leaves the screen.
+- The question's wording, `Restore the default keys for <layout>?`, and
+  its look (the end-turn question's box, `f yes / d no` with the player's
+  own Confirm and Cancel keys).
 
 ## Controller
 

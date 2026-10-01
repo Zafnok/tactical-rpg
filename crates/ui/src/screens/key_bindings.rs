@@ -2,7 +2,8 @@
 //! *Rebinding keys*): every rebindable action with its [`SLOTS`] key slots
 //! for the layout in use. Confirm on a slot captures the next key pressed
 //! into it; a key taken from another slot moves; the clear-slot key empties
-//! a slot; leaving is blocked while a required action has no key.
+//! a slot; leaving is blocked while a required action has no key; Restore
+//! defaults asks first.
 //!
 //! The screen edits a copy of the layout's [`LayoutBindings`] and hands it
 //! to [`Ctx::set_layout_bindings`] when it closes, so it is steered with the
@@ -77,6 +78,9 @@ const SLOT_W: usize = 15;
 const SLOT_PITCH: i32 = 18;
 /// What an empty slot shows.
 const EMPTY_SLOT: &str = "·";
+/// Height of the restore question's box: its two lines, a blank row above
+/// and below, and the border.
+const QUESTION_H: i32 = 6;
 /// Row of the message under the panel.
 const MESSAGE_ROW: i32 = PANEL.y + PANEL.h + 1;
 
@@ -130,6 +134,8 @@ pub struct KeyBindingsScreen {
     /// The action that just lost a key to another slot, and the seconds its
     /// row stays highlighted.
     moved: Option<(Action, f32)>,
+    /// Whether the "restore the default keys?" question is open.
+    asking_restore: bool,
     /// Set when a capture ends: cursor moves are ignored until no cursor
     /// key is held, because the key just pressed for the slot may be one
     /// (under the opened-with keymap), still down and repeating.
@@ -153,6 +159,7 @@ impl KeyBindingsScreen {
             capturing: false,
             message: None,
             moved: None,
+            asking_restore: false,
             await_release: false,
         }
     }
@@ -177,6 +184,19 @@ impl KeyBindingsScreen {
     /// Whether the focused slot is waiting for a key.
     pub fn is_capturing(&self) -> bool {
         self.capturing
+    }
+
+    /// Whether the screen is asking before it restores the default keys.
+    pub fn is_asking_restore(&self) -> bool {
+        self.asking_restore
+    }
+
+    /// The question asked before restoring the default keys.
+    pub fn restore_question(&self) -> String {
+        format!(
+            "Restore the default keys for {}?",
+            layout_picker::label(self.layout)
+        )
     }
 
     /// The message under the panel, if any.
@@ -225,17 +245,33 @@ impl KeyBindingsScreen {
         }
     }
 
-    /// Confirm: starts capturing on a slot, or restores the layout's
-    /// default keys on Restore defaults.
+    /// Confirm: starts capturing on a slot, or asks whether to restore the
+    /// layout's default keys on Restore defaults.
     fn confirm(&mut self, ctx: &mut Ctx) {
         self.message = None;
         if self.focus().is_some() {
             self.capturing = true;
         } else {
-            self.bindings = LayoutBindings::defaults(&ctx.content.keymap, self.layout);
-            self.moved = None;
+            self.asking_restore = true;
         }
         ctx.audio.menu(MenuSound::Select);
+    }
+
+    /// An action while the restore question is open: Confirm restores the
+    /// layout's default keys, Cancel backs out; either closes the question
+    /// (and returns `true`). Nothing else does anything.
+    fn answer_restore(&mut self, ctx: &mut Ctx, action: Action) -> bool {
+        match action {
+            Action::Confirm => {
+                self.bindings = LayoutBindings::defaults(&ctx.content.keymap, self.layout);
+                self.moved = None;
+                ctx.audio.menu(MenuSound::Select);
+            }
+            Action::Cancel => ctx.audio.menu(MenuSound::Cancel),
+            _ => return false,
+        }
+        self.asking_restore = false;
+        true
     }
 
     /// The clear-slot key: empties the focused slot.
@@ -306,6 +342,12 @@ impl KeyBindingsScreen {
             let back = help_line(&[(Some(capture_abort_key_name()), "back")]);
             return format!("{CAPTURE_HELP}{SEPARATOR}{back}");
         }
+        if self.asking_restore {
+            return help_line(&[
+                (Some(key_name(km, Action::Confirm)), "yes"),
+                (Some(key_name(km, Action::Cancel)), "no"),
+            ]);
+        }
         let on_slot = self.focus().is_some();
         help_line(&[
             (Some(cursor_keys_name(km)), "move"),
@@ -316,6 +358,33 @@ impl KeyBindingsScreen {
             (on_slot.then(clear_slot_key_name), "clear"),
             (Some(key_name(km, Action::Cancel)), "back"),
         ])
+    }
+
+    /// Draws the restore question in a double-bordered box in the middle
+    /// of the screen, with its answers' keys under it (the look of the
+    /// battle's end-turn question).
+    fn draw_restore_question(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        let c = |u| ctx.palette.get(u);
+        let bg = c(UiColor::PanelBg);
+        let km = &self.opened_with;
+        let question = self.restore_question();
+        let answers = format!(
+            "{} yes / {} no",
+            key_name(km, Action::Confirm),
+            key_name(km, Action::Cancel)
+        );
+        let widest = question.chars().count().max(answers.chars().count());
+        let w = i32::try_from(widest).unwrap_or(0) + 4;
+        let rect = Rect::new(
+            (i32::from(buf.width()) - w) / 2,
+            (i32::from(buf.height()) - QUESTION_H) / 2,
+            w,
+            QUESTION_H,
+        );
+        buf.fill_rect(rect, Cell::new(' ', c(UiColor::Text), bg));
+        buf.draw_box(rect, BoxStyle::Double, c(UiColor::PanelBorderFocus), bg);
+        buf.print(rect.x + 2, rect.y + 2, &question, c(UiColor::Text), bg);
+        buf.print(rect.x + 2, rect.y + 3, &answers, c(UiColor::TextDim), bg);
     }
 
     /// Draws row `i` of [`ROWS`] on console row `y`.
@@ -387,6 +456,14 @@ impl Screen for KeyBindingsScreen {
             }
             return Transition::None;
         }
+        if self.asking_restore {
+            for &action in &input.actions {
+                if self.answer_restore(ctx, action) {
+                    break;
+                }
+            }
+            return Transition::None;
+        }
         if input.pressed_chords.iter().any(|&c| is_clear_slot(c)) {
             self.clear_slot(ctx);
         }
@@ -400,9 +477,10 @@ impl Screen for KeyBindingsScreen {
                 Action::CursorRight => self.move_slot(ctx, true),
                 Action::Confirm => {
                     self.confirm(ctx);
-                    if self.capturing {
-                        // The key that confirmed isn't the key to bind,
-                        // and nothing after it this frame counts.
+                    if self.capturing || self.asking_restore {
+                        // The key that confirmed isn't the key to bind (or
+                        // the answer), and nothing after it this frame
+                        // counts.
                         break;
                     }
                 }
@@ -457,6 +535,9 @@ impl Screen for KeyBindingsScreen {
 
         if let Some(message) = &self.message {
             print_centred(buf, MESSAGE_ROW, message, c(UiColor::HpLow), black);
+        }
+        if self.asking_restore {
+            self.draw_restore_question(ctx, buf);
         }
         let bottom = i32::from(buf.height()) - 1;
         print_centred(buf, bottom, &self.help(), dim, black);

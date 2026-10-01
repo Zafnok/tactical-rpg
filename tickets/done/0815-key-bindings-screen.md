@@ -162,6 +162,11 @@ screen's look"), with screenshots of the built screen in
 - Debug menu → "Key bindings" (last entry). 0805's ticket now says to open
   the screen from Options and drop that entry.
 
+**Restore defaults asks first** (Nick, after the first push: "have a
+confirmation screen for restore defaults"): Confirm on the row opens a
+yes/no question; Cancel there answers no and stays on the screen. Step 6
+of the plan restored at once.
+
 **Deviations from the plan.**
 - Rows are in Nick's order (`ROWS` in the screen module), not
   `Action::ALL` order.
@@ -193,8 +198,8 @@ screen's look"), with screenshots of the built screen in
   you let go.
 - With two required actions unmapped, the message names the one listed
   higher on the screen.
-- Restore defaults happens at once, with no confirmation; like any other
-  change it only counts once you leave.
+- The restore question's wording (`Restore the default keys for
+  Right-handed?`) and look (the end-turn question's box).
 - Player-facing action names: Cursor up/down/left/right, Confirm, Cancel,
   End turn, Select, Confirm end turn, Previous ready unit, Next ready unit,
   Unit info, Danger zone, Auto-end on/off, Rewind, Map menu (from the

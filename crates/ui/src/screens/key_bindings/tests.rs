@@ -515,8 +515,15 @@ fn restore_defaults_resets_only_this_layout() {
     assert_eq!(s.focus(), None);
     s.moved = Some((Info, 1.0));
     sounds(&mut c);
-    s.update(&mut c, &act(&[Confirm]));
+    // It asks first; a second Confirm in the same frame isn't the answer.
+    let custom = s.bindings().clone();
+    s.update(&mut c, &act(&[Confirm, Confirm]));
     assert!(!s.is_capturing());
+    assert!(s.is_asking_restore());
+    assert_eq!(s.bindings(), &custom);
+    assert_eq!(sounds(&mut c), [cue(MenuSound::Select)]);
+    s.update(&mut c, &act(&[Confirm, Cancel]));
+    assert!(!s.is_asking_restore());
     assert_eq!(s.moved, None);
     assert_eq!(sounds(&mut c), [cue(MenuSound::Select)]);
     let defaults = LayoutBindings::defaults(&c.content.keymap, Layout::RightHanded);
@@ -525,6 +532,61 @@ fn restore_defaults_resets_only_this_layout() {
     assert_eq!(format!("{t:?}"), "Pop");
     assert!(!c.player_keys().is_custom(Layout::RightHanded));
     assert_eq!(c.layout_bindings(Layout::LeftHanded), left);
+}
+
+#[test]
+fn the_restore_question_can_be_backed_out_of() {
+    let mut c = ctx();
+    let mut s = KeyBindingsScreen::new(&c);
+    bind(&mut s, &mut c, Confirm, 1, "e");
+    let custom = s.bindings().clone();
+    while s.focus().is_some() {
+        s.update(&mut c, &act(&[CursorDown]));
+    }
+    s.update(&mut c, &act(&[Confirm]));
+    assert!(s.is_asking_restore());
+    assert_eq!(
+        s.restore_question(),
+        "Restore the default keys for Right-handed?"
+    );
+    assert_eq!(s.help(), "f yes · d no");
+    sounds(&mut c);
+    // Nothing but Confirm and Cancel answers; the clear-slot key and the
+    // cursor do nothing.
+    let other = act(&[CursorUp, Info, CursorLeft]).with_pressed_chords(vec![chord("Delete")]);
+    s.update(&mut c, &other);
+    assert!(s.is_asking_restore());
+    assert_eq!(s.focus(), None);
+    assert!(sounds(&mut c).is_empty());
+    let buf = drawn(&s, &c);
+    let asked = (0..i32::from(CONSOLE_H))
+        .map(|y| row_text(&buf, y))
+        .collect::<Vec<_>>();
+    assert!(
+        asked
+            .iter()
+            .any(|r| r.contains("║ Restore the default keys for Right-handed? ║"))
+    );
+    assert!(asked.iter().any(|r| r.contains("║ f yes / d no ")));
+    // Cancel closes the question, not the screen, and changes nothing;
+    // what follows it that frame is dropped.
+    let t = s.update(&mut c, &act(&[Cancel, Confirm, Cancel]));
+    assert_eq!(format!("{t:?}"), "None");
+    assert!(!s.is_asking_restore());
+    assert_eq!(s.bindings(), &custom);
+    assert_eq!(sounds(&mut c), [cue(MenuSound::Cancel)]);
+    assert_eq!(s.help(), "arrows move · f restore · d back");
+    let buf = drawn(&s, &c);
+    assert!(!(0..i32::from(CONSOLE_H)).any(|y| row_text(&buf, y).contains('║')));
+    // The left-handed question names its layout and keys.
+    let left = ctx().with_layout(Layout::LeftHanded);
+    let mut s = KeyBindingsScreen::new(&left);
+    s.asking_restore = true;
+    assert_eq!(
+        s.restore_question(),
+        "Restore the default keys for Left-handed?"
+    );
+    assert_eq!(s.help(), "j yes · k no");
 }
 
 #[test]
