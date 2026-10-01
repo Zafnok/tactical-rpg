@@ -332,36 +332,46 @@ impl BattleState {
         }
     }
 
-    /// Carries out [`Command::MoveAfter`](super::Command::MoveAfter) for
-    /// unit `id`: stays with `to` = `None`, else moves along the path to
-    /// `to`. Ends its action.
-    pub(super) fn move_after(
-        &mut self,
+    /// Validates [`Command::MoveAfter`](super::Command::MoveAfter) for unit
+    /// `id`: the path to `to` (its tile first), or `None` to stay.
+    pub(super) fn plan_move_after(
+        &self,
         id: UnitId,
         to: Option<Pos>,
-        events: &mut Vec<Event>,
-    ) -> Result<(), CommandError> {
+    ) -> Result<Option<Vec<Pos>>, CommandError> {
         let pending = match self.pending_move {
             Some(p) if p.unit == id => p,
             Some(p) => return Err(CommandError::MoveAfterPending(p.unit)),
             None => return Err(CommandError::NoMoveAfter(id)),
         };
-        if let Some(to) = to {
-            let path = self
-                .unit(id)
-                .map(|u| self.move_after_paths(u, pending.tiles))
-                .unwrap_or_default()
-                .into_iter()
-                .find(|path| path.last() == Some(&to))
-                .ok_or(CommandError::CannotMoveAfter(to))?;
-            if let Some(unit) = self.unit_mut(id) {
+        let Some(to) = to else {
+            return Ok(None);
+        };
+        self.unit(id)
+            .map(|u| self.move_after_paths(u, pending.tiles))
+            .unwrap_or_default()
+            .into_iter()
+            .find(|path| path.last() == Some(&to))
+            .map(Some)
+            .ok_or(CommandError::CannotMoveAfter(to))
+    }
+
+    /// Carries out a validated move after an attack by unit `id` along
+    /// `path` (`None`: it stays). Ends its action.
+    pub(super) fn move_after(
+        &mut self,
+        id: UnitId,
+        path: Option<Vec<Pos>>,
+        events: &mut Vec<Event>,
+    ) {
+        if let Some(path) = path {
+            if let (Some(unit), Some(&to)) = (self.unit_mut(id), path.last()) {
                 unit.pos = to;
             }
             events.push(Event::UnitMoved { unit: id, path });
         }
         self.pending_move = None;
         events.push(Event::UnitActed { unit: id });
-        Ok(())
     }
 
     /// The other units allied to `unit` within `radius` tiles of `dest`, in
