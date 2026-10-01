@@ -170,11 +170,11 @@ fn long_text_is_cut_inside_the_column() {
         .classes
         .get_mut(&ClassId("bulwark".into()))
     {
-        class.name = "A class name of thirty-two cells".into();
+        class.name = "Sentinel of the High Marches".into();
     }
     let s = demo(&c, ChangeKind::Promote);
     let buf = render(&s, &c);
-    assert_eq!(cell(&buf, 0, 1), "A class name of thir");
+    assert_eq!(cell(&buf, 0, 1), "Sentinel of the High");
     // The borders on both sides of the cut are whole.
     let border = |x: i32| buf.get(x, COLUMNS_Y + 1).unwrap().glyph;
     assert_eq!(border(COLUMNS_X + COLUMN_W - 2), ' ');
