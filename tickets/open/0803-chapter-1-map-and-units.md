@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0016", "0410", "0412", "0501", "0503", "0706", "0707", "0710", "0801", "0807"]
+blocked_by: ["0009", "0016", "0316", "0410", "0412", "0501", "0503", "0706", "0707", "0710", "0801", "0807"]
 nick_input: sign-off
 completed:
 ---
@@ -28,12 +28,9 @@ difficulty sim in step 7 is run and recorded.
 battle file's `music` field). This ticket's scope sets both for Chapter 1,
 so both must exist first.
 
-**Also waits for 0316** (non-attack skills cost uses per battle; Nick,
-2026-10-01: the playtest waits for it). The winning replay and the
-difficulty numbers must be made with the final skill costs. 0316 is created
-by PR #131, which hasn't merged, so its id can't be in `blocked_by` yet
-(the ticket lint rejects unknown ids): add `"0316"` here and in 0804 once
-#131 has merged, and don't start this ticket before 0316 is done.
+Also 0316 (non-attack skills cost uses per battle; Nick, 2026-10-01: the
+playtest waits for it): the winning replay and the difficulty numbers must
+be made with the final skill costs.
 
 ## Nick input
 

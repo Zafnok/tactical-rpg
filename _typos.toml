@@ -13,6 +13,10 @@ pn = "pn"
 beginnning = "beginnning"
 # Verbatim quote of Nick in docs/design/title-screen.md (ticket 0032).
 whcih = "whcih"
+# Verbatim quote of Nick asking for the title's intro cinematic (ticket
+# 0036 and the tickets that quote it).
+reminiscient = "reminiscient"
+conversaiton = "conversaiton"
 # Two-letter runs of colour keys in snapshot colour grids (ADR-0007),
 # e.g. `Iy` in the portrait snapshots, `abd` in the dialogue ones.
 iy = "iy"
