@@ -43,7 +43,8 @@ If 0028 recorded "no music here", skip this.
 1. Action menu: `Shop` on a shop tile, `Visit` on an unvisited village gate,
    `Open` on an unopened chest (player units only).
 2. `ShopScreen`: header `ARMOURY    Gold 1 250`; Buy list with price and a
-   stat line; Sell list (half price); a Blacksmith shows Repair with the cost
+   stat line; Sell list (half price; seals are never listed: no shop buys
+   them, `ShopError::NotBought`, ticket 0603); a Blacksmith shows Repair with the cost
    and `12/20 → 20/20`. Unaffordable entries dimmed. Transactions collect into
    one `UnitAction::Shop`; leaving with none sends nothing (unit not done).
 3. `Visit` / `Open`: send the action; show `Got 300 gold.` / `Got Potion.`

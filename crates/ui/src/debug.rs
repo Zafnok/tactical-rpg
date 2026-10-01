@@ -2,7 +2,9 @@
 //! shows every font glyph and palette colour, for judging the look (ticket
 //! 0011); the portrait viewer shows every portrait (ticket 0703); the test
 //! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
-//! menu was opened from (ticket 0704).
+//! menu was opened from (ticket 0704); the class-choice screen opens on a
+//! test unit, to promote or reclass it (ticket 0603), until the
+//! between-battle menus exist.
 
 mod portrait_viewer;
 
@@ -14,7 +16,7 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::screens::{DialogueScreen, centre_x, print_centred};
+use crate::screens::{ChangeKind, ClassChangeScreen, DialogueScreen, centre_x, print_centred};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 use trpg_content::palette::REQUIRED_COLORS;
@@ -28,11 +30,13 @@ pub const SCREENS: [&str; 3] = [
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 4] = [
+const TOOLS: [&str; 6] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
     "Play test scene (overlay)",
+    "Class change: promote",
+    "Class change: reclass",
 ];
 /// The scene the "Play test scene" tools play.
 pub const TEST_SCENE: &str = "test";
@@ -77,6 +81,17 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(1)) => {
                     return Transition::Push(Box::new(PortraitViewerScreen::new()));
+                }
+                Some(MenuEvent::Chosen(tool @ (4 | 5))) => {
+                    let kind = if tool == 4 {
+                        ChangeKind::Promote
+                    } else {
+                        ChangeKind::Reclass
+                    };
+                    let Some(screen) = ClassChangeScreen::demo(ctx, kind) else {
+                        continue;
+                    };
+                    return Transition::Push(Box::new(screen));
                 }
                 Some(MenuEvent::Chosen(tool)) => {
                     let Some(scene) = ctx.content.dialogue.get(TEST_SCENE).cloned() else {
@@ -451,13 +466,28 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Replace(dialogue)"
         );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(class_change)"
+        );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(class_change)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
-        // Without the test scene, its tools do nothing.
+        // Without the test scene, its tools do nothing; nor do the class
+        // change tools without their test character.
         ctx.content.dialogue.scenes.clear();
+        ctx.content.characters.characters.clear();
         let mut menu = DebugMenuScreen::new();
-        let a = [CursorUp, Confirm];
-        let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
-        assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
+        for a in [
+            [CursorUp, Confirm],
+            [CursorUp, Confirm],
+            [CursorUp, Confirm],
+        ] {
+            let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
+            assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
+        }
         assert_eq!(SCREENS, ["debug_menu", "glyph_sampler", "portrait_viewer"]);
     }
 

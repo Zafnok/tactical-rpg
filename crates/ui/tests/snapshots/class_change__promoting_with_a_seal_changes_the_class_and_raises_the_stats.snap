@@ -1,0 +1,120 @@
+---
+source: crates/ui/tests/class_change.rs
+expression: h.snapshot()
+---
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+     ╔══════════════════════════════════════════════════════════╗                                   
+     ║ ┌────────────────────────────────┐                       ║                                   
+     ║ │           ▄▄▄▀▀▀▀▀▄▄           │  PROMOTED!            ║                                   
+     ║ │        ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄        │                       ║                                   
+     ║ │      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄      │  Test Knight          ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Guard → Iron Rider   ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                       ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  HP   28 → 35  +7     ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Str  11 → 14  +3     ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Mag   0              ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Dex   7 → 9   +2     ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Spd   4 → 8   +4     ║                                   
+     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Def  49 → 50  +1     ║                                   
+     ║ │           ▄▀▀▀▀▀▀▀▀▄           │  Res   0 → 2   +2     ║                                   
+     ║ │       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       │                       ║                                   
+     ║ │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                       ║                                   
+     ║ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                       ║                                   
+     ║ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                       ║                                   
+     ║ └────────────────────────────────┘                       ║                                   
+     ╚══════════════════════════════════════════════════════════╝                                   
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ f continue                                                                                         
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcddddddddddddddddddddddddddddddddddcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeeeeeefffghhhiffeeeeeeeeeeedccjjjjjjjjjccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeeefklmnnooooooopkfeeeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeefkmnnoooooooooooqrkfeeeeeedccsssssssssssccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeiotoooooooooooooouoieeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeimquvvvvvmovvvvvuurieeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeitouwwwwxooxwwwyuuuieeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeioouxzAzxBCxzAzDuuuieeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeioouxxxxxExxxxxDuuuieeeeeedccFFFFFFFccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeioouxEGxxGHHxxxDuuuieeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeioouxxxIJJJJIxDDuuuieeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeefKKLKzxxMMMMNDOKLLLfeeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeeeeeefpPQQQQQpfeeeeeeeeeeedccccccccccccccccjjcccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeeeRSSSTuouuuuuuTSSSUeeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeeeRnooooVVVVWWVVVVooooqUeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeeeRnooooooVVVVWWVVVVooooooqUeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcdeRnooooooooVVVVWWVVVVooooooooqUedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabcddddddddddddddddddddddddddddddddddcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aXXXXXXXXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border_focus bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:panel_border bg:panel_bg
+e = fg:panel_bg bg:panel_bg
+f = fg:portrait_outline bg:panel_bg
+g = fg:portrait_outline bg:plume_red
+h = fg:plume_red bg:plume_red
+i = fg:portrait_outline bg:portrait_outline
+j = fg:text_highlight bg:panel_bg
+k = fg:portrait_outline bg:armor_steel
+l = fg:portrait_outline bg:armor_steel_light
+m = fg:armor_steel bg:armor_steel_light
+n = fg:armor_steel_light bg:armor_steel
+o = fg:armor_steel bg:armor_steel
+p = fg:portrait_outline bg:armor_steel_dark
+q = fg:armor_steel_dark bg:armor_steel
+r = fg:armor_steel bg:armor_steel_dark
+s = fg:player bg:panel_bg
+t = fg:armor_steel_light bg:armor_steel_light
+u = fg:armor_steel_dark bg:armor_steel_dark
+v = fg:armor_steel_dark bg:skin_tan_mid
+w = fg:brow_dark bg:skin_tan
+x = fg:skin_tan bg:skin_tan
+y = fg:brow_dark bg:skin_tan_mid
+z = fg:skin_tan bg:portrait_outline
+A = fg:portrait_outline bg:skin_tan
+B = fg:armor_steel bg:skin_tan_highlight
+C = fg:armor_steel bg:skin_tan
+D = fg:skin_tan_mid bg:skin_tan_mid
+E = fg:skin_tan_highlight bg:skin_tan_highlight
+F = fg:text_dim bg:panel_bg
+G = fg:skin_tan_highlight bg:skin_tan
+H = fg:skin_tan bg:skin_tan_shadow
+I = fg:mouth_dark bg:mouth_dark
+J = fg:skin_tan bg:teeth
+K = fg:armor_steel bg:portrait_outline
+L = fg:armor_steel_dark bg:portrait_outline
+M = fg:lip bg:skin_tan
+N = fg:skin_tan bg:skin_tan_mid
+O = fg:skin_tan_mid bg:portrait_outline
+P = fg:skin_tan bg:armor_steel
+Q = fg:skin_tan_mid bg:armor_steel_dark
+R = fg:armor_steel_light bg:panel_bg
+S = fg:armor_steel bg:panel_bg
+T = fg:portrait_outline bg:cloth_red
+U = fg:armor_steel_dark bg:panel_bg
+V = fg:cloth_red bg:cloth_red
+W = fg:cloth_red_dark bg:cloth_red_dark
+X = fg:text_dim bg:black

@@ -1,0 +1,79 @@
+---
+source: crates/ui/src/screens/class_change/tests.rs
+expression: "render(&s, &c).to_snapshot(&c.palette)"
+---
+                                                                                                    
+  Promotion                                                                                         
+  Test Knight  Guard  Lv 12                                                         Tier 2 Seal ×1  
+                                                                                                    
+  ┌──────────────────────┐╔══════════════════════╗                                                  
+  │ Bulwark              │║ Iron Rider           ║                                                  
+  │ Tier 2               │║ Tier 2               ║                                                  
+  │                      │║                      ║                                                  
+  │ Mov   4     armored  │║ Mov   4 → 6 mounted  ║                                                  
+  │ Armored              │║ Mounted Armored      ║                                                  
+  │                      │║                      ║                                                  
+  │ Weapons              │║ Weapons              ║                                                  
+  │ Spear    D → C       │║ Spe╔════════════════════════════════════╗                               
+  │ Axe      E → D       │║ Axe║                                    ║                               
+  │                      │║ Swo║ Promote Test Knight to Iron Rider? ║                               
+  │                      │║    ║ Uses 1 Tier 2 Seal (1 in stock).   ║                               
+  │ Active               │║ Act║ f yes / d no                       ║                               
+  │ Fortify              │║ Tra║                                    ║                               
+  │                      │║    ╚════════════════════════════════════╝                               
+  │ HP   28 → 36  +8     │║ HP   28 → 35  +7     ║                                                  
+  │ Str  11 → 15  +4     │║ Str  11 → 14  +3     ║                                                  
+  │ Mag   0              │║ Mag   0              ║                                                  
+  │ Dex   7 → 9   +2     │║ Dex   7 → 9   +2     ║                                                  
+  │ Spd   4 → 6   +2     │║ Spd   4 → 8   +4     ║                                                  
+  │ Def  49 → 50  +1 MAX │║ Def  49 → 50  +1 MAX ║                                                  
+  │ Res   0 → 2   +2     │║ Res   0 → 2   +2     ║                                                  
+  │                      │║                      ║                                                  
+  │                      │║                      ║                                                  
+  └──────────────────────┘╚══════════════════════╝                                                  
+                                                                                                    
+                                                                                                    
+ f yes · d no                                                                                       
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdefggggggggggfffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfhhhhhhhhhffffffffffffdefhhhhhhhhhffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfgggggggffffffffffffffdefgggggggffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeffffffffffffffffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeffffffffffffffffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeffffffffffffffffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfggggggfffffffffffffffdefgggefhhhhhhhhhhhhfffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeffffffffffffffffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggfffffdefffffffffffffffggfffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggfffffdefffffffffffffffggfffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfhhhhhhhffffffffffffffdefhhhhhhhffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggfffffdefffffffffffffffggfffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggfffffdefffffffffffffffggfffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggggggfdefffffffffffffffggggggfeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadfffffffffffffffggfffffdefffffffffffffffggfffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadffffffffffffffffffffffdeffffffffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aiiiiiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:player bg:black
+d = fg:panel_border bg:panel_bg
+e = fg:panel_border_focus bg:panel_bg
+f = fg:text bg:panel_bg
+g = fg:text_highlight bg:panel_bg
+h = fg:text_dim bg:panel_bg
+i = fg:text_dim bg:black
