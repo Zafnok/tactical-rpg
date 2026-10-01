@@ -18,6 +18,10 @@ pub enum RawInputEvent {
     Down(Chord),
     /// A key went up.
     Up(Key),
+    /// A character was typed (the platform's text input: the keyboard's own
+    /// layout and Shift applied), for text boxes such as the lead's name.
+    /// Comes with the key's own `Down`.
+    Text(char),
     /// A controller button went down on some pad (its binding position,
     /// from [`Pads::update`](crate::input::Pads::update)).
     PadDown(Button),
@@ -160,6 +164,9 @@ impl Game {
     fn step(&mut self, events: &[RawInputEvent], dt: f32) {
         // Bindings changed between frames (a test rebinding keys).
         self.sync_keymap();
+        let mut pressed = Vec::new();
+        let mut text = Vec::new();
+        let mut pad = false;
         for &event in events {
             // Any key or any controller button ends the title's wait
             // (`docs/design/title-screen.md`).
@@ -168,19 +175,25 @@ impl Game {
                 self.ctx.key_prompt = KeyPrompt::Pressed;
             }
             match event {
-                RawInputEvent::Down(chord) => self.input.key_down(chord),
+                RawInputEvent::Down(chord) => {
+                    self.input.key_down(chord);
+                    pressed.push(chord);
+                }
                 RawInputEvent::Up(key) => self.input.key_up(key),
-                RawInputEvent::PadDown(button) => self.input.pad_down(button),
+                // Control characters (Enter, Backspace, Escape on some
+                // platforms) are keys, not text.
+                RawInputEvent::Text(c) if !c.is_control() => text.push(c),
+                RawInputEvent::Text(_) => {}
+                RawInputEvent::PadDown(button) => {
+                    self.input.pad_down(button);
+                    pad = true;
+                }
                 RawInputEvent::PadUp(button) => self.input.pad_up(button),
             }
         }
-        let pressed = events
-            .iter()
-            .filter_map(|event| match event {
-                RawInputEvent::Down(chord) => Some(*chord),
-                _ => None,
-            })
-            .collect();
+        if dt.is_finite() {
+            self.ctx.clock_s += f64::from(dt.max(0.0));
+        }
         let actions = self.input.update(dt);
         let held = Action::ALL
             .into_iter()
@@ -195,7 +208,9 @@ impl Game {
         if opens_debug_menu {
             self.stack.push(Box::new(DebugMenuScreen::new()));
         } else {
-            let input = FrameInput::new(actions, dt, held).with_pressed_chords(pressed);
+            let input = FrameInput::new(actions, dt, held)
+                .with_typing(pressed, text)
+                .with_pad(pad);
             self.quit = self.stack.update(&mut self.ctx, &input);
             self.sync_keymap();
         }
@@ -219,6 +234,17 @@ impl Game {
         );
         self.buffer.fill_rect(self.buffer.bounds(), blank);
         self.stack.draw(&self.ctx, &mut self.buffer);
+    }
+
+    /// The top-most screen of type `T` on the stack, if it opts in
+    /// ([`Screen::as_any`]).
+    pub fn screen<T: std::any::Any>(&self) -> Option<&T> {
+        self.stack.find()
+    }
+
+    /// [`screen`](Self::screen), mutable, for scripted tests.
+    pub fn screen_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.stack.find_mut()
     }
 
     /// The music state machine (which track plays).
@@ -348,7 +374,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::J);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::K);
         assert_eq!(game.screens(), ["title"]);
         let ctx = game.into_ctx();
@@ -395,7 +421,7 @@ mod tests {
     fn pad_buttons_reach_the_top_screen() {
         let mut game = Game::start(ctx());
         assert!(!pad_tap(&mut game, Button::South));
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         pad_tap(&mut game, Button::East);
         assert_eq!(game.screens(), ["title"]);
         // Unbound buttons do nothing.
@@ -430,7 +456,7 @@ mod tests {
         assert_eq!(game.ctx().layout(), Some(Layout::LeftHanded));
         assert_eq!(game.input.keymap(), &game.ctx().keymap);
         pad_tap(&mut game, Button::South);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         pad_tap(&mut game, Button::East);
         assert_eq!(game.screens(), ["title"]);
     }
@@ -464,7 +490,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::G);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         assert_eq!(game.input.keymap(), &game.ctx().keymap);
     }
 
@@ -483,7 +509,7 @@ mod tests {
     fn events_reach_the_top_screen() {
         let mut game = Game::start(ctx());
         assert!(!tap(&mut game, Key::F));
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::D);
         assert_eq!(game.screens(), ["title"]);
     }
@@ -496,7 +522,7 @@ mod tests {
         assert!(out.quit);
         assert!(game.quit_requested());
         let before = game.buffer().clone();
-        // Would open the placeholder if the game were still running.
+        // Would open New Game if the game were still running.
         game.frame(&[RawInputEvent::Up(Key::F), down(Key::Up)], 0.0);
         game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert_eq!(game.screens(), ["title"]);
@@ -505,8 +531,22 @@ mod tests {
     }
 
     #[test]
+    fn the_clock_adds_up_frame_times() {
+        let mut game = Game::start(ctx());
+        game.frame(&[], 0.5);
+        game.frame(&[], 0.25);
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+        // Nonsense frame times don't count.
+        for dt in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            game.frame(&[], dt);
+        }
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+    }
+
+    #[test]
     fn popping_the_last_screen_quits() {
-        let mut game = Game::new(ctx(), Box::new(crate::screens::PlaceholderScreen));
+        let mut game = Game::new(ctx(), Box::new(crate::screens::ModeSelectScreen::new()));
+
         assert!(tap(&mut game, Key::D));
         assert_eq!(game.top_screen(), None);
     }
@@ -590,10 +630,10 @@ mod tests {
         assert!(!seen[1].is_held(Action::Confirm));
         // Every press of the frame, in order; releases aren't presses.
         assert_eq!(
-            seen[0].pressed_chords,
+            seen[0].pressed_chords(),
             [Chord::plain(Key::Right), Chord::plain(Key::F)]
         );
-        assert!(seen[1].pressed_chords.is_empty());
+        assert!(seen[1].pressed_chords().is_empty());
     }
 
     #[test]
@@ -604,7 +644,64 @@ mod tests {
         game.frame(&[down(Key::Delete), RawInputEvent::Down(shifted)], 0.0);
         let seen = seen.borrow();
         assert!(seen[0].actions.is_empty());
-        assert_eq!(seen[0].pressed_chords, [Chord::plain(Key::Delete), shifted]);
+        assert_eq!(
+            seen[0].pressed_chords(),
+            [Chord::plain(Key::Delete), shifted]
+        );
+    }
+
+    #[test]
+    fn screens_see_the_keys_pressed_and_the_text_typed() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let events = [
+            down(Key::A),
+            RawInputEvent::Text('a'),
+            down(Key::Backspace),
+            // Control characters some platforms send for Backspace or
+            // Enter are keys, not text.
+            RawInputEvent::Text('\u{8}'),
+            RawInputEvent::Text('\r'),
+            RawInputEvent::Text('é'),
+        ];
+        game.frame(&events, 0.0);
+        game.frame(&[RawInputEvent::Up(Key::A)], 0.0);
+        let seen = seen.borrow();
+        let pressed = [Chord::plain(Key::A), Chord::plain(Key::Backspace)];
+        assert_eq!(seen[0].pressed_chords(), pressed);
+        assert_eq!(seen[0].text(), ['a', 'é']);
+        assert!(seen[1].pressed_chords().is_empty());
+        assert!(seen[1].text().is_empty());
+    }
+
+    /// The Harness types as the app does: each character with its key
+    /// (Shift for capitals), one character per press.
+    #[test]
+    fn the_harness_types_text_with_its_keys() {
+        let seen = std::rc::Rc::default();
+        let game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let mut h = crate::harness::Harness::from_game(game);
+        h.type_text("Ma -é");
+        let seen = seen.borrow();
+        let typed: Vec<(Vec<String>, Vec<char>)> = seen
+            .iter()
+            .filter(|i| !i.text().is_empty())
+            .map(|i| {
+                let keys = i.pressed_chords().iter().map(ToString::to_string).collect();
+                (keys, i.text().to_vec())
+            })
+            .collect();
+        let expect = |k: &[&str], c| (k.iter().map(|&s| s.to_owned()).collect(), vec![c]);
+        assert_eq!(
+            typed,
+            [
+                expect(&["Shift+m"], 'M'),
+                expect(&["a"], 'a'),
+                expect(&["Space"], ' '),
+                expect(&["-"], '-'),
+                expect(&[], 'é'),
+            ]
+        );
     }
 
     /// Plays `beep` on Confirm, switches to music `battle` on Cancel, quits

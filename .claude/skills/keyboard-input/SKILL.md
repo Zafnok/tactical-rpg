@@ -75,12 +75,16 @@ with `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`.
 
 1. **React to `Action`s, not keys.** Match on `Action::Confirm`, never on
    `Key::F`. Need a new kind of input? Add an `Action` (below); don't read
-   raw keys. The one exception is the Key bindings screen
+   raw keys. The exceptions: the Key bindings screen
    (`screens/key_bindings.rs`, 0815), which reads
-   `FrameInput::pressed_chords` to capture a key and to see the clear-slot
-   key, and asks `input.rs` helpers (`is_capture_abort`, `is_clear_slot`,
-   `capture_abort_key_name`, `clear_slot_key_name`, `CAPTURE_PROMPT`)
-   instead of naming keys.
+   `FrameInput::pressed_chords()` to capture a key and to see the
+   clear-slot key, and asks `input.rs` helpers (`is_capture_abort`,
+   `is_clear_slot`, `capture_abort_key_name`, `clear_slot_key_name`,
+   `CAPTURE_PROMPT`) instead of naming keys;
+   and **text boxes** (the lead's name, 0801), which ignore actions while
+   open, take `FrameInput::text()` (typed characters, from `app`'s
+   `RawKeyEvent::Text`) and ask `input::text_key` for their fixed
+   Enter / Backspace / Escape, with `input::text_keys_help` as help line.
 2. **Name keys in text through the keymap.** Help bars:
    `widgets::help::{key_name, all_key_names, cursor_keys_name, help_line}`.
    Tips and other data text: `{ActionName}` / `{Cursor}` placeholders

@@ -450,7 +450,7 @@ impl Screen for KeyBindingsScreen {
         if self.capturing {
             // This frame's actions and repeats are ignored: the key is
             // for the slot.
-            for &chord in &input.pressed_chords {
+            for &chord in input.pressed_chords() {
                 if self.capture(ctx, chord) {
                     break;
                 }
@@ -465,7 +465,7 @@ impl Screen for KeyBindingsScreen {
             }
             return Transition::None;
         }
-        if input.pressed_chords.iter().any(|&c| is_clear_slot(c)) {
+        if input.pressed_chords().iter().any(|&c| is_clear_slot(c)) {
             self.clear_slot(ctx);
         }
         self.await_release &= CURSOR_ACTIONS.iter().any(|&a| input.is_held(a));

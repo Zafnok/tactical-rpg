@@ -7,6 +7,7 @@
 //! input to the top screen only and draws from the top-most opaque screen up,
 //! so overlays (menus, dialogs) show the screen below them.
 
+use std::any::Any;
 use std::fmt;
 
 use trpg_content::{Content, ContentErrors};
@@ -51,6 +52,17 @@ pub trait Screen {
     fn is_overlay(&self) -> bool {
         false
     }
+
+    /// This screen as [`Any`], for tests that look inside a screen on the
+    /// stack ([`ScreenStack::find`]). `None` unless the screen opts in.
+    fn as_any(&self) -> Option<&dyn Any> {
+        None
+    }
+
+    /// [`as_any`](Self::as_any), mutable ([`ScreenStack::find_mut`]).
+    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
+        None
+    }
 }
 
 /// What a screen asks the stack to do after an update.
@@ -89,11 +101,12 @@ pub struct FrameInput {
     pub dt: f32,
     /// Actions whose key is currently held down.
     held: Vec<Action>,
-    /// Every chord pressed this frame, in order, bound or not (presses
-    /// only, no repeats). Only the Key bindings screen reads these, to
-    /// capture the key for a slot; every other screen reacts to `actions`
-    /// (the `keyboard-input` skill).
-    pub pressed_chords: Vec<Chord>,
+    /// The chords pressed this frame, in order.
+    pressed: Vec<Chord>,
+    /// The characters typed this frame, in order.
+    text: Vec<char>,
+    /// Whether a controller button went down this frame.
+    pad: bool,
 }
 
 impl FrameInput {
@@ -104,15 +117,48 @@ impl FrameInput {
             actions,
             dt,
             held,
-            pressed_chords: Vec::new(),
+            pressed: Vec::new(),
+            text: Vec::new(),
+            pad: false,
         }
     }
 
-    /// The same input with the chords pressed this frame.
+    /// The same input with whether a controller button went down this
+    /// frame.
     #[must_use]
-    pub fn with_pressed_chords(mut self, chords: Vec<Chord>) -> Self {
-        self.pressed_chords = chords;
+    pub fn with_pad(mut self, pad: bool) -> Self {
+        self.pad = pad;
         self
+    }
+
+    /// Whether a controller button went down this frame: the player is on
+    /// a controller, so a screen that needs text shows a letter grid
+    /// instead of asking them to type.
+    pub fn pad_pressed(&self) -> bool {
+        self.pad
+    }
+
+    /// The same input with the chords `pressed` and the characters `text`
+    /// typed this frame.
+    #[must_use]
+    pub fn with_typing(mut self, pressed: Vec<Chord>, text: Vec<char>) -> Self {
+        self.pressed = pressed;
+        self.text = text;
+        self
+    }
+
+    /// The chords pressed this frame (bound or not; presses only, no
+    /// repeats), for the few screens that read keys themselves: a text
+    /// box's fixed keys ([`crate::input::text_key`]) and the Key bindings
+    /// screen, which captures the key for a slot.
+    /// Anything else reacts to [`actions`](Self::actions).
+    pub fn pressed_chords(&self) -> &[Chord] {
+        &self.pressed
+    }
+
+    /// The characters typed this frame (printable only), for text boxes.
+    pub fn text(&self) -> &[char] {
+        &self.text
     }
 
     /// Whether a key bound to `action` is held (e.g. hold Confirm to
@@ -171,9 +217,13 @@ pub struct Ctx {
     /// from the clock at startup so each launch picks differently.
     pub music_seed: u64,
     /// Who the player made the lead, for dialogue's name and pronoun
-    /// tokens and the lead's portrait. A placeholder here until New Game
-    /// (0801) asks the player and stores it in the campaign.
+    /// tokens and the lead's portrait: a placeholder until a campaign
+    /// starts (New Game asks the player), then the campaign's
+    /// ([`crate::flow`]).
     pub lead: LeadProfile,
+    /// Seconds the game has been running: the sum of every frame's time
+    /// (`Game` adds it), for the campaign's playtime.
+    pub clock_s: f64,
     /// Whether the title waits for a key press before showing its menu
     /// and playing its music (`docs/design/title-screen.md`). Off here;
     /// `app` sets [`KeyPrompt::Waiting`] for the web build, and `Game`
@@ -219,6 +269,7 @@ impl Ctx {
             audio: AudioQueue::default(),
             music_seed: DEFAULT_MUSIC_SEED,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
+            clock_s: 0.0,
             key_prompt: KeyPrompt::Off,
         })
     }
@@ -389,6 +440,23 @@ impl ScreenStack {
     /// Puts `screen` on top.
     pub fn push(&mut self, screen: Box<dyn Screen>) {
         self.screens.push(screen);
+    }
+
+    /// The top-most screen of type `T` (one that opts in with
+    /// [`Screen::as_any`]).
+    pub fn find<T: Any>(&self) -> Option<&T> {
+        self.screens
+            .iter()
+            .rev()
+            .find_map(|s| s.as_any()?.downcast_ref())
+    }
+
+    /// The top-most screen of type `T`, mutable ([`Screen::as_any_mut`]).
+    pub fn find_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.screens
+            .iter_mut()
+            .rev()
+            .find_map(|s| s.as_any_mut()?.downcast_mut())
     }
 
     /// Updates the top screen and applies its transition. Returns `true`
@@ -638,9 +706,7 @@ pub(crate) mod tests {
         assert!(!i.is_held(Action::Confirm));
         assert_eq!(i.actions, [Action::Confirm]);
         assert!((i.dt - 0.5).abs() < f32::EPSILON);
-        assert!(i.pressed_chords.is_empty());
-        let g = crate::input::Chord::plain(crate::input::Key::G);
-        assert_eq!(i.with_pressed_chords(vec![g]).pressed_chords, [g]);
+        assert!(i.pressed_chords().is_empty());
     }
 
     #[test]

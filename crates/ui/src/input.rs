@@ -65,6 +65,39 @@ pub fn clear_slot_key_name() -> String {
     CLEAR_SLOT.to_string()
 }
 
+/// A text box's own keys (the lead's name, 0801): fixed like `Escape` for
+/// Cancel, since while a player types, every letter key is a letter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextKey {
+    /// `Enter`: keep the text.
+    Done,
+    /// `Backspace`: delete the last character.
+    Delete,
+    /// `Escape`: close the box, text unchanged.
+    Cancel,
+}
+
+/// The text-box key `chord` is, if any (Shift or not).
+pub fn text_key(chord: Chord) -> Option<TextKey> {
+    match chord.key {
+        Key::Enter => Some(TextKey::Done),
+        Key::Backspace => Some(TextKey::Delete),
+        Key::Escape => Some(TextKey::Cancel),
+        _ => None,
+    }
+}
+
+/// The help line of a text box: `Enter done · Backspace delete · Escape
+/// cancel`. Lives here because it names keys (only this module may).
+pub fn text_keys_help() -> String {
+    let name = |key| Chord::plain(key).to_string();
+    crate::widgets::help::help_line(&[
+        (Some(name(Key::Enter)), "done"),
+        (Some(name(Key::Backspace)), "delete"),
+        (Some(name(Key::Escape)), "cancel"),
+    ])
+}
+
 /// At most this many repeats are emitted by one [`InputState::update`], so a
 /// lag spike can't teleport the cursor across the map.
 pub const MAX_REPEATS_PER_UPDATE: u64 = 5;

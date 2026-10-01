@@ -99,7 +99,7 @@ fn a_key_bound_twice_moves_and_the_loser_shows_not_mapped() {
     assert_eq!(keymap.primary(Action::Info), None);
     // `e` confirms at the title.
     h.keys("e");
-    assert_eq!(h.screens(), ["title", "placeholder"]);
+    assert_eq!(h.screens(), ["title", "mode_select"]);
 }
 
 /// Acceptance: with Confirm's only key moved away, Cancel doesn't leave.
@@ -217,7 +217,7 @@ fn edits_survive_a_restart_and_stay_with_their_layout() {
         defaults(&h, Layout::LeftHanded)
     );
     h.keys("g");
-    assert_eq!(h.screens(), ["title", "placeholder"]);
+    assert_eq!(h.screens(), ["title", "mode_select"]);
     h.keys("d");
     // The screen shows the saved keys when opened again.
     reopen(&mut h);

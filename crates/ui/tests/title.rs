@@ -35,11 +35,11 @@ fn up_wraps_to_quit() {
 }
 
 #[test]
-fn select_opens_the_placeholder() {
+fn select_opens_new_game() {
     let mut h = title();
     h.keys("f");
-    assert_eq!(h.top_screen(), "placeholder");
-    assert_eq!(h.screens(), ["title", "placeholder"]);
+    assert_eq!(h.top_screen(), "mode_select");
+    assert_eq!(h.screens(), ["title", "mode_select"]);
     assert!(!h.quit_requested());
     assert_snapshot!(h.snapshot());
 }
@@ -141,12 +141,12 @@ fn menu_sounds() {
     h.clear_audio().keys("d");
     assert!(h.sounds().is_empty());
     h.keys("f");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
     assert_eq!(h.sounds(), ["menu_select"]);
-    // The placeholder ignores Confirm and the cursor keys.
-    h.clear_audio().keys("f Down");
-    assert!(h.sounds().is_empty());
-    h.keys("d");
+    // New Game's first screen sounds like a menu too.
+    h.clear_audio().keys("Down");
+    assert_eq!(h.sounds(), ["menu_move"]);
+    h.clear_audio().keys("d");
     assert_eq!(h.sounds(), ["menu_cancel"]);
     // Holding Down: one tick per step of the highlight.
     h.clear_audio().hold("Down", 0.43);
@@ -206,7 +206,7 @@ fn the_key_that_ends_the_wait_does_nothing_else() {
     assert!(h.sounds().is_empty());
     assert_eq!(h.snapshot(), title().snapshot());
     h.keys("f");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
 }
 
 #[test]

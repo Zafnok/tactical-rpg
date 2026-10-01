@@ -1,5 +1,6 @@
 ---
 source: crates/ui/src/screens/battle/turn_tests.rs
+assertion_line: 413
 expression: buf.to_snapshot(&c.palette)
 ---
                                                                       ┌────────────────────────────┐
@@ -17,14 +18,14 @@ expression: buf.to_snapshot(&c.palette)
                     ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      │                            │
                     ..≈≈≈≈..··..............╦╦..                      │                            │
-                    ....Ar···┌───────────┐▓▓▓▓..                      │                            │
-                    ..♣♣··Lo.│ Units     │╦╦▓▓..                      │                            │
-                    ♣♣♣♣··..K│ Objective │░░▓▓..                      │                            │
-                    ♣♣♠♠··...│ Options   │▐▌▓▓..                      │                            │
-                             │ Suspend   │                            │                            │
-                             │ End Turn  │                            │                            │
-                             └───────────┘                            │                            │
-                                                                      │                            │
+                    ....Ar···┌────────────────┐.                      │                            │
+                    ..♣♣··Lo.│ Units          │.                      │                            │
+                    ♣♣♣♣··..K│ Objective      │.                      │                            │
+                    ♣♣♠♠··...│ Options        │.                      │                            │
+                             │ Suspend        │                       │                            │
+                             │ Restart Battle │                       │                            │
+                             │ End Turn       │                       │                            │
+                             └────────────────┘                       │                            │
                                                                       │                            │
                                                                       │                            │
                                                                       │                            │
@@ -50,14 +51,14 @@ aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooppookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooorrjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjjjttooobbbbbbbbbbbbbuuuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjkkoovvjbwwwwwwwwwwwbssuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkkkoojjvbcccccccccccbxxuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakklloojjjbgggggggggggbyyuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabgggggggggggbaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabcccccccccccbaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjjjttooobbbbbbbbbbbbbbbbbbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjkkoouujbvvvvvvvvvvvvvvvvbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkkkoojjubccccccccccccccccbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakklloojjjbggggggggggggggggbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabggggggggggggggggbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -65,8 +66,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzza
-azzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaazzzzzzzza
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwa
+awwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawwwwwwwwa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -88,12 +89,9 @@ q = fg:wood bg:water_bg
 r = fg:enemy bg:grass_bg
 s = fg:fort bg:fort_bg
 t = fg:player bg:road_bg
-u = fg:stone bg:stone_bg
-v = fg:player bg:grass_bg
-w = fg:panel_bg bg:panel_border_focus
-x = fg:floor bg:floor_bg
-y = fg:wood bg:stone_bg
-z = fg:text_dim bg:black
+u = fg:player bg:grass_bg
+v = fg:panel_bg bg:panel_border_focus
+w = fg:text_dim bg:black
 --- overlays ---
 over  208,270 16x2  hp_high
 over  224,286 8x2  hp_high

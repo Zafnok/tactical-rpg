@@ -16,7 +16,7 @@ fn act(actions: &[Action]) -> FrameInput {
 
 /// A frame where `c` was pressed (and did nothing as an action).
 fn press(c: &str) -> FrameInput {
-    act(&[]).with_pressed_chords(vec![chord(c)])
+    act(&[]).with_typing(vec![chord(c)], vec![])
 }
 
 /// The screen with the Debug key reserved whatever the build profile.
@@ -183,7 +183,7 @@ fn confirm_captures_the_next_key_into_the_slot() {
     focus_on(&mut s, &mut c, Confirm, 1);
     sounds(&mut c);
     // The key that confirms is not the key captured, even in one frame.
-    let confirm = act(&[Confirm, CursorDown]).with_pressed_chords(vec![chord("f")]);
+    let confirm = act(&[Confirm, CursorDown]).with_typing(vec![chord("f")], vec![]);
     s.update(&mut c, &confirm);
     assert!(s.is_capturing());
     assert_eq!(s.focus(), Some((Confirm, 1)), "later actions are dropped");
@@ -215,7 +215,7 @@ fn actions_and_repeats_are_ignored_while_capturing() {
     assert_eq!(s.focus(), Some((CursorUp, 0)));
     // The pressed key's own action that frame is ignored too: `d` is bound,
     // not treated as Cancel.
-    let d = act(&[Cancel]).with_pressed_chords(vec![chord("d")]);
+    let d = act(&[Cancel]).with_typing(vec![chord("d")], vec![]);
     let t = s.update(&mut c, &d);
     assert_eq!(format!("{t:?}"), "None");
     assert_eq!(s.bindings().slots(CursorUp)[0], Some(chord("d")));
@@ -232,7 +232,7 @@ fn a_cursor_key_captured_and_still_held_doesnt_move_the_focus() {
     let held = |actions: &[Action]| FrameInput::new(actions.to_vec(), 0.0, vec![CursorDown]);
     s.update(
         &mut c,
-        &held(&[CursorDown]).with_pressed_chords(vec![chord("Down")]),
+        &held(&[CursorDown]).with_typing(vec![chord("Down")], vec![]),
     );
     assert_eq!(s.bindings().slots(Info)[1], Some(chord("Down")));
     sounds(&mut c);
@@ -244,7 +244,7 @@ fn a_cursor_key_captured_and_still_held_doesnt_move_the_focus() {
     assert!(s.is_capturing());
     s.update(
         &mut c,
-        &held(&[]).with_pressed_chords(vec![chord("Escape")]),
+        &held(&[]).with_typing(vec![chord("Escape")], vec![]),
     );
     s.update(&mut c, &held(&[CursorDown]));
     assert_eq!(s.focus(), Some((Info, 1)), "backing out waits for it too");
@@ -270,7 +270,7 @@ fn the_abort_key_leaves_capture_with_nothing_changed() {
     s.update(&mut c, &act(&[Confirm]));
     sounds(&mut c);
     // Escape is also Cancel in every keymap: it must not close the screen.
-    let escape = act(&[Cancel]).with_pressed_chords(vec![chord("Escape")]);
+    let escape = act(&[Cancel]).with_typing(vec![chord("Escape")], vec![]);
     let t = s.update(&mut c, &escape);
     assert_eq!(format!("{t:?}"), "None");
     assert!(!s.is_capturing());
@@ -278,7 +278,7 @@ fn the_abort_key_leaves_capture_with_nothing_changed() {
     assert_eq!(sounds(&mut c), [cue(MenuSound::Cancel)]);
     // Keys pressed after it in the same frame aren't captured.
     s.update(&mut c, &act(&[Confirm]));
-    let both = act(&[]).with_pressed_chords(vec![chord("Escape"), chord("g")]);
+    let both = act(&[]).with_typing(vec![chord("Escape"), chord("g")], vec![]);
     s.update(&mut c, &both);
     assert_eq!(s.bindings(), &before);
     // Shift+Escape is an ordinary key.
@@ -300,7 +300,7 @@ fn the_clear_key_is_ignored_while_capturing() {
     assert_eq!(s.message(), None);
     assert!(sounds(&mut c).is_empty());
     // A key pressed after it in the same frame is still captured.
-    let both = act(&[]).with_pressed_chords(vec![chord("Delete"), chord("g"), chord("h")]);
+    let both = act(&[]).with_typing(vec![chord("Delete"), chord("g"), chord("h")], vec![]);
     s.update(&mut c, &both);
     assert!(!s.is_capturing());
     assert_eq!(s.bindings().slots(CursorUp)[0], Some(chord("g")));
@@ -563,7 +563,7 @@ fn the_restore_question_can_be_backed_out_of() {
     sounds(&mut c);
     // Nothing but Confirm and Cancel answers; the clear-slot key and the
     // cursor do nothing.
-    let other = act(&[CursorUp, Info, CursorLeft]).with_pressed_chords(vec![chord("Delete")]);
+    let other = act(&[CursorUp, Info, CursorLeft]).with_typing(vec![chord("Delete")], vec![]);
     s.update(&mut c, &other);
     assert!(s.is_asking_restore());
     assert_eq!(s.focus(), None);
