@@ -1,6 +1,7 @@
 # ADR-0015: Input actions, keymap layouts, virtual cursor
 
-- **Status:** Accepted; the per-key overrides plan is superseded by ADR-0031
+- **Status:** Accepted; the per-key overrides plan is superseded by ADR-0031;
+  controller buttons added by ADR-0034
 - **Date:** 2026-09-25
 - **Related tickets:** 0204, 0015, 0208
 - **Supersedes:** ADR-0006

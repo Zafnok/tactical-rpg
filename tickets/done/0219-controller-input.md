@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0032"]
 nick_input: sign-off
-completed:
+completed: 2026-09-30
 ---
 
 # 0219 — Controller input
@@ -150,20 +150,23 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 
 ## Acceptance criteria
 
-- [ ] Nick played a Quick Battle on Pages with a controller (sign-off).
-- [ ] Harness test: `PadDown(South)` / `PadUp(South)` with the default pad
+- [ ] Nick played a Quick Battle on Pages with a controller (sign-off:
+      after merge, see Completion notes).
+- [x] Harness test: `PadDown(South)` / `PadUp(South)` with the default pad
       bindings confirms; a held D-pad direction repeats with keyboard timings.
-- [ ] Unit test: on a `Nintendo` pad `East` confirms and `South` cancels,
+- [x] Unit test: on a `Nintendo` pad `East` confirms and `South` cancels,
       other buttons unchanged; vendor id → `PadKind`, unknown → `Generic`.
-- [ ] Unit tests: `pad_events` press / release, stick dead zone and
+- [x] Unit tests: `pad_events` press / release, stick dead zone and
       hysteresis (no flicker between `press` and `release`), a pad removed
       mid-press releases its buttons, two pads holding one button = one press.
-- [ ] Keymap loader rejects a button bound twice and a button on `Debug`;
+      (The function became `Pads::update`, see Completion notes.)
+- [x] Keymap loader rejects a button bound twice and a button on `Debug`;
       `keymap.ron` pad defaults match `controls.md` (test).
-- [ ] `cargo xtask web` output includes `gamepad.js` and `index.html` loads it.
-- [ ] Linux build in CI passes with gilrs; `cargo deny check` passes.
-- [ ] ADR written; ADR index updated.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `cargo xtask web` output includes `gamepad.js` and `index.html` loads it.
+- [x] Linux build in CI passes with gilrs (checked on the PR); `cargo deny
+      check` passes.
+- [x] ADR written (ADR-0034); ADR index updated.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -175,4 +178,85 @@ Quick Battle with it. Help bars still show keyboard keys in this ticket
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+Done; ADR-0034 records the approach. A controller now drives every screen
+through the same `Action`s as the keys. Help bars still name keys (0220).
+
+**What was tested, and what wasn't.** All the rules are covered by unit,
+property and Harness tests (`crates/ui/src/input/pad/tests.rs`,
+`crates/ui/tests/controller.rs` plays Quick Battle with buttons and
+compares every screen with the same play on keys). The web plugin was run
+in a real browser against **simulated** Gamepad objects: layout picker,
+title, Quick Battle, a held stick, a Switch-style pad (right button
+confirmed, bottom cancelled), unplugging mid-press. **No physical
+controller was available**, so gilrs on Windows and real pads in a browser
+are first tried by Nick's sign-off.
+
+**Sign-off for Nick (after merge, on Pages):** plug in a controller, press
+any button (the browser only notices the pad then), and play a Quick
+Battle: D-pad or left stick moves, bottom button confirms, right button
+backs out, shoulders jump between units, top button unit info, left button
+danger zone, Start twice ends the turn, Back toggles auto-end, left trigger
+rewinds. Optionally the same with the Windows download.
+
+**Deviations from the steps**
+
+- **Step 2, stick thresholds** are whole percents,
+  `stick: (press_percent: 50, release_percent: 35)`, not floats: `KeymapDef`
+  and `Content` derive `Eq`.
+- **Step 5:** instead of `pad_events(prev, now, stick)`, a small
+  `Pads` tracker (`crates/ui/src/input/pad.rs`): `Pads::update(&[(PadId,
+  PadKind, PadState)]) -> Vec<(Button, bool)>`. Hysteresis needs what was
+  *held* last frame, not the last raw stick values, and merging several
+  pads and the Switch swap had to live in the same pure, tested place.
+  `PadState` also has the right stick.
+- **Step 5b:** the swap happens in `Pads` (before pads are merged), not at
+  the keymap lookup, so a Switch pad's `A` and an Xbox pad's `A` held
+  together are one press. `PadDown(Button)` carries the binding position.
+- **Step 4:** renamed `RawKeyEvent` → `RawInputEvent` (updated in open
+  ticket 0815 and `crates/ui/README.md`).
+- **Steps 6–7:** `crates/app/src/pads.rs` plus `pads/native.rs` and
+  `pads/web.rs`. The JS functions are `trpg_pad_poll`, `_index`, `_vendor`,
+  `_buttons`, `_axis`.
+- **`unsafe`:** the workspace forbids it, and importing our own JS
+  functions needs an `unsafe extern` block. `trpg-app` now carries a copy
+  of the workspace lints with `unsafe_code = "deny"` and one
+  `#[allow(unsafe_code)]` in `pads/web.rs` (ADR-0004 rule 5 already allows
+  `unsafe` in `app` only). An xtask test keeps the copy in step and checks
+  the other crates still forbid it.
+- **Not in the steps, added:** a controller button also ends the web
+  title's `Press any key` wait (one condition in `Game::step`). Without it
+  a controller-only player is stuck on the title on Pages, and the sign-off
+  couldn't be done with a pad. The line still reads "key"; the wording, the
+  pictures and "every build" stay 0226's.
+- `THIRD_PARTY_ASSETS.md` has a row for SDL's controller database (zlib),
+  which gilrs compiles into native builds; its licence text is at
+  `crates/app/SDL_GameControllerDB-LICENSE.txt`.
+- **itch.io** (step 7): its game iframe has `allow="gamepad"` (checked on a
+  live HTML5 game page, 2026-09-30), so browsers let the game see pads
+  there. Noted in `web/README.md`.
+- macOS release job: unchanged; gilrs uses IOKit with no extra packages.
+  It only runs on a release tag, so it is first exercised by the next
+  release.
+
+**Known limits** (also in ADR-0034): on web only pads the browser gives its
+"standard" mapping work; a pad counts as Switch-style only when it reports
+Nintendo as its maker (third-party Switch-shaped pads, every pad in Safari
+and Xbox-type pads in Chrome report none, and count as ordinary pads); on
+Linux a pad is read even when the game window isn't focused.
+
+**Notes left in other tickets:** 0220 (how to get the pad's kind to
+`InputState::device()`), 0226 (the prompt already accepts a button). No new
+tickets.
+
+*Claude's starting rules* (the design docs didn't say; Nick can veto; also
+in `controls.md`):
+
+- **Diagonal stick pushes move one way only**, the way the stick is pushed
+  furthest. Example: pushed up and slightly right, the cursor goes up, never
+  up-and-right. (A D-pad diagonal presses two buttons, like two arrow keys.)
+- **The stick's dead zone:** it counts as pushed from half way out and
+  stops counting once it falls back to about a third (*tunable*).
+- **A controller button dismisses `Press any key`** on the web title
+  already (see above).
+- **Only Nintendo-made pads swap Confirm / Cancel.** Other makers'
+  Switch-shaped pads confirm with the bottom button.

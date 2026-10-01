@@ -21,6 +21,10 @@ Browser play via WASM ([ADR-0009](../docs/adr/0009-distribution.md)).
   0207): `quad-storage` exposes `localStorage` to Rust, and needs
   `sapp_jsutils` (its JS↔Rust string/object marshalling) loaded first. Both
   vendored, see below.
+- `gamepad.js` — controllers (ticket 0219,
+  [ADR-0034](../docs/adr/0034-controller-input.md)): a miniquad JS plugin
+  over the browser's Gamepad API. **Our own code**, not vendored, so it has
+  no licence file and no `THIRD_PARTY_ASSETS.md` row. See below.
 
 ## Vendored `mq_js_bundle.js`
 
@@ -76,6 +80,28 @@ from the matching commit/tag and update this note and the
 `THIRD_PARTY_ASSETS.md` row; `sapp_jsutils.js` can just be re-copied from
 the new version of the crate.
 
+## Our own `gamepad.js`
+
+- Exposes the connected pads to
+  [`crates/app/src/pads/web.rs`](../crates/app/src/pads/web.rs) as five
+  functions (`trpg_pad_poll`, `_index`, `_vendor`, `_buttons`, `_axis`).
+  The two files must list the same functions and the same plugin version
+  (`VERSION` here, `PLUGIN_VERSION` there): xtask tests fail otherwise.
+  Bump both versions when the functions change.
+- Only pads the browser reports with `mapping === "standard"` are listed.
+  All the rules (sticks as directions, the Switch-style Confirm / Cancel
+  swap, several pads as one) are in Rust
+  ([`crates/ui/src/input/pad.rs`](../crates/ui/src/input/pad.rs)).
+- Browsers don't report a pad until one of its buttons is pressed while the
+  page has focus.
+- **itch.io:** the game runs in an iframe there, where browsers only allow
+  the Gamepad API if the frame has `allow="gamepad"`. itch.io's embed has
+  it (checked 2026-09-30 on a live HTML5 game page), so nothing to set up.
+  If a host's frame lacks it, `getGamepads()` throws and the plugin reports
+  no pads; the keyboard still works.
+- `index.html` loads it after `mq_js_bundle.js` (it calls the bundle's
+  `miniquad_add_plugin`) and before `load(...)`.
+
 ## Building
 
 ```
@@ -83,8 +109,8 @@ cargo xtask web [--release]
 ```
 
 Builds `trpg-app` for `wasm32-unknown-unknown` and packages the wasm binary
-with `index.html`, `mq_js_bundle.js`, `sapp_jsutils.js` and
-`quad-storage.js` into `dist/web/`. With `--release` and `wasm-opt` on
+with `index.html`, `mq_js_bundle.js`, `sapp_jsutils.js`,
+`quad-storage.js` and `gamepad.js` into `dist/web/`. With `--release` and `wasm-opt` on
 `PATH`, runs `wasm-opt -Oz` on the binary; otherwise skips that step
 silently. Prints the output path and the wasm binary's size.
 

@@ -754,7 +754,11 @@ pub(crate) mod tests {
             c.set_layout_bindings(Layout::RightHanded, b.clone()),
             Ok(())
         );
-        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            b.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
         assert_eq!(c.layout_bindings(Layout::RightHanded), b);
         let saved = c.storage.read(KEYBINDINGS_KEY).unwrap().unwrap();
         assert_eq!(saved, c.player_keys().to_ron());
@@ -765,7 +769,11 @@ pub(crate) mod tests {
             .unwrap();
         assert_eq!(c.keymap, before);
         c.use_layout(Layout::LeftHanded);
-        assert_eq!(c.keymap, left.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            left.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
         assert_eq!(c.keymap_for(Layout::RightHanded), before);
     }
 
@@ -779,7 +787,11 @@ pub(crate) mod tests {
         // A layout already in use picks up the loaded keys.
         let mut again = ctx().with_storage(storage);
         assert_eq!(again.layout_bindings(Layout::RightHanded), b);
-        assert_eq!(again.keymap, b.keymap(again.content.keymap.repeat));
+        assert_eq!(
+            again.keymap,
+            b.keymap(again.content.keymap.repeat)
+                .with_default_pad(&again.content.keymap)
+        );
         assert!(again.take_warnings().is_empty());
     }
 
@@ -807,7 +819,11 @@ pub(crate) mod tests {
             c.set_layout_bindings(Layout::LeftHanded, b.clone())
                 .is_err()
         );
-        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            b.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
     }
 
     #[test]

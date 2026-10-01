@@ -64,6 +64,14 @@ PlayStation glyphs first.
 
 ## Implementation steps
 
+*Note from 0219 (done):* `PadKind` is in `crates/ui/src/input/pad.rs`.
+`RawInputEvent::PadDown(Button)` doesn't carry the pad's kind yet:
+`Pads::update` (which knows which pad pressed) returns `(Button, bool)`.
+Extend it to return the pressing pad's kind too and pass it on through
+`PadDown` to `InputState`. The button in the event is already the
+*binding position* (on a Nintendo pad `South` means the physical right
+button), so names must be looked up per kind from the binding position.
+
 1. **Device** (`crates/ui/src/input.rs`): `pub enum Device { Keyboard,
    Pad(PadKind) }` (`PadKind` and its vendor mapping come from 0219).
    `InputState::device()` returns the device of the last *bound* press
