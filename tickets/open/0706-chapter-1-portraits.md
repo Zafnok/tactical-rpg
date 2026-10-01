@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0701", "0703", "0011", "0021", "0110", "0711"]
+blocked_by: ["0701", "0703", "0011", "0021", "0035", "0110", "0711"]
 nick_input: sign-off
 completed:
 ---
@@ -24,6 +24,10 @@ and combat art (`docs/design/look-and-feel.md`, *Portraits and battle art*;
 ADR-0032). This ticket **assigns bought faces** to the cast instead of
 drawing them. The files come from the private assets repo (0110) and use
 0711's PNG format (48×48 faces, 5 px per pixel).
+
+**Waits for 0035** (added 2026-10-01): Harl's face must match his combat
+picture, and 0035 picks that picture (and may change his class, which 0803
+needs to know). Take Harl's face from 0035's answer.
 
 ## First mapping (from the store previews, 2026-09-30)
 

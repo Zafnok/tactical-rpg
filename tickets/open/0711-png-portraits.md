@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0021"]
+blocked_by: ["0021", "0110"]
 nick_input: sign-off
 completed:
 ---
@@ -38,6 +38,12 @@ state it.
 
 Keep the overlay drawing general (any PNG size, any whole scale): 0413
 reuses it for the big still battle images.
+
+**Needs 0110 first** (added to `blocked_by` 2026-10-01): the importer reads
+the bought zips and writes into `assets-private/`, the face-set layout must
+be checked on the bought files, and the sign-off shows two bought
+portraits. All of that needs Nick's purchase and the private assets folder
+from 0110.
 
 ## Nick input
 

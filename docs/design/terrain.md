@@ -117,5 +117,5 @@ keeps a `heal_percent` field, set to 0 on every terrain.
 - **Fliers as late-game classes** (Nick: "tier 3+"): decided in ticket 0017.
   The flying line now starts at tier 3 (`progression.md`).
 - **Capturing, healing tiles and more building tiles** (village, gate,
-  throne, …) (Nick, Q5 and Q7), after the first playtest.
+  throne, …) (Nick, Q5 and Q7), after the first playtest: ticket 0037.
 - Weather (Nick: "no weather for now").

@@ -6,7 +6,7 @@ milestone: Design decisions
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0014"]
+blocked_by: ["0014", "0804"]
 nick_input: decision
 completed:
 ---
@@ -22,8 +22,10 @@ for ranks **C, B, A and S**. Nick also chose **special weapons** that carry
 their own art (his example: a unique blade, like Dark Souls' Moonlight
 Greatsword, whose art makes the combat hit Res). None exist yet, since Chapter
 1 has no loot. Until this is decided, reaching rank C teaches nothing new.
-Run with the `ask-nick` skill, ideally after the Chapter 1 playtest (0804),
-so the starter arts have been felt first.
+Run with the `ask-nick` skill after the Chapter 1 playtest (0804), so the
+starter arts have been felt first and question 3 can be answered (0804 was
+added to `blocked_by` on 2026-10-01; the design README already said "after
+playtest 0804").
 
 ## Nick input
 
