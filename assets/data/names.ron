@@ -31,6 +31,35 @@
     "envoy": "Ragna Holt",
     "battlemage": "Oriel Mast",
 
+    // Short forms (ticket 0712): what people say instead of the full name.
+    // Each is its own entry, so renaming a character means changing the
+    // full name above and its short forms here.
+    "retainer.first": "Hollis",
+    "sergeant.first": "Tamsin",
+    "rival.first": "Dace",
+    "vowmaster.first": "Absalom",
+    "red_captain.first": "Harl",
+    "red_captain.nickname": "Red Harl",
+    "sister.first": "Wren",
+    "vosse.first": "Harrick",
+    "defector.first": "Joss",
+    "prizefighter.first": "Gil",
+    "shieldbearer.first": "Hedda",
+    "envoy.first": "Ragna",
+    "battlemage.first": "Oriel",
+    "family.marr": "Marr",
+    "family.veyne": "Veyne",
+    "god.mother.name": "Ama",
+    "god.mother.title": "the Mother",
+    "god.pyre.name": "Vael",
+    "god.pyre.title": "the Pyre",
+    "god.winter.name": "Hrim",
+    "god.winter.title": "the Long Winter",
+    "god.hand.name": "Orun",
+    "god.hand.title": "the Hand",
+    "god.door.name": "Othe",
+    "god.door.title": "the Doorkeeper",
+
     // Places.
     "place.west": "the Old Kingdoms",
     "place.east": "the Jade Reach",

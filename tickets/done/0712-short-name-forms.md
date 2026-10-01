@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0709"]
 nick_input: none
-completed:
+completed: 2026-09-30
 ---
 
 # 0712 — Short name forms in the names table
@@ -69,11 +69,11 @@ get their own ids.)
 
 ## Acceptance criteria
 
-- [ ] `names.ron` has a short-form entry for every two-word character name,
+- [x] `names.ron` has a short-form entry for every two-word character name,
       every god's name and title, and the family names.
-- [ ] A test: a `.dlg` line writing "Hollis" out is an error naming
+- [x] A test: a `.dlg` line writing "Hollis" out is an error naming
       `{n:retainer.first}`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -83,3 +83,23 @@ get their own ids.)
 
 ## Completion notes
 
+- 28 short-form ids added to `docs/story/names.md` (new "Short forms" table)
+  and `assets/data/names.ron`: `<id>.first` for the 12 characters with a
+  two-word name, `red_captain.nickname`, `family.marr`, `family.veyne`, and
+  `.name` / `.title` for the 5 gods. Nothing was renamed.
+- `names::tests::every_two_word_name_has_short_forms` keeps this true: a new
+  two-word character name or god without its short forms fails the test.
+  The placeholder `test_*` characters ("Test Lord") are left out; they are
+  not story names.
+- **Deviation:** `Names::literal_in` now reports the *longest* name written
+  out in a line instead of the first by id. Without it "Hollis Marr" written
+  out was reported as `{n:family.marr}`, the wrong token. No new syntax.
+- The existing `.dlg` files pass unchanged (no short form was written out).
+- `assets/dialogue/README.md` ("Short forms") and the `story-writing` skill
+  describe the new ids.
+- For whoever writes scripts: `Mother`, `Hand`, `Pyre` and `Wren` with a
+  capital are now always taken as the name, so a line can't start with
+  "Hand me that" or address someone as "Mother"; reword it.
+- Follow-up: **0713** (surnames only one character has, e.g. "Sergeant
+  Rook", have no id yet). Not a blocker for 0707.
+- No gameplay rules decided.
