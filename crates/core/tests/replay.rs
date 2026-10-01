@@ -283,6 +283,7 @@ fn setup(seed: u64) -> BattleSetup {
         seed,
         triggers: triggers(),
         mode: trpg_core::GameMode::Classic,
+        battle_notes: vec![],
     }
 }
 

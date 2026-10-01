@@ -441,6 +441,7 @@ fn setup(map: BattleMap, units: Vec<Unit>) -> BattleSetup {
         seed: 1,
         triggers: vec![],
         mode: crate::GameMode::Classic,
+        battle_notes: vec![],
     }
 }
 

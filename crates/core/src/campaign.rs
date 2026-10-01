@@ -55,7 +55,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::art::ArtTable;
 use crate::battle::{
-    BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement, Trigger,
+    BattleNote, BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement,
+    Trigger,
 };
 use crate::class::ClassTable;
 use crate::geom::Pos;
@@ -144,6 +145,8 @@ pub struct BattleDef {
     pub objective: Objective,
     /// The battle's story moments (0705).
     pub triggers: Vec<Trigger>,
+    /// The battle's strategy hints (0411).
+    pub battle_notes: Vec<BattleNote>,
     /// Sets the rewind charges.
     pub difficulty: Difficulty,
     /// Seed of the battle's RNG.
@@ -302,6 +305,7 @@ impl Campaign {
             seed: def.seed,
             triggers: def.triggers.clone(),
             mode: self.mode,
+            battle_notes: def.battle_notes.clone(),
         }
     }
 

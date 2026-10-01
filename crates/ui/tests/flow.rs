@@ -39,12 +39,27 @@ fn skip_scene(h: &mut Harness) {
 }
 
 /// New Game in Classic with the default lead, through the intro scene to
-/// the battle.
-fn to_battle() -> Harness {
+/// the battle, its notes still up.
+fn to_notes() -> Harness {
     let mut h = new_game(false, "Up f");
     skip_scene(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
+    assert!(notes_open(&h));
     h
+}
+
+/// [`to_notes`], and the battle notes closed.
+fn to_battle() -> Harness {
+    let mut h = to_notes();
+    h.keys("f");
+    assert!(!notes_open(&h));
+    h
+}
+
+/// Whether the battle on screen shows its notes box.
+fn notes_open(h: &Harness) -> bool {
+    let battle = h.flow().and_then(|f| f.battle());
+    battle.is_some_and(trpg_ui::screens::battle::BattleScreen::notes_open)
 }
 
 /// Sends `cmd` to the battle on screen.
@@ -185,11 +200,12 @@ fn retry_after_a_defeat_restarts_the_battle() {
     confirm_until(&mut h, "game_over");
     assert_eq!(h.screens(), ["title", "game_over"]);
     assert_snapshot!(h.snapshot());
-    // Retry.
+    // Retry: the battle from its start, its notes first.
     h.keys("f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
+    assert!(notes_open(&h));
     // Lose again, and go back to the title.
     for _ in 0..6 {
         send(&mut h, &Command::EndPhase);
@@ -237,6 +253,86 @@ fn restart_battle_from_the_map_menu() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
+    assert!(notes_open(&h));
+}
+
+/// Acceptance (0411): the test battle's two notes show in a box when the
+/// battle starts, before any phase banner; only Confirm closes it; the map
+/// menu's `Objective` page lists them again.
+#[test]
+fn battle_notes_show_at_the_start_and_on_the_objective_page() {
+    let mut h = to_notes();
+    let start = battle(&h);
+    assert_eq!(start.battle_notes().len(), 2);
+    assert!(shows(&h, "BATTLE NOTES"), "{}", h.snapshot());
+    assert!(shows(&h, "• Brigand: guards the road, but the fort is"));
+    assert!(shows(&h, "  nearer than the fight."));
+    assert!(shows(&h, "• Seize the fort within 3 turns: send your lead"));
+    assert!(shows(&h, "f close"));
+    assert_snapshot!(h.snapshot());
+    // No key but Confirm does anything: no map menu, no cursor move, no
+    // end of turn.
+    let cursor = |h: &Harness| h.flow().and_then(|f| f.battle()).map(|b| b.cursor().pos);
+    let at = cursor(&h);
+    h.keys("d Right e Space Space r");
+    assert!(notes_open(&h));
+    assert_eq!(cursor(&h), at);
+    assert_eq!(battle(&h), start);
+    assert!(!shows(&h, "Objective"));
+    h.keys("f");
+    assert!(!notes_open(&h));
+    assert!(!shows(&h, "BATTLE NOTES"));
+    assert!(!shows(&h, "Brigand: guards"));
+    assert_eq!(battle(&h), start);
+    // The map menu's Objective page: the objective, then the notes.
+    h.keys("d Down f");
+    assert!(shows(&h, "Seize the Fort"), "{}", h.snapshot());
+    assert!(shows(&h, "Turn 1/3"));
+    assert!(shows(&h, "Battle notes"));
+    assert!(shows(&h, "• Brigand: guards the road, but the fort is"));
+    assert!(shows(&h, "• Seize the fort within 3 turns: send your lead"));
+    assert!(!shows(&h, "BATTLE NOTES"));
+    assert_snapshot!("objective_page_lists_the_battle_notes", h.snapshot());
+    h.keys("d d");
+    assert!(!shows(&h, "Battle notes"));
+}
+
+/// Acceptance (0411): the first phase banner comes after the notes, not
+/// over them.
+#[test]
+fn the_phase_banner_waits_for_the_battle_notes() {
+    let banner = |h: &Harness| {
+        let battle = h.flow().and_then(|f| f.battle());
+        battle.is_some_and(|b| b.banner().is_some())
+    };
+    let mut h = to_notes();
+    assert!(!banner(&h));
+    // The enemy phase begins behind the box: its banner waits.
+    send(&mut h, &Command::EndPhase);
+    h.keys("Left");
+    assert!(notes_open(&h));
+    assert!(!banner(&h));
+    assert!(!shows(&h, "ENEMY PHASE"));
+    h.keys("f");
+    assert!(!notes_open(&h));
+    assert!(banner(&h));
+    assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
+}
+
+/// Acceptance (0411): a battle without notes (the Quick Battle) has no
+/// notes box, and nothing more on its `Objective` page.
+#[test]
+fn no_notes_box_for_a_battle_without_notes() {
+    let mut h = title();
+    h.keys("Down f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert!(battle(&h).battle_notes().is_empty());
+    assert!(!notes_open(&h));
+    assert!(!shows(&h, "BATTLE NOTES"));
+    // The Objective page: only the objective and the turn.
+    h.keys("d Down f");
+    assert!(shows(&h, "Rout the enemy"), "{}", h.snapshot());
+    assert!(!shows(&h, "Battle notes"));
 }
 
 /// Cancel on the lead screen goes back to the mode; on the mode, to the
@@ -290,8 +386,9 @@ fn the_next_chapter_follows_a_victory() {
     // New Game, Classic, Start.
     h.keys("f f Up f");
     skip_scene(&mut h);
+    // The battle notes, then the VICTORY banner.
     seize(&mut h);
-    h.keys("f");
+    h.keys("f f");
     skip_scene(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));

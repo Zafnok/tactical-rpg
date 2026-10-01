@@ -950,6 +950,7 @@ pub(crate) fn setup(units: Vec<Unit>) -> BattleSetup {
         seed: 7,
         triggers: vec![],
         mode: crate::GameMode::Classic,
+        battle_notes: vec![],
     }
 }
 
