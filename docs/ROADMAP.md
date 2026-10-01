@@ -29,8 +29,19 @@ cursor sounds, **0710** `@music` in scenes, **0807** title and battle music,
 (picked in **0022–0024**); later places get their music picked in **0025**
 world map, **0026** capital, **0027** camp, **0028** shops (played by 1007,
 1003, 0409). Level-up and EXP sounds are Nick's own work (**0605** plays
-them once he supplies them); **0904** checks
-the music for Content ID claims before release. 0212–0214 have no game dependencies and can start any time.
+them once he supplies them). The Content ID check of the music (**0904**) was
+closed without doing it: Nick chose to swap a track or add a streamer mode
+only if a claim ever happens (`audio.md`).
+
+**Title intro cinematic** (Nick, 2026-10-01: a cinematic on the title as
+long as the title song, looping with it, ending on the logo): **0036**
+decide how it fits the menu, the storyboard and how zoom looks (after
+**0811** title art) → **0228** pan and zoom over a glyph scene → **0817**
+cinematic file format and player (also needs **0227**, the music clock,
+which has no open dependencies and can start any time) → **0818** character and conversation shots and
+**0819** the title plays it in time with the music → **0820** the real
+shots (after Chapter 1's map, faces and script) → **1010** the overworld
+shot (after the world map, 1007). Not on the Chapter 1 critical path.
 
 ## Nick's queue (answer these first; any order within a row)
 
@@ -39,9 +50,9 @@ Design answers unblock most of the rules work. Suggested order:
 1. **0001** stats & combat · **0002** turn structure · **0003** weapons & items · **0004** magic · **0006** death & difficulty · **0007** setting, tone & story beats
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
-4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0035** Harl's combat picture (Nick shops around) · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
-5. Anytime, low priority: **0012** title (then **0811** title art) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
-6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons
+4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0110** buy the packs and make the private assets repo · **0035** Harl's combat picture (Nick shops around) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
+5. Anytime, low priority: **0012** title (then **0811** title art, then **0036** the title's intro cinematic) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
+6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons · **0037** more building tiles (village, gate, throne), capturing, healing tiles
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
 preparations, 0409 shops, 0410 spells, 0411 battle notes, 0502 enemy
@@ -53,18 +64,28 @@ script, 0804 playtest). Setup steps (accounts/secrets): 0103, 0104, 0106,
 
 What's still open between now and Nick's playtest (0804), by dependency depth
 (tickets on the same row can run in parallel sessions/worktrees). Updated
-2026-09-29: 0801 no longer waits for Preparations (0408) and 0803 no longer
-waits for battle notes (0411), since Chapter 1 has neither (`chapter-1.md`).
-0804 now also waits for arts, sounds, music, 0417 and the results screen.
+2026-10-01 from the tickets' `blocked_by` lists, after a dependency check:
+done tickets were dropped, 0711 now waits for 0110 (it needs the bought
+files), and 0803 now waits for 0710 and 0807 (it sets Chapter 1's music).
+Nick also put the combat scene (0413), Harl's picture (0035) and 0316 in
+front of the playtest.
 
 ```
- 1  0021 0022 0023 0024 0213 0215 0410 0412 0417 0502 0503 0602
-    0705 0708 0709 0710
- 2  0110 0414 0424 0425 0711 0712 0801
- 3  0706 0707 0802 0807 0810
- 4  0803 0809
+ 1  0022 0023 0024 0035 0110 0410 0503 0707 0710 0801
+ 2  0316* 0711 0802 0807 0810
+ 3  0413 0706 0809
+ 4  0803
  5  0804  ◄── Nick plays Chapter 1
 ```
+
+`*` 0316 (non-attack skills cost uses per battle) is created by PR #131.
+Until that merges its id can't go in `blocked_by`; 0803 and 0804 say in
+their text that they wait for it.
+
+Two row-1 tickets are Nick's: **0110** starts with him buying the art
+packs and making the private assets repo (0711, 0413, 0706 and so 0803
+wait on it), and **0035** is him shopping for Harl's picture (0413 and
+0706 wait on it).
 
 The `01xx` gates (0103–0106) aren't needed by the game itself but should land
 early so every later PR is checked by them.

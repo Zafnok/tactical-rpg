@@ -74,7 +74,10 @@ what each one does without leaving the menu?
   theirs (so the player learns what they can't afford).
 - The `look-and-feel.md` rule from Nick's answer.
 - One line added to 0410's *Scope → In* and step 1: the spell list shows the
-  focused spell's description per the `look-and-feel.md` rule.
+  focused spell's description per the `look-and-feel.md` rule. **If 0410 is
+  already in `tickets/done/`** (the two tickets don't block each other),
+  write a follow-up ticket instead (`write-ticket`) that adds the
+  description to the spell list.
 
 **Out (do not do):**
 - Rewording the info screen's Skills block (it already has effect lines),
@@ -110,7 +113,8 @@ what each one does without leaving the menu?
    (0208) and not cover the attacker or the target (see `list_origin`).
 4. If the chosen layout puts text in the help bar, follow the
    `keyboard-input` skill (key names from the keymap, never literals).
-5. Edit `tickets/open/0410-*.md` as described in *Scope*.
+5. Edit `tickets/open/0410-*.md` as described in *Scope*, or write the
+   follow-up ticket if 0410 is already done.
 
 ## Acceptance criteria
 
@@ -126,7 +130,8 @@ what each one does without leaving the menu?
       (if the list lets focus reach it; otherwise document why not).
 - [ ] Snapshots: arts list with description (archer and lord), Skill menu
       with description, both in the left-handed layout too.
-- [ ] 0410 mentions the description in its scope and step 1.
+- [ ] 0410 mentions the description in its scope and step 1 (or, if 0410
+      was already done, a follow-up ticket for the spell list exists).
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required

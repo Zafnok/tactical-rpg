@@ -52,9 +52,10 @@ keeps playing across phases and combat.
     music.
   - Rewinding (0307) doesn't restart the music.
   - Restarting the battle may pick again.
-- Every existing battle file gets a `music` value. For `ch01`, **ask Nick**
-  (ask-nick, one short question with the `battle_*` cues from `audio.md`)
-  unless 0803 has already chosen one.
+- Every existing battle file gets a `music` value (the test battle uses
+  `Pool("skirmish")`, as Quick Battle does today). Chapter 1's battle file
+  doesn't exist yet: 0803 writes it after this ticket and chooses its cue
+  there (0803 is blocked by this ticket since 2026-10-01).
 - Scenes around the battle set their own music with `@music` (0710). If 0710
   isn't done yet, the battle's track keeps playing into the victory scenes.
 - *Claude's starting rules* (list them in the PR for Nick):

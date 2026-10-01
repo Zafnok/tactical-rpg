@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["1007", "0501"]
+blocked_by: ["1007", "0501", "0807"]
 nick_input: sign-off
 completed:
 ---
@@ -30,6 +30,9 @@ Nick: make sure they're "clearly delineated so that players know which ones
 are more important and which ones are just for grinding. Some symbol above
 them or a level marker or both." The design uses **both**. The glyphs are
 chosen in 1007.
+
+Skirmish battle files use the `music: Pool("skirmish")` field that 0807
+adds to battle files (added to `blocked_by` 2026-10-01).
 
 ## Nick input
 

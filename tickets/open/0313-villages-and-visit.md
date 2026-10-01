@@ -5,9 +5,9 @@ type: feature
 milestone: M2 Core rules
 model: sonnet-5
 effort: medium
-status: blocked
-blocked_by: ["0308"]
-nick_input: none
+status: todo
+blocked_by: ["0308", "0037"]
+nick_input: answer-first
 completed:
 ---
 
@@ -22,14 +22,16 @@ itself is already written (`docs/design/weapons-and-items.md`, "Money and
 shops": a player unit on the village gate uses `Visit` for a one-time gift of
 gold, an item or a scene; then the village closes).
 
-**Blocked** until `docs/design/terrain.md` defines a village tile (a later
-terrain decision by Nick). Don't invent the tile: if it isn't in `terrain.md`,
-stop and say so. The UI half is ticket 0409 (it builds the village UI only
-once this ticket lands).
+**Blocked** until `docs/design/terrain.md` defines a village tile. That
+decision is ticket **0037** (added 2026-10-01; before that this ticket was
+`status: blocked` with nothing to unblock it). Don't invent the tile: if
+0037's answer has no village tile, close this ticket instead. The UI half
+is ticket 0409 (it builds the village UI only once this ticket lands).
 
 ## Nick input
 
-None (the tile itself comes from a terrain design decision, not this ticket).
+**Answer first:** ticket 0037 (the village tile: its glyph, costs and
+bonuses come from that decision, not from this ticket).
 
 ## Scope
 

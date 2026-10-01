@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0401", "0021"]
+blocked_by: ["0401", "0021", "0110", "0711"]
 nick_input: decision
 completed:
 ---
@@ -29,7 +29,9 @@ and the combat scene uses bought sprites (0413). The packs 0021 picked
 still-battler class: offer those as well as Claude-drawn one-colour icons,
 and say honestly that Claude-drawn icons may clash in the same way the
 portraits did. A 16×20 sprite is taller than a 16×16 tile; show how that
-looks.
+looks. Showing the bought map sprites on the real battle screen needs the
+bought files (0110) and the PNG overlay drawing (0711): both were added to
+`blocked_by` on 2026-10-01.
 
 ## Nick input
 

@@ -34,6 +34,36 @@ without asking questions.
    - `blocked_by`: every ticket whose output this one needs.
 5. Keep it small: one PR's worth of work (roughly ≤ 600 changed lines excluding
    snapshots/data). Split otherwise.
+6. **Check the chain** (see below) before you finish.
+
+## Check the dependency chain
+
+A ticket is picked up when every id in `blocked_by` is in `tickets/done/`,
+so a missing id means a session starts work it can't finish. For every
+ticket you write or change:
+
+- **Each open ticket the text names** is one of three things, and the ticket
+  says which:
+  - *needed first* (its files, types, data, decision or bought assets are
+    used) → it is in `blocked_by`;
+  - *either order works* → the text says what to do in each case ("if 0805
+    isn't done, keep the value in `Ctx` and add a line to 0805");
+  - *not this ticket's job* → it is under **Out**.
+- **Look the other way too.** Search `tickets/open/` for tickets that need
+  what the new one builds or decides, or that the new one makes wrong
+  (`grep -rn "<id or feature name>" tickets/open docs/ROADMAP.md`), and
+  update their `blocked_by` and text in the same PR.
+- **Nothing waits on nothing.** If a ticket waits for a decision, a purchase
+  or a setup step, a ticket for that exists and is in `blocked_by`. Use
+  `status: blocked` only together with a `blocked_by` id or a written
+  reason that names who unblocks it.
+- **"Before X" and "after X" are dependencies.** "Do this before the Steam
+  page" means X's ticket is blocked by this one; "after the playtest" means
+  this one is blocked by 0804.
+- If the ticket is needed for Nick's Chapter 1 playtest, add it to 0804's
+  `blocked_by` and to the critical path in `docs/ROADMAP.md`. If you can't
+  tell whether Nick wants it before the playtest, ask him.
+- Run `cargo xtask ticket-lint`.
 
 ## Turning Nick's playtest feedback into tickets
 
