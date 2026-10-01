@@ -140,11 +140,17 @@ attack it considers.
    active that would break its equipped weapon. It may still break a weapon
    with an art or combat active when that attack is worth it.
 
-**For Nick when playing:** rule 4 means a boss with Brace spends 3 of its
-weapon's 20 durability every turn you stand in range without it being able
-to reach you, so hovering in range wears its weapon down to 1–2. Say in the
-playtest (0804) if that feels like an exploit; a durability reserve would
-fix it.
+**Nick's review (2026-10-01):** rules 1, 2, 3 and 5 "ok". Rule 4 is fine
+"if it is at least proximally close to some enemies (i.e. it thinks the
+player will reach it, or it the player, within next turn)", which is what it
+does. Looking at the non-attack actives he decided they should cost **uses
+per battle** instead of durability, for the player and bosses alike, and
+that Sanctuary 2 becomes a skill of its own so a promoted Cleric keeps
+Sanctuary. Recorded in `combat-arts.md` (*Non-attack actives: uses per
+battle*) and `progression.md` (*Superseding*); ticket 0316 puts it in the
+game and replaces rule 5 with "it needs a use left". Until then a boss with
+Brace spends 3 of its weapon's 20 durability each turn it braces.
 
-**Follow-ups:** 0511 (weigh debuffs, stances, moves after attacking and
-drain; only if the playtest asks for it).
+**Follow-ups:** 0316 (non-attack actives cost uses per battle; Benediction
+replaces Sanctuary 2) and 0511 (weigh debuffs, stances, moves after
+attacking and drain; only if the playtest asks for it).

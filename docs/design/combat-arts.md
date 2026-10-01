@@ -66,14 +66,45 @@ Reviewing ticket 0312 (2026-09-27), Nick added:
 > they're combat green units... not like villagers you have to protect or
 > wild beasts you slay for materials and nothing more..."
 
+Reviewing ticket 0503 (2026-10-01), Nick changed what **non-attack actives**
+cost (this replaces "Weapon dur + spell uses" for them, and "per battle
+actives should only exist on spells"):
+
+> **Non-attack actives:** "now that I look at them, I think we should rework
+> these actives. Flavor-wise I don't see why we give any of these dur costs.
+> They should all be per-battle uses. We can for example give things like
+> Shove a higher use count per battle and something strong like Rally or
+> Inspire or Sanctuary a lower per-battle-use allowance...... this should
+> count for both the player and the boss."
+>
+> **Actives that swing a weapon** (Keen Edge, Lance Rush, Long Shot…): "the
+> ones that swing a weapon, yes, should use durability. I am ok with this."
+>
+> **How many uses:** "I think we can have more extremes between tiers here.
+> Like Shove is so minor it may as well have 8 or 10 uses. But Sanctuary 2 is
+> very impactful and not the only healing option - it should probably stay 1.
+> Sanctuary 1 can probably be 2 or 3 per battle."
+>
+> **Sanctuary 2:** "the way I thought of class actives getting replaced is by
+> higher numbers, not fundamentals like range. So when I see sanctuary 1
+> heals all within 1 and sanctuary 2 heals all within 2, that represents a
+> gameplay shift more significant than a simple replacement on numbers alone
+> imo... in this case, the promotion could probably give a new skill that
+> heals all within 2 and keep sanctuary."
+>
+> **Bosses and non-attack actives:** "I am ok with boss using non-combat
+> active if it is at least proximally close to some enemies (i.e. it thinks
+> the player will reach it, or it the player, within next turn)"
+
 So:
 
 - **Combat Arts** are weapon techniques. A unit learns a weapon kind's arts by
   reaching **weapon ranks** in that kind (E, D, then C, B, A, S later), and a
   few **special weapons** carry their own art.
-- Arts cost the weapon's **durability**, and so do **class actives** now
-  (this changes `progression.md`, where actives had uses per battle). Spell
-  actives cost **spell uses** instead.
+- Arts cost the weapon's **durability**, and so do the **class actives that
+  swing a weapon**. Spell actives cost **spell uses** instead. **Non-attack
+  actives** (Brace, Shove, Sanctuary…) have their own **uses per battle**
+  (Nick, 2026-10-01).
 - **Durability is the only limit.** An art boosts **every strike** of the
   combat. It's picked only when attacking on your own turn. Some arts leave an
   effect that lasts until your next phase, so it also helps on the enemy's
@@ -87,8 +118,9 @@ So:
   (Nick, 0312 review).
 - **Weapon EXP** is a base (2, or 4 with an art) **plus a bonus from the
   damage dealt** (Nick).
-- **Spells are the only per-battle resource.** Casting never touches
-  durability; spells and spell actives only spend the spell's uses (Nick).
+- **Per-battle resources:** spell uses and the uses of non-attack actives.
+  Casting never touches durability; spells and spell actives only spend the
+  spell's uses (Nick).
 
 Everything marked *tunable* is a starting value Claude chose; balance tickets
 may change it without asking. Items marked *Claude's starting rule* fill a gap
@@ -218,36 +250,74 @@ rank C teaches nothing new. Nick's example for a special weapon: a unique
 blade (like Dark Souls' Moonlight Greatsword) whose art makes that combat
 **Magical** (hitting Res instead of Def).
 
-## Class actives now cost durability
+## What class actives cost
 
-Nick: "class actives and weapon arts should both draw durability". This
-replaces "uses per battle" for actives in `progression.md`. Nick chose
-"Weapon dur + spell uses":
+Nick: "class actives and weapon arts should both draw durability" (ticket
+0014), then for the non-attack ones "They should all be per-battle uses"
+(2026-10-01):
 
 | Kind of active | Examples | Pays with |
 | -------------- | -------- | --------- |
 | **Combat active** (with a weapon attack) | Keen Edge, Flurry, Heavy Blow, Vault, Long Shot | The attacking weapon's durability |
-| **Non-attack active** (an action of its own) | Brace, Fortify, War Cry, Sanctuary, Shove | The **equipped** weapon's durability |
+| **Non-attack active** (an action of its own) | Brace, Fortify, War Cry, Sanctuary, Shove | **1 of its own uses per battle** |
 | **Spell active** (with a spell) | Overcast, Siphon | **1 extra use** of the spell being cast |
 
-- The rules above for arts apply to actives too: they can't be paid with a
-  broken weapon, can be used with less durability left than the cost
+- The rules above for arts apply to combat actives too: they can't be paid
+  with a broken weapon, can be used with less durability left than the cost
   (spending what is left; Nick, 0414 review: "Yes, all of them"), cost is
   paid once when committed, and a weapon that hits 0 breaks after the
   action.
-- A non-attack active needs an **equipped**, unbroken weapon of any kind. A unit with nothing equipped can't use it.
 - A spell active needs the spell to have `uses_left ≥ 2` (the cast plus the
   extra use). It never costs durability.
-- Classes with **0 weapon slots** (tier-3 magic classes) can only have spell
-  actives. That is a constraint for ticket 1001, which designs tier-3 skills.
-- **Spells are the only thing with uses per battle** (Nick). Spells (Fire,
-  Frost, Heal…) never use durability at all; they only spend their own uses,
-  which refill every battle (`magic.md`). Spell actives follow that: they
-  spend spell uses, never durability. Every other active costs durability.
+- Spells (Fire, Frost, Heal…) never use durability at all; they only spend
+  their own uses, which refill every battle (`magic.md`). Spell actives
+  follow that.
 - Actives don't double the weapon-EXP base (*Claude's starting rule*; only
   arts do). The damage bonus applies as in any combat.
 
-### Costs (*tunable*: 2/battle actives cost 3, 1/battle actives cost 5)
+### Non-attack actives: uses per battle (Nick, 2026-10-01)
+
+Example: a Grappler starts every battle with 8 Shoves. Each Shove takes
+one. At 0 the Shove is greyed out until the next battle.
+
+- Each non-attack active has a number of **uses per battle**. Using it
+  spends one. They **refill at the start of every battle**, like spell uses.
+- It costs **no durability** and needs **no weapon**: a unit with nothing
+  equipped, or a broken weapon, can still use it (*Claude's starting rule*,
+  from "I don't see why we give any of these dur costs").
+- The uses belong to the **unit and the skill**: two Guards each have their
+  own 3 Braces.
+- **The same for everyone** (Nick: "this should count for both the player
+  and the boss"): bosses and combat green units get the same uses.
+- The weaker the effect, the more uses (Nick: "more extremes between
+  tiers"):
+
+| Active | Class | Uses per battle | |
+| ------ | ----- | --------------- | - |
+| Shove | Grappler | 8 | Nick: "8 or 10" (*tunable*) |
+| Brace | Guard | 3 | *tunable* |
+| Sanctuary | Cleric | 3 | Nick: "2 or 3" (*tunable*) |
+| Fortify | Bulwark | 2 | *tunable* |
+| War Cry | Vanguard | 2 | *tunable* |
+| Inspire | Exile (lord) | 2 | *tunable* |
+| Rally | Commander (lord) | 1 | *tunable* |
+| Benediction *(working name)* | Priest | 1 | Nick: "it should probably stay 1" |
+
+- **Benediction replaces Sanctuary 2** (Nick: ranks replace "by higher
+  numbers, not fundamentals like range"). It is a skill of its own: heals
+  every ally within 2 tiles by `Mag + 5`. A Priest promoted from Cleric
+  keeps **Sanctuary** (3 uses, adjacent allies) and also has Benediction
+  (1 use). White Magic adds to both. The name is Claude's working name;
+  Nick may rename it.
+- Classes with **0 weapon slots** (tier-3 magic classes) can now have
+  non-attack actives as well as spell actives (ticket 1001).
+- **Not in the game yet:** until ticket 0316 these actives still cost the
+  durability in the table below.
+
+### Durability costs (*tunable*: 2/battle actives cost 3, 1/battle actives cost 5)
+
+The non-attack rows (marked *equipped*) are what the game does until ticket
+0316; after it they cost uses per battle, above.
 
 | Active | Class | Was | Now |
 | ------ | ----- | --- | --- |
@@ -318,8 +388,11 @@ functions. The closest pairs, all judged in the playtest:
     an art for that alone: ticket 0511.
   - A boss or combat green unit that holds its tile (it guards or never
     moves) and has nothing to attack uses its non-attack active (Brace, War
-    Cry…) instead of waiting, when a hostile unit could attack it this
-    turn. It never spends its weapon's last durability that way.
+    Cry…) instead of waiting, when a hostile unit could reach and attack it
+    on its coming turn (Nick, 2026-10-01: fine "if it is at least proximally
+    close to some enemies"). Until ticket 0316 these cost durability, and it
+    never spends its weapon's last durability that way; after it, it needs a
+    use left.
 
 ## Forecast display
 

@@ -480,11 +480,16 @@ behind when you leave an unmastered class.
   - Learning a higher rank of a family replaces the lower rank. Only the
     highest rank a unit knows is active.
   - Learning a lower rank than one already known does nothing.
+  - A higher rank only has **bigger numbers** (Nick, 2026-10-01: "the way I
+    thought of class actives getting replaced is by higher numbers, not
+    fundamentals like range"). A skill that changes how it works (a wider
+    reach, a new effect) is a **new skill**, kept alongside the old one.
 - An **active skill** is used on purpose:
-  - It costs **weapon durability** (Nick, ticket 0014; this replaces the
-    uses per battle first decided here). Combat actives pay with the
-    attacking weapon, non-attack actives with the equipped weapon, and spell
-    actives cost 1 extra use of the spell instead. Exact costs and rules:
+  - **Combat actives** cost the attacking weapon's **durability** (Nick,
+    ticket 0014), spell actives cost 1 extra use of the spell, and
+    **non-attack actives** have their own **uses per battle** (Nick,
+    2026-10-01; until ticket 0316 the game still charges them the
+    durability shown in the table below). Exact costs and rules:
     [`combat-arts.md`](combat-arts.md).
   - **Combat actives** are chosen from the attack menu as an option for that
     attack. **Non-combat actives** are an action of their own and end the
@@ -592,7 +597,7 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Lancer | **Piercing Lance** (3 dur, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
 | Mystic | **Siphon** (+1 spell use, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
-| Priest | **Sanctuary 2** (5 dur, action): heals every ally within 2 tiles by `Mag + 5` | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
+| Priest | **Sanctuary 2** (5 dur, action): heals every ally within 2 tiles by `Mag + 5`. Ticket 0316 replaces it with a skill of its own, **Benediction** (working name; 1 use per battle), so a promoted Cleric keeps Sanctuary too (Nick, `combat-arts.md`) | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
 | Exile *(lord)* | **Inspire** (3 dur, action): allies within 2 tiles get hit +10 and avoid +10 until the start of this unit's next phase | **Leadership 1**: allies within 2 tiles of the lord get hit +10 |
 | Blade Heir *(lord)* | **Crest Strike** (3 dur, combat, Sw): might +4 and hit +15 | **Resolve**: while HP ≤ 50%, Str and Spd +3 |
 | Commander *(lord)* | **Rally** (5 dur, action): allies within 2 tiles get Str +3 and Def +3 until the start of this unit's next phase | **Leadership 2**: allies within 2 tiles of the lord get hit +10 and avoid +10 (supersedes 1) |
@@ -615,8 +620,8 @@ the Flier's are in the game for now; tiers 4+ come later.
 
 - **Skills learned twice:** a unit that learns an active it already knows
   (e.g. Swoop from Flier and Sky Lancer, Overcast from Mage and Sorcerer) gets
-  nothing more. Ranks of the same active (Sanctuary 2) supersede
-  like passives.
+  nothing more. Ranks of the same active supersede like passives (none
+  exists once Sanctuary 2 becomes a skill of its own, ticket 0316).
 - **"+1 strike" skills:** these add to the strikes worked out from attack
   speed, never above the 4-strike maximum. They're meant to make 3x/4x
   happen more often, but rarely (`stats-and-combat.md`).
