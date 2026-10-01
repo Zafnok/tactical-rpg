@@ -1,10 +1,12 @@
 //! `cargo xtask check-keys`: fails when game code or player text names a
 //! key directly instead of going through an `Action` and the player's
-//! keymap (ticket 0216, the `keyboard-input` skill, ADR-0015).
+//! keymap (ticket 0216, the `keyboard-input` skill, ADR-0015). Controller
+//! buttons are treated like keys (ticket 0219, ADR-0034).
 //!
-//! It scans the non-test Rust in `crates/{ui,app,content}/src` for key types
-//! (`Key::`, `Chord::`) and macroquad key reads (`KeyCode`, `is_key_down`,
-//! …) outside the files that make up the key pipeline, and scans string
+//! It scans the non-test Rust in `crates/{ui,app,content}/src` for key and
+//! button types (`Key::`, `Chord::`, `Button::`) and macroquad key reads
+//! (`KeyCode`, `is_key_down`, …) outside the files that make up the key
+//! pipeline, and scans string
 //! literals there for key names shown to the player (`"f select"`,
 //! `"press f"`, `"[F]"`, `"Space"`, `"arrows"`, …). Text in `assets/` (`.ron`
 //! strings: tips, item and skill descriptions; `.dlg` dialogue) is prose, so
@@ -29,14 +31,16 @@ pub const MARKER: &str = "check-keys: keyboard picture";
 /// Rust source trees scanned.
 const RUST_DIRS: [&str; 3] = ["crates/ui/src", "crates/app/src", "crates/content/src"];
 
-/// The key pipeline: files that may name key types and key names.
-const KEY_FILES: [&str; 3] = [
+/// The key pipeline: files that may name key and button types and key
+/// names. `pads.rs` is to controllers what `keys.rs` is to the keyboard.
+const KEY_FILES: [&str; 4] = [
     "crates/content/src/keymap.rs",
     "crates/ui/src/input.rs",
     "crates/app/src/keys.rs",
+    "crates/app/src/pads.rs",
 ];
-/// Submodules of `ui::input`, should it ever get any.
-const KEY_DIR: &str = "crates/ui/src/input/";
+/// Their submodules: `ui::input`'s, and the per-platform controller code.
+const KEY_DIRS: [&str; 2] = ["crates/ui/src/input/", "crates/app/src/pads/"];
 /// The only file that may read macroquad's keyboard.
 const PLATFORM_FILE: &str = "crates/app/src/keys.rs";
 /// Files only compiled for tests (`#[cfg(any(test, feature = "harness"))]`).
@@ -44,8 +48,8 @@ const TEST_SUPPORT_FILES: [&str; 1] = ["crates/ui/src/harness.rs"];
 /// Files whose [`MARKER`] comments are honoured.
 const PICTURE_FILES: [&str; 1] = ["crates/ui/src/screens/layout_picker.rs"];
 
-/// Key types: only the key pipeline names them.
-const KEY_TYPES: [&str; 2] = ["Key::", "Chord::"];
+/// Key and controller-button types: only the key pipeline names them.
+const KEY_TYPES: [&str; 3] = ["Key::", "Chord::", "Button::"];
 /// macroquad's keyboard: only `app/src/keys.rs` reads it.
 const PLATFORM_READS: [&str; 6] = [
     "KeyCode",
@@ -141,7 +145,7 @@ fn is_test_file(rel: &str) -> bool {
 /// the allow-lists).
 pub fn scan_rust(rel: &str, source: &str) -> Vec<String> {
     let lines = lex(source);
-    let key_file = KEY_FILES.contains(&rel) || rel.starts_with(KEY_DIR);
+    let key_file = KEY_FILES.contains(&rel) || KEY_DIRS.iter().any(|dir| rel.starts_with(dir));
     let picture_file = PICTURE_FILES.contains(&rel);
     let exempt = exempt_lines(&lines, picture_file);
     let mut errors = Vec::new();
@@ -159,7 +163,9 @@ pub fn scan_rust(rel: &str, source: &str) -> Vec<String> {
         if !key_file {
             for pattern in KEY_TYPES {
                 if contains_token(&line.code, pattern) {
-                    errors.push(format!("{rel}:{n}: names a key with `{pattern}` — {HINT}"));
+                    errors.push(format!(
+                        "{rel}:{n}: names a key or button with `{pattern}` — {HINT}"
+                    ));
                 }
             }
         }
@@ -640,6 +646,41 @@ mod tests {
         let read = "let d = is_key_down(KeyCode::A);\n";
         assert_eq!(rust("crates/app/src/keys.rs", read), Vec::<String>::new());
         assert_eq!(rust("crates/ui/src/input.rs", read).len(), 2);
+    }
+
+    #[test]
+    fn controller_buttons_are_named_only_in_the_key_pipeline() {
+        // Ticket 0219: buttons are treated like keys.
+        let src = "if b == Button::South {\n    confirm();\n}\n";
+        let errs = rust(SCREEN, src);
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(
+            errs[0].starts_with(
+                "crates/ui/src/screens/foo.rs:1: names a key or button with `Button::`"
+            ),
+            "{}",
+            errs[0]
+        );
+        assert_eq!(rust("crates/app/src/main.rs", src).len(), 1);
+        // The pipeline, and where `app` reads the pads.
+        let pipeline = "let a = (gilrs::Button::South, Button::South, Key::F);\n";
+        for file in [
+            "crates/content/src/keymap.rs",
+            "crates/ui/src/input.rs",
+            "crates/ui/src/input/pad.rs",
+            "crates/app/src/keys.rs",
+            "crates/app/src/pads.rs",
+            "crates/app/src/pads/native.rs",
+            "crates/app/src/pads/web.rs",
+        ] {
+            assert_eq!(rust(file, pipeline), Vec::<String>::new(), "{file}");
+        }
+        // Not just any file whose name starts the same way.
+        assert_eq!(rust("crates/app/src/pads_extra.rs", pipeline).len(), 2);
+        assert_eq!(rust("crates/app/src/padsx/native.rs", pipeline).len(), 2);
+        // Other things called button are not controller buttons.
+        let other = "let m = MouseButton::Left;\nlet b = Button;\nfn f(b: Button) {}\n";
+        assert_eq!(rust(SCREEN, other), Vec::<String>::new());
     }
 
     #[test]

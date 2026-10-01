@@ -299,6 +299,14 @@ out. With no units ready, `Start` ends the turn at once.
   300 ms, then every 55 ms, *tunable*, shared with the keys). How far the
   stick is pushed doesn't change the speed.
 - The stick moves in 4 directions only (no diagonals), like the keys.
+  *Claude's starting rules (ticket 0219, Nick can veto):*
+  - A stick pushed diagonally moves the cursor only the way it is pushed
+    **furthest**. Example: pushed up and a little to the right, the cursor
+    goes up, never up-and-right.
+  - The dead zone: a stick counts as pushed from **half way** out, and
+    stops counting once it falls back to about **a third** (*tunable*,
+    `stick` in `keymap.ron`), so a stick resting near the edge doesn't
+    stutter.
 - **The right stick does nothing by default**, but the player may bind
   its 4 directions to any action (see *Rebinding buttons*). No fast
   cursor button either (the
@@ -417,6 +425,22 @@ Claude proposed six small rules; Nick's replies:
   left one (`Y`). If you rebind, the swap still applies: whatever is on the
   bottom button of an Xbox pad sits on the right button of a Switch pad.
 - **Several pads at once** all drive the game, as one player.
+
+### Notes from building it (ticket 0219)
+
+Controllers work on every build: the default buttons above, D-pad and left
+stick, the Switch-style swap, several pads, plugging in and unplugging while
+playing. Help bars and tips still name keys until ticket 0220; rebinding
+buttons is ticket 0816; the `Press any key or button` prompt and when "Pick
+your layout" shows are ticket 0226.
+
+- A pad counts as **Switch-style** when it says Nintendo made it. Other
+  makers' Switch-shaped pads (8BitDo, PowerA…) count as ordinary pads:
+  bottom confirms. Some browsers don't say who made a pad at all (Safari;
+  Chrome for Xbox-type pads), and then it's an ordinary pad too.
+- *Claude's starting rule (Nick can veto):* on the web build a controller
+  button already dismisses `Press any key` (the line itself still says
+  "key" until 0226), so a controller player isn't stuck on the title.
 
 ## Open sub-questions
 

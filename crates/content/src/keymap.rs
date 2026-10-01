@@ -1,8 +1,9 @@
 //! The keymap (`assets/data/keymap.ron`, ADR-0015): for each [`Layout`],
 //! which key chords trigger which [`Action`], the keys that work before a
-//! layout is chosen, plus key-repeat timings.
+//! layout is chosen, the controller [`Button`]s of each action (ADR-0034),
+//! plus key-repeat timings and the sticks' thresholds.
 //!
-//! [`Key`], [`Chord`] and [`Action`] live here (not in `trpg-ui`) because the
+//! [`Key`], [`Chord`], [`Button`] and [`Action`] live here (not in `trpg-ui`) because the
 //! loader must parse chords and action names to validate the file, and
 //! `trpg-ui` depends on this crate, not the other way round. `trpg-ui::input`
 //! re-exports them.
@@ -239,6 +240,99 @@ impl fmt::Display for Chord {
     }
 }
 
+/// Declares [`Button`] with its docs, keeping the variant list,
+/// [`Button::ALL`] and [`Button::name`] in one table.
+macro_rules! buttons {
+    ($($variant:ident => $doc:literal,)+) => {
+        /// A controller button, named by its **position** on an Xbox-shaped
+        /// pad, whatever is printed on it (ADR-0034). Each stick's four
+        /// directions count as buttons too. `app` translates what the
+        /// platform reports to these; anything else on a pad is ignored.
+        ///
+        /// The first 16 are in the order of the browser Gamepad API's
+        /// "standard" mapping.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum Button {
+            $(
+                #[doc = $doc]
+                $variant,
+            )+
+        }
+
+        impl Button {
+            /// Every button, in declaration order.
+            pub const ALL: &'static [Button] = &[$(Button::$variant),+];
+
+            /// The name used in keymap files (the variant name).
+            pub fn name(self) -> &'static str {
+                match self {
+                    $(Button::$variant => stringify!($variant),)+
+                }
+            }
+        }
+    };
+}
+
+buttons! {
+    South => "The bottom face button (Xbox `A`).",
+    East => "The right face button (Xbox `B`).",
+    West => "The left face button (Xbox `X`).",
+    North => "The top face button (Xbox `Y`).",
+    LeftShoulder => "The left shoulder button (Xbox `LB`).",
+    RightShoulder => "The right shoulder button (Xbox `RB`).",
+    LeftTrigger => "The left trigger (Xbox `LT`), pulled far enough to count as pressed.",
+    RightTrigger => "The right trigger (Xbox `RT`), pulled far enough to count as pressed.",
+    Select => "The left centre button (Xbox `Back`).",
+    Start => "The right centre button (Xbox `Start`).",
+    LeftStickPress => "Pressing the left stick in.",
+    RightStickPress => "Pressing the right stick in.",
+    DpadUp => "D-pad up.",
+    DpadDown => "D-pad down.",
+    DpadLeft => "D-pad left.",
+    DpadRight => "D-pad right.",
+    LeftStickUp => "The left stick pushed up.",
+    LeftStickDown => "The left stick pushed down.",
+    LeftStickLeft => "The left stick pushed left.",
+    LeftStickRight => "The left stick pushed right.",
+    RightStickUp => "The right stick pushed up.",
+    RightStickDown => "The right stick pushed down.",
+    RightStickLeft => "The right stick pushed left.",
+    RightStickRight => "The right stick pushed right.",
+}
+
+impl Button {
+    /// Looks a button up by its [`name`](Self::name) (exact match).
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.iter().copied().find(|b| b.name() == name)
+    }
+
+    /// Parses a keymap-file button name: `"South"`, `"DpadUp"`,
+    /// `"LeftStickLeft"`, …
+    pub fn parse(s: &str) -> Result<Self, String> {
+        Self::from_name(s).ok_or_else(|| {
+            let known: Vec<&str> = Self::ALL.iter().map(|b| b.name()).collect();
+            format!(
+                "unknown button \"{s}\"; known buttons: {}",
+                known.join(", ")
+            )
+        })
+    }
+}
+
+impl FromStr for Button {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
+impl fmt::Display for Button {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
 /// Everything a player can ask for (ADR-0006). Screens only ever see these.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Action {
@@ -390,6 +484,28 @@ impl Default for RepeatDef {
     }
 }
 
+/// How far a stick must be pushed to count as a held direction
+/// ([`Button::LeftStickUp`] and the rest), in percent of its full travel.
+/// `release_percent` is below `press_percent`, so a stick resting near the
+/// edge of the dead zone doesn't flicker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StickDef {
+    /// A direction starts once the stick is pushed at least this far.
+    pub press_percent: u8,
+    /// A held direction ends once the stick falls below this.
+    pub release_percent: u8,
+}
+
+impl Default for StickDef {
+    fn default() -> Self {
+        Self {
+            press_percent: 50,
+            release_percent: 35,
+        }
+    }
+}
+
 /// A complete set of key bindings the player can pick
 /// (`docs/design/controls.md`). Each is one entry of `layouts` in the keymap
 /// file.
@@ -437,8 +553,15 @@ pub type Bindings = BTreeMap<Chord, Action>;
 /// [reserved]: Chord::is_reserved
 pub type LayoutKeys = BTreeMap<Action, Vec<Chord>>;
 
+/// The default controller buttons: every [`Action`] with its buttons in the
+/// order the keymap file lists them (at most [`SLOTS`]), no button on two
+/// actions. One table for both layouts (`docs/design/controls.md`,
+/// *Controller*).
+pub type PadKeys = BTreeMap<Action, Vec<Button>>;
+
 /// The validated keymap: every [`Layout`]'s default keys, the layout
-/// picker's bindings, plus the key-repeat timings they share.
+/// picker's bindings, the default controller buttons, plus the key-repeat
+/// timings and stick thresholds they share.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct KeymapDef {
     /// Layout → its default keys. After [`load`](Self::load) every layout
@@ -447,8 +570,13 @@ pub struct KeymapDef {
     /// The keys that work before any layout is chosen (the layout picker).
     /// Actions not listed are unbound there.
     pub layout_picker: Bindings,
-    /// Key-repeat timings.
+    /// The default controller buttons, the same in every layout and the
+    /// layout picker. After [`load`](Self::load) every action is present.
+    pub pad: PadKeys,
+    /// Key-repeat timings, for held keys and held buttons alike.
     pub repeat: RepeatDef,
+    /// How far a stick is pushed to count as a direction.
+    pub stick: StickDef,
 }
 
 /// The file as written, before validation.
@@ -457,7 +585,9 @@ pub struct KeymapDef {
 struct RawKeymap {
     layouts: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     layout_picker: BTreeMap<String, Vec<String>>,
+    pad: BTreeMap<String, Vec<String>>,
     repeat: RepeatDef,
+    stick: StickDef,
 }
 
 impl KeymapDef {
@@ -494,6 +624,12 @@ impl KeymapDef {
             .map_or(&[], Vec::as_slice)
     }
 
+    /// `action`'s default controller buttons, in file order; empty if the
+    /// action is missing (only in a definition built by hand).
+    pub fn buttons(&self, action: Action) -> &[Button] {
+        self.pad.get(&action).map_or(&[], Vec::as_slice)
+    }
+
     /// Parses and validates keymap `source`, attributing errors to `file`.
     /// Reports every unknown or missing layout, and within each layout every
     /// unknown action, unparsable chord, chord bound more than once,
@@ -501,7 +637,9 @@ impl KeymapDef {
     /// chords and missing action (prefixed with the layout name), the same
     /// for the `layout_picker` section (except that unlisted actions are
     /// unbound there, and an action may have more than [`SLOTS`] chords:
-    /// the picker isn't rebindable), plus bad repeat timing.
+    /// the picker isn't rebindable), and for the `pad` section (buttons
+    /// instead of chords, every action listed, none on Debug), plus bad
+    /// repeat timing and stick thresholds.
     pub fn from_source(file: &str, source: &str) -> Result<Self, Vec<ContentError>> {
         let raw: RawKeymap = parse_ron(file, source).map_err(|e| vec![e])?;
         let mut errors = Vec::new();
@@ -521,7 +659,7 @@ impl KeymapDef {
             // layout don't point into the first.
             let from = start.map_or(0, |line| usize::try_from(line).unwrap_or(0));
             let label = format!("layout \"{layout}\"");
-            match validate_bindings(file, source, from, &label, true, actions) {
+            match validate_bindings::<Chord>(file, source, from, &label, true, actions) {
                 Ok(keys) => {
                     layouts.insert(layout, keys);
                 }
@@ -538,7 +676,7 @@ impl KeymapDef {
         }
         let picker_line = line_of_quoted(source, 0, "layout_picker");
         let from = picker_line.map_or(0, |line| usize::try_from(line).unwrap_or(0));
-        let layout_picker = match validate_bindings(
+        let layout_picker = match validate_bindings::<Chord>(
             file,
             source,
             from,
@@ -555,17 +693,52 @@ impl KeymapDef {
                 Bindings::new()
             }
         };
+        let pad_line = line_of_quoted(source, 0, "pad");
+        let from = pad_line.map_or(0, |line| usize::try_from(line).unwrap_or(0));
+        let pad = match validate_bindings::<Button>(file, source, from, "pad", true, &raw.pad) {
+            Ok(buttons) => buttons,
+            Err(e) => {
+                errors.extend(e);
+                PadKeys::new()
+            }
+        };
+        if !pad.get(&Action::Debug).is_none_or(Vec::is_empty) {
+            let message = format!(
+                "pad: action \"{}\" can't have a button: it is keyboard only, see controls.md",
+                Action::Debug
+            );
+            errors.push(positioned(
+                ContentError::new(file, message),
+                line_of_quoted(source, from, Action::Debug.name()),
+            ));
+        }
         if raw.repeat.interval_ms == 0 {
             errors.push(positioned(
                 ContentError::new(file, "repeat interval_ms must be at least 1"),
                 line_of_quoted(source, 0, "repeat"),
             ));
         }
+        let StickDef {
+            press_percent,
+            release_percent,
+        } = raw.stick;
+        if release_percent == 0 || release_percent >= press_percent || press_percent > 100 {
+            errors.push(positioned(
+                ContentError::new(
+                    file,
+                    "stick release_percent must be at least 1 and below press_percent, which \
+                     must be at most 100",
+                ),
+                line_of_quoted(source, 0, "stick"),
+            ));
+        }
         if errors.is_empty() {
             Ok(Self {
                 layouts,
                 layout_picker,
+                pad,
                 repeat: raw.repeat,
+                stick: raw.stick,
             })
         } else {
             Err(errors)
@@ -573,28 +746,72 @@ impl KeymapDef {
     }
 }
 
-/// Validates one section's `actions` (action name → chord names): a layout
-/// or the layout picker. Messages start with `label`; lines are searched
-/// from line index `from` (just after the section's own line) on. For a
-/// `layout`, every [`Action`] must be listed, with at most [`SLOTS`] chords.
-fn validate_bindings(
+/// Something `keymap.ron` binds to actions: a key [`Chord`] or a controller
+/// [`Button`].
+trait Bound: Copy + Ord + fmt::Display {
+    /// What one is called in error messages.
+    const NOUN: &'static str;
+    /// What several are called in error messages.
+    const PLURAL: &'static str;
+
+    /// Parses its keymap-file name.
+    fn parse_name(text: &str) -> Result<Self, String>;
+
+    /// Why it may never appear in the file, if so.
+    fn refused(self) -> Option<&'static str>;
+}
+
+impl Bound for Chord {
+    const NOUN: &'static str = "chord";
+    const PLURAL: &'static str = "keys";
+
+    fn parse_name(text: &str) -> Result<Self, String> {
+        Self::parse(text)
+    }
+
+    fn refused(self) -> Option<&'static str> {
+        self.is_reserved()
+            .then_some("Esc and Delete are fixed, see controls.md")
+    }
+}
+
+impl Bound for Button {
+    const NOUN: &'static str = "button";
+    const PLURAL: &'static str = "buttons";
+
+    fn parse_name(text: &str) -> Result<Self, String> {
+        Self::parse(text)
+    }
+
+    fn refused(self) -> Option<&'static str> {
+        None
+    }
+}
+
+/// Validates one section's `actions` (action name → chord or button
+/// names): a layout, the layout picker or the `pad` table. Messages start
+/// with `label`; lines are searched from line index `from` (just after the
+/// section's own line) on. For a `complete` section (a layout, `pad`), every
+/// [`Action`] must be listed, with at most [`SLOTS`] entries.
+fn validate_bindings<T: Bound>(
     file: &str,
     source: &str,
     from: usize,
     label: &str,
-    layout: bool,
+    complete: bool,
     actions: &BTreeMap<String, Vec<String>>,
-) -> Result<LayoutKeys, Vec<ContentError>> {
+) -> Result<BTreeMap<Action, Vec<T>>, Vec<ContentError>> {
+    let noun = T::NOUN;
     let mut errors = Vec::new();
-    let mut bindings = Bindings::new();
-    let mut keys = LayoutKeys::new();
+    let mut bindings = BTreeMap::new();
+    let mut keys: BTreeMap<Action, Vec<T>> = BTreeMap::new();
     let err_at = |key: &str, message: String| {
         positioned(
             ContentError::new(file, format!("{label}: {message}")),
             line_of_quoted(source, from, key),
         )
     };
-    for (action_name, chords) in actions {
+    for (action_name, names) in actions {
         let Some(action) = Action::from_name(action_name) else {
             let known: Vec<&str> = Action::ALL.iter().map(|a| a.name()).collect();
             errors.push(err_at(
@@ -606,49 +823,48 @@ fn validate_bindings(
             ));
             continue;
         };
-        if layout && chords.len() > SLOTS {
+        if complete && names.len() > SLOTS {
             errors.push(err_at(
                 action_name,
                 format!(
-                    "action \"{action}\" has {} keys; at most {SLOTS} are allowed",
-                    chords.len()
+                    "action \"{action}\" has {} {}; at most {SLOTS} are allowed",
+                    names.len(),
+                    T::PLURAL
                 ),
             ));
         }
         let listed = keys.entry(action).or_default();
-        for text in chords {
-            match Chord::parse(text) {
-                Ok(chord) if chord.is_reserved() => errors.push(err_at(
-                    action_name,
-                    format!(
-                        "action \"{action}\": \"{chord}\" can't be bound here: Esc and Delete \
-                         are fixed, see controls.md"
-                    ),
-                )),
-                Ok(chord) => {
-                    if let Some(&other) = bindings.get(&chord) {
-                        let message = if other == action {
-                            format!("chord \"{chord}\" is listed twice for \"{action}\"")
-                        } else {
-                            format!(
-                                "chord \"{chord}\" is bound to both \"{other}\" and \"{action}\""
-                            )
-                        };
-                        errors.push(err_at(action_name, message));
-                    } else {
-                        bindings.insert(chord, action);
-                        listed.push(chord);
-                    }
+        for text in names {
+            let bound = match T::parse_name(text) {
+                Ok(bound) => bound,
+                Err(why) => {
+                    errors.push(err_at(
+                        action_name,
+                        format!("action \"{action_name}\": {why}"),
+                    ));
+                    continue;
                 }
-                Err(why) => errors.push(err_at(
+            };
+            if let Some(why) = bound.refused() {
+                errors.push(err_at(
                     action_name,
-                    format!("action \"{action_name}\": {why}"),
-                )),
+                    format!("action \"{action}\": \"{bound}\" can't be bound here: {why}"),
+                ));
+            } else if let Some(&other) = bindings.get(&bound) {
+                let message = if other == action {
+                    format!("{noun} \"{bound}\" is listed twice for \"{action}\"")
+                } else {
+                    format!("{noun} \"{bound}\" is bound to both \"{other}\" and \"{action}\"")
+                };
+                errors.push(err_at(action_name, message));
+            } else {
+                bindings.insert(bound, action);
+                listed.push(bound);
             }
         }
     }
     for action in Action::ALL {
-        if layout && !actions.contains_key(action.name()) {
+        if complete && !actions.contains_key(action.name()) {
             errors.push(ContentError::new(
                 file,
                 format!(
@@ -803,13 +1019,39 @@ mod tests {
 
     /// A keymap source holding `blocks` as its layouts, then `repeat`, then
     /// `picker` as the `layout_picker` section's entries (on the line after
-    /// `layout_picker: {`).
+    /// `layout_picker: {`), then a `pad` section with every action `[]` and
+    /// the default `stick`.
     fn source_with_picker(blocks: &[String], picker: &str) -> String {
+        source_with_pad(blocks, picker, "", "")
+    }
+
+    /// [`source_with_picker`], except that the `pad` section leaves out
+    /// `skip` and has `extra` spliced in after the other actions.
+    fn source_with_pad(blocks: &[String], picker: &str, skip: &str, extra: &str) -> String {
+        let pad: Vec<String> = Action::ALL
+            .iter()
+            .filter(|a| a.name() != skip)
+            .map(|a| format!("        \"{a}\": [],\n"))
+            .collect();
         format!(
             "(\n    layouts: {{\n{}    }},\n    repeat: (delay_ms: 300, interval_ms: 55),\n    \
-             layout_picker: {{\n{picker}    }},\n)",
-            blocks.concat()
+             layout_picker: {{\n{picker}    }},\n    pad: {{\n{}{extra}    }},\n    stick: \
+             (press_percent: 50, release_percent: 35),\n)",
+            blocks.concat(),
+            pad.concat()
         )
+    }
+
+    /// A keymap source with empty layouts and picker, whose `pad` section
+    /// leaves out `skip` and has `extra` spliced in.
+    fn pad_source(skip: &str, extra: &str) -> String {
+        source_with_pad(&empty_layouts(), "", skip, extra)
+    }
+
+    /// Line of the `pad` section's entry number `n` (0-based) in
+    /// [`pad_source`].
+    fn pad_line(n: usize) -> Option<u32> {
+        u32::try_from(3 + 2 * (Action::ALL.len() + 2) + 4 + 1 + n).ok()
     }
 
     /// A complete valid keymap source, except that the `LeftHanded` layout
@@ -833,6 +1075,251 @@ mod tests {
 
     fn left(k: &KeymapDef) -> Bindings {
         k.bindings(Layout::LeftHanded).unwrap_or_default()
+    }
+
+    #[test]
+    fn button_names_round_trip() {
+        assert_eq!(Button::ALL.len(), 16 + 4 + 4);
+        for (i, &b) in Button::ALL.iter().enumerate() {
+            assert_eq!(b as usize, i);
+            assert_eq!(Button::parse(&b.to_string()), Ok(b));
+            assert_eq!(b.name().parse::<Button>(), Ok(b));
+            assert_eq!(Button::from_name(b.name()), Some(b));
+        }
+        assert_eq!(Button::South.name(), "South");
+        assert_eq!(Button::RightStickRight.to_string(), "RightStickRight");
+        // The browser Gamepad API's standard mapping order.
+        let standard = [
+            "South",
+            "East",
+            "West",
+            "North",
+            "LeftShoulder",
+            "RightShoulder",
+            "LeftTrigger",
+            "RightTrigger",
+            "Select",
+            "Start",
+            "LeftStickPress",
+            "RightStickPress",
+            "DpadUp",
+            "DpadDown",
+            "DpadLeft",
+            "DpadRight",
+        ];
+        let names: Vec<&str> = Button::ALL[..16].iter().map(|b| b.name()).collect();
+        assert_eq!(names, standard);
+    }
+
+    #[test]
+    fn button_parse_rejects_garbage() {
+        for bad in ["", "south", "A", "Shift+South", "South ", "f"] {
+            assert_eq!(Button::from_name(bad), None, "{bad:?}");
+            let err = Button::parse(bad).err().unwrap_or_default();
+            assert!(
+                err.starts_with(&format!(
+                    "unknown button \"{bad}\"; known buttons: South, East,"
+                )),
+                "{err}"
+            );
+        }
+    }
+
+    #[test]
+    fn pad_section_loads_in_file_order() {
+        let extra = "        \"CursorUp\": [\"LeftStickUp\", \"DpadUp\", \"RightStickUp\"],\n";
+        let k = KeymapDef::from_source("k.ron", &pad_source("CursorUp", extra)).unwrap_or_default();
+        assert_eq!(
+            k.buttons(Action::CursorUp),
+            [Button::LeftStickUp, Button::DpadUp, Button::RightStickUp]
+        );
+        assert_eq!(k.buttons(Action::Confirm), []);
+        assert_eq!(k.pad.len(), Action::ALL.len());
+        assert_eq!(k.stick, StickDef::default());
+        assert_eq!(KeymapDef::default().buttons(Action::CursorUp), []);
+    }
+
+    #[test]
+    fn pad_button_on_two_actions_is_error_with_line() {
+        let src = pad_source("Info", "        \"Info\": [\"South\"],\n");
+        // Confirm in the pad section: the last `"Confirm": []` of the file.
+        let empty = "\"Confirm\": []";
+        let at = src.rfind(empty).unwrap_or(0);
+        let rest = &src[at + empty.len()..];
+        let src = format!("{}\"Confirm\": [\"South\"]{rest}", &src[..at]);
+        let errs = KeymapDef::from_source("k.ron", &src)
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert_eq!(
+            errs[0].message,
+            "pad: button \"South\" is bound to both \"Confirm\" and \"Info\""
+        );
+        assert_eq!(errs[0].line, pad_line(Action::ALL.len() - 1));
+    }
+
+    #[test]
+    fn pad_button_listed_twice_is_error() {
+        let errs = errors(&pad_source(
+            "Info",
+            "        \"Info\": [\"West\", \"West\"],\n",
+        ));
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(
+            errs[0].ends_with("pad: button \"West\" is listed twice for \"Info\""),
+            "{}",
+            errs[0]
+        );
+    }
+
+    #[test]
+    fn pad_button_on_debug_is_error_with_line() {
+        let src = pad_source("Debug", "        \"Debug\": [\"RightTrigger\"],\n");
+        let errs = KeymapDef::from_source("k.ron", &src)
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert_eq!(
+            errs[0].message,
+            "pad: action \"Debug\" can't have a button: it is keyboard only, see controls.md"
+        );
+        assert_eq!(errs[0].line, pad_line(Action::ALL.len() - 1));
+        // Listed empty, it is fine.
+        assert!(errors(&pad_source("", "")).is_empty());
+    }
+
+    #[test]
+    fn pad_unknown_button_and_action_are_errors() {
+        let errs = errors(&pad_source(
+            "Info",
+            "        \"Info\": [\"f\"],\n        \"Attack\": [],\n",
+        ));
+        assert_eq!(errs.len(), 2, "{errs:?}");
+        assert!(
+            errs[0].contains("pad: unknown action \"Attack\""),
+            "{}",
+            errs[0]
+        );
+        assert!(
+            errs[1].contains("pad: action \"Info\": unknown button \"f\"; known buttons: South"),
+            "{}",
+            errs[1]
+        );
+    }
+
+    #[test]
+    fn pad_missing_action_is_error() {
+        let errs = errors(&pad_source("Rewind", ""));
+        assert_eq!(
+            errs,
+            vec!["k.ron: pad: missing action \"Rewind\" (list it with [] to leave it unbound)"]
+        );
+    }
+
+    #[test]
+    fn pad_more_than_three_buttons_is_error() {
+        let four = "        \"Info\": [\"South\", \"East\", \"West\", \"North\"],\n";
+        let errs = KeymapDef::from_source("k.ron", &pad_source("Info", four))
+            .err()
+            .unwrap_or_default();
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert_eq!(
+            errs[0].message,
+            "pad: action \"Info\" has 4 buttons; at most 3 are allowed"
+        );
+        assert_eq!(errs[0].line, pad_line(Action::ALL.len() - 1));
+        let three = "        \"Info\": [\"South\", \"East\", \"West\"],\n";
+        let k = KeymapDef::from_source("k.ron", &pad_source("Info", three)).unwrap_or_default();
+        assert_eq!(k.buttons(Action::Info).len(), 3);
+    }
+
+    #[test]
+    fn missing_pad_or_stick_section_is_error() {
+        let src = pad_source("", "");
+        let stick = "    stick: (press_percent: 50, release_percent: 35),\n";
+        assert!(src.contains(stick));
+        assert_eq!(errors(&src.replace(stick, "")).len(), 1);
+        let at = src.find("    pad: {").unwrap_or(0);
+        let end = src.find("    stick:").unwrap_or(0);
+        assert_eq!(errors(&format!("{}{}", &src[..at], &src[end..])).len(), 1);
+    }
+
+    #[test]
+    fn stick_thresholds_must_be_in_order_and_in_range() {
+        let stick_line =
+            u32::try_from(3 + 2 * (Action::ALL.len() + 2) + 6 + Action::ALL.len()).ok();
+        for (press, release, ok) in [
+            (50, 35, true),
+            (100, 99, true),
+            (2, 1, true),
+            (101, 35, false),
+            (50, 50, false),
+            (50, 51, false),
+            (50, 0, false),
+        ] {
+            let src = pad_source("", "").replace(
+                "press_percent: 50, release_percent: 35",
+                &format!("press_percent: {press}, release_percent: {release}"),
+            );
+            match KeymapDef::from_source("k.ron", &src) {
+                Ok(k) => {
+                    assert!(ok, "{press}/{release} should be refused");
+                    assert_eq!(
+                        (k.stick.press_percent, k.stick.release_percent),
+                        (press, release)
+                    );
+                }
+                Err(errs) => {
+                    assert!(!ok, "{press}/{release}: {errs:?}");
+                    assert_eq!(errs.len(), 1);
+                    assert!(errs[0].message.starts_with("stick release_percent"));
+                    assert_eq!(errs[0].line, stick_line);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn embedded_pad_buttons_match_the_design() {
+        // docs/design/controls.md, Controller → Default buttons.
+        use Button::{
+            DpadDown, DpadLeft, DpadRight, DpadUp, East, LeftShoulder, LeftStickDown,
+            LeftStickLeft, LeftStickRight, LeftStickUp, LeftTrigger, North, RightShoulder, Select,
+            South, Start, West,
+        };
+        let k = KeymapDef::load().unwrap_or_default();
+        let design: PadKeys = [
+            // D-pad and left stick both move the cursor.
+            (Action::CursorLeft, vec![DpadLeft, LeftStickLeft]),
+            (Action::CursorDown, vec![DpadDown, LeftStickDown]),
+            (Action::CursorUp, vec![DpadUp, LeftStickUp]),
+            (Action::CursorRight, vec![DpadRight, LeftStickRight]),
+            (Action::Confirm, vec![South]),
+            (Action::Cancel, vec![East]),
+            (Action::PrevUnit, vec![LeftShoulder]),
+            (Action::NextUnit, vec![RightShoulder]),
+            (Action::Info, vec![North]),
+            (Action::DangerZone, vec![West]),
+            (Action::EndTurn, vec![Start]),
+            (Action::ToggleAutoEnd, vec![Select]),
+            (Action::Rewind, vec![LeftTrigger]),
+            // No button: the map menu, the optional split keys, Debug.
+            (Action::Menu, vec![]),
+            (Action::Select, vec![]),
+            (Action::ConfirmEndTurn, vec![]),
+            (Action::Debug, vec![]),
+        ]
+        .into();
+        assert_eq!(design.len(), Action::ALL.len());
+        assert_eq!(k.pad, design);
+        // Stick thresholds: tunable, press above release.
+        assert_eq!(
+            k.stick,
+            StickDef {
+                press_percent: 50,
+                release_percent: 35
+            }
+        );
     }
 
     #[test]

@@ -1,12 +1,14 @@
-//! Keyboard input as [`Action`]s (ADR-0006): a data-driven [`Keymap`] from
-//! chords to actions, and [`InputState`], which turns key presses and
-//! releases plus frame time into the actions screens see, including key
-//! repeat for held cursor keys.
+//! Keyboard and controller input as [`Action`]s (ADR-0006, ADR-0034): a
+//! data-driven [`Keymap`] from chords and controller buttons to actions,
+//! and [`InputState`], which turns presses and releases plus frame time
+//! into the actions screens see, including repeat for held cursor keys and
+//! buttons.
 //!
-//! [`Key`], [`Chord`], [`Action`] and [`Layout`] are defined in
+//! [`Key`], [`Chord`], [`Button`], [`Action`] and [`Layout`] are defined in
 //! `trpg-content` (its keymap loader validates them) and re-exported here.
 //! The player's own bindings (3 slots per action, per layout) are in
-//! [`bindings`].
+//! [`bindings`]; [`pad`] turns the controllers' raw state into button
+//! presses.
 //!
 //! **Fixed keys** (`docs/design/controls.md`, *Rebinding keys*; ADR-0031):
 //! plain `Escape` is Cancel in every keymap, and `Delete` does nothing in
@@ -15,13 +17,15 @@
 //! are ordinary chords.
 
 pub mod bindings;
+pub mod pad;
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 pub use bindings::{BindError, LayoutBindings, PlayerKeys, Slots};
+pub use pad::{ButtonSet, PadId, PadKind, PadState, Pads};
 pub use trpg_content::keymap::{
-    Action, Chord, Key, KeymapDef, Layout, LayoutKeys, RepeatDef, SLOTS,
+    Action, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS, StickDef,
 };
 
 /// The keys every keymap has on top of its own bindings, whatever the
@@ -32,13 +36,18 @@ const FIXED: [(Chord, Action); 1] = [(Chord::plain(Key::Escape), Action::Cancel)
 /// lag spike can't teleport the cursor across the map.
 pub const MAX_REPEATS_PER_UPDATE: u64 = 5;
 
-/// Lookup from chord to action, plus repeat timings.
+/// Lookup from chord, and from controller button, to action, plus repeat
+/// timings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Keymap {
     /// Every chord that does something, fixed keys included.
     bindings: HashMap<Chord, Action>,
     /// Each action's own chords (not the fixed keys), in the order given.
     chords: BTreeMap<Action, Vec<Chord>>,
+    /// Every controller button that does something.
+    pad: HashMap<Button, Action>,
+    /// Each action's buttons, in the order given.
+    buttons: BTreeMap<Action, Vec<Button>>,
     repeat: RepeatDef,
 }
 
@@ -65,33 +74,74 @@ impl Keymap {
         Self {
             bindings: lookup,
             chords,
+            pad: HashMap::new(),
+            buttons: BTreeMap::new(),
             repeat,
         }
     }
 
+    /// This keymap with `pad` as its controller buttons, replacing any it
+    /// had. A button listed twice keeps its last action.
+    #[must_use]
+    pub fn with_pad(mut self, pad: impl IntoIterator<Item = (Button, Action)>) -> Self {
+        self.pad.clear();
+        self.buttons.clear();
+        for (button, action) in pad {
+            if let Some(old) = self.pad.insert(button, action)
+                && let Some(list) = self.buttons.get_mut(&old)
+            {
+                list.retain(|&b| b != button);
+            }
+            self.buttons.entry(action).or_default().push(button);
+        }
+        self
+    }
+
+    /// This keymap with the default controller buttons from a validated
+    /// keymap definition: the same in every layout and the layout picker
+    /// (`docs/design/controls.md`, *Controller*).
+    #[must_use]
+    pub fn with_default_pad(self, def: &KeymapDef) -> Self {
+        let pad = def.pad.iter();
+        self.with_pad(pad.flat_map(|(&a, buttons)| buttons.iter().map(move |&b| (b, a))))
+    }
+
     /// `layout`'s default bindings from a validated keymap definition (no
     /// player changes; for those see [`PlayerKeys`]), with its repeat
-    /// timings. A definition without that layout (only possible when built
-    /// by hand) gives a keymap with only the fixed keys.
+    /// timings and the default controller buttons. A definition without
+    /// that layout (only possible when built by hand) gives a keymap with
+    /// only the fixed keys and the buttons.
     pub fn for_layout(def: &KeymapDef, layout: Layout) -> Self {
         let keys = def.layouts.get(&layout).into_iter().flatten();
         let bindings = keys.flat_map(|(&a, chords)| chords.iter().map(move |&c| (c, a)));
-        Self::new(bindings, def.repeat)
+        Self::new(bindings, def.repeat).with_default_pad(def)
     }
 
     /// The keys that work before any layout is chosen, from the keymap
     /// definition's `layout_picker` section, so the layout picker can be
     /// used whichever hand the player types with. Actions it doesn't list
-    /// (e.g. Cancel: a layout must be picked) are unbound.
+    /// (e.g. Cancel: a layout must be picked) have no key. The controller
+    /// buttons are the default ones, as in every layout.
     pub fn layout_picker(def: &KeymapDef) -> Self {
         let bindings = def.layout_picker.iter().map(|(&c, &a)| (c, a));
-        Self::new(bindings, def.repeat)
+        Self::new(bindings, def.repeat).with_default_pad(def)
     }
 
     /// The action bound to `chord`, if any. `Shift+h` and `h` are distinct:
     /// there is no fallback from a shifted chord to the plain one.
     pub fn action(&self, chord: Chord) -> Option<Action> {
         self.bindings.get(&chord).copied()
+    }
+
+    /// The action bound to the controller button `button`, if any.
+    pub fn pad_action(&self, button: Button) -> Option<Action> {
+        self.pad.get(&button).copied()
+    }
+
+    /// Every controller button bound to `action`, in the order they were
+    /// given (file order for `keymap.ron`).
+    pub fn buttons_for(&self, action: Action) -> Vec<Button> {
+        self.buttons.get(&action).cloned().unwrap_or_default()
     }
 
     /// Key-repeat timings.
@@ -174,10 +224,21 @@ impl Keymap {
     }
 }
 
-/// The repeat currently running for the most recently pressed repeatable key.
+/// Something the player can hold down: a keyboard key or a controller
+/// button (a stick direction counts as a button).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Input {
+    /// A keyboard key.
+    Key(Key),
+    /// A controller button.
+    Pad(Button),
+}
+
+/// The repeat currently running for the most recently pressed repeatable
+/// key or button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Repeat {
-    key: Key,
+    input: Input,
     action: Action,
     /// Time held so far, in microseconds.
     held_us: u64,
@@ -186,9 +247,9 @@ struct Repeat {
 }
 
 impl Repeat {
-    fn start(key: Key, action: Action) -> Self {
+    fn start(input: Input, action: Action) -> Self {
         Self {
-            key,
+            input,
             action,
             held_us: 0,
             counted: 0,
@@ -196,22 +257,27 @@ impl Repeat {
     }
 }
 
-/// Turns key events and elapsed time into [`Action`]s.
+/// Turns key and controller-button events and elapsed time into
+/// [`Action`]s.
 ///
 /// Feed it every key press ([`key_down`](Self::key_down)) and release
-/// ([`key_up`](Self::key_up)), then call [`update`](Self::update) once per
-/// frame with the frame time. A press emits its action once. While a
-/// repeatable action's key is held, it re-emits after the repeat delay and
-/// then every interval. The most recently pressed repeatable key is the one
-/// that repeats; releasing it hands repeating back to the most recent
-/// repeatable key still held, which waits a full delay before repeating.
+/// ([`key_up`](Self::key_up)), and every controller button press
+/// ([`pad_down`](Self::pad_down)) and release ([`pad_up`](Self::pad_up)),
+/// then call [`update`](Self::update) once per frame with the frame time.
+/// Keys and buttons follow the same rules. A press emits its action once.
+/// While a repeatable action's key or button is held, it re-emits after the
+/// repeat delay and then every interval. The most recently pressed
+/// repeatable one is the one that repeats; releasing it hands repeating
+/// back to the most recent repeatable one still held, which waits a full
+/// delay before repeating.
 #[derive(Debug, Clone)]
 pub struct InputState {
     keymap: Keymap,
     /// Actions from presses since the last update.
     pending: Vec<Action>,
-    /// Bound keys currently down with the action they triggered, oldest first.
-    held: Vec<(Key, Action)>,
+    /// Bound keys and buttons currently down with the action they
+    /// triggered, oldest first.
+    held: Vec<(Input, Action)>,
     repeat: Option<Repeat>,
 }
 
@@ -242,33 +308,57 @@ impl InputState {
     /// A key went down (with its modifier state). Unbound chords and keys
     /// already held are ignored.
     pub fn key_down(&mut self, chord: Chord) {
-        if self.held.iter().any(|&(k, _)| k == chord.key) {
-            return;
-        }
-        let Some(action) = self.keymap.action(chord) else {
-            return;
-        };
-        self.held.push((chord.key, action));
-        self.pending.push(action);
-        if action.is_repeatable() {
-            self.repeat = Some(Repeat::start(chord.key, action));
-        }
+        self.press(Input::Key(chord.key), self.keymap.action(chord));
     }
 
     /// A key went up. Stops its repeat, if it was the repeating one.
     pub fn key_up(&mut self, key: Key) {
-        self.held.retain(|&(k, _)| k != key);
-        if self.repeat.is_some_and(|r| r.key == key) {
+        self.release(Input::Key(key));
+    }
+
+    /// A controller button went down, on any pad ([`Pads`] merges them and
+    /// gives the button's binding position). Unbound buttons and buttons
+    /// already held are ignored.
+    pub fn pad_down(&mut self, button: Button) {
+        self.press(Input::Pad(button), self.keymap.pad_action(button));
+    }
+
+    /// A controller button went up. Stops its repeat, if it was the
+    /// repeating one.
+    pub fn pad_up(&mut self, button: Button) {
+        self.release(Input::Pad(button));
+    }
+
+    /// `input` went down, bound to `action` (if any).
+    fn press(&mut self, input: Input, action: Option<Action>) {
+        if self.held.iter().any(|&(i, _)| i == input) {
+            return;
+        }
+        let Some(action) = action else {
+            return;
+        };
+        self.held.push((input, action));
+        self.pending.push(action);
+        if action.is_repeatable() {
+            self.repeat = Some(Repeat::start(input, action));
+        }
+    }
+
+    /// `input` went up.
+    fn release(&mut self, input: Input) {
+        self.held.retain(|&(i, _)| i != input);
+        if self.repeat.is_some_and(|r| r.input == input) {
             self.repeat = self
                 .held
                 .iter()
                 .rev()
                 .find(|(_, a)| a.is_repeatable())
-                .map(|&(k, a)| Repeat::start(k, a));
+                .map(|&(i, a)| Repeat::start(i, a));
         }
     }
 
-    /// Whether any held key is bound to `action` (e.g. hold to fast-forward).
+    /// Whether any held key or button is bound to `action` (e.g. hold to
+    /// fast-forward).
     pub fn is_held(&self, action: Action) -> bool {
         self.held.iter().any(|&(_, a)| a == action)
     }
@@ -352,6 +442,20 @@ mod tests {
         InputState::new(test_keymap(delay_ms, interval_ms))
     }
 
+    /// The buttons [`pad_state`] adds to the test keymap.
+    const TEST_PAD: [(Button, Action); 5] = [
+        (Button::DpadLeft, CursorLeft),
+        (Button::DpadDown, CursorDown),
+        (Button::LeftStickDown, CursorDown),
+        (Button::DpadRight, CursorRight),
+        (Button::South, Confirm),
+    ];
+
+    /// [`default_state`] with a few controller buttons bound too.
+    fn pad_state() -> InputState {
+        InputState::new(test_keymap(170, 55).with_pad(TEST_PAD))
+    }
+
     /// Seconds for `ms` milliseconds.
     fn ms(ms: u32) -> f32 {
         Duration::from_millis(u64::from(ms)).as_secs_f32()
@@ -411,6 +515,81 @@ mod tests {
         assert_eq!(km.primary(CursorLeft), Some(chord("h")));
         assert_eq!(km.primary(Confirm), Some(chord("f")));
         assert_eq!(km.primary(Action::Cancel), None);
+    }
+
+    #[test]
+    fn with_pad_looks_buttons_up_and_lists_them_in_order() {
+        let km = pad_state().keymap().clone();
+        assert_eq!(km.pad_action(Button::South), Some(Confirm));
+        assert_eq!(km.pad_action(Button::LeftStickDown), Some(CursorDown));
+        assert_eq!(km.pad_action(Button::East), None);
+        assert_eq!(
+            km.buttons_for(CursorDown),
+            vec![Button::DpadDown, Button::LeftStickDown]
+        );
+        assert_eq!(km.buttons_for(Info), vec![]);
+        // The keys are untouched, and a keymap has no buttons by itself.
+        assert_eq!(km.action(chord("f")), Some(Confirm));
+        assert_eq!(km.chords_for(CursorLeft), vec![chord("h"), chord("Left")]);
+        let keys_only = test_keymap(170, 55);
+        assert_eq!(keys_only.pad_action(Button::South), None);
+        assert_eq!(keys_only.buttons_for(Confirm), vec![]);
+        assert_ne!(km, keys_only);
+    }
+
+    #[test]
+    fn a_repeated_button_keeps_its_last_action_and_with_pad_replaces_the_table() {
+        let km = test_keymap(170, 55).with_pad([
+            (Button::South, Confirm),
+            (Button::East, Confirm),
+            (Button::North, Info),
+            (Button::South, Info),
+        ]);
+        assert_eq!(km.buttons_for(Confirm), vec![Button::East]);
+        assert_eq!(km.buttons_for(Info), vec![Button::North, Button::South]);
+        assert_eq!(km.pad_action(Button::South), Some(Info));
+        let km = km.with_pad([(Button::West, Confirm)]);
+        assert_eq!(km.buttons_for(Confirm), vec![Button::West]);
+        assert_eq!(km.buttons_for(Info), vec![]);
+        assert_eq!(km.pad_action(Button::South), None);
+        assert_eq!(km.pad_action(Button::East), None);
+    }
+
+    #[test]
+    fn every_keymap_from_the_definition_has_the_default_buttons() {
+        let def = KeymapDef::load().unwrap_or_default();
+        let keymaps = [
+            Keymap::for_layout(&def, Layout::RightHanded),
+            Keymap::for_layout(&def, Layout::LeftHanded),
+            Keymap::layout_picker(&def),
+            PlayerKeys::default().keymap(&def, Layout::LeftHanded),
+            Keymap::new([], def.repeat).with_default_pad(&def),
+        ];
+        for km in keymaps {
+            assert_eq!(km.pad_action(Button::South), Some(Confirm));
+            assert_eq!(km.pad_action(Button::East), Some(Action::Cancel));
+            assert_eq!(km.pad_action(Button::Start), Some(Action::EndTurn));
+            assert_eq!(
+                km.buttons_for(CursorUp),
+                vec![Button::DpadUp, Button::LeftStickUp]
+            );
+            // Unused by default.
+            assert_eq!(km.pad_action(Button::RightTrigger), None);
+            assert_eq!(km.pad_action(Button::RightStickUp), None);
+            assert_eq!(km.buttons_for(Action::Debug), vec![]);
+            for action in Action::ALL {
+                assert_eq!(km.buttons_for(action), def.buttons(action), "{action}");
+            }
+        }
+        // A layout's keys alone carry no buttons.
+        let keys = LayoutBindings::defaults(&def, Layout::RightHanded).keymap(def.repeat);
+        assert_eq!(keys.pad_action(Button::South), None);
+        assert_eq!(keys.clone().with_default_pad(&def), {
+            PlayerKeys::default().keymap(&def, Layout::RightHanded)
+        });
+        // A definition built by hand without buttons gives none.
+        let empty = Keymap::for_layout(&KeymapDef::default(), Layout::LeftHanded);
+        assert_eq!(empty.pad_action(Button::South), None);
     }
 
     #[test]
@@ -531,6 +710,113 @@ mod tests {
         s.key_down(chord("j"));
         assert_eq!(s.update(0.0), vec![Confirm]);
         assert_eq!(s.keymap().action(chord("l")), None);
+    }
+
+    #[test]
+    fn set_keymap_forgets_held_buttons_too() {
+        let mut s = pad_state();
+        s.pad_down(Button::DpadRight);
+        s.pad_down(Button::South);
+        s.set_keymap(test_keymap(170, 55).with_pad([(Button::East, Confirm)]));
+        assert!(!s.is_held(Confirm) && !s.is_held(CursorRight));
+        assert_eq!(s.update(ms(1000)), vec![]);
+        // South is unbound now; East confirms.
+        s.pad_up(Button::South);
+        s.pad_down(Button::South);
+        s.pad_down(Button::East);
+        assert_eq!(s.update(0.0), vec![Confirm]);
+    }
+
+    #[test]
+    fn a_button_press_emits_once_and_is_held_until_released() {
+        let mut s = pad_state();
+        s.pad_down(Button::South);
+        assert_eq!(s.update(0.0), vec![Confirm]);
+        assert_eq!(s.update(ms(1000)), vec![]);
+        assert!(s.is_held(Confirm));
+        // Reported down again while held (a second pad): ignored.
+        s.pad_down(Button::South);
+        assert_eq!(s.update(0.0), vec![]);
+        s.pad_up(Button::South);
+        assert!(!s.is_held(Confirm));
+        assert_eq!(s.update(ms(1000)), vec![]);
+    }
+
+    #[test]
+    fn unbound_buttons_are_ignored() {
+        let mut s = pad_state();
+        s.pad_down(Button::RightTrigger);
+        assert!(s.held.is_empty());
+        s.pad_up(Button::RightTrigger);
+        assert_eq!(s.update(ms(500)), vec![]);
+        // Without buttons in the keymap, every button is unbound.
+        let mut s = default_state();
+        s.pad_down(Button::South);
+        assert_eq!(s.update(ms(500)), vec![]);
+    }
+
+    #[test]
+    fn a_held_button_repeats_with_the_key_timings() {
+        let mut s = pad_state();
+        s.pad_down(Button::DpadRight);
+        assert_eq!(s.update(ms(169)), vec![CursorRight]);
+        assert_eq!(s.update(ms(1)), vec![CursorRight]); // 170: first repeat
+        assert_eq!(s.update(ms(54)), vec![]); // 224
+        assert_eq!(s.update(ms(1)), vec![CursorRight]); // 225
+        assert_eq!(s.update(ms(110)), vec![CursorRight, CursorRight]); // 335
+        s.pad_up(Button::DpadRight);
+        assert_eq!(s.update(ms(1000)), vec![]);
+        assert!(!s.is_held(CursorRight));
+    }
+
+    #[test]
+    fn a_key_and_a_button_on_one_action_are_separate_inputs() {
+        let mut s = pad_state();
+        s.key_down(chord("f"));
+        s.pad_down(Button::South);
+        assert_eq!(s.update(0.0), vec![Confirm, Confirm]);
+        // Letting go of one leaves the action held by the other.
+        s.key_up(Key::F);
+        assert!(s.is_held(Confirm));
+        assert_eq!(s.held, vec![(Input::Pad(Button::South), Confirm)]);
+        s.pad_up(Button::South);
+        assert!(!s.is_held(Confirm));
+        // Likewise for two directions' repeat: the stick takes over from
+        // the D-pad, and the D-pad resumes after a full delay.
+        s.pad_down(Button::DpadDown);
+        s.pad_down(Button::LeftStickDown);
+        assert_eq!(s.update(ms(170)), vec![CursorDown, CursorDown, CursorDown]);
+        s.pad_up(Button::LeftStickDown);
+        assert_eq!(s.update(ms(169)), vec![]);
+        assert_eq!(s.update(ms(1)), vec![CursorDown]);
+    }
+
+    #[test]
+    fn the_newest_of_keys_and_buttons_repeats() {
+        let mut s = pad_state();
+        s.key_down(chord("l"));
+        assert_eq!(s.update(ms(100)), vec![CursorRight]);
+        // A button pressed later takes over the repeat from the key...
+        s.pad_down(Button::DpadDown);
+        assert_eq!(s.update(ms(169)), vec![CursorDown]);
+        assert_eq!(s.update(ms(1)), vec![CursorDown]);
+        assert!(s.is_held(CursorRight) && s.is_held(CursorDown));
+        // ...and hands it back when released, after a full delay.
+        s.pad_up(Button::DpadDown);
+        assert_eq!(s.update(ms(169)), vec![]);
+        assert_eq!(s.update(ms(1)), vec![CursorRight]);
+        // And the other way round: a key takes over from a button.
+        let mut s = pad_state();
+        s.pad_down(Button::DpadLeft);
+        s.key_down(chord("j"));
+        assert_eq!(s.update(ms(170)), vec![CursorLeft, CursorDown, CursorDown]);
+        // Releasing the older, non-repeating one changes nothing.
+        s.pad_up(Button::DpadLeft);
+        assert_eq!(s.update(ms(55)), vec![CursorDown]);
+        // A non-repeatable button doesn't stop the key's repeat.
+        s.pad_down(Button::South);
+        s.pad_up(Button::South);
+        assert_eq!(s.update(ms(55)), vec![Confirm, CursorDown]);
     }
 
     #[test]
@@ -691,7 +977,107 @@ mod tests {
         assert_eq!(s.update(ms(10)).len(), 1 + 5);
     }
 
+    /// One step of a random input script.
+    #[derive(Debug, Clone, Copy)]
+    enum Step {
+        KeyDown(Chord),
+        KeyUp(Key),
+        PadDown(Button),
+        PadUp(Button),
+        Wait(u32),
+    }
+
+    fn arb_step() -> impl Strategy<Value = Step> {
+        // Bound and unbound keys and buttons, repeatable and not.
+        let key = || prop::sample::select(vec![Key::H, Key::J, Key::L, Key::F, Key::Z]);
+        let button = || {
+            prop::sample::select(vec![
+                Button::DpadLeft,
+                Button::DpadDown,
+                Button::LeftStickDown,
+                Button::South,
+                Button::North,
+            ])
+        };
+        prop_oneof![
+            (key(), any::<bool>()).prop_map(|(key, shift)| Step::KeyDown(Chord { key, shift })),
+            key().prop_map(Step::KeyUp),
+            button().prop_map(Step::PadDown),
+            button().prop_map(Step::PadUp),
+            (0u32..400).prop_map(Step::Wait),
+        ]
+    }
+
     proptest! {
+        /// Any mix of key and button presses and releases: nothing stays
+        /// held after its release, only bound inputs are held (each once,
+        /// oldest first), and the one repeating is always the newest held
+        /// cursor input.
+        #[test]
+        fn keys_and_buttons_never_stick_and_only_the_newest_cursor_input_repeats(
+            steps in prop::collection::vec(arb_step(), 0..60),
+        ) {
+            let mut s = pad_state();
+            let km = s.keymap().clone();
+            // What should be held, oldest first, and the presses not yet
+            // handed out.
+            let mut held: Vec<(Input, Action)> = Vec::new();
+            let mut pending = Vec::new();
+            for &step in &steps {
+                let press = match step {
+                    Step::KeyDown(chord) => {
+                        s.key_down(chord);
+                        Some((Input::Key(chord.key), km.action(chord)))
+                    }
+                    Step::PadDown(button) => {
+                        s.pad_down(button);
+                        Some((Input::Pad(button), km.pad_action(button)))
+                    }
+                    _ => None,
+                };
+                if let Some((input, Some(action))) = press
+                    && !held.iter().any(|&(i, _)| i == input)
+                {
+                    held.push((input, action));
+                    pending.push(action);
+                }
+                let release = match step {
+                    Step::KeyUp(key) => {
+                        s.key_up(key);
+                        Some(Input::Key(key))
+                    }
+                    Step::PadUp(button) => {
+                        s.pad_up(button);
+                        Some(Input::Pad(button))
+                    }
+                    _ => None,
+                };
+                if let Some(input) = release {
+                    held.retain(|&(i, _)| i != input);
+                    prop_assert!(!s.held.iter().any(|&(i, _)| i == input));
+                }
+                prop_assert_eq!(&s.held, &held);
+                let newest = held.iter().rev().find(|(_, a)| a.is_repeatable());
+                prop_assert_eq!(s.repeat.map(|r| (r.input, r.action)), newest.copied());
+                for action in Action::ALL {
+                    prop_assert_eq!(s.is_held(action), held.iter().any(|&(_, a)| a == action));
+                }
+                if let Step::Wait(millis) = step {
+                    let out = s.update(ms(millis));
+                    // The presses, in order, then only the newest cursor
+                    // input's repeats.
+                    prop_assert!(out.len() >= pending.len());
+                    prop_assert_eq!(&out[..pending.len()], &pending[..]);
+                    let repeats = &out[pending.len()..];
+                    match newest {
+                        Some(&(_, action)) => prop_assert!(repeats.iter().all(|&a| a == action)),
+                        None => prop_assert!(repeats.is_empty()),
+                    }
+                    pending.clear();
+                }
+            }
+        }
+
         #[test]
         fn held_key_emits_expected_count(
             slices in prop::collection::vec(0u32..=100, 0..60),
