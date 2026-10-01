@@ -100,7 +100,10 @@ battle; say if any number of uses feels wrong (they are *tunable*).
      cost kind;
    - every number (stat amounts, `CombatMods` numbers, `power`, `collision`,
      `tiles`, `range`, `post_move`, uses) is at least the lower rank's, and
-     at least one is higher. A cost in durability may be anything.
+     at least one is higher. A cost in durability may be anything. A
+     `CombatMods` number going from 0 to more is allowed: Nick kept Bow
+     Focus 2 (adds crit +5) and Leadership 2 (adds avoid +10) as
+     replacements; both must pass.
    With `sanctuary_2` gone (step 4) the shipped data must pass.
 6. **UI** (`crates/ui/src/screens/battle/skills.rs`, `art_list.rs`): where a
    non-attack active shows `3 dur  Wpn 20/20` it shows its uses left and

@@ -498,6 +498,12 @@ behind when you leave an unmastered class.
       (crit +20 with a sword) replaces. A heal reaching 2 tiles instead of
       1 doesn't replace Sanctuary: the Priest gets it as a new skill and
       keeps Sanctuary.
+    - A rank 2 **may add another bonus of the same kind**, as long as the
+      condition, targets and reach stay the same and it gives everything
+      rank 1 gave (Nick, asked about these two: "keep them as
+      replacements"): Bow Focus 1 (hit +5 with a bow) → Bow Focus 2
+      (hit +10 and crit +5 with a bow), and Leadership 1 (allies within 2
+      tiles: hit +10) → Leadership 2 (hit +10 and avoid +10, same reach).
     - The game's data is checked for this when it loads (ticket 0316).
 - An **active skill** is used on purpose:
   - **Combat actives** cost the attacking weapon's **durability** (Nick,
