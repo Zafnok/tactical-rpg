@@ -1,8 +1,9 @@
 //! The map menu (ticket 0405), opened by Cancel with nothing to cancel or
 //! Confirm on an empty tile (`docs/design/controls.md`): `Units` (jump the
-//! cursor to one), `Objective` (what to do and the turn), `Options` and
-//! `Suspend` (placeholders until 0805 and 0802), `Restart Battle` (0801,
-//! with a confirm) and `End Turn`; and the end-turn prompt
+//! cursor to one), `Objective` (what to do and the turn), `Options` (a
+//! placeholder until 0805), `Suspend` (0802: saves the battle and goes back
+//! to the title), `Restart Battle` (0801, with a confirm) and `End Turn`;
+//! and the end-turn prompt
 //! (`docs/design/turn-structure.md`).
 
 use trpg_core::{BattleState, Faction, Objective, Phase, Turn, UnitId};
@@ -21,7 +22,8 @@ pub enum MapEntry {
     Objective,
     /// Options (ticket 0805): disabled for now.
     Options,
-    /// Suspend the battle (ticket 0802): disabled for now.
+    /// Save the whole battle to the one-time suspend save and go back to
+    /// the title (`death-and-difficulty.md`).
     Suspend,
     /// Start the battle again from its first turn, with every rewind
     /// charge back (`death-and-difficulty.md`), after a confirm.
@@ -53,13 +55,15 @@ impl MapEntry {
         }
     }
 
-    /// Whether it can be chosen in `state`: `Options` and `Suspend` never
-    /// (placeholders), `End Turn` only in the player phase of a battle still
-    /// going, the others (`Restart Battle` too) always.
+    /// Whether it can be chosen in `state`: `Options` never (a
+    /// placeholder), `Suspend` while the battle is still going, `End Turn`
+    /// only in the player phase of a battle still going, the others
+    /// (`Restart Battle` too) always.
     pub fn enabled(self, state: &BattleState) -> bool {
         match self {
             MapEntry::Units | MapEntry::Objective | MapEntry::Restart => true,
-            MapEntry::Options | MapEntry::Suspend => false,
+            MapEntry::Options => false,
+            MapEntry::Suspend => state.outcome().is_none(),
             MapEntry::EndTurn => state.phase() == Phase::Player && state.outcome().is_none(),
         }
     }
@@ -235,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn options_and_suspend_are_disabled_and_end_turn_needs_the_player_phase() {
+    fn options_is_disabled_and_end_turn_needs_the_player_phase() {
         let mut s = quick_battle(&ctx().content).unwrap();
         let (menu, entries) = map_menu(&s, MapEntry::Units);
         assert_eq!(entries, MapEntry::ALL);
@@ -245,7 +249,7 @@ mod tests {
                 ("Units", true),
                 ("Objective", true),
                 ("Options", false),
-                ("Suspend", false),
+                ("Suspend", true),
                 ("Restart Battle", true),
                 ("End Turn", true),
             ]
@@ -254,7 +258,8 @@ mod tests {
         assert_eq!(map_menu(&s, MapEntry::Restart).0.focus(), 4);
         assert_eq!(map_menu(&s, MapEntry::EndTurn).0.focus(), 5);
         // A disabled entry can't take the focus.
-        assert_eq!(map_menu(&s, MapEntry::Suspend).0.focus(), 0);
+        assert_eq!(map_menu(&s, MapEntry::Options).0.focus(), 0);
+        assert_eq!(map_menu(&s, MapEntry::Suspend).0.focus(), 3);
         // In the enemy phase, End Turn is disabled.
         s.apply(&trpg_core::Command::EndPhase).unwrap();
         assert_eq!(s.phase(), Phase::Enemy);
@@ -263,6 +268,7 @@ mod tests {
         assert_eq!(ready_players(&s), 0);
         assert!(MapEntry::Units.enabled(&s));
         assert!(MapEntry::Restart.enabled(&s));
+        assert!(MapEntry::Suspend.enabled(&s));
     }
 
     #[test]
@@ -280,6 +286,8 @@ mod tests {
         let s = battle_with(&c, q.map().clone(), players, rout);
         assert!(s.outcome().is_some());
         assert!(!MapEntry::EndTurn.enabled(&s));
+        // Nor is there a battle left to suspend.
+        assert!(!MapEntry::Suspend.enabled(&s));
     }
 
     #[test]

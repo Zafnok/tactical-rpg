@@ -365,6 +365,8 @@ pub enum Effect {
     Cursor(Pos),
     /// Start the battle again (the map menu's `Restart Battle`, confirmed).
     Restart,
+    /// Save the battle and go back to the title (the map menu's `Suspend`).
+    Suspend,
 }
 
 impl Mode {
@@ -930,12 +932,11 @@ fn step_map_menu(
             }
             Some(MapEntry::Objective) => (Mode::Objective, Effect::None),
             Some(MapEntry::Restart) => (Mode::RestartPrompt, Effect::None),
+            Some(MapEntry::Suspend) => (Mode::default(), Effect::Suspend),
             Some(MapEntry::EndTurn) => end_turn(state),
 
-            // Disabled: the menu never chooses them.
-            Some(MapEntry::Options | MapEntry::Suspend) | None => {
-                (Mode::MapMenu { menu, entries }, Effect::None)
-            }
+            // Disabled: the menu never chooses it.
+            Some(MapEntry::Options) | None => (Mode::MapMenu { menu, entries }, Effect::None),
         },
         Some(MenuEvent::Cancelled) => (Mode::default(), Effect::None),
         None => (Mode::MapMenu { menu, entries }, Effect::None),

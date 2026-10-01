@@ -1,13 +1,16 @@
 //! The title screen: `New Game` starts the game flow ([`FlowScreen`],
-//! ticket 0801); debug builds add `Quick Battle`, a test battle through the
-//! same flow.
+//! ticket 0801); `Continue` (shown only while there is a suspend save)
+//! carries on the suspended battle and `Load Game` opens the save slots
+//! (0802); debug builds add `Quick Battle`, a test battle through the same
+//! flow.
 
 use super::{centre_x, draw_debug_hint, print_centred};
-use crate::audio::pick_from_pool;
+use crate::audio::{MenuSound, pick_from_pool};
 use crate::color::UiColor;
 use crate::flow::FlowScreen;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
+use crate::save;
 use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, Transition};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
@@ -28,8 +31,12 @@ const MENU_ROW: i32 = 14;
 /// (`docs/design/title-screen.md`).
 pub const PRESS_ANY_KEY: &str = "Press any key";
 
+/// Menu item that carries on the suspended battle.
+const CONTINUE: &str = "Continue";
 /// Menu item that starts a new game.
 const NEW_GAME: &str = "New Game";
+/// Menu item that opens the save slots.
+const LOAD_GAME: &str = "Load Game";
 /// Debug menu item: straight into a test battle.
 const QUICK_BATTLE: &str = "Quick Battle";
 /// Menu item that quits.
@@ -50,13 +57,20 @@ fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
     );
 }
 
-/// Title, subtitle and a `New Game` / `Quit` menu, with a help line naming
-/// the keys of the active layout.
+/// Title, subtitle and a menu (`Continue` while a battle is suspended,
+/// `New Game`, `Load Game`, `Quit`), with a help line naming the keys of
+/// the active layout.
 #[derive(Debug, Clone)]
 pub struct TitleScreen {
     menu: Menu,
     /// Menu item labels, in menu order.
     items: Vec<&'static str>,
+    /// Whether the saves may have changed since the menu was built (the
+    /// screen has no "shown" hook): set when another screen is opened, and
+    /// the next update builds the menu again ([`refresh`](Self::refresh)).
+    stale: bool,
+    /// Why `Continue` couldn't, shown under the menu until the next key.
+    notice: Option<String>,
     /// Whether the title music was asked for since this screen was last
     /// shown. The screen has no "shown" hook, so a screen that changes the
     /// music clears it and the next update asks again.
@@ -70,26 +84,87 @@ pub struct TitleScreen {
 }
 
 impl TitleScreen {
-    /// The title screen with `New Game` focused.
+    /// The title screen with `New Game` focused, as it is with no saves
+    /// (the first update looks for them; [`refreshed`](Self::refreshed)
+    /// does at once).
     pub fn new() -> Self {
-        Self::with_items(vec![NEW_GAME, QUIT])
+        Self::with_debug(false)
     }
 
-    /// The title screen with a debug `Quick Battle` item after `New Game`,
-    /// which plays a test battle through the game flow.
+    /// The title screen with a debug `Quick Battle` item after `Load
+    /// Game`, which plays a test battle through the game flow.
     pub fn with_quick_battle() -> Self {
-        Self::with_items(vec![NEW_GAME, QUICK_BATTLE, QUIT])
+        Self::with_debug(true)
     }
 
-    fn with_items(items: Vec<&'static str>) -> Self {
+    fn with_debug(quick_battle: bool) -> Self {
+        let (menu, items) = Self::build(quick_battle, false, false);
         Self {
-            // Nothing to back out of on the title screen.
-            menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()).without_cancel(),
+            menu,
             items,
+            stale: true,
+            notice: None,
             music_on: false,
             battles_started: 0,
             prompt_done: false,
         }
+    }
+
+    /// The menu and its labels: `Continue` first if a battle is
+    /// `suspended`; `Load Game` disabled unless a slot is `saved`. Nothing
+    /// to back out of on the title screen.
+    fn build(quick_battle: bool, suspended: bool, saved: bool) -> (Menu, Vec<&'static str>) {
+        let mut items = vec![NEW_GAME, LOAD_GAME];
+        if suspended {
+            items.insert(0, CONTINUE);
+        }
+        if quick_battle {
+            items.push(QUICK_BATTLE);
+        }
+        items.push(QUIT);
+        let entries = items.iter().map(|&label| {
+            if label == LOAD_GAME && !saved {
+                MenuItem::disabled(label)
+            } else {
+                MenuItem::new(label)
+            }
+        });
+        (Menu::new(entries.collect()).without_cancel(), items)
+    }
+
+    /// Builds the menu for the saves in `ctx`'s storage. If it comes out
+    /// different (a battle was suspended or continued, a first save made),
+    /// the focus goes to its first item; otherwise it stays.
+    pub fn refresh(&mut self, ctx: &Ctx) {
+        self.stale = false;
+        let storage = ctx.storage.as_ref();
+        let suspended = save::has_suspend(storage);
+        let saved = save::any_slot(storage);
+        let quick_battle = self.items.contains(&QUICK_BATTLE);
+        let (menu, items) = Self::build(quick_battle, suspended, saved);
+        if menu.items() != self.menu.items() {
+            self.menu = menu;
+            self.items = items;
+        }
+    }
+
+    /// The same screen with its menu built for `ctx`'s saves
+    /// ([`refresh`](Self::refresh)).
+    #[must_use]
+    pub fn refreshed(mut self, ctx: &Ctx) -> Self {
+        self.refresh(ctx);
+        self
+    }
+
+    /// The notice under the menu, if any.
+    pub fn notice(&self) -> Option<&str> {
+        self.notice.as_deref()
+    }
+
+    /// Opens `screen` over the title; the saves may change under it.
+    fn open(&mut self, screen: Box<dyn Screen>) -> Transition {
+        self.stale = true;
+        Transition::Push(screen)
     }
 
     /// Whether the title is still showing [`PRESS_ANY_KEY`] instead of
@@ -150,19 +225,32 @@ impl Screen for TitleScreen {
             ctx.audio.play_music(TITLE_MUSIC);
             self.music_on = true;
         }
+        if self.stale {
+            self.refresh(ctx);
+        }
         for &action in &input.actions {
+            self.notice = None;
             let chosen = match self.menu.handle_with_sound(action, &mut ctx.audio) {
                 Some(MenuEvent::Chosen(i)) => self.items.get(i).copied(),
                 Some(MenuEvent::Cancelled) | None => None,
             };
             match chosen {
-                Some(NEW_GAME) => return Transition::Push(Box::new(FlowScreen::new_game())),
+                Some(CONTINUE) => match FlowScreen::resume(ctx) {
+                    Ok(flow) => return self.open(Box::new(flow)),
+                    // The save stays; the title says why it can't go on.
+                    Err(e) => {
+                        self.notice = Some(e.to_string());
+                        ctx.audio.menu(MenuSound::Denied);
+                    }
+                },
+                Some(NEW_GAME) => return self.open(Box::new(FlowScreen::new_game())),
+                Some(LOAD_GAME) => return self.open(Box::new(FlowScreen::load_game(ctx))),
                 // The test data always builds (tested); should it ever
                 // not, the item does nothing.
                 Some(QUICK_BATTLE) => {
                     if let Some(flow) = FlowScreen::quick_battle(ctx) {
                         self.start_quick_battle_music(ctx);
-                        return Transition::Push(Box::new(flow));
+                        return self.open(Box::new(flow));
                     }
                 }
 
@@ -185,9 +273,12 @@ impl Screen for TitleScreen {
             draw_debug_hint(ctx, buf, bottom);
             return;
         }
-        let (w, _) = self.menu.size();
+        let (w, h) = self.menu.size();
         let x = centre_x(buf, usize::try_from(w).unwrap_or(0));
         self.menu.draw(&ctx.palette, buf, x, MENU_ROW);
+        if let Some(notice) = &self.notice {
+            print_centred(buf, MENU_ROW + h + 1, notice, c(UiColor::HpLow), black);
+        }
         print_centred(buf, bottom, &Self::help(ctx), c(UiColor::TextDim), black);
         draw_debug_hint(ctx, buf, bottom);
     }
@@ -227,7 +318,7 @@ mod tests {
     fn debug_title_offers_quick_battle() {
         use Action::{Confirm, CursorDown, CursorUp};
         let mut t = TitleScreen::with_quick_battle();
-        assert_eq!(t.items, [NEW_GAME, QUICK_BATTLE, QUIT]);
+        assert_eq!(t.items, [NEW_GAME, LOAD_GAME, QUICK_BATTLE, QUIT]);
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(battle)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
@@ -241,7 +332,7 @@ mod tests {
         t.menu = TitleScreen::with_quick_battle().menu;
         let input = FrameInput::new(vec![CursorDown, Confirm], 0.0, vec![]);
         assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
-        assert_eq!(TitleScreen::new().items, [NEW_GAME, QUIT]);
+        assert_eq!(TitleScreen::new().items, [NEW_GAME, LOAD_GAME, QUIT]);
     }
 
     /// The music each update asks for, as cue names (`-` for a stop).
@@ -324,6 +415,113 @@ mod tests {
             assert_eq!(cues.last().map(String::as_str), want, "battle {n}");
             t.menu = TitleScreen::with_quick_battle().menu;
         }
+    }
+
+    /// A context whose storage holds `suspend` as the suspend save and
+    /// `slot` in slot 3.
+    fn ctx_with_saves(suspend: Option<&str>, slot: Option<&str>) -> Ctx {
+        let mut c = ctx();
+        if let Some(text) = suspend {
+            c.storage.write(save::SUSPEND_KEY, text).unwrap();
+        }
+        if let Some(text) = slot {
+            c.storage.write(&save::slot_key(3), text).unwrap();
+        }
+        c
+    }
+
+    fn labels(t: &TitleScreen) -> Vec<(&str, bool)> {
+        let items = t.menu.items().iter();
+        items.map(|i| (i.label.as_str(), i.enabled)).collect()
+    }
+
+    #[test]
+    fn the_menu_follows_the_saves() {
+        // No saves: no Continue, Load Game disabled.
+        let none = [(NEW_GAME, true), (LOAD_GAME, false), (QUIT, true)];
+        assert_eq!(labels(&TitleScreen::new()), none);
+        assert_eq!(labels(&TitleScreen::new().refreshed(&ctx())), none);
+        // A slot with anything in it: Load Game.
+        let c = ctx_with_saves(None, Some("junk"));
+        let t = TitleScreen::new().refreshed(&c);
+        let saved = [(NEW_GAME, true), (LOAD_GAME, true), (QUIT, true)];
+        assert_eq!(labels(&t), saved);
+        assert_eq!(t.items, [NEW_GAME, LOAD_GAME, QUIT]);
+        assert_eq!(t.menu.focus(), 0);
+        // A suspend save: Continue, first and focused.
+        let c = ctx_with_saves(Some("junk"), None);
+        let t = TitleScreen::with_quick_battle().refreshed(&c);
+        assert_eq!(
+            labels(&t),
+            [
+                (CONTINUE, true),
+                (NEW_GAME, true),
+                (LOAD_GAME, false),
+                (QUICK_BATTLE, true),
+                (QUIT, true)
+            ]
+        );
+        assert_eq!(t.items, [CONTINUE, NEW_GAME, LOAD_GAME, QUICK_BATTLE, QUIT]);
+        assert_eq!(t.menu.focus(), 0);
+    }
+
+    #[test]
+    fn the_first_update_and_every_return_look_for_saves() {
+        use Action::{Confirm, CursorDown};
+        let mut c = ctx_with_saves(None, Some("junk"));
+        let mut t = TitleScreen::new();
+        assert!(!t.menu.items()[1].enabled);
+        // The first update finds the save; the focus moves onto Load Game.
+        assert_eq!(
+            format!("{:?}", t.update(&mut c, &input(&[CursorDown, Confirm]))),
+            "Push(save_slots)"
+        );
+        // Nothing changed while it was open: the focus stays.
+        t.update(&mut c, &input(&[]));
+        assert_eq!(t.menu.focus(), 1);
+        // The saves don't change under the title itself: no look.
+        c.storage.write(save::SUSPEND_KEY, "junk").unwrap();
+        t.update(&mut c, &input(&[]));
+        assert_eq!(t.items, [NEW_GAME, LOAD_GAME, QUIT]);
+        // Back from another screen with a battle suspended: Continue,
+        // focused.
+        t.update(&mut c, &input(&[Confirm]));
+        t.update(&mut c, &input(&[]));
+        assert_eq!(t.items, [CONTINUE, NEW_GAME, LOAD_GAME, QUIT]);
+        assert_eq!(t.menu.focus(), 0);
+    }
+
+    #[test]
+    fn continue_with_a_save_that_cant_be_read_says_why() {
+        use Action::{Confirm, CursorDown};
+        let mut c = ctx_with_saves(Some("junk"), None);
+        let mut t = TitleScreen::new().refreshed(&c);
+        assert_eq!(t.notice(), None);
+        assert_eq!(outcome_in(&mut t, &mut c, &[Confirm]), "None");
+        assert_eq!(t.notice(), Some("This save can't be read"));
+        c.audio.take();
+        // The save is still there, and so is Continue.
+        assert_eq!(
+            c.storage.read(save::SUSPEND_KEY),
+            Ok(Some("junk".to_owned()))
+        );
+        assert_eq!(t.items[0], CONTINUE);
+        // No key, no change; the next key clears the notice.
+        t.update(&mut c, &input(&[]));
+        assert!(t.notice().is_some());
+        t.update(&mut c, &input(&[CursorDown]));
+        assert_eq!(t.notice(), None);
+        c.audio.take();
+        // Chosen: the select sound, then the refusal.
+        t.menu = TitleScreen::new().refreshed(&c).menu;
+        assert_eq!(
+            sounds_of(&mut t, &mut c, &[Confirm]),
+            ["menu_select", MenuSound::Denied.cue()]
+        );
+    }
+
+    fn outcome_in(screen: &mut dyn Screen, c: &mut Ctx, actions: &[Action]) -> String {
+        format!("{:?}", screen.update(c, &input(actions)))
     }
 
     #[test]

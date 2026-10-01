@@ -1,6 +1,5 @@
 ---
 source: crates/ui/src/screens/battle/turn_tests.rs
-assertion_line: 413
 expression: buf.to_snapshot(&c.palette)
 ---
                                                                       ┌────────────────────────────┐
@@ -55,7 +54,7 @@ aaaaaaaaaaaaaaaaaaaajjjjttooobbbbbbbbbbbbbbbbbbjaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaajjkkoouujbvvvvvvvvvvvvvvvvbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaakkkkoojjubccccccccccccccccbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaakklloojjjbggggggggggggggggbjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabggggggggggggggggbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb

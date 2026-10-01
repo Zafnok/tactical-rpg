@@ -138,6 +138,16 @@ pub enum Queued {
     Scene(String),
 }
 
+/// Why the battle screen closes before the battle is over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Leaving {
+    /// `Restart Battle`: the game flow starts the battle again.
+    Restart,
+    /// `Suspend`: the game flow saves the battle and goes back to the
+    /// title.
+    Suspend,
+}
+
 /// The battle screen: the player browses the map with the cursor, selects
 /// and moves units ([`Mode`]), opens the map menu, ends the turn; phase and
 /// outcome banners show as the battle goes on, and the outcome's closes the
@@ -180,9 +190,9 @@ pub struct BattleScreen {
     /// The unit whose walk was shown since the last command: its move's
     /// steps have been heard.
     walked: Option<UnitId>,
-    /// The player chose `Restart Battle`: the screen closes, and the game
-    /// flow starts the battle again.
-    restart: bool,
+    /// The player chose `Restart Battle` or `Suspend`: the screen closes,
+    /// and the game flow does it.
+    leaving: Option<Leaving>,
     /// Where the cursor and camera were when the player phase ended: they
     /// go back there when the next one starts.
     player_view: Option<(Pos, Camera)>,
@@ -224,7 +234,7 @@ impl BattleScreen {
             progress: None,
             cues: CueQueue::default(),
             walked: None,
-            restart: false,
+            leaving: None,
             player_view: None,
         }
     }
@@ -237,6 +247,16 @@ impl BattleScreen {
             Event::SceneTriggered { scene } => Some(Queued::Scene(scene.clone())),
             _ => None,
         }));
+        screen
+    }
+
+    /// A suspended battle carrying on (0802): the battle as `history`'s
+    /// commands left it, with its rewind points and the charges left.
+    /// `history` must have its content tables
+    /// ([`BattleHistory::restore_tables`]).
+    pub fn resume(history: BattleHistory) -> Self {
+        let mut screen = Self::new(history.state_at(history.len()));
+        screen.history = history;
         screen
     }
 
@@ -551,7 +571,20 @@ impl BattleScreen {
     /// Whether the player chose `Restart Battle` (the screen then pops,
     /// and the game flow starts the battle again).
     pub fn restart_requested(&self) -> bool {
-        self.restart
+        self.leaving == Some(Leaving::Restart)
+    }
+
+    /// Whether the player chose `Suspend` (the screen then pops, and the
+    /// game flow saves the battle and goes back to the title).
+    pub fn suspend_requested(&self) -> bool {
+        self.leaving == Some(Leaving::Suspend)
+    }
+
+    /// The suspend save couldn't be written: the battle goes on, showing
+    /// `message`.
+    pub fn suspend_failed(&mut self, message: String) {
+        self.leaving = None;
+        self.toast = Some((message, TOAST_S));
     }
 
     /// Applies `cmd` as if the player (or the AI) had sent it: scripted
@@ -832,7 +865,8 @@ impl BattleScreen {
                 self.cursor.jump(to);
                 self.follow(to);
             }
-            Effect::Restart => self.restart = true,
+            Effect::Restart => self.leaving = Some(Leaving::Restart),
+            Effect::Suspend => self.leaving = Some(Leaving::Suspend),
         }
     }
 
@@ -1478,7 +1512,7 @@ impl Screen for BattleScreen {
                 }
                 _ => self.step_mode(ctx, action),
             }
-            if self.restart {
+            if self.leaving.is_some() {
                 return Transition::Pop;
             }
         }

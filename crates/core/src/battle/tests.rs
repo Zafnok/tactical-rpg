@@ -2696,7 +2696,7 @@ fn free_tiles() -> Vec<Pos> {
 }
 
 prop_compose! {
-    fn arb_unit()(
+    pub(crate) fn arb_unit()(
         hp in 1..=20,
         str in 0..=8,
         def in 0..=4,

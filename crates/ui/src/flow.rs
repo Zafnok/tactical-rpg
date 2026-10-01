@@ -1,11 +1,15 @@
 //! The game flow (ticket 0801): from `New Game` through each chapter's
-//! scenes and battle to the result.
+//! scenes and battle to the result; and saving and loading it (0802).
 //!
 //! ```text
 //! New Game → mode → lead → [chapter: intro scenes → battle
-//!     ├─ victory → apply the result → victory scenes → (0802: save prompt)
+//!     ├─ victory → apply the result → victory scenes
+//!     │            → "Save your progress?" (→ slot picker)
 //!     │            → next chapter, or "To be continued" → title
-//!     └─ defeat  → Game Over → Retry (the battle again) | Title]
+//!     ├─ defeat  → Game Over → Retry (the battle again) | Title
+//!     └─ Suspend → the suspend save → title]
+//! Load Game → slot picker → the chapter after the one the save cleared
+//! Continue  → the suspended battle, where it was (the save is deleted)
 //! ```
 //!
 //! [`FlowScreen`] is one screen on the stack that owns the campaign and
@@ -16,6 +20,14 @@
 //! its [`BattleSetup`], kept so that `Restart Battle` (map menu) and
 //! `Retry` (Game Over) rebuild it exactly, every rewind charge back.
 //!
+//! **Saves** (`death-and-difficulty.md`, ADR-0036). A chapter save holds
+//! the campaign once its chapter is won, so its
+//! [`chapter`](Campaign::chapter) is the one just cleared until the next
+//! begins; loading one starts the chapter after it. The suspend save holds
+//! the campaign as the battle started with it and the battle's history;
+//! continuing rebuilds the battle's setup from the two, so a restart after
+//! it is the same as before.
+//!
 //! No Preparations yet (0408): every battle uses its default pack (the
 //! content validator refuses `preparations: true`).
 
@@ -23,13 +35,18 @@ use std::any::Any;
 use std::collections::VecDeque;
 
 use trpg_content::{ChapterDef, Scene, battle_campaign, new_campaign};
-use trpg_core::{BattleDef, BattleRewards, BattleSetup, BattleState, Campaign, GameMode, Outcome};
+use trpg_core::{
+    BattleDef, BattleRewards, BattleSetup, BattleState, Campaign, GameMode, Outcome, SaveFile,
+    SavePoint,
+};
 
 use crate::glyph_buffer::GlyphBuffer;
+use crate::save::{self, SUSPEND_KEY, SaveError};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::game_over::{GameOverChoice, GameOverScreen, ToBeContinuedScreen};
 use crate::screens::lead_select::LeadSelectScreen;
 use crate::screens::mode_select::ModeSelectScreen;
+use crate::screens::save::{SavePromptScreen, SlotOutcome, SlotPickerScreen};
 use crate::screens::{BattleScreen, DialogueScreen};
 
 /// The chapter the debug Quick Battle plays (`assets/chapters/quick.ron`).
@@ -48,6 +65,10 @@ pub enum Stage {
     Battle(Box<BattleScreen>),
     /// After a defeat.
     GameOver(GameOverScreen),
+    /// "Save your progress?", after a chapter's victory scenes.
+    SavePrompt(SavePromptScreen),
+    /// The slot picker: saving after a victory, or loading from the title.
+    Slots(Box<SlotPickerScreen>),
     /// After the last chapter.
     ToBeContinued(ToBeContinuedScreen),
 }
@@ -82,6 +103,9 @@ pub struct FlowScreen {
     rewards: Option<BattleRewards>,
     /// [`Ctx::clock_s`] when the campaign began, for its playtime.
     started_at: f64,
+    /// The save slot last saved to or loaded from: the slot picker opens
+    /// on it.
+    slot: Option<usize>,
 }
 
 impl FlowScreen {
@@ -96,7 +120,53 @@ impl FlowScreen {
             then: Then::Battle,
             rewards: None,
             started_at: 0.0,
+            slot: None,
         }
+    }
+
+    /// `Load Game`: the slot picker first. Going back from it ends the
+    /// flow.
+    pub fn load_game(ctx: &Ctx) -> Self {
+        let mut flow = Self::new_game();
+        flow.stage = Stage::Slots(Box::new(SlotPickerScreen::load(ctx, None)));
+        flow
+    }
+
+    /// `Continue`: the suspended battle, exactly where it was. The suspend
+    /// save is deleted (it can't be loaded twice,
+    /// `death-and-difficulty.md`); a save that can't be continued is left
+    /// alone.
+    pub fn resume(ctx: &mut Ctx) -> Result<Self, SaveError> {
+        let file = save::read(ctx.storage.as_ref(), SUSPEND_KEY)?.ok_or(SaveError::Missing)?;
+        let SaveFile {
+            campaign, point, ..
+        } = file;
+        let SavePoint::Battle(mut history) = point else {
+            return Err(SaveError::Corrupt);
+        };
+        // A chapter or battle the game no longer has can't be continued.
+        let chapter = ctx.content.chapters.get(&campaign.chapter);
+        let chapter = chapter.cloned().ok_or(SaveError::Corrupt)?;
+        let def = ctx.content.battles.get(&chapter.battle);
+        let def = def.cloned().ok_or(SaveError::Corrupt)?;
+        let tables = ctx.content.tables();
+        let setup = campaign.battle_setup(&def, &tables);
+        history.restore_tables(
+            tables.terrain,
+            tables.classes,
+            tables.items,
+            tables.spells,
+            tables.skills,
+            tables.arts,
+        );
+        // If deleting fails the battle still continues.
+        let _ = ctx.storage.delete(SUSPEND_KEY);
+        let mut flow = Self::new_game();
+        flow.adopt(ctx, campaign);
+        flow.chapter = Some(chapter);
+        flow.fight = Some(Fight { def, setup });
+        flow.stage = Stage::Battle(Box::new(BattleScreen::resume(*history)));
+        Ok(flow)
     }
 
     /// The debug Quick Battle: the [`QUICK_CHAPTER`] with its battle's own
@@ -155,6 +225,8 @@ impl FlowScreen {
             Stage::Scene(s) => s.as_ref(),
             Stage::Battle(s) => s.as_ref(),
             Stage::GameOver(s) => s,
+            Stage::SavePrompt(s) => s,
+            Stage::Slots(s) => s.as_ref(),
             Stage::ToBeContinued(s) => s,
         }
     }
@@ -166,22 +238,35 @@ impl FlowScreen {
             Stage::Scene(s) => s.as_mut(),
             Stage::Battle(s) => s.as_mut(),
             Stage::GameOver(s) => s,
+            Stage::SavePrompt(s) => s,
+            Stage::Slots(s) => s.as_mut(),
             Stage::ToBeContinued(s) => s,
         }
     }
 
-    /// Starts `campaign` at its chapter; dialogue from here on uses its
-    /// lead.
-    fn begin(&mut self, ctx: &mut Ctx, campaign: Campaign) {
+    /// Makes `campaign` the flow's: dialogue from here on uses its lead,
+    /// and its playtime counts on from what it had.
+    fn adopt(&mut self, ctx: &mut Ctx, campaign: Campaign) {
         ctx.lead = campaign.lead.clone();
-        // A loaded campaign (0802) carries on from its playtime.
         #[expect(clippy::cast_precision_loss, reason = "exact below 2^53 s")]
         let played = campaign.playtime_s as f64;
         self.started_at = ctx.clock_s - played;
-
-        let chapter = campaign.chapter.clone();
         self.campaign = Some(campaign);
+    }
+
+    /// Starts `campaign` at its chapter.
+    fn begin(&mut self, ctx: &mut Ctx, campaign: Campaign) {
+        let chapter = campaign.chapter.clone();
+        self.adopt(ctx, campaign);
         self.start_chapter(ctx, &chapter);
+    }
+
+    /// Goes on with the loaded chapter save `campaign`: the chapter after
+    /// the one it cleared ("To be continued" if the game has none yet).
+    fn begin_loaded(&mut self, ctx: &mut Ctx, campaign: Campaign) {
+        self.chapter = ctx.content.chapters.get(&campaign.chapter).cloned();
+        self.adopt(ctx, campaign);
+        self.next_chapter(ctx);
     }
 
     /// Starts chapter `id` with its intro scenes. A chapter missing from
@@ -210,7 +295,8 @@ impl FlowScreen {
         }
         match self.then {
             Then::Battle => self.start_battle(ctx),
-            Then::NextChapter => self.next_chapter(ctx),
+            // The chapter is over: the save prompt, then the next one.
+            Then::NextChapter => self.stage = Stage::SavePrompt(SavePromptScreen::new()),
         }
     }
 
@@ -250,15 +336,41 @@ impl FlowScreen {
         self.stage = Stage::Battle(Box::new(BattleScreen::start(state, &events)));
     }
 
-    /// The battle screen closed: a restart, or its outcome.
-    fn battle_over(&mut self, ctx: &Ctx, battle: &BattleScreen) {
+    /// The battle screen closed: a restart, a suspend, or its outcome.
+    /// Returns `true` when the flow is over (suspended: back to the title).
+    fn battle_over(&mut self, ctx: &mut Ctx, battle: Box<BattleScreen>) -> bool {
         if battle.restart_requested() {
             self.restart();
-            return;
+            return false;
+        }
+        if battle.suspend_requested() {
+            return self.suspend(ctx, battle);
         }
         match battle.state().outcome() {
-            Some(Outcome::Victory) => self.won(ctx, battle),
+            Some(Outcome::Victory) => self.won(ctx, &battle),
             _ => self.stage = Stage::GameOver(GameOverScreen::new()),
+        }
+        false
+    }
+
+    /// Writes the suspend save: the campaign as the battle started with it
+    /// and the battle's history. Returns whether it was written; if not,
+    /// the battle goes on, showing why.
+    fn suspend(&mut self, ctx: &mut Ctx, mut battle: Box<BattleScreen>) -> bool {
+        let written = match &self.campaign {
+            Some(campaign) => {
+                let file = SaveFile::suspended(campaign.clone(), battle.history().clone());
+                save::write(ctx.storage.as_mut(), SUSPEND_KEY, &file)
+            }
+            None => Err(SaveError::Missing),
+        };
+        match written {
+            Ok(()) => true,
+            Err(e) => {
+                battle.suspend_failed(e.to_string());
+                self.stage = Stage::Battle(battle);
+                false
+            }
         }
     }
 
@@ -279,8 +391,8 @@ impl FlowScreen {
         self.next_scene(ctx);
     }
 
-    /// After a chapter's victory scenes: its next chapter, or "To be
-    /// continued". The save prompt (0802) goes here.
+    /// After a chapter's save prompt (or loading its save): its next
+    /// chapter, or "To be continued".
     fn next_chapter(&mut self, ctx: &Ctx) {
         let next = self.chapter.as_ref().and_then(|c| c.next.clone());
         match next {
@@ -311,11 +423,35 @@ impl FlowScreen {
                 None => self.stage = Stage::Mode(ModeSelectScreen::new()),
             },
             Stage::Scene(_) => self.next_scene(ctx),
-            Stage::Battle(b) => self.battle_over(ctx, &b),
+            Stage::Battle(b) => return self.battle_over(ctx, b),
             Stage::GameOver(s) => match s.result() {
                 Some(GameOverChoice::Retry) => self.restart(),
                 _ => return true,
             },
+            Stage::SavePrompt(s) => match (s.result(), &self.campaign) {
+                (Some(true), Some(campaign)) => {
+                    let picker = SlotPickerScreen::save(ctx, campaign.clone(), self.slot);
+                    self.stage = Stage::Slots(Box::new(picker));
+                }
+                _ => self.next_chapter(ctx),
+            },
+            Stage::Slots(s) => {
+                let saving = s.is_saving();
+                match s.into_result() {
+                    Some(SlotOutcome::Saved(slot)) => {
+                        self.slot = Some(slot);
+                        self.next_chapter(ctx);
+                    }
+                    Some(SlotOutcome::Loaded(slot, file)) => {
+                        self.slot = Some(slot);
+                        self.begin_loaded(ctx, file.campaign);
+                    }
+                    // Back from saving: the question again. Back from
+                    // loading: the title.
+                    None if saving => self.stage = Stage::SavePrompt(SavePromptScreen::new()),
+                    None => return true,
+                }
+            }
             Stage::ToBeContinued(_) => return true,
         }
         false

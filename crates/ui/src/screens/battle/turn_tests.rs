@@ -387,8 +387,13 @@ fn objective_shows_the_goal_and_the_turn() {
         panic!("{:?}", s.mode());
     };
     assert_eq!(menu.focus(), 1);
-    // Down skips the disabled Options and Suspend to Restart Battle, then
-    // End Turn.
+    // Down skips the disabled Options to Suspend, then Restart Battle,
+    // then End Turn.
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 3);
     press(&mut s, &mut c, &[Action::CursorDown]);
     let Mode::MapMenu { menu, .. } = s.mode() else {
         panic!("{:?}", s.mode());

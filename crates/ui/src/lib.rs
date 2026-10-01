@@ -14,6 +14,7 @@ pub mod glyph_buffer;
 pub mod harness;
 pub mod input;
 pub mod portrait;
+pub mod save;
 pub mod screen;
 pub mod screens;
 pub mod snapshot;
