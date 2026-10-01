@@ -260,6 +260,28 @@ impl Keymap {
         })
     }
 
+    /// What moves the cursor on a pad of `kind`, for help text: the whole
+    /// sets of direction buttons the four cursor actions are on, joined
+    /// with `/` (`D-pad/stick` with the defaults); if they are on no whole
+    /// set, each one's [`primary_button`](Self::primary_button)'s name in
+    /// up-left-down-right order. `None` if any cursor action has no button.
+    pub fn cursor_buttons_name(&self, kind: PadKind) -> Option<String> {
+        let bound = [
+            Action::CursorUp,
+            Action::CursorDown,
+            Action::CursorLeft,
+            Action::CursorRight,
+        ]
+        .map(|action| self.buttons_for(action));
+        pad::cursor_buttons_name(kind, &bound)
+    }
+
+    /// The button help text names for `action`: the first of
+    /// [`buttons_for`](Self::buttons_for), or `None` if it has none.
+    pub fn primary_button(&self, action: Action) -> Option<Button> {
+        self.buttons_for(action).into_iter().next()
+    }
+
     /// The chord help text names for `action`: the first of
     /// [`chords_for`](Self::chords_for), or `None` if it has none.
     pub fn primary(&self, action: Action) -> Option<Chord> {
@@ -288,6 +310,18 @@ impl Keymap {
             [Action::EndTurn, Action::Confirm]
         }
     }
+}
+
+/// What the player is playing with: whatever they pressed last
+/// (`docs/design/controls.md`, *Switching between keyboard and
+/// controller*). Help text names keys or this pad's buttons to match.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Device {
+    /// The keyboard.
+    #[default]
+    Keyboard,
+    /// A controller of this kind.
+    Pad(PadKind),
 }
 
 /// Something the player can hold down: a keyboard key or a controller
@@ -345,6 +379,8 @@ pub struct InputState {
     /// triggered, oldest first.
     held: Vec<(Input, Action)>,
     repeat: Option<Repeat>,
+    /// Where the last bound press came from.
+    device: Device,
 }
 
 impl InputState {
@@ -355,7 +391,16 @@ impl InputState {
             pending: Vec::new(),
             held: Vec::new(),
             repeat: None,
+            device: Device::default(),
         }
+    }
+
+    /// What the player pressed last: the keyboard, or a pad of some kind.
+    /// Only presses that do something count (a bound key or button going
+    /// down), so an unbound key or a resting stick never switches it.
+    /// The keyboard until anything is pressed.
+    pub fn device(&self) -> Device {
+        self.device
     }
 
     /// The bindings in use.
@@ -366,15 +411,20 @@ impl InputState {
     /// Switches to other bindings (the player picked a layout). Forgets held
     /// keys, pending presses and any running repeat, so nothing pressed
     /// under the old bindings leaks into the new ones; a key still down is
-    /// ignored until it is pressed again.
+    /// ignored until it is pressed again. The [`device`](Self::device)
+    /// stays.
     pub fn set_keymap(&mut self, keymap: Keymap) {
-        *self = Self::new(keymap);
+        *self = Self {
+            device: self.device,
+            ..Self::new(keymap)
+        };
     }
 
     /// A key went down (with its modifier state). Unbound chords and keys
     /// already held are ignored.
     pub fn key_down(&mut self, chord: Chord) {
-        self.press(Input::Key(chord.key), self.keymap.action(chord));
+        let action = self.keymap.action(chord);
+        self.press(Input::Key(chord.key), action, Device::Keyboard);
     }
 
     /// A key went up. Stops its repeat, if it was the repeating one.
@@ -382,11 +432,12 @@ impl InputState {
         self.release(Input::Key(key));
     }
 
-    /// A controller button went down, on any pad ([`Pads`] merges them and
-    /// gives the button's binding position). Unbound buttons and buttons
-    /// already held are ignored.
-    pub fn pad_down(&mut self, button: Button) {
-        self.press(Input::Pad(button), self.keymap.pad_action(button));
+    /// A controller button went down, on a pad of `kind` ([`Pads`] merges
+    /// the pads and gives the button's binding position). Unbound buttons
+    /// and buttons already held are ignored.
+    pub fn pad_down(&mut self, button: Button, kind: PadKind) {
+        let action = self.keymap.pad_action(button);
+        self.press(Input::Pad(button), action, Device::Pad(kind));
     }
 
     /// A controller button went up. Stops its repeat, if it was the
@@ -395,14 +446,15 @@ impl InputState {
         self.release(Input::Pad(button));
     }
 
-    /// `input` went down, bound to `action` (if any).
-    fn press(&mut self, input: Input, action: Option<Action>) {
+    /// `input` went down on `device`, bound to `action` (if any).
+    fn press(&mut self, input: Input, action: Option<Action>, device: Device) {
         if self.held.iter().any(|&(i, _)| i == input) {
             return;
         }
         let Some(action) = action else {
             return;
         };
+        self.device = device;
         self.held.push((input, action));
         self.pending.push(action);
         if action.is_repeatable() {
@@ -507,6 +559,9 @@ mod tests {
     fn state_with(delay_ms: u32, interval_ms: u32) -> InputState {
         InputState::new(test_keymap(delay_ms, interval_ms))
     }
+
+    /// The kind of pad the tests press buttons on.
+    const PAD: PadKind = PadKind::Xbox;
 
     /// The buttons [`pad_state`] adds to the test keymap.
     const TEST_PAD: [(Button, Action); 5] = [
@@ -795,27 +850,167 @@ mod tests {
     #[test]
     fn set_keymap_forgets_held_buttons_too() {
         let mut s = pad_state();
-        s.pad_down(Button::DpadRight);
-        s.pad_down(Button::South);
+        s.pad_down(Button::DpadRight, PAD);
+        s.pad_down(Button::South, PAD);
         s.set_keymap(test_keymap(170, 55).with_pad([(Button::East, Confirm)]));
         assert!(!s.is_held(Confirm) && !s.is_held(CursorRight));
         assert_eq!(s.update(ms(1000)), vec![]);
         // South is unbound now; East confirms.
         s.pad_up(Button::South);
-        s.pad_down(Button::South);
-        s.pad_down(Button::East);
+        s.pad_down(Button::South, PAD);
+        s.pad_down(Button::East, PAD);
         assert_eq!(s.update(0.0), vec![Confirm]);
+    }
+
+    #[test]
+    fn the_device_is_whatever_was_pressed_last() {
+        let mut s = pad_state();
+        assert_eq!(s.device(), Device::Keyboard);
+        s.pad_down(Button::South, PadKind::PlayStation);
+        assert_eq!(s.device(), Device::Pad(PadKind::PlayStation));
+        // Releases and passing time don't count.
+        s.pad_up(Button::South);
+        s.key_up(Key::F);
+        s.update(ms(500));
+        assert_eq!(s.device(), Device::Pad(PadKind::PlayStation));
+        s.key_down(chord("f"));
+        assert_eq!(s.device(), Device::Keyboard);
+        // Another pad, of another kind.
+        s.pad_down(Button::DpadLeft, PadKind::Nintendo);
+        assert_eq!(s.device(), Device::Pad(PadKind::Nintendo));
+        s.pad_down(Button::DpadDown, PadKind::Generic);
+        assert_eq!(s.device(), Device::Pad(PadKind::Generic));
+        // The fixed Cancel key is a press like any other.
+        s.key_down(chord("Escape"));
+        assert_eq!(s.device(), Device::Keyboard);
+        assert_eq!(Device::default(), Device::Keyboard);
+    }
+
+    #[test]
+    fn presses_that_do_nothing_leave_the_device_alone() {
+        let mut s = pad_state();
+        // An unbound button, and a button on a keymap without buttons.
+        s.pad_down(Button::RightTrigger, PAD);
+        assert_eq!(s.device(), Device::Keyboard);
+        let mut keys_only = default_state();
+        keys_only.pad_down(Button::South, PAD);
+        assert_eq!(keys_only.device(), Device::Keyboard);
+        // An unbound key, and a key reported down again while held.
+        s.key_down(chord("f"));
+        s.pad_down(Button::South, PAD);
+        assert_eq!(s.device(), Device::Pad(PAD));
+        s.key_down(chord("z"));
+        s.key_down(chord("Shift+f"));
+        s.key_down(chord("f"));
+        assert_eq!(s.device(), Device::Pad(PAD));
+        // Likewise a button held on one pad and pressed on another.
+        s.key_up(Key::F);
+        s.key_down(chord("f"));
+        assert_eq!(s.device(), Device::Keyboard);
+        s.pad_down(Button::South, PadKind::Nintendo);
+        assert_eq!(s.device(), Device::Keyboard);
+    }
+
+    #[test]
+    fn switching_bindings_keeps_the_device() {
+        let mut s = pad_state();
+        s.pad_down(Button::South, PadKind::Nintendo);
+        s.set_keymap(test_keymap(170, 55));
+        assert_eq!(s.device(), Device::Pad(PadKind::Nintendo));
+        assert!(!s.is_held(Confirm));
+    }
+
+    /// A keymap with only these buttons.
+    fn buttons(pad: &[(Button, Action)]) -> Keymap {
+        Keymap::new([], RepeatDef::default()).with_pad(pad.iter().copied())
+    }
+
+    #[test]
+    fn the_first_button_is_the_primary_one() {
+        let km = pad_state().keymap().clone();
+        assert_eq!(km.primary_button(CursorDown), Some(Button::DpadDown));
+        assert_eq!(km.primary_button(Confirm), Some(Button::South));
+        assert_eq!(km.primary_button(Info), None);
+        assert_eq!(test_keymap(170, 55).primary_button(Confirm), None);
+    }
+
+    #[test]
+    fn the_default_cursor_buttons_are_the_dpad_and_the_stick() {
+        let def = KeymapDef::load().unwrap_or_default();
+        let km = Keymap::for_layout(&def, Layout::LeftHanded);
+        for kind in [
+            PadKind::Xbox,
+            PadKind::PlayStation,
+            PadKind::Nintendo,
+            PadKind::Generic,
+        ] {
+            assert_eq!(km.cursor_buttons_name(kind).as_deref(), Some("D-pad/stick"));
+        }
+    }
+
+    #[test]
+    fn rebound_cursor_buttons_are_named_by_whole_sets_or_one_by_one() {
+        use Button::{
+            DpadDown, DpadLeft, DpadRight, DpadUp, East, LeftStickDown, LeftStickLeft,
+            LeftStickRight, LeftStickUp, North, RightStickDown, RightStickLeft, RightStickRight,
+            RightStickUp, South, West,
+        };
+        let name = |pad: &[(Button, Action)], kind| buttons(pad).cursor_buttons_name(kind);
+        let on = |[up, down, left, right]: [Button; 4]| {
+            [
+                (up, CursorUp),
+                (down, CursorDown),
+                (left, CursorLeft),
+                (right, CursorRight),
+            ]
+        };
+        let dpad = on([DpadUp, DpadDown, DpadLeft, DpadRight]);
+        let stick = on([LeftStickUp, LeftStickDown, LeftStickLeft, LeftStickRight]);
+        let right = on([
+            RightStickUp,
+            RightStickDown,
+            RightStickLeft,
+            RightStickRight,
+        ]);
+        let xbox = PadKind::Xbox;
+        assert_eq!(name(&dpad, xbox).as_deref(), Some("D-pad"));
+        assert_eq!(name(&stick, xbox).as_deref(), Some("stick"));
+        assert_eq!(name(&right, xbox).as_deref(), Some("R-stick"));
+        // Whole sets are named D-pad first, whatever the slot order.
+        let all = [right, stick, dpad].concat();
+        assert_eq!(name(&all, xbox).as_deref(), Some("D-pad/stick/R-stick"));
+        // A set with a direction elsewhere isn't whole; the whole one is
+        // still named, and the odd button isn't.
+        let mut mixed = [dpad, stick].concat();
+        mixed.retain(|&(b, _)| b != LeftStickLeft);
+        mixed.push((West, CursorLeft));
+        assert_eq!(name(&mixed, xbox).as_deref(), Some("D-pad"));
+        // No whole set: each direction's first button, up-left-down-right,
+        // as the pad names them.
+        let face = on([North, South, West, East]);
+        assert_eq!(name(&face, xbox).as_deref(), Some("Y/X/A/B"));
+        assert_eq!(name(&face, PadKind::Nintendo).as_deref(), Some("X/Y/A/B"));
+        let broken = on([DpadUp, DpadDown, DpadLeft, East]);
+        assert_eq!(name(&broken, xbox).as_deref(), Some("↑/←/↓/B"));
+        // A direction with no button at all.
+        for missing in 0..4 {
+            let mut some = dpad.to_vec();
+            some.remove(missing);
+            assert_eq!(name(&some, xbox), None, "{missing}");
+        }
+        assert_eq!(name(&[], xbox), None);
+        assert_eq!(test_keymap(170, 55).cursor_buttons_name(xbox), None);
     }
 
     #[test]
     fn a_button_press_emits_once_and_is_held_until_released() {
         let mut s = pad_state();
-        s.pad_down(Button::South);
+        s.pad_down(Button::South, PAD);
         assert_eq!(s.update(0.0), vec![Confirm]);
         assert_eq!(s.update(ms(1000)), vec![]);
         assert!(s.is_held(Confirm));
         // Reported down again while held (a second pad): ignored.
-        s.pad_down(Button::South);
+        s.pad_down(Button::South, PAD);
         assert_eq!(s.update(0.0), vec![]);
         s.pad_up(Button::South);
         assert!(!s.is_held(Confirm));
@@ -825,20 +1020,20 @@ mod tests {
     #[test]
     fn unbound_buttons_are_ignored() {
         let mut s = pad_state();
-        s.pad_down(Button::RightTrigger);
+        s.pad_down(Button::RightTrigger, PAD);
         assert!(s.held.is_empty());
         s.pad_up(Button::RightTrigger);
         assert_eq!(s.update(ms(500)), vec![]);
         // Without buttons in the keymap, every button is unbound.
         let mut s = default_state();
-        s.pad_down(Button::South);
+        s.pad_down(Button::South, PAD);
         assert_eq!(s.update(ms(500)), vec![]);
     }
 
     #[test]
     fn a_held_button_repeats_with_the_key_timings() {
         let mut s = pad_state();
-        s.pad_down(Button::DpadRight);
+        s.pad_down(Button::DpadRight, PAD);
         assert_eq!(s.update(ms(169)), vec![CursorRight]);
         assert_eq!(s.update(ms(1)), vec![CursorRight]); // 170: first repeat
         assert_eq!(s.update(ms(54)), vec![]); // 224
@@ -853,7 +1048,7 @@ mod tests {
     fn a_key_and_a_button_on_one_action_are_separate_inputs() {
         let mut s = pad_state();
         s.key_down(chord("f"));
-        s.pad_down(Button::South);
+        s.pad_down(Button::South, PAD);
         assert_eq!(s.update(0.0), vec![Confirm, Confirm]);
         // Letting go of one leaves the action held by the other.
         s.key_up(Key::F);
@@ -863,8 +1058,8 @@ mod tests {
         assert!(!s.is_held(Confirm));
         // Likewise for two directions' repeat: the stick takes over from
         // the D-pad, and the D-pad resumes after a full delay.
-        s.pad_down(Button::DpadDown);
-        s.pad_down(Button::LeftStickDown);
+        s.pad_down(Button::DpadDown, PAD);
+        s.pad_down(Button::LeftStickDown, PAD);
         assert_eq!(s.update(ms(170)), vec![CursorDown, CursorDown, CursorDown]);
         s.pad_up(Button::LeftStickDown);
         assert_eq!(s.update(ms(169)), vec![]);
@@ -877,7 +1072,7 @@ mod tests {
         s.key_down(chord("l"));
         assert_eq!(s.update(ms(100)), vec![CursorRight]);
         // A button pressed later takes over the repeat from the key...
-        s.pad_down(Button::DpadDown);
+        s.pad_down(Button::DpadDown, PAD);
         assert_eq!(s.update(ms(169)), vec![CursorDown]);
         assert_eq!(s.update(ms(1)), vec![CursorDown]);
         assert!(s.is_held(CursorRight) && s.is_held(CursorDown));
@@ -887,14 +1082,14 @@ mod tests {
         assert_eq!(s.update(ms(1)), vec![CursorRight]);
         // And the other way round: a key takes over from a button.
         let mut s = pad_state();
-        s.pad_down(Button::DpadLeft);
+        s.pad_down(Button::DpadLeft, PAD);
         s.key_down(chord("j"));
         assert_eq!(s.update(ms(170)), vec![CursorLeft, CursorDown, CursorDown]);
         // Releasing the older, non-repeating one changes nothing.
         s.pad_up(Button::DpadLeft);
         assert_eq!(s.update(ms(55)), vec![CursorDown]);
         // A non-repeatable button doesn't stop the key's repeat.
-        s.pad_down(Button::South);
+        s.pad_down(Button::South, PAD);
         s.pad_up(Button::South);
         assert_eq!(s.update(ms(55)), vec![Confirm, CursorDown]);
     }
@@ -1110,7 +1305,7 @@ mod tests {
                         Some((Input::Key(chord.key), km.action(chord)))
                     }
                     Step::PadDown(button) => {
-                        s.pad_down(button);
+                        s.pad_down(button, PAD);
                         Some((Input::Pad(button), km.pad_action(button)))
                     }
                     _ => None,
