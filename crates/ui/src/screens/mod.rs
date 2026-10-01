@@ -2,11 +2,13 @@
 
 pub mod battle;
 pub mod dialogue;
+pub mod key_bindings;
 pub mod layout_picker;
 pub mod title;
 
 pub use battle::BattleScreen;
 pub use dialogue::DialogueScreen;
+pub use key_bindings::KeyBindingsScreen;
 pub use layout_picker::LayoutPickerScreen;
 pub use title::{PlaceholderScreen, TitleScreen};
 

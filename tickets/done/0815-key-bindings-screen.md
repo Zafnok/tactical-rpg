@@ -5,10 +5,10 @@ type: feature
 milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0217", "0218"]
 nick_input: sign-off
-completed:
+completed: 2026-09-30
 ---
 
 # 0815 — Key bindings screen
@@ -115,25 +115,25 @@ exists), and:
 
 ## Acceptance criteria
 
-- [ ] Nick approved the look from mockups (note which option in Completion
+- [x] Nick approved the look from mockups (note which option in Completion
       notes).
-- [ ] Binding `e` to Confirm's slot 2 in right-handed moves it from Info;
+- [x] Binding `e` to Confirm's slot 2 in right-handed moves it from Info;
       Info shows `! not mapped`; after leaving, `e` confirms and nothing
       opens Info (Harness test).
-- [ ] With Confirm's only key moved away, Cancel does not leave and the
+- [x] With Confirm's only key moved away, Cancel does not leave and the
       message names Confirm; binding a new Confirm key then allows leaving
       (Harness test).
-- [ ] `Esc` during capture changes nothing; `Delete` during capture is
+- [x] `Esc` during capture changes nothing; `Delete` during capture is
       ignored; `Delete` on a slot empties it (Harness tests).
-- [ ] Navigation still works after the player moves every cursor key to
+- [x] Navigation still works after the player moves every cursor key to
       other actions (Harness test: the opened-with keymap drives the screen).
-- [ ] Edits persist across restart and per layout (MemoryStorage Harness
+- [x] Edits persist across restart and per layout (MemoryStorage Harness
       test: edit right-handed, restart, still there; left-handed unchanged).
-- [ ] Restore defaults resets only the current layout (test).
-- [ ] Snapshots: list, capture prompt, `! not mapped` row, blocked-leave
+- [x] Restore defaults resets only the current layout (test).
+- [x] Snapshots: list, capture prompt, `! not mapped` row, blocked-leave
       message.
-- [ ] `cargo xtask check-keys` passes (no key named in the screen code).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `cargo xtask check-keys` passes (no key named in the screen code).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -142,3 +142,65 @@ exists), and:
 - Integration: Harness scripts above.
 
 ## Completion notes
+
+**Look (Nick, 2026-09-30).** Three looks were rendered with the real font
+(A plain list as in the sketch, B a panel with "Must have a key" /
+"Optional" groups, C the list plus a keyboard picture of taken keys). Nick
+picked **B: grouped panel** and **required first, then optional** for the
+row order. Recorded in `docs/design/controls.md` (*Rebinding keys*, "The
+screen's look"), with screenshots of the built screen in
+`docs/screenshots/0815-key-bindings*.png`.
+
+**Done.**
+- `FrameInput::pressed_chords` (every chord pressed this frame), filled by
+  `Game`; `input::{is_capture_abort, is_clear_slot, capture_abort_key_name,
+  clear_slot_key_name, CAPTURE_PROMPT}`.
+- `KeyBindingsScreen` (`crates/ui/src/screens/key_bindings.rs`): capture,
+  moved keys, Delete, blocked leave, Restore defaults, help bar. It edits a
+  copy and saves with `Ctx::set_layout_bindings` on leaving, so the keys it
+  was opened with steer it throughout.
+- Debug menu → "Key bindings" (last entry). 0805's ticket now says to open
+  the screen from Options and drop that entry.
+
+**Deviations from the plan.**
+- Rows are in Nick's order (`ROWS` in the screen module), not
+  `Action::ALL` order.
+- `FrameInput::new` keeps its signature; the chords are added with
+  `with_pressed_chords`, so the many existing screen tests are untouched.
+- The text `Press a key…` lives in `input.rs` (`CAPTURE_PROMPT`), next to
+  the capture helpers: `check-keys` reads "Press a" as naming the key `a`,
+  and `input.rs` is the file allowed to hold such text. The gate itself is
+  unchanged.
+- The scope listed sounds as out (0425), but 0425 has since landed and
+  `crates/ui/README.md` asks every screen to play the menu sounds, so the
+  screen plays the existing move / select / cancel / denied cues. No new
+  sounds.
+- The screen's name is in `debug::SCREENS`: the Debug key does nothing on
+  it (otherwise pressing it at `Press a key…` would open the debug menu
+  instead of showing "That key can't be used").
+
+**Claude's starting rules** (Nick to veto at sign-off; also in
+`controls.md`):
+- The screen is steered with the keys you had when you opened it; your
+  changes count from the moment you leave. (Already listed in 0030.)
+- Up/down wrap round through the rows and Restore defaults; left/right
+  stop at the first and third slot.
+- The debug key (only in builds with the debug menu) can't be bound: it
+  shows `That key can't be used` and the slot keeps waiting.
+- When a key moves, the action that lost it lights up white for 1.5 s.
+- If the key you press for a slot is one of your old cursor keys and you
+  keep it held, the highlight doesn't run off: cursor moves wait until
+  you let go.
+- With two required actions unmapped, the message names the one listed
+  higher on the screen.
+- Restore defaults happens at once, with no confirmation; like any other
+  change it only counts once you leave.
+- Player-facing action names: Cursor up/down/left/right, Confirm, Cancel,
+  End turn, Select, Confirm end turn, Previous ready unit, Next ready unit,
+  Unit info, Danger zone, Auto-end on/off, Rewind, Map menu (from the
+  table in `controls.md`).
+
+**For Nick's sign-off:** F2 → Key bindings (bottom of the debug menu).
+
+**Follow-ups:** none new. 0805 (Options opens the screen) and 0816
+(controller buttons on the same screen) were already ticketed.

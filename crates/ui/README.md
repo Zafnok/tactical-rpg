@@ -13,9 +13,9 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
 | `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
-| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
+| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
-| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay) |
+| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
@@ -24,7 +24,9 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 1. `app` collects key presses/releases as `RawKeyEvent`s and calls
    `game.frame(&events, dt)`.
 2. `Game` feeds them to `InputState`, which turns them into this frame's
-   `Action`s (presses, then key repeats).
+   `Action`s (presses, then key repeats). The raw presses also go into
+   `FrameInput::pressed_chords`, which only the Key bindings screen reads
+   (to capture a key for a slot).
 3. Only the **top** screen's `update(ctx, input)` runs. It returns a
    `Transition`: `None`, `Push(screen)`, `Pop`, `Replace(screen)` or `Quit`.
    Popping the last screen also quits.

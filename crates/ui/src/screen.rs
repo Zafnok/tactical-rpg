@@ -16,7 +16,7 @@ use trpg_core::{LeadGender, LeadProfile};
 use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Keymap, Layout, LayoutBindings, PlayerKeys};
+use crate::input::{Action, Chord, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
 
@@ -89,12 +89,30 @@ pub struct FrameInput {
     pub dt: f32,
     /// Actions whose key is currently held down.
     held: Vec<Action>,
+    /// Every chord pressed this frame, in order, bound or not (presses
+    /// only, no repeats). Only the Key bindings screen reads these, to
+    /// capture the key for a slot; every other screen reacts to `actions`
+    /// (the `keyboard-input` skill).
+    pub pressed_chords: Vec<Chord>,
 }
 
 impl FrameInput {
     /// Input for one frame; `held` lists the actions whose keys are down.
+    /// No [`pressed_chords`](Self::pressed_chords).
     pub fn new(actions: Vec<Action>, dt: f32, held: Vec<Action>) -> Self {
-        Self { actions, dt, held }
+        Self {
+            actions,
+            dt,
+            held,
+            pressed_chords: Vec::new(),
+        }
+    }
+
+    /// The same input with the chords pressed this frame.
+    #[must_use]
+    pub fn with_pressed_chords(mut self, chords: Vec<Chord>) -> Self {
+        self.pressed_chords = chords;
+        self
     }
 
     /// Whether a key bound to `action` is held (e.g. hold Confirm to
@@ -620,6 +638,9 @@ pub(crate) mod tests {
         assert!(!i.is_held(Action::Confirm));
         assert_eq!(i.actions, [Action::Confirm]);
         assert!((i.dt - 0.5).abs() < f32::EPSILON);
+        assert!(i.pressed_chords.is_empty());
+        let g = crate::input::Chord::plain(crate::input::Key::G);
+        assert_eq!(i.with_pressed_chords(vec![g]).pressed_chords, [g]);
     }
 
     #[test]

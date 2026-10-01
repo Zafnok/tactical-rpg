@@ -152,6 +152,13 @@ impl Game {
                 RawKeyEvent::Up(key) => self.input.key_up(key),
             }
         }
+        let pressed = events
+            .iter()
+            .filter_map(|event| match event {
+                RawKeyEvent::Down(chord) => Some(*chord),
+                RawKeyEvent::Up(_) => None,
+            })
+            .collect();
         let actions = self.input.update(dt);
         let held = Action::ALL
             .into_iter()
@@ -166,7 +173,7 @@ impl Game {
         if opens_debug_menu {
             self.stack.push(Box::new(DebugMenuScreen::new()));
         } else {
-            let input = FrameInput::new(actions, dt, held);
+            let input = FrameInput::new(actions, dt, held).with_pressed_chords(pressed);
             self.quit = self.stack.update(&mut self.ctx, &input);
             self.sync_keymap();
         }
@@ -478,6 +485,23 @@ mod tests {
         assert!(seen[1].actions.is_empty());
         assert!(seen[1].is_held(Action::CursorRight));
         assert!(!seen[1].is_held(Action::Confirm));
+        // Every press of the frame, in order; releases aren't presses.
+        assert_eq!(
+            seen[0].pressed_chords,
+            [Chord::plain(Key::Right), Chord::plain(Key::F)]
+        );
+        assert!(seen[1].pressed_chords.is_empty());
+    }
+
+    #[test]
+    fn screens_see_unbound_and_shifted_presses_as_chords() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let shifted = Chord::shifted(Key::Q);
+        game.frame(&[down(Key::Delete), RawKeyEvent::Down(shifted)], 0.0);
+        let seen = seen.borrow();
+        assert!(seen[0].actions.is_empty());
+        assert_eq!(seen[0].pressed_chords, [Chord::plain(Key::Delete), shifted]);
     }
 
     /// Plays `beep` on Confirm, switches to music `battle` on Cancel, quits
