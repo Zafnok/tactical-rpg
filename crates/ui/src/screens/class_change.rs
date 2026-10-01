@@ -57,7 +57,7 @@ const COLUMNS_Y: i32 = 4;
 const COLUMN_H: i32 = 25;
 
 /// Widest text in a column (one blank cell inside each border).
-const TEXT_W: usize = COLUMN_W as usize - 4;
+const TEXT_W: usize = 20;
 
 /// Row of the title.
 const TITLE_ROW: i32 = 1;
@@ -264,7 +264,7 @@ impl ClassChangeScreen {
         unit.stats.hp += 8;
         unit.stats.str += 4;
         unit.stats.dex += 3;
-        unit.stats.spd += 2;
+        unit.stats.spd += 3;
         unit.stats.def = classes.hard_ceilings.def - 1;
         unit.hp = unit.stats.hp;
         let mastered = ClassRecord {
@@ -336,11 +336,9 @@ impl ClassChangeScreen {
         } else {
             (self.focus + n - 1) % n
         };
-        if self.focus < self.first {
-            self.first = self.focus;
-        } else if self.focus >= self.first + COLUMNS {
-            self.first = self.focus + 1 - COLUMNS;
-        }
+        // The window of `COLUMNS` columns moves just far enough to hold it.
+        let leftmost = (self.focus + 1).saturating_sub(COLUMNS);
+        self.first = self.first.min(self.focus).max(leftmost);
         true
     }
 

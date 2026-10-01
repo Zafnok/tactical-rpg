@@ -62,7 +62,7 @@ fn promoting_with_a_seal_changes_the_class_and_raises_the_stats() {
         "Str  11 → 14  +3",
         "Mag   0",
         "Dex   7 → 9   +2",
-        "Spd   4 → 8   +4",
+        "Spd   5 → 9   +4",
         "Def  49 → 50  +1",
         "Res   0 → 2   +2",
     ] {

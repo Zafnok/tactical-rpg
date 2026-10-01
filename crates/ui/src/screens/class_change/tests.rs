@@ -75,7 +75,7 @@ fn a_promotion_offers_the_branches_with_what_promote_would_do() {
     assert_eq!(s.stock().count(&item("tier_2_seal")), 1);
 }
 
-/// The knight: HP 28, Str 11, Mag 0, Dex 7, Spd 4, Def 49, Res 0. Bulwark
+/// The knight: HP 28, Str 11, Mag 0, Dex 7, Spd 5, Def 49, Res 0. Bulwark
 /// base `28 11 0 6 4 14 2` less Guard `20 7 0 4 2 9 0`; Iron Rider
 /// `27 10 0 6 6 11 2`.
 #[test]
@@ -108,7 +108,7 @@ fn the_columns_show_each_stat_before_and_after_and_mark_a_maxed_one() {
             "Str  11 → 15  +4",
             "Mag   0",
             "Dex   7 → 9   +2",
-            "Spd   4 → 6   +2",
+            "Spd   5 → 7   +2",
             // Def +5 is cut at the hard ceiling (50).
             "Def  49 → 50  +1 MAX",
             "Res   0 → 2   +2",
@@ -137,7 +137,7 @@ fn the_columns_show_each_stat_before_and_after_and_mark_a_maxed_one() {
             "Str  11 → 14  +3",
             "Mag   0",
             "Dex   7 → 9   +2",
-            "Spd   4 → 8   +4",
+            "Spd   5 → 9   +4",
             "Def  49 → 50  +1 MAX",
             "Res   0 → 2   +2",
             "",
@@ -158,6 +158,28 @@ fn the_columns_show_each_stat_before_and_after_and_mark_a_maxed_one() {
     assert_eq!(buf.get(COLUMNS_X, COLUMNS_Y).unwrap().glyph, '╔');
     assert_eq!(buf.get(COLUMNS_X + COLUMN_W, COLUMNS_Y).unwrap().glyph, '┌');
     assert_eq!(s.help(&c), "Left/Right class · f choose · d back");
+}
+
+#[test]
+fn long_text_is_cut_inside_the_column() {
+    assert_eq!(i32::try_from(TEXT_W).unwrap() + 4, COLUMN_W);
+    let mut c = ctx();
+    if let Some(class) = c
+        .content
+        .classes
+        .classes
+        .get_mut(&ClassId("bulwark".into()))
+    {
+        class.name = "A class name of thirty-two cells".into();
+    }
+    let s = demo(&c, ChangeKind::Promote);
+    let buf = render(&s, &c);
+    assert_eq!(cell(&buf, 0, 1), "A class name of thir");
+    // The borders on both sides of the cut are whole.
+    let border = |x: i32| buf.get(x, COLUMNS_Y + 1).unwrap().glyph;
+    assert_eq!(border(COLUMNS_X + COLUMN_W - 2), ' ');
+    assert_eq!(border(COLUMNS_X + COLUMN_W - 1), '║');
+    assert_eq!(border(COLUMNS_X + COLUMN_W), '│');
 }
 
 #[test]
@@ -234,7 +256,7 @@ fn choosing_asks_first_then_promotes_and_shows_the_bonus() {
         (page.from.as_str(), page.to.as_str()),
         ("Guard", "Iron Rider")
     );
-    assert_eq!(page.before, [28, 11, 0, 7, 4, 49, 0]);
+    assert_eq!(page.before, [28, 11, 0, 7, 5, 49, 0]);
     assert_eq!(page.gains.0, [7, 3, 0, 2, 4, 1, 2]);
     assert_eq!(page.character.as_deref(), Some("test_knight"));
     assert_eq!(s.help(&c), "f skip · hold f fast");

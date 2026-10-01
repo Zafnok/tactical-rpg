@@ -25,7 +25,7 @@ expression: h.snapshot()
   ║ Str  11              ║│ Str  11              ││ Str  11              ││ Str  11              │  
   ║ Mag   0              ║│ Mag   0              ││ Mag   0              ││ Mag   0              │  
   ║ Dex   7              ║│ Dex   7              ││ Dex   7              ││ Dex   7              │  
-  ║ Spd   4              ║│ Spd   4              ││ Spd   4              ││ Spd   4              │  
+  ║ Spd   5              ║│ Spd   5              ││ Spd   5              ││ Spd   5              │  
   ║ Def  49              ║│ Def  49              ││ Def  49              ││ Def  49              │  
   ║ Res   0              ║│ Res   0              ││ Res   0              ││ Res   0              │  
   ║                      ║│                      ││                      ││                      │  
