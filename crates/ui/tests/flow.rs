@@ -260,8 +260,8 @@ fn quick_battle_runs_through_the_flow() {
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
     assert_eq!(campaign.chapter, "quick");
     assert_eq!(campaign.mode, GameMode::Classic);
-    assert_eq!(campaign.roster.len(), 3);
-    assert_eq!(battle(&h).units().len(), 6);
+    assert_eq!(campaign.roster.len(), 4);
+    assert_eq!(battle(&h).units().len(), 8);
 }
 
 /// Playtime counts from the start of the campaign.
@@ -299,7 +299,7 @@ fn the_next_chapter_follows_a_victory() {
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
     assert_eq!(campaign.chapter, "quick");
     assert_eq!(campaign.gold, 500);
-    // The Quick Battle's slots are the test lord, knight and archer: of
+    // The Quick Battle's slots are the test lord, knight, archer and mage: of
     // this army only the knight has one.
     let players: Vec<String> = battle(&h)
         .units()

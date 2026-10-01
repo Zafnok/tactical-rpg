@@ -1,0 +1,118 @@
+---
+source: crates/ui/src/screens/battle/magic_tests.rs
+expression: buf.to_snapshot(&c.palette)
+---
+                                    ┌─ Fire 10/10 ───────────────────┐╔═════════ Forecast ═════════╗
+                                    │ Attack                         │║                            ║
+                                    │ Overcast        +1 use  active │║ Test Mage     Frost Element║
+                                    └────────────────────────────────┘║ Fire          Frost        ║
+                                                                      ║ 10/10         10/10        ║
+                                                                      ║ HP 16 ███▒▒   HP 30 █████  ║
+                                                                      ║ Hit  90       Hit  93      ║
+                                                                      ║ Crit 1        Crit 1       ║
+                                                                      ║ (resist)                   ║
+                                                                      ║ ────────────────────────── ║
+                                                                      ║  3 dmg   →  1              ║
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      ║             2 ←  7 dmg     ║
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      ║ ────────────────────────── ║
+                    ≈≈≈≈≈≈====······....♣♣♣♣....                      ║  3 ×1     Total  7 ×1      ║
+                    ..≈≈≈≈..··..............╦╦..                      ║                            ║
+                    MaFrBr····....Br..▓▓▓▓▓▓▓▓..                      ║                            ║
+                    Kn**··Lo..╦╦......▓▓░░╦╦▓▓..                      ║                            ║
+                    **♣♣··..Ar........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ║                            ║
+                                                                      ╚════════════════════════════╝
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ Left/Right target · Up/Down art · f cast · d back                                         F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbccccccddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddddddbbdfffffffffdddddgggggggggggggb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdhhhhddddddddddhhhhhddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhhhdddddddddhhhhhddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhddddiiijjdddhhddddkkkkkddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhdddddddddddhhhddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdhhhhddddddddddhhhhdddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdccccccccdddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddhddhddddddddddddddb
+aaaaaaaaaaaaaaaaaaaallllllmmmmnnnnooooppppqqqqrraaaaaaaaaaaaaaaaaaaaaabdddddddddddddhdhddddddddddddb
+aaaaaaaaaaaaaaaaaaaallllmmmmnnnnssttssooooqqqqqqaaaaaaaaaaaaaaaaaaaaaabdbbbbbbbbbbbbbbbbbbbbbbbbbbdb
+aaaaaaaaaaaaaaaaaaaallmmmmuuuussssssnnnnoooonnnnaaaaaaaaaaaaaaaaaaaaaabdddddddddddhhhhhddddddddddddb
+aaaaaaaaaaaaaaaaaaaannmmmmnnssnnnnnnnnnnnnnnvvnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaawwxxyyssssnnnnzznnAAAAAAAAnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaawwBBsswwnnvvnnnnnnAACCvvAAnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaBBoossnnwwnnnnnnnnAACCCCAAnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaooppssnnnnnnnnnnnnAAAADDAAnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEa
+aEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaEEEEEEEEa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:panel_bg bg:panel_border_focus
+f = fg:player bg:panel_bg
+g = fg:enemy bg:panel_bg
+h = fg:text_dim bg:panel_bg
+i = fg:hp_mid bg:panel_bg
+j = fg:hp_low bg:panel_bg
+k = fg:hp_high bg:panel_bg
+l = fg:water bg:sea
+m = fg:water bg:water_bg
+n = fg:grass bg:grass_bg
+o = fg:forest bg:forest_bg
+p = fg:thicket bg:thicket_bg
+q = fg:mountain bg:mountain_bg
+r = fg:peak bg:peak_bg
+s = fg:road bg:road_bg
+t = fg:enemy bg:road_bg
+u = fg:wood bg:water_bg
+v = fg:fort bg:fort_bg
+w = fg:player bg:grass_bg
+x = fg:enemy bg:#4c271c
+y = fg:enemy bg:#50281d
+z = fg:enemy bg:grass_bg
+A = fg:stone bg:stone_bg
+B = fg:fire bg:fire_bg
+C = fg:floor bg:floor_bg
+D = fg:wood bg:stone_bg
+E = fg:text_dim bg:black
+--- overlays ---
+over  208,270 16x2  hp_high
+over  160,270 16x2  hp_high
+over  224,286 16x2  hp_high
+over  192,254 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  176,254 16x2  hp_high
+over  160,254 16x2  hp_high
+over  175,240 3x1  cursor
+over  175,240 1x3  cursor
+over  189,240 3x1  cursor
+over  191,240 1x3  cursor
+over  175,253 3x1  cursor
+over  175,251 1x3  cursor
+over  189,253 3x1  cursor
+over  191,251 1x3  cursor

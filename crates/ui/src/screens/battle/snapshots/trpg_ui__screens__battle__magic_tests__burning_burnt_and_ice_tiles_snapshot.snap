@@ -1,6 +1,6 @@
 ---
-source: crates/ui/src/screens/battle/turn_tests.rs
-expression: "render(&s, &c).to_snapshot(&c.palette)"
+source: crates/ui/src/screens/battle/magic_tests.rs
+expression: buf.to_snapshot(&c.palette)
 ---
                                                                       ┌────────────────────────────┐
                                                                       │ Plain                      │
@@ -14,13 +14,13 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                                                                       │                            │
                                                                       │                            │
                     ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
-                   ╔══════════════════════════════╗                   │                            │
-                   ║                              ║                   │                            │
-                   ║ End turn with 4 units ready? ║                   │                            │
-                   ║ f yes / d no                 ║                   │                            │
-                   ║                              ║                   │                            │
-                   ╚══════════════════════════════╝                   │                            │
-                    ♣♣♠♠··..........Fr▓▓▓▓▐▌▓▓..                      │                            │
+                    ≈≈≈≈≈≈≈≈....··Ra··♣♣♣♣^^^^^^                      │                            │
+                    ≈≈≈≈≈≈====······....♣♣♣♣....                      │                            │
+                    ..▒▒≈≈..··..............╦╦..                      │                            │
+                    MaFrBr····....Br..▓▓▓▓▓▓▓▓..                      │                            │
+                    Kn,,··Lo..╦╦......▓▓░░╦╦▓▓..                      │                            │
+                    **♣♣··..Ar........▓▓░░░░▓▓..                      │                            │
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
                                                                       │                            │
                                                                       │                            │
                                                                       │                            │
@@ -33,7 +33,7 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                                                                       │                            │
                                                                       └────────────────────────────┘
                                                      w danger zone: OFF · Shift+Space auto-end: OFF 
- Space yes · f yes · d no                                                                  F2 debug 
+ f select · e info · s next unit · r rewind · d menu · Space end turn                      F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdddddccccccccccccccccccccccb
@@ -47,13 +47,13 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcggggggcc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabcggggggggggggcccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjppqqqqrrqqjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooppookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooojjjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjrriijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaattuuppoooojjjjuujjvvvvvvvvjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaawwxxoowwjjssjjjjjjvvyyssvvjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaazzkkoojjwwjjjjjjjjvvyyyyvvjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjjjvvvvAAvvjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -65,8 +65,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassssssssssssssssssssssssssssssssssssssssssssssa
-assssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassssssssa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBa
+aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBaaaaaaaaaaaaaaaaaaaaaaBBBBBBBBa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -83,9 +83,33 @@ l = fg:thicket bg:thicket_bg
 m = fg:mountain bg:mountain_bg
 n = fg:peak bg:peak_bg
 o = fg:road bg:road_bg
-p = fg:enemy bg:grass_bg
-q = fg:stone bg:stone_bg
-r = fg:wood bg:stone_bg
-s = fg:text_dim bg:black
+p = fg:enemy bg:road_bg
+q = fg:wood bg:water_bg
+r = fg:ice bg:ice_bg
+s = fg:fort bg:fort_bg
+t = fg:#4d6278 bg:grass_bg
+u = fg:enemy bg:grass_bg
+v = fg:stone bg:stone_bg
+w = fg:player bg:grass_bg
+x = fg:ash bg:ash_bg
+y = fg:floor bg:floor_bg
+z = fg:fire bg:fire_bg
+A = fg:wood bg:stone_bg
+B = fg:text_dim bg:black
 --- overlays ---
-over  288,302 16x2  hp_high
+over  208,270 16x2  hp_high
+over  160,270 16x2  hp_high
+over  224,286 16x2  hp_high
+over  192,254 16x2  hp_high
+over  272,254 16x2  hp_high
+over  272,206 16x2  hp_high
+over  176,254 16x2  hp_high
+over  160,254 16x2  hp_high
+over  207,256 3x1  cursor
+over  207,256 1x3  cursor
+over  221,256 3x1  cursor
+over  223,256 1x3  cursor
+over  207,269 3x1  cursor
+over  207,267 1x3  cursor
+over  221,269 3x1  cursor
+over  223,267 1x3  cursor
