@@ -7,6 +7,10 @@
 //! Test units have 20 HP, Mov 4 and 0 in every other stat, and carry a
 //! `sword` (might 5, hit 100, range 1), so combat is exact: every strike
 //! hits for the weapon's might and each side strikes once.
+//!
+//! No test unit knows an art or an active unless a test gives it one: the
+//! rank arts need rank D ([`ranked`]), the others come with a weapon
+//! (`pike`, `trick`, `knack`), and actives are learned ([`knowing`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -15,7 +19,7 @@ use std::time::Instant;
 use proptest::prelude::*;
 
 use super::*;
-use crate::art::ArtTable;
+use crate::art::{ArtDef, ArtEffect, ArtTable};
 use crate::battle::{BattleSetup, Event, Objective, Reinforcement};
 use crate::class::{ClassDef, ClassId, ClassTable, UnitTags, WeaponProficiency};
 use crate::combat::{CombatMods, DamageType};
@@ -25,9 +29,11 @@ use crate::item::{
 };
 use crate::magic::Element;
 use crate::map::BattleMap;
-use crate::skill::{Condition, PassiveEffect, SkillDef, SkillId, SkillKind, SkillTable};
+use crate::skill::{
+    Area, Condition, PassiveEffect, SkillDef, SkillId, SkillKind, SkillTable, TimedMods, WeaponReq,
+};
 use crate::spell::{SpellDef, SpellState, SpellTable};
-use crate::stats::Stats;
+use crate::stats::{StatKind, Stats};
 use crate::terrain::{TerrainId, TerrainRules, TerrainTable};
 use crate::unit::Role;
 use crate::weapon::{WeaponKind, WeaponRank};
@@ -110,12 +116,23 @@ fn weapon(name: &str, might: StatValue, hit: StatValue, (min, max): (u32, u32)) 
 
 /// `sword` (might 5), `blade` (3), `lance` (10), `flaky` (5, hit 50),
 /// `javelin` (4, range 1–2), `bow` (a bow: 5, range 2), `potion` (heals 10).
+/// With their own arts: `pike` (5; `line_pierce`), `trick` (5, hit 50;
+/// `bash`, `aim`, `zeal`) and `knack` (5, hit 50; `zeal`).
 fn items() -> ItemTable {
     let bow = WeaponDef {
         kind: WeaponKind::Bow,
         ..weapon("Bow", 5, 100, (2, 2))
     };
+    let with_arts = |name: &str, hit, arts: &[&str]| {
+        ItemDef::Weapon(WeaponDef {
+            arts: arts.iter().map(|a| ArtId::new(a)).collect(),
+            ..weapon(name, 5, hit, (1, 1))
+        })
+    };
     let entries = [
+        ("pike", with_arts("Pike", 100, &["line_pierce"])),
+        ("trick", with_arts("Trick", 50, &["bash", "aim", "zeal"])),
+        ("knack", with_arts("Knack", 50, &["zeal"])),
         ("sword", ItemDef::Weapon(weapon("Sword", 5, 100, (1, 1)))),
         ("blade", ItemDef::Weapon(weapon("Blade", 3, 100, (1, 1)))),
         ("lance", ItemDef::Weapon(weapon("Lance", 10, 100, (1, 1)))),
@@ -143,8 +160,8 @@ fn items() -> ItemTable {
     }
 }
 
-/// `fire` (attack: might 5, hit 100, range 1–2, 5 uses) and `heal` (power
-/// 5, range 1, 3 uses).
+/// `fire` (attack: might 5, hit 100, range 1–2, 5 uses), `ember` (the same
+/// with 1 use) and `heal` (power 5, range 1, 3 uses).
 fn spells() -> SpellTable {
     let fire = SpellDef {
         id: SpellId::new("fire"),
@@ -171,17 +188,127 @@ fn spells() -> SpellTable {
         uses: 3,
         terrain_effect: None,
     };
+    let ember = SpellDef {
+        id: SpellId::new("ember"),
+        name: "Ember".into(),
+        uses: 1,
+        ..fire.clone()
+    };
     SpellTable {
-        spells: [fire, heal]
+        spells: [fire, ember, heal]
             .into_iter()
             .map(|s| (s.id.clone(), s))
             .collect(),
     }
 }
 
+/// The rank D arts `guard_break` (sword, 4 durability: hit +10, no counter)
+/// and `close_shot` (bow, 2: min range 1, hit −10), and the weapon arts
+/// `line_pierce` (4) and `aim`, `bash` and `zeal` (1: hit +20).
+fn arts() -> ArtTable {
+    let art = |id: &str, kind, rank, cost, effect| ArtDef {
+        id: ArtId::new(id),
+        name: id.into(),
+        kind,
+        rank,
+        cost,
+        effect,
+    };
+    let sure = || ArtEffect {
+        hit: 20,
+        ..ArtEffect::default()
+    };
+    let (sword, d) = (WeaponKind::Sword, Some(WeaponRank::D));
+    let guard_break = ArtEffect {
+        hit: 10,
+        no_counter: true,
+        ..ArtEffect::default()
+    };
+    let close_shot = ArtEffect {
+        hit: -10,
+        min_range: Some(1),
+        ..ArtEffect::default()
+    };
+    let line_pierce = ArtEffect {
+        line_pierce: true,
+        ..ArtEffect::default()
+    };
+    let arts = [
+        art("guard_break", sword, d, 4, guard_break),
+        art("close_shot", WeaponKind::Bow, d, 2, close_shot),
+        art("line_pierce", sword, None, 4, line_pierce),
+        art("aim", sword, None, 1, sure()),
+        art("bash", sword, None, 1, sure()),
+        art("zeal", sword, None, 1, sure()),
+    ];
+    ArtTable {
+        arts: arts.into_iter().map(|a| (a.id.clone(), a)).collect(),
+    }
+}
+
+/// A combat active.
+fn strike(id: &str, cost: SkillCost, with: WeaponReq, mods: CombatMods, range: u32) -> SkillDef {
+    SkillDef {
+        id: SkillId::new(id),
+        name: id.into(),
+        family: id.into(),
+        rank: 1,
+        kind: SkillKind::Active {
+            cost,
+            effect: ActiveEffect::Strike {
+                with,
+                mods,
+                range,
+                stance: None,
+                post_move: 0,
+                drain: false,
+            },
+        },
+    }
+}
+
 /// `skirmish`: after attacking with a bow, move 1 tile. `charge`: might +2
-/// after moving 4 tiles or more.
+/// after moving 4 tiles or more. The actives, with their durability cost:
+/// `keen` (3: might +1), `zeal` (1: hit +20), `long_shot` (3: a bow's max
+/// range +1), `overcast` (an extra spell use: a spell's might +2) and
+/// `brace` (3, no attack: Def +3 until the user's next phase).
 fn skills() -> SkillTable {
+    let might = |might| CombatMods {
+        might,
+        ..CombatMods::default()
+    };
+    let sure = CombatMods {
+        hit: 20,
+        ..CombatMods::default()
+    };
+    let dur = SkillCost::Durability;
+    let bow = WeaponReq::Kind(WeaponKind::Bow);
+    let brace = SkillDef {
+        kind: SkillKind::Active {
+            cost: dur(3),
+            effect: ActiveEffect::Buff {
+                area: Area::Own,
+                mods: TimedMods {
+                    stats: vec![(StatKind::Def, 3)],
+                    combat: CombatMods::default(),
+                },
+            },
+        },
+        ..strike("brace", dur(3), WeaponReq::Any, might(0), 0)
+    };
+    let actives = [
+        strike("keen", dur(3), WeaponReq::Any, might(1), 0),
+        strike("zeal", dur(1), WeaponReq::Any, sure, 0),
+        strike("long_shot", dur(3), bow, might(0), 1),
+        strike(
+            "overcast",
+            SkillCost::ExtraSpellUse,
+            WeaponReq::Spell,
+            might(2),
+            0,
+        ),
+        brace,
+    ];
     let skirmish = SkillDef {
         id: SkillId::new("skirmish"),
         name: "Skirmish".into(),
@@ -208,6 +335,7 @@ fn skills() -> SkillTable {
     SkillTable {
         skills: [skirmish, charge]
             .into_iter()
+            .chain(actives)
             .map(|s| (s.id.clone(), s))
             .collect(),
     }
@@ -299,7 +427,7 @@ fn setup(map: BattleMap, units: Vec<Unit>) -> BattleSetup {
         items: Arc::new(items()),
         spells: Arc::new(spells()),
         skills: Arc::new(skills()),
-        arts: Arc::new(ArtTable::default()),
+        arts: Arc::new(arts()),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 3,
@@ -337,6 +465,86 @@ fn edit(units: &mut [Unit], id: u32, f: impl FnOnce(&mut Unit)) {
 
 fn next(state: &BattleState) -> Command {
     next_command(state, &AiWeights::STARTING).unwrap()
+}
+
+/// The next command with the starting weights but for the two costs.
+fn next_costing(state: &BattleState, durability: u32, spell_use: u32) -> Command {
+    let weights = AiWeights {
+        durability,
+        spell_use,
+        ..AiWeights::STARTING
+    };
+    next_command(state, &weights).unwrap()
+}
+
+/// Makes `u` a boss.
+fn boss(u: &mut Unit) {
+    u.role = Role::Boss;
+}
+
+/// Gives `u` rank D in swords and bows: the rank arts.
+fn ranked(u: &mut Unit) {
+    u.weapon_ranks = [WeaponKind::Sword, WeaponKind::Bow]
+        .map(|kind| (kind, WeaponRank::D))
+        .into();
+}
+
+/// Teaches `u` the skills `ids` (only those).
+fn knowing(u: &mut Unit, ids: &[&str]) {
+    u.learned_skills = ids.iter().map(|id| SkillId::new(id)).collect();
+}
+
+/// An attack with the weapon in slot 0 and an art.
+fn art_attack(unit: u32, dest: Pos, target: u32, art: &str) -> Command {
+    act(
+        unit,
+        dest,
+        UnitAction::Attack {
+            target: UnitId(target),
+            slot: 0,
+            active: None,
+            art: Some(ArtId::new(art)),
+        },
+    )
+}
+
+/// An attack with the weapon in slot 0 and a combat active.
+fn active_attack(unit: u32, dest: Pos, target: u32, active: &str) -> Command {
+    act(
+        unit,
+        dest,
+        UnitAction::Attack {
+            target: UnitId(target),
+            slot: 0,
+            active: Some(SkillId::new(active)),
+            art: None,
+        },
+    )
+}
+
+/// Casting `spell` at a unit, with or without Overcast.
+fn cast(spell: &str, unit: u32, dest: Pos, target: u32, overcast: bool) -> Command {
+    act(
+        unit,
+        dest,
+        UnitAction::Cast {
+            spell: SpellId::new(spell),
+            target: CastTarget::Unit(UnitId(target)),
+            active: overcast.then(|| SkillId::new("overcast")),
+        },
+    )
+}
+
+/// Using a non-combat active on nobody.
+fn use_skill(unit: u32, dest: Pos, skill: &str) -> Command {
+    act(
+        unit,
+        dest,
+        UnitAction::UseSkill {
+            skill: SkillId::new(skill),
+            target: None,
+        },
+    )
 }
 
 fn act(unit: u32, dest: Pos, action: UnitAction) -> Command {
@@ -542,7 +750,7 @@ fn spells_without_uses_and_heals_are_not_attacks() {
     });
     let caster = state.unit(UnitId(2)).unwrap();
     let with = |u: &Unit| {
-        arms(&state, u)
+        arms(&state, u, &AiWeights::STARTING)
             .into_iter()
             .map(|a| a.with)
             .collect::<Vec<_>>()
@@ -742,6 +950,260 @@ fn healers_with_nobody_to_heal_attack_or_keep_back() {
         .unwrap()
         .command;
     assert_eq!(healer_plan, wait(3, p(12, 0)));
+}
+
+// --- Arts and actives ------------------------------------------------------
+
+/// Unit `attacker` at 5 HP, fast enough to strike twice (5, then 6), two
+/// tiles from unit `target` at 10 HP: its two strikes would kill, but the
+/// counter between them fells it first.
+fn duel(rows: &[&str], attacker: u32, target: u32, change: impl FnOnce(&mut Unit)) -> BattleState {
+    enemy_phase(rows, |u| {
+        edit(u, target, |x| x.hp = 10);
+        edit(u, attacker, |x| {
+            ranked(x);
+            x.hp = 5;
+            x.stats.spd = 10;
+            change(x);
+        });
+    })
+}
+
+#[test]
+fn a_boss_breaks_the_guard_of_a_unit_it_can_only_kill_without_a_counter() {
+    let state = duel(&["P.E"], 2, 1, boss);
+    assert_eq!(next(&state), art_attack(2, p(1, 0), 1, "guard_break"));
+    // The art's forecast: no counter, and the kill.
+    let Command::Act { dest, action, .. } = next(&state) else {
+        panic!("expected an Act");
+    };
+    let preview = state.preview_attack(UnitId(2), dest, &action).unwrap();
+    assert_eq!(preview.forecast.defender, None);
+    assert_eq!(preview.forecast.attacker.strikes, 2);
+}
+
+#[test]
+fn an_ordinary_enemy_never_uses_an_art_or_an_active() {
+    // The same duel: without Guard Break it attacks all the same, and falls.
+    let state = duel(&["P.E"], 2, 1, |_| {});
+    assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
+    // Nor a combat active that would beat the plain attack...
+    let state = enemy_phase(&["P.E"], |u| knowing(&mut u[1], &["keen"]));
+    assert_eq!(next_costing(&state, 0, 0), attack(2, p(1, 0), 1, 0));
+    // ...nor a non-combat one where a boss would (below).
+    let state = enemy_phase(&["P..E"], |u| {
+        knowing(&mut u[1], &["brace"]);
+        u[1].ai = AiBehavior::Stationary;
+    });
+    assert_eq!(next(&state), wait(2, p(3, 0)));
+}
+
+#[test]
+fn a_boss_never_picks_an_art_or_an_active_it_cannot_pay_for() {
+    // A broken sword pays for no art: the duel's plain attack.
+    let state = duel(&["P.E"], 2, 1, |x| {
+        boss(x);
+        x.loadout.weapons[0].as_mut().unwrap().durability_left = 0;
+    });
+    assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
+    // Overcast needs two uses of the spell (the cast and the extra one):
+    // Fire has 5, Ember only 1.
+    for (spell, overcast) in [("fire", true), ("ember", false)] {
+        let state = enemy_phase(&["P...E"], |u| {
+            u[1] = carrying(u[1].clone(), &[]);
+            boss(&mut u[1]);
+            knowing(&mut u[1], &["overcast"]);
+            u[1].learned = BTreeSet::from([SpellId::new(spell)]);
+        });
+        assert_eq!(next(&state), cast(spell, 2, p(2, 0), 1, overcast));
+    }
+}
+
+#[test]
+fn combat_green_units_use_arts_and_noncombatants_never_do() {
+    // The duel, an ally (1) against an enemy (2), in the Other phase.
+    let other_phase = |role| {
+        let mut state = duel(&["A.E.......P"], 1, 2, |x| x.role = role);
+        state.apply(&Command::EndPhase).unwrap();
+        assert_eq!(state.phase(), Phase::Other);
+        state
+    };
+    let state = other_phase(Role::Regular);
+    assert_eq!(next(&state), art_attack(1, p(1, 0), 2, "guard_break"));
+    let state = other_phase(Role::Noncombatant);
+    assert_eq!(next(&state), attack(1, p(1, 0), 2, 0));
+}
+
+#[test]
+fn an_art_must_be_worth_its_durability() {
+    // At full HP Guard Break (4 durability) only spares the boss the
+    // counter's 5 damage: worth 5 × 5 = 25.
+    let state = enemy_phase(&["P.E"], |u| {
+        boss(&mut u[1]);
+        ranked(&mut u[1]);
+    });
+    let (art, plain) = (
+        art_attack(2, p(1, 0), 1, "guard_break"),
+        attack(2, p(1, 0), 1, 0),
+    );
+    assert_eq!(next(&state), art, "it costs 4 × 5 = 20");
+    assert_eq!(next_costing(&state, 6, 0), art, "it costs 24");
+    assert_eq!(next_costing(&state, 7, 0), plain, "it costs 28");
+}
+
+#[test]
+fn a_combat_active_must_be_worth_its_durability() {
+    // Keen (3 durability) deals 1 more damage: worth 10.
+    let state = enemy_phase(&["P.E"], |u| {
+        boss(&mut u[1]);
+        knowing(&mut u[1], &["keen"]);
+    });
+    let (active, plain) = (
+        active_attack(2, p(1, 0), 1, "keen"),
+        attack(2, p(1, 0), 1, 0),
+    );
+    assert_eq!(next_costing(&state, 3, 0), active, "it costs 9");
+    assert_eq!(next_costing(&state, 4, 0), plain, "it costs 12");
+    assert_eq!(next(&state), plain, "it costs 15");
+}
+
+#[test]
+fn a_spell_active_must_be_worth_its_spell_use() {
+    // Overcast deals 2 more damage: worth 20.
+    let state = enemy_phase(&["P...E"], |u| {
+        u[1] = carrying(u[1].clone(), &[]);
+        boss(&mut u[1]);
+        knowing(&mut u[1], &["overcast"]);
+        u[1].learned = BTreeSet::from([SpellId::new("fire")]);
+    });
+    assert_eq!(
+        next(&state),
+        cast("fire", 2, p(2, 0), 1, true),
+        "it costs 15"
+    );
+    assert_eq!(
+        next_costing(&state, 99, 19),
+        cast("fire", 2, p(2, 0), 1, true)
+    );
+    assert_eq!(
+        next_costing(&state, 0, 21),
+        cast("fire", 2, p(2, 0), 1, false)
+    );
+}
+
+#[test]
+fn a_plain_attack_wins_a_tie_with_an_art() {
+    // An archer next to the boss can't counter, and the boss hits anyway:
+    // Guard Break changes nothing, so even free it isn't used.
+    let state = enemy_phase(&["PE"], |u| {
+        u[0] = carrying(u[0].clone(), &["bow"]);
+        boss(&mut u[1]);
+        ranked(&mut u[1]);
+    });
+    assert_eq!(next_costing(&state, 0, 0), attack(2, p(1, 0), 1, 0));
+}
+
+#[test]
+fn equal_techniques_go_to_the_lowest_id_then_the_active() {
+    // The Zeal active and the arts Aim, Bash and Zeal all give hit +20 for
+    // 1 durability: Aim.
+    let with = |weapon: &'static str| {
+        enemy_phase(&["P.E"], |u| {
+            u[1] = carrying(u[1].clone(), &[weapon]);
+            boss(&mut u[1]);
+            knowing(&mut u[1], &["zeal"]);
+        })
+    };
+    assert_eq!(next(&with("trick")), art_attack(2, p(1, 0), 1, "aim"));
+    // The Zeal active and the Zeal art: the active.
+    assert_eq!(next(&with("knack")), active_attack(2, p(1, 0), 1, "zeal"));
+    // An active the weapon doesn't fit is refused by the battle: no bow, no
+    // Long Shot.
+    let state = enemy_phase(&["P.E"], |u| {
+        boss(&mut u[1]);
+        knowing(&mut u[1], &["long_shot"]);
+    });
+    assert_eq!(next_costing(&state, 0, 0), attack(2, p(1, 0), 1, 0));
+}
+
+#[test]
+fn techniques_that_change_the_range_reach_their_targets() {
+    let archer = |rows: &[&str], skills: &'static [&'static str]| {
+        enemy_phase(rows, |u| {
+            u[1] = carrying(u[1].clone(), &["bow"]);
+            boss(&mut u[1]);
+            knowing(&mut u[1], skills);
+            u[1].ai = AiBehavior::Stationary;
+        })
+    };
+    // Long Shot (max range +1) reaches 3 tiles; without it, nothing does.
+    let long = archer(&["P..E"], &["long_shot"]);
+    assert_eq!(next(&long), active_attack(2, p(3, 0), 1, "long_shot"));
+    assert_eq!(next(&archer(&["P..E"], &[])), wait(2, p(3, 0)));
+    // At 2 tiles the bow reaches by itself.
+    let near = archer(&["P.E"], &["long_shot"]);
+    assert_eq!(next(&near), attack(2, p(2, 0), 1, 0));
+    // Close Shot (min range 1) hits a unit next to the archer.
+    let state = enemy_phase(&["PE"], |u| {
+        u[1] = carrying(u[1].clone(), &["bow"]);
+        boss(&mut u[1]);
+        ranked(&mut u[1]);
+        u[1].ai = AiBehavior::Stationary;
+    });
+    assert_eq!(next(&state), art_attack(2, p(1, 0), 1, "close_shot"));
+}
+
+#[test]
+fn line_pierce_counts_the_unit_behind_the_target() {
+    // Players 1 and 2 in a row: the pierce's 5 damage (worth 50) pays for
+    // the art's 4 durability (20).
+    let pike = |u: &mut Vec<Unit>, id: usize| {
+        u[id] = carrying(u[id].clone(), &["pike"]);
+        boss(&mut u[id]);
+    };
+    let state = enemy_phase(&["PPE"], |u| pike(u, 2));
+    assert_eq!(next(&state), art_attack(3, p(2, 0), 2, "line_pierce"));
+    // Nobody behind the target: no pierce, so a plain attack.
+    let state = enemy_phase(&["P.E"], |u| pike(u, 1));
+    assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
+}
+
+#[test]
+fn a_boss_holding_its_tile_braces_when_it_is_threatened() {
+    let holding = |rows: &[&str], ai, skills: &'static [&'static str], durability| {
+        enemy_phase(rows, |u| {
+            boss(&mut u[1]);
+            knowing(&mut u[1], skills);
+            u[1].ai = ai;
+            u[1].loadout.weapons[0].as_mut().unwrap().durability_left = durability;
+        })
+    };
+    let still = AiBehavior::Stationary;
+    // The player can walk up and attack it this turn; it can't attack.
+    let state = holding(&["P..E"], still, &["brace"], 20);
+    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
+    // A Guard that can't reach anyone does the same.
+    let state = enemy_phase(&["P..E"], |u| {
+        boss(&mut u[1]);
+        knowing(&mut u[1], &["brace"]);
+        u[1].ai = AiBehavior::Guard;
+        u[1].stats.mov = 0;
+    });
+    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
+    // Out of every hostile unit's reach it just waits.
+    let state = holding(&["P.......E"], still, &["brace"], 20);
+    assert_eq!(next(&state), wait(2, p(8, 0)));
+    // It keeps its weapon's last durability: Brace costs 3.
+    let state = holding(&["P..E"], still, &["brace"], 4);
+    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
+    let state = holding(&["P..E"], still, &["brace"], 3);
+    assert_eq!(next(&state), wait(2, p(3, 0)));
+    // A combat active is no action of its own.
+    let state = holding(&["P..E"], still, &["keen"], 20);
+    assert_eq!(next(&state), wait(2, p(3, 0)));
+    // A boss that can attack does that instead.
+    let state = holding(&["PE"], still, &["brace"], 20);
+    assert_eq!(next(&state), attack(2, p(1, 0), 1, 0));
 }
 
 // --- Order within the phase ------------------------------------------------
@@ -1040,6 +1502,8 @@ fn scores_add_up_the_weights() {
         lord: 7,
         risk: 3,
         terrain: 5,
+        durability: 9,
+        spell_use: 9,
     };
     let planner = Planner::new(&state, &weights);
     let odds = Odds {
@@ -1116,6 +1580,19 @@ fn the_same_state_gives_the_same_command() {
     let first = next(&state);
     assert_eq!(next(&state), first);
     assert_eq!(next(&state.clone()), first);
+    // A boss with arts and actives to choose from, attacking or holding.
+    for rows in [["P.E"], ["P..E"]] {
+        let state = enemy_phase(&rows, |u| {
+            u[1] = carrying(u[1].clone(), &["trick", "pike", "sword"]);
+            boss(&mut u[1]);
+            ranked(&mut u[1]);
+            knowing(&mut u[1], &["brace", "keen", "zeal"]);
+            u[1].stats.mov = 1;
+        });
+        let first = next(&state);
+        assert_eq!(next(&state), first);
+        assert_eq!(next(&state.clone()), first);
+    }
 }
 
 #[test]
@@ -1141,7 +1618,8 @@ fn the_ai_plays_both_sides_to_the_end() {
 }
 
 prop_compose! {
-    /// A unit of a random faction, behaviour and gear on a 9×7 map.
+    /// A unit of a random faction, behaviour, role and gear (worn weapons,
+    /// arts and actives included) on a 9×7 map.
     fn any_unit(id: u32)(
         x in 0..9i32,
         y in 0..7i32,
@@ -1149,18 +1627,30 @@ prop_compose! {
         ai in prop::sample::select(vec![AiBehavior::Aggressive, AiBehavior::Guard, AiBehavior::Stationary, AiBehavior::Healer]),
         hp in 1..=20,
         mov in 0..6,
-        gear in 0..6usize,
+        gear in 0..8usize,
+        role in prop::sample::select(vec![Role::Regular, Role::Boss, Role::Noncombatant]),
+        rank_d in any::<bool>(),
+        wear in 0..=20u32,
+        actives in prop::sample::subsequence(vec!["brace", "keen", "long_shot", "overcast", "zeal"], 0..=5),
     ) -> Unit {
-        let weapons: &[&str] = [&["sword"][..], &["bow"], &["javelin", "blade"], &["flaky"], &[], &["lance", "bow"]][gear];
+        let weapons: &[&str] = [&["sword"][..], &["bow"], &["javelin", "blade"], &["flaky"], &[], &["lance", "bow"], &["pike", "trick"], &["knack", "bow"]][gear];
         let mut u = carrying(unit(id, faction, p(x, y)), weapons);
         u.hp = hp;
         u.ai = ai;
         u.stats.mov = mov;
+        u.role = role;
         if gear == 4 {
             u.learned = BTreeSet::from([SpellId::new("fire"), SpellId::new("heal")]);
         }
+        knowing(&mut u, &actives);
         if gear == 1 {
-            u.learned_skills = BTreeSet::from([SkillId::new("skirmish")]);
+            u.learned_skills.insert(SkillId::new("skirmish"));
+        }
+        if rank_d {
+            ranked(&mut u);
+        }
+        for weapon in u.loadout.weapons.iter_mut().flatten() {
+            weapon.durability_left -= wear;
         }
         u
     }

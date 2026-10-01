@@ -10,7 +10,7 @@ use crate::item::{Equipped, ItemId};
 use crate::skill::{
     CostSource, EffectSource, SkillCost, SkillId, TimedEffect, check_cost, pay_cost,
 };
-use crate::unit::{Faction, Role, Unit, UnitId};
+use crate::unit::{Unit, UnitId};
 
 /// A validated use of a Combat Art in an attack.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,16 +53,10 @@ pub struct AttackPreview {
     pub plan: StrikePlan,
 }
 
-/// Whether `unit` may use arts and active skills (`combat-arts.md`,
-/// *Enemies: bosses only; combat green units too*): every player unit,
-/// bosses among enemies, and green units that aren't non-combat ones.
+/// Refuses a unit that may not use arts and active skills
+/// ([`Unit::may_use_arts`]).
 pub(super) fn check_arts_allowed(unit: &Unit) -> Result<(), CommandError> {
-    let allowed = match unit.faction {
-        Faction::Player => true,
-        Faction::Enemy => unit.role == Role::Boss,
-        Faction::Ally | Faction::Neutral => unit.role != Role::Noncombatant,
-    };
-    if allowed {
+    if unit.may_use_arts() {
         Ok(())
     } else {
         Err(CommandError::ArtsNotAllowed(unit.id))

@@ -48,8 +48,15 @@
 //!    `(y, x)`) and waits; with no target it can walk to, it waits where
 //!    it is.
 //! 3. [`Guard`](AiBehavior::Guard): attacks if it can (a target in its
-//!    threat area this turn), else waits where it is.
+//!    threat area this turn), else holds its tile (below).
 //!    [`Stationary`](AiBehavior::Stationary): the same, from its own tile.
+//!
+//! A unit **holding its tile** waits there. One that may use arts and
+//! actives (below) first uses a non-combat active (Brace, War Cry…) if a
+//! hostile unit could attack its tile this turn (the danger zone): the
+//! first the battle accepts, lowest skill id first, with no target and then
+//! on each unit (lowest id first). It never uses one that would spend its
+//! equipped weapon's last durability.
 //!
 //! It never uses consumables: enemies carry none, and only healers heal
 //! (Nick, `weapons-and-items.md`).
@@ -57,8 +64,8 @@
 //! ## Attack choice
 //!
 //! Every stoppable tile × every target in range × every weapon the unit can
-//! wield and attack spell with uses left (tile casts are never used; no arts
-//! or actives: bosses use them, ticket 0503) is scored from its forecast:
+//! wield and attack spell with uses left (tile casts are never used) is
+//! scored from its forecast:
 //!
 //! ```text
 //! score = damage × E[HP dealt] + kill × P(kill) + lord × (target is a lord)
@@ -69,8 +76,30 @@
 //! expectations play the forecast's strikes out in order, each hitting with
 //! its displayed hit chance (follow-ups included), ignoring crits and
 //! stopping when a unit falls, as combat does. The highest score wins; ties
-//! go to the lowest `(target id, y, x, weapon or spell id, slot)`. A unit
-//! that can attack always does, whatever the score.
+//! go to the lowest `(target id, y, x, weapon or spell id, slot)`, then to
+//! the plain attack, then to the lowest art or active id (an active before
+//! an art of the same id). A unit that can attack always does, whatever the
+//! score.
+//!
+//! ## Arts and actives (ticket 0503)
+//!
+//! Only the units the battle lets use them do ([`Unit::may_use_arts`],
+//! `combat-arts.md`): bosses among enemies and combat green units (and
+//! player units, when the AI plays them). For such a unit every attack
+//! above is also scored with each Combat Art it can use with that weapon
+//! and each of its combat actives, one per attack, from the forecast the
+//! battle gives with it (its range changes included):
+//!
+//! ```text
+//! score = the attack's score with the art or active
+//!       + damage × E[HP dealt] + kill × P(kill) + lord   (Line Pierce's strike)
+//!       − durability × its durability cost   (or − spell_use, a spell active)
+//! ```
+//!
+//! Line Pierce's strike at the unit behind the target is counted as if the
+//! attacker is still standing after the combat. What an art or active does
+//! beyond the forecast's numbers (a debuff, a stance on later turns, a move
+//! or healing after the attack) scores nothing.
 //!
 //! ## Flow distance
 //!
@@ -85,12 +114,14 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::art::ArtId;
 use crate::battle::{BattleState, CastTarget, Command, PendingMove, Phase, UnitAction};
 use crate::combat::{CombatHp, Forecast, Side, SideForecast, strike_order};
 use crate::geom::{Grid, Pos};
 use crate::item::{Equipped, WEAPON_SLOTS};
 use crate::magic::Affinity;
 use crate::movement::{Reach, TileSet, danger_zone, reachable};
+use crate::skill::{ActiveEffect, SkillCost, SkillId, SkillKind};
 use crate::spell::{SpellId, SpellKind};
 use crate::stats::StatValue;
 use crate::terrain::MovementTypeId;
@@ -130,6 +161,10 @@ pub struct AiWeights {
     pub risk: u32,
     /// Score per point of the attacking tile's Def + Avoid / 10.
     pub terrain: u32,
+    /// Score lost per point of durability an art or active costs.
+    pub durability: u32,
+    /// Score lost for the extra spell use a spell active costs.
+    pub spell_use: u32,
 }
 
 impl AiWeights {
@@ -140,6 +175,8 @@ impl AiWeights {
         lord: 50,
         risk: 5,
         terrain: 5,
+        durability: 5,
+        spell_use: 15,
     };
 }
 
@@ -233,29 +270,70 @@ impl Decision {
     }
 }
 
+/// A Combat Art or a combat active used with an attack.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum Technique {
+    Active(SkillId),
+    Art(ArtId),
+}
+
+impl Technique {
+    /// Its id.
+    fn id(&self) -> &str {
+        match self {
+            Technique::Active(skill) => &skill.0,
+            Technique::Art(art) => &art.0,
+        }
+    }
+}
+
+/// A technique an [`Arm`] can attack with.
+struct Extra {
+    technique: Technique,
+    /// Added to the arm's max range.
+    range: u32,
+    /// Score its cost loses.
+    penalty: f64,
+}
+
 /// Something a unit can attack with, and its range.
 struct Arm {
     with: Equipped,
     min: u32,
     max: u32,
+    /// The arts and combat actives to try with it, in tie-break order (none
+    /// for a unit that may not use them).
+    extras: Vec<Extra>,
 }
 
 impl Arm {
-    /// The action attacking `target` with it.
-    fn action(&self, target: UnitId) -> UnitAction {
+    /// The action attacking `target` with it, using `technique`.
+    fn action(&self, target: UnitId, technique: Option<&Technique>) -> UnitAction {
+        let (mut active, mut art) = (None, None);
+        match technique {
+            Some(Technique::Active(skill)) => active = Some(skill.clone()),
+            Some(Technique::Art(id)) => art = Some(id.clone()),
+            None => {}
+        }
         match &self.with {
             Equipped::Weapon(slot) => UnitAction::Attack {
                 target,
                 slot: *slot,
-                active: None,
-                art: None,
+                active,
+                art,
             },
             Equipped::Spell(spell) => UnitAction::Cast {
                 spell: spell.clone(),
                 target: CastTarget::Unit(target),
-                active: None,
+                active,
             },
         }
+    }
+
+    /// The farthest it reaches with any of its techniques.
+    fn reach(&self) -> u32 {
+        let bonus = self.extras.iter().map(|e| e.range).max().unwrap_or(0);
+        self.max.saturating_add(bonus)
     }
 }
 
@@ -328,17 +406,16 @@ impl<'a> Planner<'a> {
             AiBehavior::Aggressive => attack.unwrap_or_else(|| {
                 other(wait_at(approach(&reach, &dests, &flow).unwrap_or(unit.pos)))
             }),
-            AiBehavior::Guard | AiBehavior::Stationary => {
-                attack.unwrap_or_else(|| other(wait_at(unit.pos)))
-            }
+            AiBehavior::Guard | AiBehavior::Stationary => attack
+                .unwrap_or_else(|| other(self.stand(unit).unwrap_or_else(|| wait_at(unit.pos)))),
         })
     }
 
     /// The best attack `unit` can make from `dests`, with its score.
     fn best_attack(&self, unit: &Unit, reach: &Reach, dests: &[Pos]) -> Option<(f64, Command)> {
         let state = self.state;
-        let arms = arms(state, unit);
-        let longest = arms.iter().map(|a| a.max).max()?;
+        let arms = arms(state, unit, self.weights);
+        let longest = arms.iter().map(Arm::reach).max()?;
         let mut best: Option<(f64, Command)> = None;
         let mut targets: Vec<&Unit> = hostiles_of(state, unit).collect();
         targets.sort_by_key(|t| t.id);
@@ -356,28 +433,102 @@ impl<'a> Planner<'a> {
                 if distance > longest {
                     continue;
                 }
-                let moved = reach
-                    .path_to(dest)
-                    .map_or(0, |p| u32::try_from(p.len() - 1).unwrap_or(u32::MAX));
-                for arm in arms.iter().filter(|a| (a.min..=a.max).contains(&distance)) {
-                    let Some(forecast) = state.plain_forecast(unit, dest, moved, target, &arm.with)
-                    else {
-                        continue;
+                let path = reach.path_to(dest).unwrap_or_default();
+                let moved = u32::try_from(path.len().saturating_sub(1)).unwrap_or(u32::MAX);
+                let terrain = terrain_bonus(state, dest);
+                for arm in &arms {
+                    let mut offer = |score: f64, action: UnitAction| {
+                        if best.as_ref().is_none_or(|(top, _)| score > *top) {
+                            let command = Command::Act {
+                                unit: unit.id,
+                                dest,
+                                action,
+                            };
+                            best = Some((score, command));
+                        }
                     };
-                    let odds = Odds::of(&forecast, own, theirs);
-                    let score = self.score(&odds, target.is_lord, terrain_bonus(state, dest));
-                    if best.as_ref().is_none_or(|(top, _)| score > *top) {
-                        let command = Command::Act {
-                            unit: unit.id,
-                            dest,
-                            action: arm.action(target.id),
+                    if (arm.min..=arm.max).contains(&distance)
+                        && let Some(forecast) =
+                            state.plain_forecast(unit, dest, moved, target, &arm.with)
+                    {
+                        let odds = Odds::of(&forecast, own, theirs);
+                        let score = self.score(&odds, target.is_lord, terrain);
+                        offer(score, arm.action(target.id, None));
+                    }
+                    for extra in &arm.extras {
+                        let action = arm.action(target.id, Some(&extra.technique));
+                        let Some((forecast, pierce)) =
+                            state.attack_forecast(unit, dest, &path, &action)
+                        else {
+                            continue;
                         };
-                        best = Some((score, command));
+                        let odds = Odds::of(&forecast, own, theirs);
+                        let score = self.score(&odds, target.is_lord, terrain)
+                            + self.pierce_score(own, pierce)
+                            - extra.penalty;
+                        offer(score, action);
                     }
                 }
             }
         }
         best
+    }
+
+    /// What Line Pierce's strike `pierce` (the unit behind the target and
+    /// the strike's forecast) adds to an attack's score (see the module
+    /// docs).
+    fn pierce_score(&self, own: CombatHp, pierce: Option<(UnitId, Forecast)>) -> f64 {
+        let Some((forecast, victim)) = pierce.and_then(|(id, f)| Some((f, self.state.unit(id)?)))
+        else {
+            return 0.0;
+        };
+        let theirs = CombatHp {
+            current: victim.hp,
+            max: victim.stats.hp,
+        };
+        self.score(&Odds::of(&forecast, own, theirs), victim.is_lord, 0.0)
+    }
+
+    /// The non-combat active `unit`, holding its tile, uses instead of
+    /// waiting, if any (see the module docs).
+    fn stand(&self, unit: &Unit) -> Option<Command> {
+        let state = self.state;
+        if !unit.may_use_arts() || !self.danger(unit.faction).contains(unit.pos) {
+            return None;
+        }
+        let slot = unit.loadout.equipped_slot()?;
+        let left = unit.loadout.weapon(slot)?.durability_left;
+        let mut ids: Vec<UnitId> = state.units().iter().map(|u| u.id).collect();
+        ids.sort();
+        let targets: Vec<Option<UnitId>> = std::iter::once(None)
+            .chain(ids.into_iter().map(Some))
+            .collect();
+        let action = unit
+            .usable_skills(state.classes(), state.skills())
+            .into_iter()
+            .filter(|def| {
+                let spares_weapon = matches!(
+                    def.kind,
+                    SkillKind::Active { cost: SkillCost::Durability(cost), .. } if cost < left
+                );
+                spares_weapon && !def.is_combat()
+            })
+            .flat_map(|def| {
+                targets.iter().map(|&target| UnitAction::UseSkill {
+                    skill: def.id.clone(),
+                    target,
+                })
+            })
+            .find(|action| {
+                state
+                    .check_action(unit, unit.pos, &[unit.pos], action)
+                    .is_ok()
+            })?;
+        Some(Command::Act {
+            unit: unit.id,
+            dest: unit.pos,
+            action,
+        })
     }
 
     /// An attack's score (see the module docs).
@@ -500,14 +651,17 @@ impl<'a> Planner<'a> {
 }
 
 /// What `unit` can attack with: every weapon it can wield, then every
-/// attack spell with uses left, ordered by `(id, slot)`.
-fn arms(state: &BattleState, unit: &Unit) -> Vec<Arm> {
+/// attack spell with uses left, ordered by `(id, slot)`, each with the
+/// techniques to try with it.
+fn arms(state: &BattleState, unit: &Unit, weights: &AiWeights) -> Vec<Arm> {
     let mut arms: Vec<(String, usize, Arm)> = Vec::new();
     if let Some(class) = state.classes().get(&unit.class) {
         for slot in 0..WEAPON_SLOTS {
             if let Some((copy, def)) = unit.usable_weapon(slot, class, state.items()) {
+                let with = Equipped::Weapon(slot);
                 let arm = Arm {
-                    with: Equipped::Weapon(slot),
+                    extras: extras(state, unit, &with, weights),
+                    with,
                     min: def.min_range,
                     max: def.max_range,
                 };
@@ -517,8 +671,10 @@ fn arms(state: &BattleState, unit: &Unit) -> Vec<Arm> {
     }
     for spell in &unit.learned {
         if let Some(def) = unit.castable_attack(spell, state.spells()) {
+            let with = Equipped::Spell(spell.clone());
             let arm = Arm {
-                with: Equipped::Spell(spell.clone()),
+                extras: extras(state, unit, &with, weights),
+                with,
                 min: def.min_range,
                 max: def.max_range,
             };
@@ -527,6 +683,46 @@ fn arms(state: &BattleState, unit: &Unit) -> Vec<Arm> {
     }
     arms.sort_by(|a, b| (&a.0, a.1).cmp(&(&b.0, b.1)));
     arms.into_iter().map(|(_, _, arm)| arm).collect()
+}
+
+/// The techniques `unit` tries when attacking with `with`: its combat
+/// actives, and with a weapon the Combat Arts it can pay for, ordered by id
+/// (an active first). None for a unit that may not use them. The battle
+/// refuses those that don't fit the attack ([`BattleState::attack_forecast`]).
+fn extras(state: &BattleState, unit: &Unit, with: &Equipped, weights: &AiWeights) -> Vec<Extra> {
+    if !unit.may_use_arts() {
+        return Vec::new();
+    }
+    let mut out: Vec<Extra> = unit
+        .usable_skills(state.classes(), state.skills())
+        .into_iter()
+        .filter_map(|def| match &def.kind {
+            SkillKind::Active {
+                cost,
+                effect: ActiveEffect::Strike { range, .. },
+            } => Some(Extra {
+                technique: Technique::Active(def.id.clone()),
+                range: *range,
+                penalty: match cost {
+                    SkillCost::Durability(points) => {
+                        f64::from(weights.durability) * f64::from(*points)
+                    }
+                    SkillCost::ExtraSpellUse => f64::from(weights.spell_use),
+                },
+            }),
+            _ => None,
+        })
+        .collect();
+    if let Equipped::Weapon(slot) = *with {
+        let arts = unit.usable_arts(slot, state.classes(), state.items(), state.arts());
+        out.extend(arts.into_iter().map(|art| Extra {
+            technique: Technique::Art(art.id.clone()),
+            range: 0,
+            penalty: f64::from(weights.durability) * f64::from(art.cost),
+        }));
+    }
+    out.sort_by(|a, b| (a.technique.id(), &a.technique).cmp(&(b.technique.id(), &b.technique)));
+    out
 }
 
 /// The terrain bonus of standing on `pos`: its Def + Avoid / 10.
