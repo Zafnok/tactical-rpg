@@ -1,0 +1,78 @@
+---
+source: crates/ui/tests/key_bindings_screen.rs
+expression: h.snapshot()
+---
+                                                                                                    
+  ┌─ Key bindings · Right-handed ────────────────────────────────────────────────────────────────┐  
+  │                                                                                              │  
+  │                           Key 1             Key 2             Key 3                          │  
+  │ Must have a key                                                                              │  
+  │   Cursor up               Up                ·                 ·                              │  
+  │   Cursor down             Down              ·                 ·                              │  
+  │   Cursor left             Left              ·                 ·                              │  
+  │   Cursor right            Right             ·                 ·                              │  
+  │   Confirm                 f                 g                 ·                              │  
+  │   Cancel  + Escape        d                 ·                 ·                              │  
+  │   End turn                Space             ·                 ·                              │  
+  │                                                                                              │  
+  │ Optional               ╔════════════════════════════════════════════╗                        │  
+  │   Select               ║                                            ║           ! not mapped │  
+  │   Confirm end turn     ║ Restore the default keys for Right-handed? ║           ! not mapped │  
+  │   Previous ready unit  ║ f yes / d no                               ║                        │  
+  │   Next ready unit      ║                                            ║                        │  
+  │   Unit info            ╚════════════════════════════════════════════╝                        │  
+  │   Danger zone             w                 ·                 ·                              │  
+  │   Auto-end on/off         Shift+Space       ·                 ·                              │  
+  │   Rewind                  r                 ·                 ·                              │  
+  │   Map menu                ·                 ·                 ·                 ! not mapped │  
+  │                                                                                              │  
+  │   Restore defaults                                                                           │  
+  │                                                                                              │  
+  │                                                                                              │  
+  └──────────────────────────────────────────────────────────────────────────────────────────────┘  
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                            f yes · d no                                            
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbcccccccccccccccccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddeeeeedddddddddddddeeeeedddddddddddddeeeeeddddddddddddddddddddddddddbaa
+aabdfffffffffffffffddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddeeeeeeeeddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdffffffffdddddddddddddddffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfdddddddddddeeeeeeeeeeeedbaa
+aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfdddddddddddeeeeeeeeeeeedbaa
+aabddddddddddddddddddddddddfdeeeeeeeeeeeedddddddddddddddddddddddddddddddfddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddedddddddddddddddddedddddddddddddddddedddddddddddddddddeeeeeeeeeeeedbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddggggggggggggggggggddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:text_dim bg:panel_bg
+f = fg:panel_border_focus bg:panel_bg
+g = fg:panel_bg bg:panel_border_focus
+h = fg:text_dim bg:black
