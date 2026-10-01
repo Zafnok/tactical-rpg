@@ -182,6 +182,65 @@ fn literal_check_hits() {
 }
 
 #[test]
+fn literal_check_reports_the_longest_name() {
+    let names = table(&[
+        ("family.marr", "Marr"),
+        ("retainer", "Hollis Marr"),
+        ("retainer.first", "Hollis"),
+        ("rival.first", "Dace"),
+        ("sister.first", "Wren"),
+    ]);
+    // A full name is itself, not the short forms inside it.
+    assert_eq!(
+        names.literal_in("Hollis Marr rode out."),
+        Some(("retainer", "Hollis Marr"))
+    );
+    assert_eq!(
+        names.literal_in("Hollis, wait."),
+        Some(("retainer.first", "Hollis"))
+    );
+    assert_eq!(
+        names.literal_in("A Marr never runs."),
+        Some(("family.marr", "Marr"))
+    );
+    // Of equally long names, the first by id.
+    assert_eq!(
+        names.literal_in("Wren and Dace."),
+        Some(("rival.first", "Dace"))
+    );
+}
+
+#[test]
+fn every_two_word_name_has_short_forms() {
+    let names = load().unwrap_or_default();
+    let story = || {
+        names
+            .names
+            .iter()
+            .filter(|(id, _)| !id.starts_with("test_"))
+    };
+    let mut people = 0;
+    let mut gods = 0;
+    for (id, name) in story() {
+        if let Some((god, title)) = name.split_once(", ") {
+            // A god: "Ama, the Mother".
+            gods += 1;
+            assert_eq!(names.get(&format!("{id}.name")), Some(god), "{id}");
+            assert_eq!(names.get(&format!("{id}.title")), Some(title), "{id}");
+        } else if !id.contains('.') && name.contains(' ') {
+            // A person: "Hollis Marr".
+            people += 1;
+            let first = name.split(' ').next();
+            assert_eq!(names.get(&format!("{id}.first")), first, "{id}");
+        }
+    }
+    assert_eq!((people, gods), (12, 5));
+    assert_eq!(names.get("family.marr"), Some("Marr"));
+    assert_eq!(names.get("family.veyne"), Some("Veyne"));
+    assert_eq!(names.get("red_captain.nickname"), Some("Red Harl"));
+}
+
+#[test]
 fn literal_check_misses() {
     let names = story();
     // Tokens, other case, and ordinary words aren't hits.

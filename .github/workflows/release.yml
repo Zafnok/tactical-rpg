@@ -164,7 +164,7 @@ jobs:
           persist-credentials: false
       - run: rustup show
       - name: Install macroquad system libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev libudev-dev
       - run: cargo build --release --locked -p trpg-app --target x86_64-unknown-linux-gnu
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:

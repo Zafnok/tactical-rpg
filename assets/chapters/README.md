@@ -3,7 +3,7 @@
 A chapter is a story beat (`docs/design/chapter-1.md`): scenes, a battle,
 more scenes, then the next chapter. Each `*.ron` file here is one chapter,
 loaded by `trpg_content::chapter` and validated by the all-assets test
-(ADR-0034). The file stem is the chapter's id. The game flow
+(ADR-0035). The file stem is the chapter's id. The game flow
 (`trpg_ui::flow`) plays them.
 
 ```ron

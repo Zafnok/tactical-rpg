@@ -309,3 +309,23 @@ fn the_next_chapter_follows_a_victory() {
         .collect();
     assert_eq!(players, ["Test Knight"]);
 }
+
+/// On a controller, choosing the name opens the letter grid instead of
+/// the typing box (Nick: type on a keyboard, a grid on a controller).
+#[test]
+fn a_controller_spells_the_name_on_the_letter_grid() {
+    let mut h = title();
+    // New Game, Classic, down to the name, choose it.
+    h.pad("South South DpadDown South");
+    assert_eq!(h.top_screen(), "lead_select");
+    assert!(shows(&h, "A  B  C  D"), "{}", h.snapshot());
+    assert!(!shows(&h, "Type a name"));
+    // East (Cancel) deletes the "y"; "B" is right of "A"; Done is up and
+    // round to the left of the bottom row.
+    h.pad("East DpadRight South DpadUp DpadLeft DpadLeft South");
+    assert!(!shows(&h, "A  B  C  D"), "{}", h.snapshot());
+    assert!(shows(&h, "EllerB Veyne"), "{}", h.snapshot());
+    // The keyboard still types: the same name row opens the typing box.
+    h.keys("f");
+    assert!(shows(&h, "Type a name on your keyboard."));
+}

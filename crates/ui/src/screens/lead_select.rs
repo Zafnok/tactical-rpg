@@ -7,9 +7,9 @@
 //! ([`NameBox`]). While the box is open the game's keys do nothing (Select
 //! and the rest are letters then), and a hint says to type; the text box's
 //! own fixed keys finish, delete and cancel ([`crate::input::text_key`]).
-//! For controller players (0219) the name is spelled on a letter grid
-//! ([`NameEntry`]) with the cursor and Confirm, like a console naming
-//! screen; 0219 opens it when the name is chosen with a controller.
+//! When the name is chosen with a controller button, it is spelled on a
+//! letter grid instead ([`NameEntry`]) with the cursor and Confirm, like a
+//! console naming screen.
 //!
 //! Name rules for both: letters (A-Z, a-z), `-`, `'` and single spaces
 //! between words, at most [`MAX_NAME_LEN`] characters, not blank.
@@ -318,7 +318,7 @@ pub struct LeadSelectScreen {
     row: Row,
     /// The typing box, while open.
     typing: Option<NameBox>,
-    /// The letter grid, while open (controller players, 0219).
+    /// The letter grid, while open (controller players).
     entry: Option<NameEntry>,
     result: Option<LeadProfile>,
 }
@@ -404,9 +404,10 @@ impl LeadSelectScreen {
         ctx.audio.menu(MenuSound::Move);
     }
 
-    /// Handles one action outside the grid. Returns whether the screen is
-    /// done (chose Start or went back).
-    fn step(&mut self, action: Action, ctx: &mut Ctx) -> bool {
+    /// Handles one action outside the grid. `pad`: it came from a
+    /// controller, so the name opens the letter grid, not the typing box.
+    /// Returns whether the screen is done (chose Start or went back).
+    fn step(&mut self, action: Action, pad: bool, ctx: &mut Ctx) -> bool {
         match (self.row, action) {
             (_, Action::CursorDown) => self.step_row(true, ctx),
             (_, Action::CursorUp) => self.step_row(false, ctx),
@@ -422,7 +423,11 @@ impl LeadSelectScreen {
                 ctx.audio.menu(MenuSound::Select);
             }
             (Row::Name, Action::Confirm) => {
-                self.typing = Some(NameBox::new(&self.name));
+                if pad {
+                    self.entry = Some(NameEntry::new(&self.name));
+                } else {
+                    self.typing = Some(NameBox::new(&self.name));
+                }
                 ctx.audio.menu(MenuSound::Select);
             }
             (Row::Start, Action::Confirm) => {
@@ -602,7 +607,7 @@ impl Screen for LeadSelectScreen {
                 }
                 continue;
             }
-            if self.step(action, ctx) {
+            if self.step(action, input.pad_pressed(), ctx) {
                 return Transition::Pop;
             }
             // The key that opened the typing box types nothing, and the

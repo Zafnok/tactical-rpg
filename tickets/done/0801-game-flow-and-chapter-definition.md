@@ -141,7 +141,7 @@ chapters with several battles (world map and skirmishes: 1007, 1008 per
 
 ## Completion notes
 
-**Done.** New Game now runs a real game flow; ADR-0034 records the design.
+**Done.** New Game now runs a real game flow; ADR-0035 records the design.
 
 - **Files** (data only, no code per battle): `assets/battles/*.ron` and
   `assets/chapters/*.ron`, plus `assets/data/new_game.ron` (first chapter,
@@ -202,9 +202,8 @@ fine with a credits screen later, 0808)
    win. Gold picked up in battle is kept on a win, lost on a defeat.
 5. The lead's name (Nick, PR #127: "C"): typed on the keyboard, with a
    "Type a name on your keyboard." hint; while typing, the game's keys do
-   nothing, and Enter / Backspace / Escape finish, delete and cancel. On a
-   controller (0219) it is spelled on a letter grid (built here, opened by
-   0219). Up to 12 characters: letters, `-`, `'` and single spaces. The
+   nothing, and Enter / Backspace / Escape finish, delete and cancel.
+   Chosen with a controller button, it is spelled on a letter grid instead. Up to 12 characters: letters, `-`, `'` and single spaces. The
    lead's two map letters are the first two of the chosen name.
 6. Mode screen lines: "Classic: a unit that falls in battle dies and is
    gone for good." / "Casual: a unit that falls retreats, and is back for

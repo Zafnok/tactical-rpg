@@ -87,7 +87,45 @@
         "CursorDown": ["Down", "s"],
         "Confirm": ["f", "j", "Enter", "Space"],
     },
-    // Held cursor keys, in every layout and the layout picker: first repeat
-    // after delay_ms, then every interval_ms.
+    // Controller buttons (controls.md, Controller): one table for both
+    // layouts and the layout picker, with the same rules as a layout (every
+    // action listed, at most 3 buttons, a button on only one action). Debug
+    // is keyboard only and must stay []. Buttons are named by position on an
+    // Xbox-shaped pad, whatever is printed on them: "South" "East" "West"
+    // "North" (the face buttons), "LeftShoulder" "RightShoulder"
+    // "LeftTrigger" "RightTrigger", "Select" (the left centre button, Back)
+    // "Start", "LeftStickPress" "RightStickPress", "DpadUp" "DpadDown"
+    // "DpadLeft" "DpadRight", and each stick's directions "LeftStickUp"
+    // "LeftStickDown" "LeftStickLeft" "LeftStickRight" "RightStickUp" ...
+    // On Switch-style pads South and East swap, so the button labelled A
+    // confirms there too.
+    pad: {
+        // D-pad and left stick both move the cursor; held, they repeat.
+        "CursorLeft": ["DpadLeft", "LeftStickLeft"],
+        "CursorDown": ["DpadDown", "LeftStickDown"],
+        "CursorUp": ["DpadUp", "LeftStickUp"],
+        "CursorRight": ["DpadRight", "LeftStickRight"],
+
+        "Confirm": ["South"],
+        "Cancel": ["East"],
+        "PrevUnit": ["LeftShoulder"],
+        "NextUnit": ["RightShoulder"],
+        "Info": ["North"],
+        "DangerZone": ["West"],
+        // Start opens the end-turn prompt; Start again confirms it.
+        "EndTurn": ["Start"],
+        "ToggleAutoEnd": ["Select"],
+        "Menu": [],
+        "Debug": [],
+        "Rewind": ["LeftTrigger"],
+        "Select": [],
+        "ConfirmEndTurn": [],
+    },
+    // Held cursor keys and buttons, in every layout and the layout picker:
+    // first repeat after delay_ms, then every interval_ms.
     repeat: (delay_ms: 300, interval_ms: 55),
+    // A stick counts as a held direction once pushed press_percent of the
+    // way, and stops below release_percent (lower, so a stick resting near
+    // the edge doesn't flicker). Tunable.
+    stick: (press_percent: 50, release_percent: 35),
 )

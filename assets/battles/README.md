@@ -2,7 +2,7 @@
 
 Each `*.ron` file here is one battle: everything needed to play it. They
 are loaded by `trpg_content::battle` and validated by the all-assets test
-(ADR-0005, ADR-0034), so adding a battle needs **only data**: a map, a
+(ADR-0005, ADR-0035), so adding a battle needs **only data**: a map, a
 battle file and its scenes. The file stem is the battle's id
 (`ch01.ron` → `"ch01"`). A chapter (`assets/chapters/`) names the battle it
 plays; later the world map's battles and skirmishes (1007, 1008) will too.

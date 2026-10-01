@@ -60,7 +60,7 @@ exists), and:
 1. **Raw presses** (`crates/ui/src/screen.rs`, `game.rs`): add
    `FrameInput::pressed_chords: Vec<Chord>`, the chords pressed this frame
    in order (presses only, no repeats), filled by `Game::frame` from the
-   `RawKeyEvent::Down`s. Add to `crates/ui/src/input.rs` (allow-listed by
+   `RawInputEvent::Down`s. Add to `crates/ui/src/input.rs` (allow-listed by
    `check-keys`): `pub fn is_capture_abort(c: Chord) -> bool` (plain
    `Escape`) and `pub fn is_clear_slot(c: Chord) -> bool` (plain `Delete`),
    so the screen never names a key itself.

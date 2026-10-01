@@ -42,7 +42,10 @@ pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_l
 pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
-pub use keymap::{Action, Bindings, Chord, Key, KeymapDef, Layout, LayoutKeys, RepeatDef, SLOTS};
+pub use keymap::{
+    Action, Bindings, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS,
+    StickDef,
+};
 pub use map::{MapDef, MapLegend};
 pub use names::Names;
 pub use palette::PaletteDef;

@@ -160,7 +160,9 @@ impl LayoutBindings {
     }
 
     /// The keymap these bindings give: every slot, the Debug chords (unless
-    /// a slot took one), and the fixed keys ([`Keymap::new`]).
+    /// a slot took one), and the fixed keys ([`Keymap::new`]). Keys only:
+    /// controller buttons don't belong to a layout
+    /// ([`Keymap::with_default_pad`]).
     pub fn keymap(&self, repeat: RepeatDef) -> Keymap {
         let debug = self.debug.iter().map(|&c| (c, Action::Debug));
         let slotted = self
@@ -211,9 +213,13 @@ impl PlayerKeys {
             .unwrap_or_else(|| LayoutBindings::defaults(def, layout))
     }
 
-    /// The keymap for `layout` with the player's bindings.
+    /// The keymap for `layout` with the player's bindings, and the default
+    /// controller buttons (the same for every layout; rebinding them is
+    /// ticket 0816).
     pub fn keymap(&self, def: &KeymapDef, layout: Layout) -> Keymap {
-        self.bindings(def, layout).keymap(def.repeat)
+        self.bindings(def, layout)
+            .keymap(def.repeat)
+            .with_default_pad(def)
     }
 
     /// Replaces `layout`'s bindings; the other layout is untouched.

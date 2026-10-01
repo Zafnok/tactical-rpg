@@ -1,4 +1,4 @@
-# ADR-0034: Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others
+# ADR-0035: Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others
 
 - **Status:** Accepted
 - **Date:** 2026-09-30
@@ -69,6 +69,8 @@ scenes and a battle, carrying the army from one battle to the next. Forces:
    (every letter key is a letter then) and finishes, deletes and cancels on
    fixed Enter / Backspace / Escape (`input::text_key`, named in help text
    only by `input::text_keys_help`, like the fixed Escape for Cancel).
+   `FrameInput::pad_pressed` says a controller button went down this frame:
+   the name chosen that way opens the letter grid instead.
 
 ## Consequences
 
