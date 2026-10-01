@@ -305,7 +305,21 @@ functions. The closest pairs, all judged in the playtest:
   (at class level 1, generic units have none).
 - When a boss or a green unit attacks with an art or active, the forecast
   and playback show its name.
-- How the boss and green AI choose: ticket 0503.
+- How the boss and green AI choose (ticket 0503; all *Claude's starting
+  rules*, numbers *tunable* in `assets/data/ai.ron`):
+  - It weighs every attack it can make plain and with each art or combat
+    active, by the forecast, and picks the best. Using one counts against
+    the attack (5 points per durability, where 1 damage is worth 10), so it
+    keeps them for attacks they really improve. Example: a boss facing a
+    unit whose counter would hurt it uses Guard Break (no counter); against
+    an archer next to it, who can't counter anyway, it attacks normally.
+  - It doesn't yet value what the forecast's numbers don't show (pinning or
+    slowing the target, a stance for the enemy's turn), so it doesn't pick
+    an art for that alone: ticket 0511.
+  - A boss or combat green unit that holds its tile (it guards or never
+    moves) and has nothing to attack uses its non-attack active (Brace, War
+    Cry…) instead of waiting, when a hostile unit could attack it this
+    turn. It never spends its weapon's last durability that way.
 
 ## Forecast display
 

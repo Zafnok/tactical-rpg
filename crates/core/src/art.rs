@@ -34,7 +34,7 @@ use crate::combat::{CombatMods, WeaponStats, WeaponTrait};
 use crate::item::ItemTable;
 use crate::skill::{CostSource, SkillCost, TimedMods, check_cost};
 use crate::stats::{StatKind, StatValue};
-use crate::unit::Unit;
+use crate::unit::{Faction, Role, Unit};
 use crate::weapon::{WeaponKind, WeaponRank};
 
 /// String id of a Combat Art, e.g. `"guard_break"`.
@@ -205,6 +205,17 @@ impl ArtTable {
 
 /// A unit's Combat Art rules (see the module docs).
 impl Unit {
+    /// Whether the unit may use arts and active skills (`combat-arts.md`,
+    /// *Enemies: bosses only; combat green units too*): every player unit,
+    /// bosses among enemies, and green units that aren't non-combat ones.
+    pub fn may_use_arts(&self) -> bool {
+        match self.faction {
+            Faction::Player => true,
+            Faction::Enemy => self.role == Role::Boss,
+            Faction::Ally | Faction::Neutral => self.role != Role::Noncombatant,
+        }
+    }
+
     /// The rank arts the unit knows, by kind, then lowest rank first. Only
     /// ranks it has recorded count (a unit that never used bows knows no
     /// bow arts), whatever its current class.

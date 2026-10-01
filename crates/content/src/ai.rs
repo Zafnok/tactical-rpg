@@ -32,7 +32,8 @@ pub fn from_source(file: &str, source: &str) -> Result<AiWeights, Vec<ContentErr
 mod tests {
     use super::*;
 
-    const VALID: &str = "(damage: 1, kill: 2, lord: 3, risk: 4, terrain: 5)";
+    const VALID: &str =
+        "(damage: 1, kill: 2, lord: 3, risk: 4, terrain: 5, durability: 6, spell_use: 7)";
 
     #[test]
     fn valid_source_loads() {
@@ -42,6 +43,8 @@ mod tests {
             lord: 3,
             risk: 4,
             terrain: 5,
+            durability: 6,
+            spell_use: 7,
         };
         assert_eq!(from_source("ai.ron", VALID), Ok(expected));
     }
@@ -55,7 +58,7 @@ mod tests {
         assert!(from_source("ai.ron", &missing).is_err());
         let negative = "(
  damage: 1, kill: 2, lord: 3,
- risk: -4, terrain: 5)";
+ risk: -4, terrain: 5, durability: 6, spell_use: 7)";
         let errors = from_source("ai.ron", negative).err().unwrap_or_default();
         assert_eq!(errors.first().map(|e| e.line), Some(Some(3)));
     }
