@@ -40,6 +40,18 @@ fn focus_on(s: &mut KeyBindingsScreen, c: &mut Ctx, action: Action, slot: usize)
     assert_eq!(s.focus(), Some((action, slot)));
 }
 
+/// Moves the focus down to Restore defaults. Bounded, so a screen that
+/// never gets there fails the test instead of looping for ever.
+fn focus_on_restore(s: &mut KeyBindingsScreen, c: &mut Ctx) {
+    for _ in 0..=ROWS.len() {
+        if s.focus().is_none() {
+            return;
+        }
+        s.update(c, &act(&[CursorDown]));
+    }
+    panic!("Restore defaults was never reached");
+}
+
 /// Focuses `action`'s slot `slot`, confirms, and presses `key`.
 fn bind(s: &mut KeyBindingsScreen, c: &mut Ctx, action: Action, slot: usize, key: &str) {
     focus_on(s, c, action, slot);
@@ -540,9 +552,7 @@ fn the_restore_question_can_be_backed_out_of() {
     let mut s = KeyBindingsScreen::new(&c);
     bind(&mut s, &mut c, Confirm, 1, "e");
     let custom = s.bindings().clone();
-    while s.focus().is_some() {
-        s.update(&mut c, &act(&[CursorDown]));
-    }
+    focus_on_restore(&mut s, &mut c);
     s.update(&mut c, &act(&[Confirm]));
     assert!(s.is_asking_restore());
     assert_eq!(
@@ -632,9 +642,7 @@ fn help_names_the_keys_the_screen_was_opened_with() {
     assert_eq!(s.help(), "Press the key to put here · Escape back");
     s.update(&mut c, &press("Escape"));
     s.update(&mut c, &act(&[CursorUp, CursorUp, CursorUp, CursorUp]));
-    while s.focus().is_some() {
-        s.update(&mut c, &act(&[CursorDown]));
-    }
+    focus_on_restore(&mut s, &mut c);
     assert_eq!(s.help(), "arrows move · f restore · d back");
     let left = ctx().with_layout(Layout::LeftHanded);
     assert_eq!(

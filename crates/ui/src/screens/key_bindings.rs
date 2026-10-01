@@ -66,10 +66,11 @@ pub const MOVED_FLASH_SECS: f32 = 1.5;
 
 /// The panel, in cells.
 const PANEL: Rect = Rect::new(2, 1, 96, 27);
-/// Column of the group headings.
-const HEADING_X: i32 = PANEL.x + 2;
 /// Column of the action labels.
 const LABEL_X: i32 = PANEL.x + 4;
+/// Column of the title and the group headings, two cells left of the
+/// labels.
+const HEADING_X: i32 = LABEL_X - 2;
 /// Column of the first slot's highlight bar; its text starts one cell in.
 const SLOTS_X: i32 = LABEL_X + 23;
 /// Cells a slot's key name may take (the longest chord name fits).
@@ -500,7 +501,7 @@ impl Screen for KeyBindingsScreen {
         buf.fill_rect(PANEL, Cell::new(' ', text, bg));
         buf.draw_box(PANEL, BoxStyle::Single, c(UiColor::PanelBorder), bg);
         let title = format!(" {TITLE}{SEPARATOR}{} ", layout_picker::label(self.layout));
-        buf.print(PANEL.x + 2, PANEL.y, &title, c(UiColor::TextHighlight), bg);
+        buf.print(HEADING_X, PANEL.y, &title, c(UiColor::TextHighlight), bg);
 
         let mut y = PANEL.y + 2;
         for j in 0..SLOTS {
