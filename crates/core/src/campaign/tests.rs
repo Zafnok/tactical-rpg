@@ -84,7 +84,10 @@ fn def() -> BattleDef {
         ],
         enemies: vec![
             unit(4, Faction::Enemy, p(1, 0)),
-            named(armed(unit(5, Faction::Enemy, p(1, 2)), 20), "rook"),
+            Unit {
+                role: Role::Boss,
+                ..named(armed(unit(5, Faction::Enemy, p(1, 2)), 20), "rook")
+            },
         ],
         reinforcements: vec![],
         preparations: false,

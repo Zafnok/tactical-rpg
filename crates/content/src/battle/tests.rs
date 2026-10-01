@@ -331,8 +331,33 @@ fn objective_errors() {
 }
 
 #[test]
+fn reinforcements_are_numbered_in_order() {
+    let c = content();
+    let two = OK.replace(
+        "    reinforcements: [\n",
+        "    reinforcements: [\n        (turn: 3, unit: (template: \"test_raider\", pos: (13, 3))),\n",
+    );
+    let def = load(&c, &two).unwrap_or_else(|e| panic!("{e:?}"));
+    let ids: Vec<u32> = def.reinforcements.iter().map(|r| r.unit.id.0).collect();
+    assert_eq!(ids, [4, 5]);
+    // The objective's rogue is the second one now.
+    assert_eq!(
+        def.objective,
+        Objective::DefeatUnit {
+            unit: UnitId(5),
+            turn_limit: Some(9)
+        }
+    );
+}
+
+#[test]
 fn pack_errors() {
     let c = content();
+    // A full pack is fine.
+    assert_eq!(
+        errors(&c, "\"elixir\"]", "\"elixir\", \"potion\"]"),
+        Vec::<String>::new()
+    );
     assert_eq!(
         errors(&c, "pack_cap: 3", "pack_cap: 1"),
         ["default_pack: 2 items, more than the pack cap 1"]

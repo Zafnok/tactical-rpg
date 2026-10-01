@@ -165,8 +165,8 @@ impl Game {
                 RawKeyEvent::Text(_) => {}
             }
         }
-        if dt.is_finite() && dt > 0.0 {
-            self.ctx.clock_s += f64::from(dt);
+        if dt.is_finite() {
+            self.ctx.clock_s += f64::from(dt.max(0.0));
         }
         let actions = self.input.update(dt);
         let held = Action::ALL
@@ -519,6 +519,60 @@ mod tests {
         assert!(seen[1].actions.is_empty());
         assert!(seen[1].is_held(Action::CursorRight));
         assert!(!seen[1].is_held(Action::Confirm));
+    }
+
+    #[test]
+    fn screens_see_the_keys_pressed_and_the_text_typed() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let events = [
+            down(Key::A),
+            RawKeyEvent::Text('a'),
+            down(Key::Backspace),
+            // Control characters some platforms send for Backspace or
+            // Enter are keys, not text.
+            RawKeyEvent::Text('\u{8}'),
+            RawKeyEvent::Text('\r'),
+            RawKeyEvent::Text('é'),
+        ];
+        game.frame(&events, 0.0);
+        game.frame(&[RawKeyEvent::Up(Key::A)], 0.0);
+        let seen = seen.borrow();
+        let pressed = [Chord::plain(Key::A), Chord::plain(Key::Backspace)];
+        assert_eq!(seen[0].pressed_chords(), pressed);
+        assert_eq!(seen[0].text(), ['a', 'é']);
+        assert!(seen[1].pressed_chords().is_empty());
+        assert!(seen[1].text().is_empty());
+    }
+
+    /// The Harness types as the app does: each character with its key
+    /// (Shift for capitals), one character per press.
+    #[test]
+    fn the_harness_types_text_with_its_keys() {
+        let seen = std::rc::Rc::default();
+        let game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let mut h = crate::harness::Harness::from_game(game);
+        h.type_text("Ma -é");
+        let seen = seen.borrow();
+        let typed: Vec<(Vec<String>, Vec<char>)> = seen
+            .iter()
+            .filter(|i| !i.text().is_empty())
+            .map(|i| {
+                let keys = i.pressed_chords().iter().map(ToString::to_string).collect();
+                (keys, i.text().to_vec())
+            })
+            .collect();
+        let expect = |k: &[&str], c| (k.iter().map(|&s| s.to_owned()).collect(), vec![c]);
+        assert_eq!(
+            typed,
+            [
+                expect(&["Shift+m"], 'M'),
+                expect(&["a"], 'a'),
+                expect(&["Space"], ' '),
+                expect(&["-"], '-'),
+                expect(&[], 'é'),
+            ]
+        );
     }
 
     /// Plays `beep` on Confirm, switches to music `battle` on Cancel, quits

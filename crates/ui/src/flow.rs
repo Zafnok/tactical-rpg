@@ -370,3 +370,6 @@ impl Screen for FlowScreen {
         Some(self)
     }
 }
+
+#[cfg(test)]
+mod tests;

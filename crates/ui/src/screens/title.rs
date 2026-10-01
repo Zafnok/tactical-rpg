@@ -352,8 +352,19 @@ mod tests {
     fn screens_cover_the_whole_buffer() {
         use crate::console::{CONSOLE_H, CONSOLE_W};
         let c = ctx();
-        let screens: [&dyn Screen; 2] = [&TitleScreen::new(), &TitleScreen::with_quick_battle()];
-
+        let mut naming = crate::screens::LeadSelectScreen::new();
+        let typing = FrameInput::new(vec![Action::CursorDown], 0.0, vec![]);
+        naming.update(&mut ctx(), &typing);
+        naming.update(&mut ctx(), &input(&[Action::Confirm]));
+        let screens: [&dyn Screen; 7] = [
+            &TitleScreen::new(),
+            &TitleScreen::with_quick_battle(),
+            &crate::screens::ModeSelectScreen::new(),
+            &crate::screens::LeadSelectScreen::new(),
+            &naming,
+            &crate::screens::GameOverScreen::new(),
+            &crate::screens::ToBeContinuedScreen,
+        ];
         for screen in screens {
             let stale = Cell::new(
                 'x',
