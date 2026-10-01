@@ -95,6 +95,30 @@ test_knight: For the Crown of Ardeval!
 }
 
 #[test]
+fn short_forms_written_out_are_errors() {
+    let src = scene(
+        "test_knight: Hollis, wait.
+> Hollis Marr did not wait.
+test_lord: A Marr never does. Ask Red Harl.
+> By Ama. By the Mother.
+test_lord: {N:retainer.first}, wait. {N:god.mother.title} keep you, {n:family.veyne}.",
+    );
+    assert_eq!(
+        errors(&src),
+        [
+            "t.dlg:4: \"Hollis\" is written out; write {n:retainer.first} (\"Hollis\") so a \
+             rename reaches this line",
+            "t.dlg:5: \"Hollis Marr\" is written out; write {n:retainer} (\"Hollis Marr\") so \
+             a rename reaches this line",
+            "t.dlg:6: \"Red Harl\" is written out; write {n:red_captain.nickname} (\"Red \
+             Harl\") so a rename reaches this line",
+            "t.dlg:7: \"Mother\" is written out; write {n:god.mother.title} (\"the Mother\") \
+             so a rename reaches this line",
+        ]
+    );
+}
+
+#[test]
 fn the_lead_default_name_written_out() {
     assert_eq!(
         errors(&scene("test_knight: Ellery, wait.")),
