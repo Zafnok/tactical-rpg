@@ -3,6 +3,7 @@
 pub mod ai;
 pub mod art;
 pub mod battle;
+pub mod campaign;
 pub mod class;
 pub mod combat;
 pub mod geom;
@@ -29,6 +30,10 @@ pub use battle::{
     AttackPreview, BattleSetup, BattleState, Burning, CastTarget, Command, CommandError,
     Destination, Event, GameMode, Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom,
     ShopTxn, TileRect, Trigger, TriggerWhen, Turn, UnitAction, Who,
+};
+pub use campaign::{
+    ApplyError, BattleDef, BattleRewards, Campaign, Difficulty, GameTables, PlayerSlot,
+    UNUSED_CHARGE_PERCENT,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,

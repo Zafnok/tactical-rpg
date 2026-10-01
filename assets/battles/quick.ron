@@ -1,0 +1,52 @@
+// PLACEHOLDER: the debug Quick Battle (title screen, debug builds and the
+// Pages build): the placeholder characters against generic enemies on the
+// test map, one brigand close enough to fight on turn 1. Its triggers try
+// out each kind of dialogue trigger (ticket 0705) on the scenes in
+// dialogue/test_triggers.dlg; the rogue they are about arrives on the fort
+// at (12, 3) in turn 2's enemy phase, and joins if defeated.
+(
+    id: "quick",
+    map: "test_small",
+    player_slots: [
+        (character: "test_lord", pos: (3, 5)),
+        (character: "test_knight", pos: (4, 6)),
+        (character: "test_archer", pos: (2, 4)),
+    ],
+    enemies: [
+        (template: "test_brigand", pos: (8, 2)),
+        // In reach of every player unit on turn 1, for a first fight.
+        (template: "test_brigand", pos: (7, 4)),
+        (template: "test_raider", pos: (7, 1)),
+    ],
+    reinforcements: [
+        (turn: 2, unit: (character: "test_rogue", pos: (12, 3))),
+    ],
+    default_pack: ["potion", "potion", "potion"],
+    objective: Rout(),
+    triggers: [
+        (when: TurnStart(turn: 3, phase: Player), scene: "test_turn_3", once: true),
+        // A player unit ends a move in the walled fort (10, 5)-(11, 6).
+        (
+            when: UnitEntersArea(who: Faction(Player), area: (x: 10, y: 5, w: 2, h: 2)),
+            scene: "test_fort",
+            once: true,
+        ),
+        (when: CombatStart(unit: "test_rogue"), scene: "test_engage", once: true),
+        (when: HalfHp(unit: "test_rogue"), scene: "test_rogue_half", once: true),
+        (when: UnitFell(unit: "test_rogue", recruit: true), scene: "test_rogue_falls", once: true),
+        (when: UnitFell(unit: "test_lord"), scene: "test_lord_falls", once: true),
+        (
+            when: UnitFell(unit: "test_knight", mode: Some(Classic)),
+            scene: "test_knight_dies",
+            once: true,
+        ),
+        (
+            when: UnitFell(unit: "test_knight", mode: Some(Casual)),
+            scene: "test_knight_retreats",
+            once: true,
+        ),
+        (when: Talk(a: "test_lord", b: "test_rogue"), scene: "test_talk", once: true),
+    ],
+    difficulty: Normal,
+    seed: 1,
+)

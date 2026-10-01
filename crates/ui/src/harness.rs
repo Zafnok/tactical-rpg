@@ -11,12 +11,13 @@
 //!
 //! let mut h = Harness::with_layout(Layout::RightHanded);
 //! h.keys("f");
-//! assert_eq!(h.top_screen(), "placeholder");
+//! assert_eq!(h.top_screen(), "mode_select");
 //! h.keys("d");
 //! assert_eq!(h.top_screen(), "title");
 //! ```
 
 use crate::audio::{AudioRequest, MusicCommand};
+use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Layout};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
@@ -113,6 +114,29 @@ impl Harness {
         for token in script.split_whitespace() {
             let chord = parse(token);
             self.frame(&[RawInputEvent::Down(chord)], FRAME_DT);
+            self.frame(&[RawInputEvent::Up(chord.key)], FRAME_DT);
+        }
+        self
+    }
+
+    /// Types `text` one character per frame as the app reports typing: the
+    /// key's press (Shift for capitals) with the character, then its
+    /// release. A character without a key of its own is typed alone.
+    pub fn type_text(&mut self, text: &str) -> &mut Self {
+        for c in text.chars() {
+            let name = match c {
+                ' ' => "Space".to_owned(),
+                c if c.is_ascii_uppercase() => format!("Shift+{}", c.to_ascii_lowercase()),
+                c => c.to_string(),
+            };
+            let Ok(chord) = Chord::parse(&name) else {
+                self.frame(&[RawInputEvent::Text(c)], FRAME_DT);
+                continue;
+            };
+            self.frame(
+                &[RawInputEvent::Down(chord), RawInputEvent::Text(c)],
+                FRAME_DT,
+            );
             self.frame(&[RawInputEvent::Up(chord.key)], FRAME_DT);
         }
         self
@@ -247,6 +271,17 @@ impl Harness {
     /// The current frame in the snapshot format of [`crate::snapshot`].
     pub fn snapshot(&self) -> String {
         self.game.buffer().to_snapshot(&self.game.ctx().palette)
+    }
+
+    /// The game flow on the stack (New Game or Quick Battle), if any.
+    pub fn flow(&self) -> Option<&FlowScreen> {
+        self.game.screen()
+    }
+
+    /// The game flow on the stack, to play its battle with scripted
+    /// commands ([`FlowScreen::battle_mut`]).
+    pub fn flow_mut(&mut self) -> Option<&mut FlowScreen> {
+        self.game.screen_mut()
     }
 
     /// Whether the game has asked to quit.
@@ -480,7 +515,8 @@ mod tests {
         );
         h.keys("Up f");
         assert!(h.quit_requested());
-        let mut h = Harness::with_screen(Box::new(crate::screens::PlaceholderScreen));
+        let mut h = Harness::with_screen(Box::new(crate::screens::ModeSelectScreen::new()));
+
         h.keys("d");
         assert_eq!(h.top_screen(), "");
         assert!(h.screens().is_empty());

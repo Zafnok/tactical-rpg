@@ -13,7 +13,8 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
 | `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
-| `screens` | Game screens: `TitleScreen`, `PlaceholderScreen`, `LayoutPickerScreen`, `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
+| `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, Game Over, "To be continued" |
+| `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
 | `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
@@ -116,10 +117,10 @@ use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
 
 #[test]
-fn select_opens_the_placeholder() {
+fn select_opens_new_game() {
     let mut h = Harness::with_layout(Layout::RightHanded); // at the title
     h.keys("f");                         // press + release, one frame each
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
     assert_snapshot!(h.snapshot());      // GlyphBuffer text snapshot
     h.keys("d");
     assert_eq!(h.top_screen(), "title");
@@ -133,6 +134,9 @@ fn select_opens_the_placeholder() {
   repeats), then releases it. `wait(0.2)`: time passes with no input. One
   call runs at most `MAX_FRAMES` (2 000, ~33 s); longer ones panic.
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
+- `flow()` / `flow_mut()`: the game flow on the stack; `flow_mut()` →
+  `battle_mut()` → `send(&Command)` plays its battle with scripted
+  commands (`crates/ui/tests/flow.rs`).
 - Audio: `audio_requests()` (every request of the run), `last_frame_audio()`
   (the last frame's; a `keys` press is the frame *before* the last),
   `music_commands()`, `clear_audio()`, `sounds()` (the sound cues played,

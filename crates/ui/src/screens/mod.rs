@@ -2,13 +2,19 @@
 
 pub mod battle;
 pub mod dialogue;
+pub mod game_over;
 pub mod layout_picker;
+pub mod lead_select;
+pub mod mode_select;
 pub mod title;
 
 pub use battle::BattleScreen;
 pub use dialogue::DialogueScreen;
+pub use game_over::{GameOverScreen, ToBeContinuedScreen};
 pub use layout_picker::LayoutPickerScreen;
-pub use title::{PlaceholderScreen, TitleScreen};
+pub use lead_select::LeadSelectScreen;
+pub use mode_select::ModeSelectScreen;
+pub use title::TitleScreen;
 
 use crate::color::{Rgb, UiColor};
 use crate::glyph_buffer::GlyphBuffer;

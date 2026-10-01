@@ -1,0 +1,10 @@
+// PLACEHOLDER: a tiny chapter for the game flow and its tests (ticket
+// 0801). New Game starts here until Chapter 1 exists (ticket 0803).
+(
+    id: "test",
+    title: "Test Chapter",
+    intro_scenes: ["test_intro"],
+    battle: "test",
+    victory_scenes: ["test_victory"],
+    next: None,
+)

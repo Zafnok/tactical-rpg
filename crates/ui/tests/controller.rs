@@ -49,7 +49,7 @@ fn the_title_menu_works_with_a_pad() {
     let mut h = title();
     // The bottom button confirms, the right one backs out.
     h.pad("South");
-    assert_eq!(h.screens(), ["title", "placeholder"]);
+    assert_eq!(h.screens(), ["title", "mode_select"]);
     h.pad("East");
     assert_eq!(h.screens(), ["title"]);
     // The D-pad and the left stick both move the menu.
@@ -193,7 +193,7 @@ fn the_first_launch_picker_works_with_a_pad() {
     assert_eq!(h.game().ctx().layout(), Some(Layout::LeftHanded));
     // The pad goes on working with the layout it picked.
     h.pad("South");
-    assert_eq!(h.screens(), ["title", "placeholder"]);
+    assert_eq!(h.screens(), ["title", "mode_select"]);
 }
 
 /// On the web build the title waits for a first press (ticket 0224): any
@@ -210,5 +210,5 @@ fn a_button_ends_the_web_titles_wait() {
     assert!(h.sounds().is_empty());
     assert_eq!(h.snapshot(), title().snapshot());
     h.pad("South");
-    assert_eq!(h.top_screen(), "placeholder");
+    assert_eq!(h.top_screen(), "mode_select");
 }

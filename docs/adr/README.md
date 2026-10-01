@@ -43,5 +43,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0032](0032-bought-art.md) | Bought art is allowed; audio stays free | Accepted |
 | [0033](0033-playtest-bots.md) | Playtest bots play through `core`'s commands, on reseeded copies, outside the game | Accepted |
 | [0034](0034-controller-input.md) | Controller input: gilrs on native, a Gamepad API plugin on web | Accepted |
+| [0035](0035-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

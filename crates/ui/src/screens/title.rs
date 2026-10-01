@@ -1,9 +1,11 @@
-//! The placeholder title screen (the real game flow comes with ticket 0801).
+//! The title screen: `New Game` starts the game flow ([`FlowScreen`],
+//! ticket 0801); debug builds add `Quick Battle`, a test battle through the
+//! same flow.
 
-use super::battle::quick_battle_screen;
 use super::{centre_x, draw_debug_hint, print_centred};
-use crate::audio::{MenuSound, pick_from_pool};
+use crate::audio::pick_from_pool;
 use crate::color::UiColor;
+use crate::flow::FlowScreen;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, Transition};
@@ -74,7 +76,7 @@ impl TitleScreen {
     }
 
     /// The title screen with a debug `Quick Battle` item after `New Game`,
-    /// which opens a battle on the test map with placeholder units.
+    /// which plays a test battle through the game flow.
     pub fn with_quick_battle() -> Self {
         Self::with_items(vec![NEW_GAME, QUICK_BATTLE, QUIT])
     }
@@ -154,15 +156,16 @@ impl Screen for TitleScreen {
                 Some(MenuEvent::Cancelled) | None => None,
             };
             match chosen {
-                Some(NEW_GAME) => return Transition::Push(Box::new(PlaceholderScreen)),
-                // The placeholder data always builds (tested); should it
-                // ever not, the item does nothing.
+                Some(NEW_GAME) => return Transition::Push(Box::new(FlowScreen::new_game())),
+                // The test data always builds (tested); should it ever
+                // not, the item does nothing.
                 Some(QUICK_BATTLE) => {
-                    if let Ok(screen) = quick_battle_screen(&ctx.content) {
+                    if let Some(flow) = FlowScreen::quick_battle(ctx) {
                         self.start_quick_battle_music(ctx);
-                        return Transition::Push(Box::new(screen));
+                        return Transition::Push(Box::new(flow));
                     }
                 }
+
                 Some(QUIT) => return Transition::Quit,
                 _ => {}
             }
@@ -190,49 +193,6 @@ impl Screen for TitleScreen {
     }
 }
 
-/// Stand-in for screens that don't exist yet; Cancel goes back.
-#[derive(Debug, Clone, Copy)]
-pub struct PlaceholderScreen;
-
-impl PlaceholderScreen {
-    /// The message shown: `Coming soon`, then `press <Cancel key> to go
-    /// back` with the key named from the active keymap.
-    pub fn message(ctx: &Ctx) -> String {
-        format!(
-            "Coming soon — press {} to go back",
-            key_name(&ctx.keymap, Action::Cancel)
-        )
-    }
-}
-
-impl Screen for PlaceholderScreen {
-    fn name(&self) -> &'static str {
-        "placeholder"
-    }
-
-    fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
-        if input.actions.contains(&Action::Cancel) {
-            ctx.audio.menu(MenuSound::Cancel);
-            Transition::Pop
-        } else {
-            Transition::None
-        }
-    }
-
-    fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        clear(ctx, buf);
-        let y = i32::from(buf.height()) / 2;
-        let p = &ctx.palette;
-        print_centred(
-            buf,
-            y,
-            &Self::message(ctx),
-            p.get(UiColor::Text),
-            p.get(UiColor::Black),
-        );
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,12 +215,12 @@ mod tests {
         assert!(!t.is_overlay());
         assert_eq!(outcome(&mut t, &[]), "None");
         assert_eq!(outcome(&mut t, &[Cancel]), "None");
-        assert_eq!(outcome(&mut t, &[Confirm]), "Push(placeholder)");
+        assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
         assert_eq!(outcome(&mut t, &[CursorUp]), "None");
         // Actions after the one that transitions are dropped.
-        assert_eq!(outcome(&mut t, &[Confirm, CursorDown]), "Push(placeholder)");
-        assert_eq!(outcome(&mut t, &[Confirm]), "Push(placeholder)");
+        assert_eq!(outcome(&mut t, &[Confirm, CursorDown]), "Push(mode_select)");
+        assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
     }
 
     #[test]
@@ -268,16 +228,16 @@ mod tests {
         use Action::{Confirm, CursorDown, CursorUp};
         let mut t = TitleScreen::with_quick_battle();
         assert_eq!(t.items, [NEW_GAME, QUICK_BATTLE, QUIT]);
-        assert_eq!(outcome(&mut t, &[Confirm]), "Push(placeholder)");
+        assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(battle)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
         assert_eq!(
             outcome(&mut t, &[CursorUp, CursorUp, Confirm]),
-            "Push(placeholder)"
+            "Push(mode_select)"
         );
-        // Without the test characters, Quick Battle does nothing.
+        // Without its chapter, Quick Battle does nothing.
         let mut c = ctx();
-        c.content.characters.characters.clear();
+        c.content.chapters.clear();
         t.menu = TitleScreen::with_quick_battle().menu;
         let input = FrameInput::new(vec![CursorDown, Confirm], 0.0, vec![]);
         assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
@@ -318,9 +278,6 @@ mod tests {
         // Nothing to back out of: Cancel is silent.
         assert!(sounds_of(&mut t, &mut c, &[Cancel]).is_empty());
         assert_eq!(sounds_of(&mut t, &mut c, &[Confirm]), ["menu_select"]);
-        let mut p = PlaceholderScreen;
-        assert!(sounds_of(&mut p, &mut c, &[Confirm, CursorDown]).is_empty());
-        assert_eq!(sounds_of(&mut p, &mut c, &[Cancel]), ["menu_cancel"]);
     }
 
     #[test]
@@ -370,28 +327,12 @@ mod tests {
     }
 
     #[test]
-    fn placeholder_pops_on_cancel_only() {
-        let mut p = PlaceholderScreen;
-        assert_eq!(p.name(), "placeholder");
-        assert_eq!(outcome(&mut p, &[Action::Confirm]), "None");
-        assert_eq!(outcome(&mut p, &[Action::Confirm, Action::Cancel]), "Pop");
-    }
-
-    #[test]
     fn texts_name_the_layout_keys() {
         let mut c = ctx();
         assert_eq!(TitleScreen::help(&c), "arrows move · f select · d back");
         c.use_layout(crate::input::Layout::LeftHanded);
         assert_eq!(TitleScreen::help(&c), "wasd move · j select · k back");
-        assert_eq!(
-            PlaceholderScreen::message(&c),
-            "Coming soon — press k to go back"
-        );
         c.use_layout(crate::input::Layout::RightHanded);
-        assert_eq!(
-            PlaceholderScreen::message(&c),
-            "Coming soon — press d to go back"
-        );
         c.keymap = crate::input::Keymap::new(
             crate::input::Action::ALL
                 .iter()
@@ -404,10 +345,6 @@ mod tests {
             TitleScreen::help(&c),
             "arrows move · f select · ! not mapped back"
         );
-        assert_eq!(
-            PlaceholderScreen::message(&c),
-            "Coming soon — press ! not mapped to go back"
-        );
     }
 
     /// Opaque screens must paint every cell, not rely on `Game` clearing.
@@ -415,10 +352,18 @@ mod tests {
     fn screens_cover_the_whole_buffer() {
         use crate::console::{CONSOLE_H, CONSOLE_W};
         let c = ctx();
-        let screens: [&dyn Screen; 3] = [
+        let mut naming = crate::screens::LeadSelectScreen::new();
+        let typing = FrameInput::new(vec![Action::CursorDown], 0.0, vec![]);
+        naming.update(&mut ctx(), &typing);
+        naming.update(&mut ctx(), &input(&[Action::Confirm]));
+        let screens: [&dyn Screen; 7] = [
             &TitleScreen::new(),
             &TitleScreen::with_quick_battle(),
-            &PlaceholderScreen,
+            &crate::screens::ModeSelectScreen::new(),
+            &crate::screens::LeadSelectScreen::new(),
+            &naming,
+            &crate::screens::GameOverScreen::new(),
+            &crate::screens::ToBeContinuedScreen,
         ];
         for screen in screens {
             let stale = Cell::new(

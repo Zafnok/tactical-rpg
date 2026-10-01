@@ -16,6 +16,9 @@ pub const LEAD_ID: &str = "lead";
 /// The lead's default first name (a placeholder; the family name Veyne is
 /// fixed), which the player can change at New Game.
 pub const DEFAULT_NAME: &str = "Ellery";
+/// The lead's family name, which the player can't change
+/// (`setting-and-tone.md`).
+pub const FAMILY_NAME: &str = "Veyne";
 /// Longest lead name, in characters.
 pub const MAX_NAME_LEN: usize = 12;
 /// Portrait of the male lead.
