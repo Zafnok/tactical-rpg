@@ -14,6 +14,10 @@ use super::*;
 use crate::harness::Harness;
 use crate::screen::tests::ctx;
 
+/// The Quick Battle's rogue: an enemy the lord can talk to, which joins if
+/// defeated.
+const ROGUE: &str = "test_rogue";
+
 /// Where the rogue stands in these tests: right of the lord at (3, 5).
 const ROGUE_AT: Pos = Pos::new(4, 5);
 
@@ -25,7 +29,7 @@ const ROGUE_CELL: (i32, i32) = (28, 16);
 /// `rogue_hp` HP) next to the lord, and the Quick Battle's triggers.
 fn rogue_setup(c: &Ctx, rogue_hp: StatValue) -> BattleSetup {
     let (map, mut units) = quick_units(c);
-    let def = &c.content.characters.characters[&CharacterId(QUICK_BATTLE_ROGUE.into())];
+    let def = &c.content.characters.characters[&CharacterId(ROGUE.into())];
     let classes = &c.content.classes;
     let mut rogue = character_unit(
         def,
@@ -39,7 +43,8 @@ fn rogue_setup(c: &Ctx, rogue_hp: StatValue) -> BattleSetup {
     rogue.hp = rogue_hp;
     units.push(rogue);
     BattleSetup {
-        triggers: quick_battle_triggers(),
+        triggers: c.content.battles[QUICK_BATTLE].triggers.clone(),
+
         ..setup(c, map, units, Objective::Rout { turn_limit: None })
     }
 }

@@ -1832,6 +1832,13 @@ impl BattleState {
         self.exp_pool
     }
 
+    /// The battle's random numbers where they stand now. The campaign
+    /// rolls the level ups of the rewards after a battle on a copy
+    /// ([`Campaign::apply_result`](crate::Campaign::apply_result)).
+    pub fn rng(&self) -> &SimRng {
+        &self.rng
+    }
+
     /// Whether unit `id` may choose [`UnitAction::Seize`] after moving to
     /// `dest` (the action menu offers it only then). Doesn't check that it
     /// can reach `dest` or still act.

@@ -188,6 +188,18 @@ character's name plate comes from `names.ron` too (its character id is its
 name id). Names keep their article (`the Thornmarch`), so write
 `{n:place.thornmarch}`, not `the {n:place.thornmarch}`.
 
+### Short forms
+
+People mostly say a first name, so the short forms of a name are ids of
+their own (`docs/story/names.md`, "Short forms"), used like any other:
+
+| Id | For | Example |
+| -- | --- | ------- |
+| `<character>.first` | The first name of a character with a two-word name | `{n:retainer.first}` → `Hollis` |
+| `family.<name>` | A family name several people share | `{n:family.marr}` → `Marr` |
+| `<god>.name`, `<god>.title` | A god's name and title on their own | `{n:god.mother.name}` → `Ama`, `{n:god.mother.title}` → `the Mother` |
+| `red_captain.nickname` | A nickname | `Red Harl` |
+
 ### Rules for names
 
 - A name token's id must be in `names.ron`. Ids are lowercase letters,
@@ -198,7 +210,11 @@ name id). Names keep their article (`the Thornmarch`), so write
   whole words, case-sensitively, without the name's leading `the`/`a`/`an`
   (so `Thornmarch` alone is caught too). Names with no capital letter
   (`breath`, `a vow`, `mor`) are ordinary words and aren't checked.
-  Comments aren't checked.
+  Comments aren't checked. Short forms are names too, so `Hollis` alone is
+  an error; a line that holds several names reports the longest
+  (`Hollis Marr` is reported as `{n:retainer}`). A few short forms are also
+  ordinary words (`Mother`, `Hand`, `Pyre`, `Wren`): with a capital they are
+  always taken as the name, so reword a line that starts with one.
 - **Lengths** count every name token as the **longest** name in
   `names.ron`, whichever name it is, so renaming anything can't push a line
   over its limit.

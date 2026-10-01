@@ -4,7 +4,7 @@
 
 use insta::assert_snapshot;
 use trpg_content::FontAtlasDef;
-use trpg_core::{Objective, Outcome, UnitAction};
+use trpg_core::{ItemId, Objective, Outcome, UnitAction};
 
 use super::banner::{BannerKind, PHASE_BANNER_S};
 use super::testing::{battle_with, skirmish, through_ai_phases, wait};
@@ -387,7 +387,13 @@ fn objective_shows_the_goal_and_the_turn() {
         panic!("{:?}", s.mode());
     };
     assert_eq!(menu.focus(), 1);
-    // Down skips the disabled Options and Suspend to End Turn.
+    // Down skips the disabled Options and Suspend to Restart Battle, then
+    // End Turn.
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 4);
     press(&mut s, &mut c, &[Action::CursorDown, Action::Confirm]);
     assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 3 });
 }

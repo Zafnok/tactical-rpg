@@ -19,6 +19,14 @@ any time.**
   same commit. Every name below is unique, so a whole-word find-and-replace is
   safe (check `Rue`, `Wren`, `Crane` and `Piers`, which are also ordinary
   English words, by eye).
+- **A name's short forms are separate rows** (the "Short forms" table below:
+  first names, family names, a god's name and title on their own), because
+  people mostly say "Hollis", not "Hollis Marr". **Renaming a character means
+  changing the full name and every short form of it** (rename Hollis Marr and
+  `retainer`, `retainer.first` and, if the family name changes, `family.marr`
+  and the other Marrs all change), here and in `names.ron`. Nothing derives
+  one from the other, so a short form can also be a nickname that isn't part
+  of the full name.
 - **Character sheet files are named by id** (`characters/retainer.md`), not by
   name, so they never move.
 - New names get an id here first.
@@ -50,6 +58,40 @@ Later Act 1 recruits (named in `outline.md`, sheets written by later tickets):
 | `shieldbearer` | Hedda Ravn | The Brennish envoy's bodyguard |
 | `envoy` | Ragna Holt | Brennish envoy in Saltmere (NPC) |
 | `battlemage` | Oriel Mast | Crown battle-mage who gave the order at the Ashfields |
+
+## Short forms
+
+What people say instead of the full name. Scripts use these ids like any
+other (`{n:retainer.first}`); the validator rejects a short form written out
+just as it does a full name.
+
+| Id | Current short form | Short for |
+| -- | ------------------ | --------- |
+| `retainer.first` | Hollis | `retainer` (Hollis Marr) |
+| `sergeant.first` | Tamsin | `sergeant` (Tamsin Rook) |
+| `rival.first` | Dace | `rival` (Dace Marr) |
+| `vowmaster.first` | Absalom | `vowmaster` (Absalom Crane) |
+| `red_captain.first` | Harl | `red_captain` (Harl Coster) |
+| `red_captain.nickname` | Red Harl | `red_captain`: what the Thornmarch calls him |
+| `sister.first` | Wren | `sister` (Wren Marr) |
+| `vosse.first` | Harrick | `vosse` (Harrick Vosse) |
+| `defector.first` | Joss | `defector` (Joss Pellam) |
+| `prizefighter.first` | Gil | `prizefighter` (Gil Parrow) |
+| `shieldbearer.first` | Hedda | `shieldbearer` (Hedda Ravn) |
+| `envoy.first` | Ragna | `envoy` (Ragna Holt) |
+| `battlemage.first` | Oriel | `battlemage` (Oriel Mast) |
+| `family.marr` | Marr | The family name of `retainer`, `rival` and `sister` |
+| `family.veyne` | Veyne | The lead's family name (also in `house.veyne` and `place.veyne_hall`) |
+| `god.mother.name` | Ama | `god.mother` (Ama, the Mother) |
+| `god.mother.title` | the Mother | `god.mother` |
+| `god.pyre.name` | Vael | `god.pyre` (Vael, the Pyre) |
+| `god.pyre.title` | the Pyre | `god.pyre` |
+| `god.winter.name` | Hrim | `god.winter` (Hrim, the Long Winter) |
+| `god.winter.title` | the Long Winter | `god.winter` |
+| `god.hand.name` | Orun | `god.hand` (Orun, the Hand) |
+| `god.hand.title` | the Hand | `god.hand` |
+| `god.door.name` | Othe | `god.door` (Othe, the Doorkeeper) |
+| `god.door.title` | the Doorkeeper | `god.door` |
 
 ## Places
 

@@ -1,23 +1,44 @@
 //! [`Game`]: the whole UI behind one call per frame. `app` feeds it raw key
-//! events and the frame time and blits the buffer it returns; the test
-//! `Harness` drives it the same way without a window.
+//! and controller-button events and the frame time and blits the buffer it
+//! returns; the test `Harness` drives it the same way without a window.
 
 use crate::audio::{AudioRequest, MusicCommand, MusicState};
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
-use crate::input::{Action, Chord, InputState, Key};
+use crate::input::{Action, Button, Chord, InputState, Key};
 use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, ScreenStack};
 use crate::screens::{LayoutPickerScreen, TitleScreen};
 
-/// A keyboard event as `app` reports it.
+/// A keyboard or controller event as `app` reports it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RawKeyEvent {
+pub enum RawInputEvent {
     /// A key went down, with the Shift state at the time.
     Down(Chord),
     /// A key went up.
     Up(Key),
+    /// A character was typed (the platform's text input: the keyboard's own
+    /// layout and Shift applied), for text boxes such as the lead's name.
+    /// Comes with the key's own `Down`.
+    Text(char),
+    /// A controller button went down on some pad (its binding position,
+    /// from [`Pads::update`](crate::input::Pads::update)).
+    PadDown(Button),
+    /// A controller button went up on every pad.
+    PadUp(Button),
+}
+
+impl RawInputEvent {
+    /// The event for a change [`Pads::update`](crate::input::Pads::update)
+    /// reports: `button` pressed or released.
+    pub fn pad(button: Button, pressed: bool) -> Self {
+        if pressed {
+            Self::PadDown(button)
+        } else {
+            Self::PadUp(button)
+        }
+    }
 }
 
 /// The result of one frame.
@@ -110,7 +131,7 @@ impl Game {
     /// Runs one frame: applies `events` (in order), advances input by `dt`
     /// seconds, updates the top screen with the resulting actions, collects
     /// its audio requests and redraws. After a quit, frames do nothing.
-    pub fn frame(&mut self, events: &[RawKeyEvent], dt: f32) -> FrameOutput<'_> {
+    pub fn frame(&mut self, events: &[RawInputEvent], dt: f32) -> FrameOutput<'_> {
         self.audio_out.clear();
         self.music_out.clear();
         if !self.quit {
@@ -140,17 +161,38 @@ impl Game {
         self.music.update(dt, &mut self.music_out);
     }
 
-    fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
+    fn step(&mut self, events: &[RawInputEvent], dt: f32) {
         // Bindings changed between frames (a test rebinding keys).
         self.sync_keymap();
+        let mut pressed = Vec::new();
+        let mut text = Vec::new();
+        let mut pad = false;
         for &event in events {
-            if matches!(event, RawKeyEvent::Down(_)) && self.ctx.key_prompt == KeyPrompt::Waiting {
+            // Any key or any controller button ends the title's wait
+            // (`docs/design/title-screen.md`).
+            let press = matches!(event, RawInputEvent::Down(_) | RawInputEvent::PadDown(_));
+            if press && self.ctx.key_prompt == KeyPrompt::Waiting {
                 self.ctx.key_prompt = KeyPrompt::Pressed;
             }
             match event {
-                RawKeyEvent::Down(chord) => self.input.key_down(chord),
-                RawKeyEvent::Up(key) => self.input.key_up(key),
+                RawInputEvent::Down(chord) => {
+                    self.input.key_down(chord);
+                    pressed.push(chord);
+                }
+                RawInputEvent::Up(key) => self.input.key_up(key),
+                // Control characters (Enter, Backspace, Escape on some
+                // platforms) are keys, not text.
+                RawInputEvent::Text(c) if !c.is_control() => text.push(c),
+                RawInputEvent::Text(_) => {}
+                RawInputEvent::PadDown(button) => {
+                    self.input.pad_down(button);
+                    pad = true;
+                }
+                RawInputEvent::PadUp(button) => self.input.pad_up(button),
             }
+        }
+        if dt.is_finite() {
+            self.ctx.clock_s += f64::from(dt.max(0.0));
         }
         let actions = self.input.update(dt);
         let held = Action::ALL
@@ -166,7 +208,9 @@ impl Game {
         if opens_debug_menu {
             self.stack.push(Box::new(DebugMenuScreen::new()));
         } else {
-            let input = FrameInput::new(actions, dt, held);
+            let input = FrameInput::new(actions, dt, held)
+                .with_typing(pressed, text)
+                .with_pad(pad);
             self.quit = self.stack.update(&mut self.ctx, &input);
             self.sync_keymap();
         }
@@ -190,6 +234,17 @@ impl Game {
         );
         self.buffer.fill_rect(self.buffer.bounds(), blank);
         self.stack.draw(&self.ctx, &mut self.buffer);
+    }
+
+    /// The top-most screen of type `T` on the stack, if it opts in
+    /// ([`Screen::as_any`]).
+    pub fn screen<T: std::any::Any>(&self) -> Option<&T> {
+        self.stack.find()
+    }
+
+    /// [`screen`](Self::screen), mutable, for scripted tests.
+    pub fn screen_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.stack.find_mut()
     }
 
     /// The music state machine (which track plays).
@@ -249,13 +304,13 @@ mod tests {
     use crate::input::Layout;
     use crate::screen::tests::{ctx, ctx_with_cues};
 
-    fn down(key: Key) -> RawKeyEvent {
-        RawKeyEvent::Down(Chord::plain(key))
+    fn down(key: Key) -> RawInputEvent {
+        RawInputEvent::Down(Chord::plain(key))
     }
 
     fn tap(game: &mut Game, key: Key) -> bool {
         let quit = game.frame(&[down(key)], 0.0).quit;
-        game.frame(&[RawKeyEvent::Up(key)], 0.0);
+        game.frame(&[RawInputEvent::Up(key)], 0.0);
         quit
     }
 
@@ -319,7 +374,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::J);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::K);
         assert_eq!(game.screens(), ["title"]);
         let ctx = game.into_ctx();
@@ -336,10 +391,91 @@ mod tests {
         let mut web = ctx();
         web.key_prompt = KeyPrompt::Waiting;
         let mut game = Game::start(web);
-        game.frame(&[RawKeyEvent::Up(Key::Q)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::Q)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
         game.frame(&[down(Key::Q)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
+    }
+
+    fn pad_tap(game: &mut Game, button: Button) -> bool {
+        let quit = game.frame(&[RawInputEvent::PadDown(button)], 0.0).quit;
+        game.frame(&[RawInputEvent::PadUp(button)], 0.0);
+        quit
+    }
+
+    #[test]
+    fn pad_changes_become_pad_events() {
+        assert_eq!(
+            RawInputEvent::pad(Button::South, true),
+            RawInputEvent::PadDown(Button::South)
+        );
+        assert_eq!(
+            RawInputEvent::pad(Button::Start, false),
+            RawInputEvent::PadUp(Button::Start)
+        );
+    }
+
+    /// Ticket 0219: with the default buttons, the bottom face button
+    /// confirms and the right one cancels.
+    #[test]
+    fn pad_buttons_reach_the_top_screen() {
+        let mut game = Game::start(ctx());
+        assert!(!pad_tap(&mut game, Button::South));
+        assert_eq!(game.screens(), ["title", "mode_select"]);
+        pad_tap(&mut game, Button::East);
+        assert_eq!(game.screens(), ["title"]);
+        // Unbound buttons do nothing.
+        pad_tap(&mut game, Button::RightTrigger);
+        assert_eq!(game.screens(), ["title"]);
+        // D-pad up wraps to Quit; South chooses it.
+        pad_tap(&mut game, Button::DpadUp);
+        assert!(pad_tap(&mut game, Button::South));
+    }
+
+    #[test]
+    fn screens_see_held_buttons() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        game.frame(&[RawInputEvent::PadUp(Button::South)], 0.0);
+        let seen = seen.borrow();
+        assert_eq!(seen[0].actions, [Action::Confirm]);
+        assert!(seen[0].is_held(Action::Confirm));
+        assert!(seen[1].actions.is_empty());
+        assert!(!seen[1].is_held(Action::Confirm));
+    }
+
+    /// The first-launch layout picker works with a pad (its D-pad and
+    /// Confirm), and the pad keeps working with the layout it picked.
+    #[test]
+    fn the_first_launch_picker_works_with_a_pad() {
+        let mut game = Game::start(first_launch());
+        pad_tap(&mut game, Button::DpadDown);
+        pad_tap(&mut game, Button::South);
+        assert_eq!(game.screens(), ["title"]);
+        assert_eq!(game.ctx().layout(), Some(Layout::LeftHanded));
+        assert_eq!(game.input.keymap(), &game.ctx().keymap);
+        pad_tap(&mut game, Button::South);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
+        pad_tap(&mut game, Button::East);
+        assert_eq!(game.screens(), ["title"]);
+    }
+
+    /// Any controller button ends the title's wait too, bound or not;
+    /// releases don't.
+    #[test]
+    fn a_pad_button_moves_the_key_prompt_on() {
+        let mut web = ctx();
+        web.key_prompt = KeyPrompt::Waiting;
+        let mut game = Game::start(web);
+        game.frame(&[RawInputEvent::PadUp(Button::RightTrigger)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
+        game.frame(&[RawInputEvent::PadDown(Button::RightTrigger)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
+        // Native builds never wait.
+        let mut game = Game::start(ctx());
+        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Off);
     }
 
     #[test]
@@ -354,7 +490,7 @@ mod tests {
         tap(&mut game, Key::F);
         assert_eq!(game.screens(), ["title"]);
         tap(&mut game, Key::G);
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         assert_eq!(game.input.keymap(), &game.ctx().keymap);
     }
 
@@ -373,7 +509,7 @@ mod tests {
     fn events_reach_the_top_screen() {
         let mut game = Game::start(ctx());
         assert!(!tap(&mut game, Key::F));
-        assert_eq!(game.screens(), ["title", "placeholder"]);
+        assert_eq!(game.screens(), ["title", "mode_select"]);
         tap(&mut game, Key::D);
         assert_eq!(game.screens(), ["title"]);
     }
@@ -382,21 +518,35 @@ mod tests {
     fn quit_stops_further_frames() {
         let mut game = Game::start(ctx());
         game.frame(&[down(Key::Up)], 0.0);
-        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert!(out.quit);
         assert!(game.quit_requested());
         let before = game.buffer().clone();
-        // Would open the placeholder if the game were still running.
-        game.frame(&[RawKeyEvent::Up(Key::F), down(Key::Up)], 0.0);
-        game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        // Would open New Game if the game were still running.
+        game.frame(&[RawInputEvent::Up(Key::F), down(Key::Up)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert_eq!(game.screens(), ["title"]);
         assert_eq!(game.buffer(), &before);
         assert!(game.frame(&[], 0.0).quit);
     }
 
     #[test]
+    fn the_clock_adds_up_frame_times() {
+        let mut game = Game::start(ctx());
+        game.frame(&[], 0.5);
+        game.frame(&[], 0.25);
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+        // Nonsense frame times don't count.
+        for dt in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            game.frame(&[], dt);
+        }
+        assert!((game.ctx().clock_s - 0.75).abs() < 1e-9);
+    }
+
+    #[test]
     fn popping_the_last_screen_quits() {
-        let mut game = Game::new(ctx(), Box::new(crate::screens::PlaceholderScreen));
+        let mut game = Game::new(ctx(), Box::new(crate::screens::ModeSelectScreen::new()));
+
         assert!(tap(&mut game, Key::D));
         assert_eq!(game.top_screen(), None);
     }
@@ -469,7 +619,7 @@ mod tests {
         let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
         assert_eq!(game.ctx().palette, ctx().palette);
         game.frame(&[down(Key::Right), down(Key::F)], 0.1);
-        game.frame(&[RawKeyEvent::Up(Key::F)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::F)], 0.0);
         let seen = seen.borrow();
         assert_eq!(seen[0].actions, [Action::CursorRight, Action::Confirm]);
         assert!((seen[0].dt - 0.1).abs() < f32::EPSILON);
@@ -478,6 +628,60 @@ mod tests {
         assert!(seen[1].actions.is_empty());
         assert!(seen[1].is_held(Action::CursorRight));
         assert!(!seen[1].is_held(Action::Confirm));
+    }
+
+    #[test]
+    fn screens_see_the_keys_pressed_and_the_text_typed() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let events = [
+            down(Key::A),
+            RawInputEvent::Text('a'),
+            down(Key::Backspace),
+            // Control characters some platforms send for Backspace or
+            // Enter are keys, not text.
+            RawInputEvent::Text('\u{8}'),
+            RawInputEvent::Text('\r'),
+            RawInputEvent::Text('é'),
+        ];
+        game.frame(&events, 0.0);
+        game.frame(&[RawInputEvent::Up(Key::A)], 0.0);
+        let seen = seen.borrow();
+        let pressed = [Chord::plain(Key::A), Chord::plain(Key::Backspace)];
+        assert_eq!(seen[0].pressed_chords(), pressed);
+        assert_eq!(seen[0].text(), ['a', 'é']);
+        assert!(seen[1].pressed_chords().is_empty());
+        assert!(seen[1].text().is_empty());
+    }
+
+    /// The Harness types as the app does: each character with its key
+    /// (Shift for capitals), one character per press.
+    #[test]
+    fn the_harness_types_text_with_its_keys() {
+        let seen = std::rc::Rc::default();
+        let game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let mut h = crate::harness::Harness::from_game(game);
+        h.type_text("Ma -é");
+        let seen = seen.borrow();
+        let typed: Vec<(Vec<String>, Vec<char>)> = seen
+            .iter()
+            .filter(|i| !i.text().is_empty())
+            .map(|i| {
+                let keys = i.pressed_chords().iter().map(ToString::to_string).collect();
+                (keys, i.text().to_vec())
+            })
+            .collect();
+        let expect = |k: &[&str], c| (k.iter().map(|&s| s.to_owned()).collect(), vec![c]);
+        assert_eq!(
+            typed,
+            [
+                expect(&["Shift+m"], 'M'),
+                expect(&["a"], 'a'),
+                expect(&["Space"], ' '),
+                expect(&["-"], '-'),
+                expect(&[], 'é'),
+            ]
+        );
     }
 
     /// Plays `beep` on Confirm, switches to music `battle` on Cancel, quits
@@ -550,7 +754,7 @@ mod tests {
         assert_eq!(out.audio, [beep(1.0)]);
         assert!(out.music.is_empty());
         // Each frame holds only its own requests.
-        let out = game.frame(&[RawKeyEvent::Up(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::F)], 0.0);
         assert!(out.audio.is_empty());
         assert!(game.ctx().audio.pending().is_empty());
     }
@@ -566,7 +770,7 @@ mod tests {
         };
         assert_eq!(out.music, [music("battle", load), half]);
         assert_eq!(game.music().target(), Some("battle"));
-        let out = game.frame(&[RawKeyEvent::Up(Key::D)], 0.25);
+        let out = game.frame(&[RawInputEvent::Up(Key::D)], 0.25);
         assert_eq!(out.music, [music("title", stop), music("battle", start)]);
         assert_eq!(game.music().current(), Some("battle"));
     }
@@ -577,7 +781,7 @@ mod tests {
         let out = game.frame(&[down(Key::Up)], 0.0);
         assert!(out.quit);
         assert_eq!(out.audio[1..], [beep(0.5)]);
-        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert!(out.audio.is_empty());
         assert!(out.music.is_empty());
     }
@@ -649,7 +853,7 @@ mod tests {
         for key in [Key::F; 5] {
             let quit = game.frame(&[down(key)], 0.0).quit;
             assert!(!quit);
-            music.extend(music_of(game.frame(&[RawKeyEvent::Up(key)], 0.5).audio));
+            music.extend(music_of(game.frame(&[RawInputEvent::Up(key)], 0.5).audio));
         }
         for _ in 0..60 {
             music.extend(music_of(game.frame(&[], 0.5).audio));
@@ -662,7 +866,7 @@ mod tests {
         let title = AudioRequest::PlayMusic {
             cue: "title".into(),
         };
-        assert_eq!(game.frame(&[RawKeyEvent::Up(Key::F)], 0.0).audio, [title]);
+        assert_eq!(game.frame(&[RawInputEvent::Up(Key::F)], 0.0).audio, [title]);
         assert!(game.frame(&[], 0.1).audio.is_empty());
     }
 }

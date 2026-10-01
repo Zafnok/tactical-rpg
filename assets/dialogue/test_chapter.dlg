@@ -1,0 +1,18 @@
+# PLACEHOLDER scenes of the test chapter (chapters/test.ron, ticket 0801),
+# which New Game plays until Chapter 1 exists (0803). The intro uses the
+# lead's name and pronoun tokens.
+
+@scene test_intro
+@caption Test Field, morning
+@left  lead neutral
+@right test_knight neutral
+test_knight: {lead}! The fort is just ahead.
+> {lead} looks over the field. {They} can see the fort from here.
+test_knight: Take it before the brigand does.
+@end
+
+@scene test_victory
+@left  lead happy
+@right test_knight happy
+test_knight: The fort is ours, {lead}. Well done.
+@end

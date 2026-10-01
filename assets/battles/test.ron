@@ -1,0 +1,21 @@
+// PLACEHOLDER: the test chapter's battle (chapters/test.ron), which New
+// Game plays until Chapter 1 exists (ticket 0803), and which the flow's
+// tests use. The lead seizes the fort next to them within 3 turns; one
+// brigand stands in the way.
+(
+    id: "test",
+    map: "test_small",
+    player_slots: [
+        (character: "lead", pos: (3, 5)),
+        (character: "test_knight", pos: (3, 6)),
+    ],
+    enemies: [
+        (template: "test_brigand", pos: (8, 3)),
+    ],
+    pack_cap: 3,
+    default_pack: ["potion", "potion"],
+    clear_gold: 500,
+    objective: Seize(pos: (5, 5), by_lord: true, turn_limit: Some(3)),
+    difficulty: Normal,
+    seed: 1,
+)

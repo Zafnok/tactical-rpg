@@ -77,7 +77,7 @@ hard beats.
 | Age | **18–25** | Nick |
 | Gender | **Player chooses** (male/female) at New Game | Nick |
 | Personality | **Persona-style lead.** Defined background, look and situation; few spoken lines; the player shapes the personality through reply choices | Nick |
-| Name | **Player can rename** the lead, with a default first name (**Ellery**, placeholder: Claude's pick after Nick turned down Rowan on 2026-09-30, "lame name, pick something better"); the family name **Veyne** is fixed (Nick, 0701 gate 1: "A") | Nick |
+| Name | **Player can rename** the lead, with a default first name (**Ellery**, placeholder: Claude's pick after Nick turned down Rowan on 2026-09-30, "lame name, pick something better"); the family name **Veyne** is fixed (Nick, 0701 gate 1: "A"). On a keyboard the player **types** the name, with a hint to type and the game's keys off while typing; on a controller they spell it on a letter grid (Nick, 0801 PR #127: "C") | Nick |
 
 ### Rules for writing the lead
 

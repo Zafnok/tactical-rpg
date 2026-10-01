@@ -38,15 +38,13 @@ mod sounds;
 pub mod tips;
 pub mod units;
 
-use std::sync::Arc;
-
 use std::collections::VecDeque;
-use trpg_content::{Content, TipTrigger, character_unit, check_map_labels, check_triggers};
+use trpg_content::{Content, TipTrigger, battle_campaign};
 
+use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{
-    BattleHistory, BattlePack, BattleSetup, BattleState, CharacterId, Command, Event, Faction,
-    GameMode, ItemId, Objective, Phase, Pos, Reinforcement, StatValue, Stock, TileRect, TileSet,
-    Trigger, TriggerWhen, Unit, UnitId, Who, danger_zone, next_command,
+    BattleHistory, BattleState, Command, Event, Faction, GameMode, LeadGender, LeadProfile, Phase,
+    Pos, StatValue, TileSet, Unit, UnitId, danger_zone, next_command,
 };
 
 use self::ai_phase::{AiAction, PACING};
@@ -75,208 +73,23 @@ use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::tips::{draw_tip, fill_placeholders};
 use crate::widgets::help::{SEPARATOR, cursor_keys_name, help_line, key_name};
 
-/// Map id of the debug Quick Battle.
-pub const QUICK_BATTLE_MAP: &str = "test_small";
+/// Battle id of the debug Quick Battle (`assets/battles/quick.ron`).
+pub const QUICK_BATTLE: &str = "quick";
 
-/// Seed of the debug Quick Battle's RNG.
-pub const QUICK_BATTLE_SEED: u64 = 1;
-
-/// The consumable the debug Quick Battle's pack is filled with.
-pub const QUICK_BATTLE_POTION: &str = "potion";
-
-/// How many of them (Chapter 1's default pack, `chapter-1.md`).
-pub const QUICK_BATTLE_POTIONS: usize = 3;
-
-/// The turn the debug Quick Battle's rogue ([`QUICK_BATTLE_ROGUE`]) arrives
-/// on, at the start of the enemy phase.
-pub const QUICK_BATTLE_ROGUE_TURN: trpg_core::Turn = 2;
-
-/// The character of the Quick Battle's rogue: an enemy the lord can talk
-/// to, which joins if defeated.
-pub const QUICK_BATTLE_ROGUE: &str = "test_rogue";
-
-/// The debug Quick Battle: `test_small.map` with the placeholder characters
-/// against generic enemies (rout), at the start of the battle: everyone at
-/// full HP and every player unit ready, one brigand close enough to fight
-/// on turn 1. Its triggers ([`quick_battle_triggers`]) try out each kind of
-/// dialogue trigger; the rogue they are about arrives on the fort at
-/// (12, 3) in turn [`QUICK_BATTLE_ROGUE_TURN`]'s enemy phase. Fails with a
-/// message if the content lacks something it needs.
+/// The debug Quick Battle (`assets/battles/quick.ron`, which the title
+/// screen plays through the game flow) at its start, with its own
+/// characters in Classic: `test_small.map` with the placeholder characters
+/// against generic enemies (rout), one brigand close enough to fight on
+/// turn 1, and a trigger of each kind about a rogue who arrives on turn 2.
+/// Fails with a message if the content lacks it.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
-    Ok(BattleState::new(quick_battle_setup(content)?).0)
-}
-
-/// The screen of a new [`quick_battle`], with any scene its start fires.
-pub fn quick_battle_screen(content: &Content) -> Result<BattleScreen, String> {
-    let (state, events) = BattleState::new(quick_battle_setup(content)?);
-    Ok(BattleScreen::start(state, &events))
-}
-
-/// The debug Quick Battle's dialogue triggers (0705), one of each kind, on
-/// the scenes in `assets/dialogue/test_triggers.dlg`: turn 3 starts; a
-/// player unit ends a move in the walled fort (10, 5)–(11, 6); the rogue
-/// fights, drops to half HP, or falls (and joins after the battle); the
-/// lord or the knight falls (the knight's line depends on the mode); the
-/// lord and the rogue talk.
-pub fn quick_battle_triggers() -> Vec<Trigger> {
-    let c = |id: &str| CharacterId(id.into());
-    let rogue = c(QUICK_BATTLE_ROGUE);
-    let once = |when, scene: &str| Trigger {
-        when,
-        scene: scene.into(),
-        once: true,
-    };
-    let fell = |unit: &str, mode, recruit| TriggerWhen::UnitFell {
-        unit: c(unit),
-        mode,
-        recruit,
-    };
-    vec![
-        once(
-            TriggerWhen::TurnStart {
-                turn: 3,
-                phase: Phase::Player,
-            },
-            "test_turn_3",
-        ),
-        once(
-            TriggerWhen::UnitEntersArea {
-                who: Who::Faction(Faction::Player),
-                area: TileRect {
-                    x: 10,
-                    y: 5,
-                    w: 2,
-                    h: 2,
-                },
-            },
-            "test_fort",
-        ),
-        once(
-            TriggerWhen::CombatStart {
-                unit: rogue.clone(),
-                against: None,
-            },
-            "test_engage",
-        ),
-        once(
-            TriggerWhen::HalfHp {
-                unit: rogue.clone(),
-            },
-            "test_rogue_half",
-        ),
-        once(fell(QUICK_BATTLE_ROGUE, None, true), "test_rogue_falls"),
-        once(fell("test_lord", None, false), "test_lord_falls"),
-        once(
-            fell("test_knight", Some(GameMode::Classic), false),
-            "test_knight_dies",
-        ),
-        once(
-            fell("test_knight", Some(GameMode::Casual), false),
-            "test_knight_retreats",
-        ),
-        once(
-            TriggerWhen::Talk {
-                a: c("test_lord"),
-                b: rogue,
-            },
-            "test_talk",
-        ),
-    ]
-}
-
-/// The [`BattleSetup`] of the [`quick_battle`].
-fn quick_battle_setup(content: &Content) -> Result<BattleSetup, String> {
-    let map = content
-        .maps
-        .get(QUICK_BATTLE_MAP)
-        .ok_or_else(|| format!("no map \"{QUICK_BATTLE_MAP}\""))?
-        .map
-        .clone();
-    let classes = &content.classes;
-    let items = &content.items;
-    let chars = &content.characters;
-    let mut units = Vec::new();
-    let mut next_id = 0;
-    let mut id = || {
-        next_id += 1;
-        UnitId(next_id)
-    };
-    let character = |name: &str, id, faction, pos| {
-        let def = chars
-            .characters
-            .get(&CharacterId(name.into()))
-            .ok_or_else(|| format!("no character \"{name}\""))?;
-        character_unit(def, id, classes, items, faction, pos).map_err(|e| e.to_string())
-    };
-    let named = [
-        ("test_lord", Pos::new(3, 5)),
-        ("test_knight", Pos::new(4, 6)),
-        ("test_archer", Pos::new(2, 4)),
-    ];
-    for (name, pos) in named {
-        units.push(character(name, id(), Faction::Player, pos)?);
-    }
-    let generics = [
-        ("test_brigand", Pos::new(8, 2)),
-        // In reach of every player unit on turn 1, for a first fight.
-        ("test_brigand", Pos::new(7, 4)),
-        ("test_raider", Pos::new(7, 1)),
-    ];
-    for (name, pos) in generics {
-        let template = chars
-            .generics
-            .get(name)
-            .ok_or_else(|| format!("no generic \"{name}\""))?;
-        let unit = template
-            .unit(id(), classes, items, Faction::Enemy, pos)
-            .map_err(|e| e.to_string())?;
-        units.push(unit);
-    }
-    let rogue = character(QUICK_BATTLE_ROGUE, id(), Faction::Enemy, Pos::new(12, 3))?;
-    let reinforcements = vec![Reinforcement {
-        turn: QUICK_BATTLE_ROGUE_TURN,
-        unit: rogue,
-    }];
-    let everyone: Vec<Unit> = units
-        .iter()
-        .chain(reinforcements.iter().map(|r| &r.unit))
-        .cloned()
-        .collect();
-    let triggers = quick_battle_triggers();
-    let errors = check_map_labels(QUICK_BATTLE_MAP, &everyone)
-        .into_iter()
-        .chain(check_triggers(
-            QUICK_BATTLE_MAP,
-            &triggers,
-            &everyone,
-            &map,
-            &content.dialogue,
-        ));
-    if let Some(e) = errors.into_iter().next() {
-        return Err(e.to_string());
-    }
-    Ok(BattleSetup {
-        map,
-        terrain: Arc::new(content.terrain.rules.clone()),
-        classes: Arc::new(classes.clone()),
-        items: Arc::new(items.clone()),
-        spells: Arc::new(content.spells.clone()),
-        skills: Arc::new(content.skills.clone()),
-        arts: Arc::new(content.arts.clone()),
-        pack: BattlePack {
-            items: vec![ItemId::new(QUICK_BATTLE_POTION); QUICK_BATTLE_POTIONS],
-            cap: items.rules.default_pack_cap,
-        },
-        gold: 0,
-        stock: Stock::default(),
-        units,
-        reinforcements,
-        objective: Objective::Rout { turn_limit: None },
-        rewind_charges: 3,
-        seed: QUICK_BATTLE_SEED,
-        triggers,
-        mode: GameMode::Classic,
-    })
+    let def = content
+        .battles
+        .get(QUICK_BATTLE)
+        .ok_or_else(|| format!("no battle \"{QUICK_BATTLE}\""))?;
+    let lead = LeadProfile::new(DEFAULT_NAME, LeadGender::Male);
+    let campaign = battle_campaign(content, def, GameMode::Classic, lead);
+    Ok(BattleState::new(campaign.battle_setup(def, &content.tables())).0)
 }
 
 /// How far range overlays tint a tile's background toward their colour
@@ -367,6 +180,9 @@ pub struct BattleScreen {
     /// The unit whose walk was shown since the last command: its move's
     /// steps have been heard.
     walked: Option<UnitId>,
+    /// The player chose `Restart Battle`: the screen closes, and the game
+    /// flow starts the battle again.
+    restart: bool,
     /// Where the cursor and camera were when the player phase ended: they
     /// go back there when the next one starts.
     player_view: Option<(Pos, Camera)>,
@@ -408,6 +224,7 @@ impl BattleScreen {
             progress: None,
             cues: CueQueue::default(),
             walked: None,
+            restart: false,
             player_view: None,
         }
     }
@@ -731,6 +548,19 @@ impl BattleScreen {
         }
     }
 
+    /// Whether the player chose `Restart Battle` (the screen then pops,
+    /// and the game flow starts the battle again).
+    pub fn restart_requested(&self) -> bool {
+        self.restart
+    }
+
+    /// Applies `cmd` as if the player (or the AI) had sent it: scripted
+    /// tests play a battle with it.
+    #[cfg(any(test, feature = "harness"))]
+    pub fn send(&mut self, cmd: &Command) {
+        self.apply(cmd);
+    }
+
     /// The commands sent so far and the rewind charges left.
     pub fn history(&self) -> &BattleHistory {
         &self.history
@@ -1002,6 +832,7 @@ impl BattleScreen {
                 self.cursor.jump(to);
                 self.follow(to);
             }
+            Effect::Restart => self.restart = true,
         }
     }
 
@@ -1101,6 +932,8 @@ impl BattleScreen {
                 self.help_idle(ctx, info, back)
             }
             Mode::Objective => help_line(&[cancel("back")]),
+            Mode::RestartPrompt => help_line(&[confirm("restart"), cancel("back")]),
+
             Mode::EndTurnPrompt { .. } => {
                 let [accept, also] = km.end_turn_accept_actions();
                 let yes = |a| (Some(key_name(km, a)), "yes");
@@ -1325,6 +1158,7 @@ impl BattleScreen {
             | Mode::UnitList { .. }
             | Mode::Objective
             | Mode::EndTurnPrompt { .. }
+            | Mode::RestartPrompt
             | Mode::Info { .. } => return,
             Mode::AiAction(a) if !a.shows_cursor() => return,
             Mode::Selected(sel) => {
@@ -1436,6 +1270,19 @@ impl BattleScreen {
                 .replace(SEPARATOR, " / ");
                 let lines = [
                     (map_menu::end_turn_question(*ready), UiColor::Text),
+                    (yes_no, UiColor::TextDim),
+                ];
+                map_menu::draw_dialog(buf, p, "", &lines);
+            }
+            Mode::RestartPrompt => {
+                let km = &ctx.keymap;
+                let yes_no = help_line(&[
+                    (Some(key_name(km, Action::Confirm)), "yes"),
+                    (Some(key_name(km, Action::Cancel)), "no"),
+                ])
+                .replace(SEPARATOR, " / ");
+                let lines = [
+                    (map_menu::RESTART_QUESTION.to_owned(), UiColor::Text),
                     (yes_no, UiColor::TextDim),
                 ];
                 map_menu::draw_dialog(buf, p, "", &lines);
@@ -1619,7 +1466,11 @@ impl Screen for BattleScreen {
                 }
                 _ => self.step_mode(ctx, action),
             }
+            if self.restart {
+                return Transition::Pop;
+            }
         }
+
         self.play_sounds(ctx, input);
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
@@ -1931,7 +1782,7 @@ mod tests {
     use insta::assert_snapshot;
 
     use crate::glyph_buffer::Layer;
-    use trpg_core::{BattleMap, Grid, Phase, TerrainId, Unit};
+    use trpg_core::{BattleMap, Grid, Objective, Phase, TerrainId, Unit};
 
     use super::testing::{battle, vaulted, wait};
     use super::*;
@@ -1985,44 +1836,10 @@ mod tests {
     #[test]
     fn quick_battle_reports_missing_content() {
         let mut content = ctx().content;
-        content.characters.characters.clear();
+        content.battles.clear();
         assert_eq!(
             quick_battle(&content),
-            Err("no character \"test_lord\"".to_owned())
-        );
-        let mut content = ctx().content;
-        content.characters.generics.clear();
-        assert_eq!(
-            quick_battle(&content),
-            Err("no generic \"test_brigand\"".to_owned())
-        );
-        let mut content = ctx().content;
-        content.maps.clear();
-        assert_eq!(
-            quick_battle(&content),
-            Err("no map \"test_small\"".to_owned())
-        );
-        let mut content = ctx().content;
-        content.classes.classes.clear();
-        assert_eq!(
-            quick_battle(&content),
-            Err("unknown class \"exile\"".to_owned())
-        );
-        let mut content = ctx().content;
-        let mut knight =
-            content.characters.characters[&trpg_core::CharacterId("test_knight".into())].clone();
-        knight.map_label = Some("Lo".into());
-        content
-            .characters
-            .characters
-            .insert(knight.id.clone(), knight);
-        assert_eq!(
-            quick_battle(&content),
-            Err(
-                "test_small: Test Lord and Test Knight are both labelled \"Lo\" on the map; \
-                 give one a map_label"
-                    .to_owned()
-            )
+            Err("no battle \"quick\"".to_owned())
         );
     }
 

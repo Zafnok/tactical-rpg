@@ -7,6 +7,7 @@
 //! input to the top screen only and draws from the top-most opaque screen up,
 //! so overlays (menus, dialogs) show the screen below them.
 
+use std::any::Any;
 use std::fmt;
 
 use trpg_content::{Content, ContentErrors};
@@ -16,7 +17,7 @@ use trpg_core::{LeadGender, LeadProfile};
 use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Keymap, Layout, LayoutBindings, PlayerKeys};
+use crate::input::{Action, Chord, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
 
@@ -50,6 +51,17 @@ pub trait Screen {
     /// Whether the screen below shows through (drawn first, then this one).
     fn is_overlay(&self) -> bool {
         false
+    }
+
+    /// This screen as [`Any`], for tests that look inside a screen on the
+    /// stack ([`ScreenStack::find`]). `None` unless the screen opts in.
+    fn as_any(&self) -> Option<&dyn Any> {
+        None
+    }
+
+    /// [`as_any`](Self::as_any), mutable ([`ScreenStack::find_mut`]).
+    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
+        None
     }
 }
 
@@ -89,12 +101,61 @@ pub struct FrameInput {
     pub dt: f32,
     /// Actions whose key is currently held down.
     held: Vec<Action>,
+    /// The chords pressed this frame, in order.
+    pressed: Vec<Chord>,
+    /// The characters typed this frame, in order.
+    text: Vec<char>,
+    /// Whether a controller button went down this frame.
+    pad: bool,
 }
 
 impl FrameInput {
     /// Input for one frame; `held` lists the actions whose keys are down.
     pub fn new(actions: Vec<Action>, dt: f32, held: Vec<Action>) -> Self {
-        Self { actions, dt, held }
+        Self {
+            actions,
+            dt,
+            held,
+            pressed: Vec::new(),
+            text: Vec::new(),
+            pad: false,
+        }
+    }
+
+    /// The same input with whether a controller button went down this
+    /// frame.
+    #[must_use]
+    pub fn with_pad(mut self, pad: bool) -> Self {
+        self.pad = pad;
+        self
+    }
+
+    /// Whether a controller button went down this frame: the player is on
+    /// a controller, so a screen that needs text shows a letter grid
+    /// instead of asking them to type.
+    pub fn pad_pressed(&self) -> bool {
+        self.pad
+    }
+
+    /// The same input with the chords `pressed` and the characters `text`
+    /// typed this frame.
+    #[must_use]
+    pub fn with_typing(mut self, pressed: Vec<Chord>, text: Vec<char>) -> Self {
+        self.pressed = pressed;
+        self.text = text;
+        self
+    }
+
+    /// The chords pressed this frame, for the few screens that read keys
+    /// themselves: a text box's fixed keys ([`crate::input::text_key`]).
+    /// Anything else reacts to [`actions`](Self::actions).
+    pub fn pressed_chords(&self) -> &[Chord] {
+        &self.pressed
+    }
+
+    /// The characters typed this frame (printable only), for text boxes.
+    pub fn text(&self) -> &[char] {
+        &self.text
     }
 
     /// Whether a key bound to `action` is held (e.g. hold Confirm to
@@ -153,9 +214,13 @@ pub struct Ctx {
     /// from the clock at startup so each launch picks differently.
     pub music_seed: u64,
     /// Who the player made the lead, for dialogue's name and pronoun
-    /// tokens and the lead's portrait. A placeholder here until New Game
-    /// (0801) asks the player and stores it in the campaign.
+    /// tokens and the lead's portrait: a placeholder until a campaign
+    /// starts (New Game asks the player), then the campaign's
+    /// ([`crate::flow`]).
     pub lead: LeadProfile,
+    /// Seconds the game has been running: the sum of every frame's time
+    /// (`Game` adds it), for the campaign's playtime.
+    pub clock_s: f64,
     /// Whether the title waits for a key press before showing its menu
     /// and playing its music (`docs/design/title-screen.md`). Off here;
     /// `app` sets [`KeyPrompt::Waiting`] for the web build, and `Game`
@@ -201,6 +266,7 @@ impl Ctx {
             audio: AudioQueue::default(),
             music_seed: DEFAULT_MUSIC_SEED,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
+            clock_s: 0.0,
             key_prompt: KeyPrompt::Off,
         })
     }
@@ -371,6 +437,23 @@ impl ScreenStack {
     /// Puts `screen` on top.
     pub fn push(&mut self, screen: Box<dyn Screen>) {
         self.screens.push(screen);
+    }
+
+    /// The top-most screen of type `T` (one that opts in with
+    /// [`Screen::as_any`]).
+    pub fn find<T: Any>(&self) -> Option<&T> {
+        self.screens
+            .iter()
+            .rev()
+            .find_map(|s| s.as_any()?.downcast_ref())
+    }
+
+    /// The top-most screen of type `T`, mutable ([`Screen::as_any_mut`]).
+    pub fn find_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.screens
+            .iter_mut()
+            .rev()
+            .find_map(|s| s.as_any_mut()?.downcast_mut())
     }
 
     /// Updates the top screen and applies its transition. Returns `true`
@@ -754,7 +837,11 @@ pub(crate) mod tests {
             c.set_layout_bindings(Layout::RightHanded, b.clone()),
             Ok(())
         );
-        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            b.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
         assert_eq!(c.layout_bindings(Layout::RightHanded), b);
         let saved = c.storage.read(KEYBINDINGS_KEY).unwrap().unwrap();
         assert_eq!(saved, c.player_keys().to_ron());
@@ -765,7 +852,11 @@ pub(crate) mod tests {
             .unwrap();
         assert_eq!(c.keymap, before);
         c.use_layout(Layout::LeftHanded);
-        assert_eq!(c.keymap, left.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            left.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
         assert_eq!(c.keymap_for(Layout::RightHanded), before);
     }
 
@@ -779,7 +870,11 @@ pub(crate) mod tests {
         // A layout already in use picks up the loaded keys.
         let mut again = ctx().with_storage(storage);
         assert_eq!(again.layout_bindings(Layout::RightHanded), b);
-        assert_eq!(again.keymap, b.keymap(again.content.keymap.repeat));
+        assert_eq!(
+            again.keymap,
+            b.keymap(again.content.keymap.repeat)
+                .with_default_pad(&again.content.keymap)
+        );
         assert!(again.take_warnings().is_empty());
     }
 
@@ -807,7 +902,11 @@ pub(crate) mod tests {
             c.set_layout_bindings(Layout::LeftHanded, b.clone())
                 .is_err()
         );
-        assert_eq!(c.keymap, b.keymap(c.content.keymap.repeat));
+        assert_eq!(
+            c.keymap,
+            b.keymap(c.content.keymap.repeat)
+                .with_default_pad(&c.content.keymap)
+        );
     }
 
     #[test]

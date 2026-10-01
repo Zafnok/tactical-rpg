@@ -182,6 +182,43 @@ mod tests {
         items.iter().map(|s| (*s).to_string()).collect()
     }
 
+    /// The lines of `manifest`'s `[header]` table, without comments and
+    /// blank lines.
+    fn table<'a>(manifest: &'a str, header: &str) -> Vec<&'a str> {
+        let lines = manifest.lines().skip_while(|l| l.trim() != header).skip(1);
+        lines
+            .take_while(|l| !l.starts_with('['))
+            .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+            .collect()
+    }
+
+    /// `trpg-app` copies the workspace lints because one of them differs
+    /// (`unsafe_code`, ADR-0034); the copy must not drift.
+    #[test]
+    fn app_lints_are_the_workspace_lints_except_unsafe_code() {
+        let root = repo_root();
+        let workspace = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
+        let app = std::fs::read_to_string(root.join("crates/app/Cargo.toml")).unwrap();
+        let clippy = table(&workspace, "[workspace.lints.clippy]");
+        assert!(clippy.len() > 5, "{clippy:?}");
+        assert_eq!(table(&app, "[lints.clippy]"), clippy);
+        let rust: Vec<String> = table(&workspace, "[workspace.lints.rust]")
+            .iter()
+            .map(|l| l.replace("unsafe_code = \"forbid\"", "unsafe_code = \"deny\""))
+            .collect();
+        assert!(
+            rust.contains(&"unsafe_code = \"deny\"".to_owned()),
+            "{rust:?}"
+        );
+        assert_eq!(table(&app, "[lints.rust]"), rust);
+        // Every other crate inherits the workspace's `forbid`.
+        for other in ["core", "content", "ui", "xtask"] {
+            let manifest =
+                std::fs::read_to_string(root.join(format!("crates/{other}/Cargo.toml"))).unwrap();
+            assert_eq!(table(&manifest, "[lints]"), ["workspace = true"], "{other}");
+        }
+    }
+
     #[test]
     fn repo_root_points_at_the_workspace_root() {
         let root = repo_root();

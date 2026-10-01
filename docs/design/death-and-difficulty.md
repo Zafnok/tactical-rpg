@@ -60,6 +60,17 @@ design levers yourself. Let's go through them."):
 >
 > **Lord falls in Casual** "9A" (game over in both modes).
 
+On 0801's starting rules (PR #127, 2026-09-30):
+
+> "1. sure 2. it doesn't need a cap, I don't think it would ever exceed tbh
+> and minor overflow to next lv is ok 3. sure [...] 7. Retry chapter would
+> only be applicable for ch1 and 2 and maybe 3... rest chapters would be
+> several battles... so of course it should be retry, maybe even retry
+> battle"
+
+(1: every unit is back at full HP for the next battle. 3: a unit that dies
+in Classic sends its whole loadout to the stock.)
+
 ## Falling units
 
 A unit falls when its HP reaches 0.
@@ -88,7 +99,13 @@ per `turn-structure.md`), in **both** modes:
 2. Every player unit on the map has fallen → game over.
 3. A map's turn limit runs out (`turn-structure.md`).
 
-Game over offers `Retry` (restart the battle) or `Title`.
+Game over offers `Retry Battle` (restart the battle, not the chapter) or
+`Title` (Nick, PR #127).
+
+**Between battles** (Nick, PR #127): every unit, standing or retreated, is
+back at **full HP** for the next battle. A unit that dies in Classic sends
+its **whole loadout** to the stock: weapons (keeping their wear), armour
+and accessory.
 
 ## Rewind
 
@@ -112,7 +129,7 @@ standard FE "cancel your move before you choose an action".
 - Luck is part of the saved state: repeating the same actions after a rewind
   gives the same results. Doing something different changes the outcome.
 - **Restart:** `Restart battle` in the map menu (with a confirm), available at
-  any time, and `Retry` on Game Over both put the battle back at its first turn
+  any time, and `Retry Battle` on Game Over both put the battle back at its first turn
   and **refund every charge**.
 - Rewind works the same in Classic and Casual.
 
@@ -130,8 +147,9 @@ Charges don't carry over to the next map. Instead, each unused charge gives a
   if the EXP scale grows (e.g. 1,000,000 per level) the bonus scales with it
   (70,000). The percentage may be revisited once Nick sees the numbers on
   screen (0804).
-- The bonus is added after the battle's normal EXP, following the award rules
-  in `progression.md` (max 100 per award, level cap).
+- The bonus is added after the battle's normal EXP as **one award with no
+  100-EXP cap** (Nick, PR #127: "minor overflow to next lv is ok"); only the
+  level cap limits it. At most 8 charges × 7 = 56 today.
 
 ## Difficulty
 

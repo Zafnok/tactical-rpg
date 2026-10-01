@@ -1,0 +1,7 @@
+// PLACEHOLDER: the debug Quick Battle as a chapter with no scenes, so it
+// runs through the same flow as the story (title -> battle -> result).
+(
+    id: "quick",
+    title: "Quick Battle",
+    battle: "quick",
+)

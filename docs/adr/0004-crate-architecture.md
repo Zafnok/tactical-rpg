@@ -1,6 +1,6 @@
 # ADR-0004: Crate layering and deterministic core
 
-- **Status:** Accepted
+- **Status:** Accepted; `app`'s one `unsafe` (rule 5) set out in ADR-0034
 - **Date:** 2026-09-25
 
 ## Context

@@ -72,7 +72,8 @@ and the `ascii-art` skill (the two pictures).
 2. `crates/app/src/main.rs`: set `KeyPrompt::Waiting` on every build (not
    only wasm).
 3. `crates/ui/src/game.rs`: the prompt is dismissed by a key **or** a pad
-   press; remember which (`FirstPress::Key | Pad`). Stop pushing the layout
+   press (0219 already made a pad press dismiss it, so controller players
+   weren't stuck on the web title); remember which (`FirstPress::Key | Pad`). Stop pushing the layout
    picker in `Game::start`; instead, when the prompt is dismissed by a key
    and `ctx.layout().is_none()`, push `LayoutPickerScreen`.
 4. Layout still unchosen: when 0220's `InputState::device()` changes from a
