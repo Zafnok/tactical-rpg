@@ -50,7 +50,12 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0815's
    `keybindings` config); Confirm on "Key bindings" opens 0815's
    `KeyBindingsScreen`; "Reset tips"; "Restore defaults" (all settings;
    custom keys are reset from the Key bindings screen, not here).
-4. **Key bindings:** no rebinding UI in this ticket. Key bindings are saved
+4. **Key bindings:** the row pushes `KeyBindingsScreen::new(ctx)`
+   (`crates/ui/src/screens/key_bindings.rs`); once it does, remove 0815's
+   temporary "Key bindings" entry from the debug menu
+   (`crates/ui/src/debug.rs`, `TOOLS` / `KEY_BINDINGS_TOOL`; keep the
+   screen's name in `debug::SCREENS`, so the Debug key does nothing while
+   it captures a key). No rebinding UI in this ticket. Key bindings are saved
    by 0217 under their own `Storage` key (`keybindings`), not in
    `Settings`, and edited on 0815's screen.
 5. **Game mode** (only when a campaign is loaded, per

@@ -20,7 +20,8 @@ FE on-map Armoury / Vendor / Blacksmith, villages and chests. The same shop
 screen is reused between chapters through 0308's `ShopSession`.
 
 **Villages are on hold** (`docs/design/terrain.md`, 2026-09-26: no village
-tile yet). Build the village UI only if 0308 implemented villages.
+tile yet; ticket 0037 decides it, and 0313 then builds the rules). Build
+the village UI only if 0313 is done; this ticket doesn't wait for it.
 
 ## Nick input
 

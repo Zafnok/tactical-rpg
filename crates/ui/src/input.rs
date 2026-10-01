@@ -32,6 +32,39 @@ pub use trpg_content::keymap::{
 /// player binds: plain `Escape` cancels.
 const FIXED: [(Chord, Action); 1] = [(Chord::plain(Key::Escape), Action::Cancel)];
 
+/// The chord that backs out of the Key bindings screen's "Press a key…"
+/// without changing anything.
+const CAPTURE_ABORT: Chord = Chord::plain(Key::Escape);
+
+/// The chord that empties the highlighted slot on the Key bindings screen.
+const CLEAR_SLOT: Chord = Chord::plain(Key::Delete);
+
+/// What a slot on the Key bindings screen shows while it waits for a key
+/// (`docs/design/controls.md`, *Rebinding keys*).
+pub const CAPTURE_PROMPT: &str = "Press a key…";
+
+/// Whether `chord` backs out of the Key bindings screen's "Press a key…"
+/// (`docs/design/controls.md`, *Rebinding keys*). The screen asks this
+/// rather than naming the key (the `keyboard-input` skill).
+pub fn is_capture_abort(chord: Chord) -> bool {
+    chord == CAPTURE_ABORT
+}
+
+/// Whether `chord` empties the highlighted slot on the Key bindings screen.
+pub fn is_clear_slot(chord: Chord) -> bool {
+    chord == CLEAR_SLOT
+}
+
+/// The name of the [`is_capture_abort`] key, for help text.
+pub fn capture_abort_key_name() -> String {
+    CAPTURE_ABORT.to_string()
+}
+
+/// The name of the [`is_clear_slot`] key, for help text.
+pub fn clear_slot_key_name() -> String {
+    CLEAR_SLOT.to_string()
+}
+
 /// A text box's own keys (the lead's name, 0801): fixed like `Escape` for
 /// Cancel, since while a player types, every letter key is a letter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -492,6 +525,20 @@ mod tests {
     /// Seconds for `ms` milliseconds.
     fn ms(ms: u32) -> f32 {
         Duration::from_millis(u64::from(ms)).as_secs_f32()
+    }
+
+    #[test]
+    fn only_the_plain_fixed_chords_abort_capture_and_clear_a_slot() {
+        assert!(is_capture_abort(chord("Escape")));
+        assert!(!is_capture_abort(chord("Shift+Escape")));
+        assert!(!is_capture_abort(chord("Delete")));
+        assert!(is_clear_slot(chord("Delete")));
+        assert!(!is_clear_slot(chord("Shift+Delete")));
+        assert!(!is_clear_slot(chord("Escape")));
+        assert_eq!(capture_abort_key_name(), "Escape");
+        assert_eq!(clear_slot_key_name(), "Delete");
+        // Both are reserved, so neither can end up in a slot.
+        assert!(chord("Escape").is_reserved() && chord("Delete").is_reserved());
     }
 
     #[test]

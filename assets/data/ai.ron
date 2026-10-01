@@ -11,6 +11,12 @@
 // Expected values use the forecast's displayed hit chances, follow-ups
 // included, crits ignored.
 //
+// Bosses and combat green units also weigh each attack with every Combat Art
+// and combat active they can use (ticket 0503). Using one costs:
+// − durability × the durability it costs
+// − spell_use  for a spell active (it costs 1 extra spell use)
+// so they keep them for attacks they really improve.
+//
 // Enemies carry no consumables and never drink potions (Nick,
 // docs/design/weapons-and-items.md); only healer units heal.
 (
@@ -19,4 +25,6 @@
     lord: 50,
     risk: 5,
     terrain: 5,
+    durability: 5,
+    spell_use: 15,
 )

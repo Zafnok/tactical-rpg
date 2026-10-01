@@ -14,9 +14,9 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, Game Over, "To be continued" |
-| `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `DialogueScreen` (full-screen or over the map), `ClassChangeScreen` (`screens/class_change`: promotion and reclass between battles, 0603), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
+| `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `ClassChangeScreen` (`screens/class_change`: promotion and reclass between battles, 0603), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
-| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), class change on a test unit (promote, reclass) |
+| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), class change on a test unit (promote, reclass) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
@@ -27,7 +27,9 @@ the buffer it returns; tests drive the same `Game` headlessly with the
    through `input::Pads` first, which turns each pad's raw state into
    button changes (ADR-0034).
 2. `Game` feeds them to `InputState`, which turns them into this frame's
-   `Action`s (presses, then repeats of the held cursor key or button).
+   `Action`s (presses, then repeats of the held cursor key or button). The
+   raw key presses also go into `FrameInput::pressed_chords()`, which text
+   boxes and the Key bindings screen read (to capture a key for a slot).
 3. Only the **top** screen's `update(ctx, input)` runs. It returns a
    `Transition`: `None`, `Push(screen)`, `Pop`, `Replace(screen)` or `Quit`.
    Popping the last screen also quits.

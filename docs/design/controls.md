@@ -190,6 +190,24 @@ exactly as before:
 **Help bar and tips** show the player's current keys. An action with no key
 shows as `! not mapped` there too.
 
+**The screen's look** (ticket 0815, Nick picked from three rendered
+mockups, 2026-09-30: "B: grouped panel", rows "Required first, then
+optional"): one panel titled `Key bindings · <layout>` with columns `Key 1`
+`Key 2` `Key 3` and two groups. **Must have a key:** Cursor up, down, left,
+right, Confirm, Cancel (`+ Escape` after its name), End turn. **Optional:**
+Select, Confirm end turn, Previous ready unit, Next ready unit, Unit info,
+Danger zone, Auto-end on/off, Rewind, Map menu. Then **Restore defaults**.
+An empty slot is a small dot; `! not mapped` sits at the right of the row,
+red for a required action and dim for an optional one. Screenshots:
+[`0815-key-bindings.png`](../screenshots/0815-key-bindings.png),
+[`0815-key-bindings-blocked.png`](../screenshots/0815-key-bindings-blocked.png).
+
+**Restore defaults asks first** (Nick, 2026-09-30, on the 0815 build:
+"have a confirmation screen for restore defaults"). Confirm on Restore
+defaults opens `Restore the default keys for Right-handed?`; Confirm
+answers yes, Cancel answers no and stays on the Key bindings screen with
+nothing changed.
+
 *Claude's starting rules (Nick to veto at sign-off of 0815):*
 
 - `Esc` doesn't count as Cancel's required key: Cancel still needs one of
@@ -205,6 +223,22 @@ shows as `! not mapped` there too.
 - The Key bindings screen is steered with the keys the player had when
   they opened it; changes take effect when they leave. This way moving
   every cursor key elsewhere can't trap them on the screen.
+- On that screen, up/down wrap round (the row after Map menu is Restore
+  defaults, then Cursor up again); left/right stop at the first and third
+  slot.
+- A key the game keeps for itself (only the developer debug key, in builds
+  that have the debug menu) shows `That key can't be used` and the slot
+  keeps waiting. Example: Mia presses the debug key at `Press a key…`;
+  the message appears and she presses `g` instead.
+- When a key moves, the action that lost it lights up white for 1.5
+  seconds (*tunable*), so the player sees where it came from.
+- If the key pressed for a slot is one of the player's old cursor keys
+  and they keep it held, the highlight stays put until they let go.
+- When two required actions have no key, the blocked-leave message names
+  the one listed higher on the screen.
+- The question's wording, `Restore the default keys for <layout>?`, and
+  its look (the end-turn question's box, `f yes / d no` with the player's
+  own Confirm and Cancel keys).
 
 ## Controller
 

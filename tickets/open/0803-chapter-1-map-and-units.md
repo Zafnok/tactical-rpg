@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0016", "0410", "0412", "0501", "0503", "0706", "0707", "0801"]
+blocked_by: ["0009", "0016", "0316", "0410", "0412", "0501", "0503", "0706", "0707", "0710", "0801", "0807"]
 nick_input: sign-off
 completed:
 ---
@@ -23,6 +23,14 @@ Proves the chapter is winnable with an automated replay.
 Chapter 1 has no battle notes (`chapter-1.md`, *Extras*). 0503 (bosses use
 Combat Arts and actives) was added, so the boss behaves as designed before the
 difficulty sim in step 7 is run and recorded.
+
+**Blockers added 2026-10-01:** 0710 (`@music` in scenes) and 0807 (the
+battle file's `music` field). This ticket's scope sets both for Chapter 1,
+so both must exist first.
+
+Also 0316 (non-attack skills cost uses per battle; Nick, 2026-10-01: the
+playtest waits for it): the winning replay and the difficulty numbers must
+be made with the final skill costs.
 
 ## Nick input
 

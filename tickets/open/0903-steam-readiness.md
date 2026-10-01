@@ -6,7 +6,7 @@ milestone: M8 Release
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0804", "0902"]
+blocked_by: ["0804", "0816", "0902", "0906"]
 nick_input: setup
 completed:
 ---
@@ -18,6 +18,11 @@ completed:
 Steam is the end goal after Chapter 1 proves fun
 ([ADR-0009](../../docs/adr/0009-distribution.md)). Steam needs a Steamworks
 partner account and a $100 app fee — Nick's decision and money.
+
+**Blockers added 2026-10-01:** 0906 (the title's trademark check must be
+done before the Steam page is created) and 0816 (step 3 assumes controller
+input, button names and button rebinding all exist; 0816 is the last of
+them and waits for 0220 and 0815).
 
 ## Nick input
 

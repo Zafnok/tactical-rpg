@@ -111,6 +111,7 @@ pub struct FrameInput {
 
 impl FrameInput {
     /// Input for one frame; `held` lists the actions whose keys are down.
+    /// No [`pressed_chords`](Self::pressed_chords).
     pub fn new(actions: Vec<Action>, dt: f32, held: Vec<Action>) -> Self {
         Self {
             actions,
@@ -146,8 +147,10 @@ impl FrameInput {
         self
     }
 
-    /// The chords pressed this frame, for the few screens that read keys
-    /// themselves: a text box's fixed keys ([`crate::input::text_key`]).
+    /// The chords pressed this frame (bound or not; presses only, no
+    /// repeats), for the few screens that read keys themselves: a text
+    /// box's fixed keys ([`crate::input::text_key`]) and the Key bindings
+    /// screen, which captures the key for a slot.
     /// Anything else reacts to [`actions`](Self::actions).
     pub fn pressed_chords(&self) -> &[Chord] {
         &self.pressed
@@ -703,6 +706,7 @@ pub(crate) mod tests {
         assert!(!i.is_held(Action::Confirm));
         assert_eq!(i.actions, [Action::Confirm]);
         assert!((i.dt - 0.5).abs() < f32::EPSILON);
+        assert!(i.pressed_chords().is_empty());
     }
 
     #[test]

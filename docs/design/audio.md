@@ -134,9 +134,14 @@ sign-off: "it should sound like a heal").
 - **Places and moments without a cue yet:** capital city, world map, camp,
   shops, victory and defeat stings, game over, level up. Nick hasn't been
   asked about these.
-- **Content ID:** check the chosen tracks against YouTube's copyright system
-  before release. This matters most for cynicmusic and Alexandr Zhelanov,
-  who sell or stream their catalogues (ticket 0904).
+- **Content ID** (decided 2026-10-01, ticket 0904): **no check before
+  release.** The plan was to test the chosen tracks against YouTube's
+  copyright system (cynicmusic and Alexandr Zhelanov sell or stream their
+  catalogues). Nick: "tbh I think we just bite the bullet and if one these
+  guys decides they wanna copyright CC-BY stuff then we can swap it out or
+  add a streamer mode later..." So: if someone reports a claim on a track,
+  swap that track or add a streamer mode then. New tracks still avoid
+  composers already known to register with Content ID (as 0020 did).
 
 ## Appendix: Nick's words
 

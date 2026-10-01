@@ -628,6 +628,26 @@ mod tests {
         assert!(seen[1].actions.is_empty());
         assert!(seen[1].is_held(Action::CursorRight));
         assert!(!seen[1].is_held(Action::Confirm));
+        // Every press of the frame, in order; releases aren't presses.
+        assert_eq!(
+            seen[0].pressed_chords(),
+            [Chord::plain(Key::Right), Chord::plain(Key::F)]
+        );
+        assert!(seen[1].pressed_chords().is_empty());
+    }
+
+    #[test]
+    fn screens_see_unbound_and_shifted_presses_as_chords() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        let shifted = Chord::shifted(Key::Q);
+        game.frame(&[down(Key::Delete), RawInputEvent::Down(shifted)], 0.0);
+        let seen = seen.borrow();
+        assert!(seen[0].actions.is_empty());
+        assert_eq!(
+            seen[0].pressed_chords(),
+            [Chord::plain(Key::Delete), shifted]
+        );
     }
 
     #[test]

@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0404", "0021", "0110", "0711"]
+blocked_by: ["0404", "0021", "0035", "0110", "0711"]
 nick_input: decision
 completed:
 ---
@@ -40,10 +40,15 @@ fighter (Brigand) from *Vol.1 Monstrous Uprising*, and an on-foot lance
 fighter for the Rider (nothing mounted exists in the catalogue).
 Named characters without their own hero art use their class's picture
 recoloured to their colours (Nick: "sure"); a character's face and combat
-picture must match (Rue uses the Witch for both). The boss **Harl** has no
-picture yet: ticket 0035 (Nick shops around); until it's answered, he uses
-a public placeholder. The picture's weapon must match the unit's weapon
-type (weapon types have their own rules).
+picture must match (Rue uses the Witch for both). The boss **Harl**'s
+picture is decided in ticket 0035 (Nick shops around), which this ticket
+waits for since 2026-10-01 (before that, nothing would have put his picture
+in once it was chosen). Use 0035's pick; if Nick chose to keep a stand-in,
+use the stand-in he named. The picture's weapon must match the unit's
+weapon type (weapon types have their own rules).
+
+Nick wants this scene in the Chapter 1 playtest (2026-10-01), so 0804 waits
+for this ticket.
 
 ## Nick input
 
@@ -93,7 +98,11 @@ combat rules; buying anything.
    Not meant to look good; Nick only sees the bought art.
 5. Draw the scene in 0404's playback overlay with 0711's overlay drawing
    (mirror one fighter so they face each other). Honour the
-   `combat_animations` setting (off = 0404's plain box).
+   `combat_animations` setting (off = 0404's plain box). The setting comes
+   from the Options menu (0805), which this ticket doesn't wait for: if
+   0805 isn't done, keep the value in `Ctx` (as `cursor_style` and
+   `text_speed` are today, default on) and add a line to 0805 to move it
+   into `Settings`.
 6. List each pack in `THIRD_PARTY_ASSETS.md` as ADR-0032 says (marked
    private) and note the class → image mapping in `look-and-feel.md` or the
    class data.

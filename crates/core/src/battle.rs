@@ -2178,6 +2178,25 @@ impl BattleState {
         forecast(&self.tables.items.combat_rules(), &a, &d, distance)
     }
 
+    /// The forecast of `unit` walking `path` (its tile first) to `dest` and
+    /// making the attack `action` (an `Attack` or an attack spell's `Cast`,
+    /// with its art or active), and Line Pierce's strike if it has one: the
+    /// numbers the `Act` would fight with. For the AI ([`crate::ai`]), like
+    /// [`Self::plain_forecast`]; the action is validated as an `Act`'s is,
+    /// so `None` if the battle would refuse it (or it is no attack).
+    pub(crate) fn attack_forecast(
+        &self,
+        unit: &Unit,
+        dest: Pos,
+        path: &[Pos],
+        action: &UnitAction,
+    ) -> Option<(Forecast, Option<(UnitId, Forecast)>)> {
+        match self.plan_step(unit, dest, path, action) {
+            Ok(Step::Attack(step)) => Some((step.forecast, step.pierce)),
+            _ => None,
+        }
+    }
+
     /// The spell `spell` if `unit` has learned it and has a use left.
     fn castable(&self, unit: &Unit, spell: &SpellId) -> Result<&SpellDef, CommandError> {
         let def = self.known_spell(unit, spell)?;

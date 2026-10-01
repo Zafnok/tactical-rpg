@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0801", "0802", "0409", "1003", "0025", "0026"]
+blocked_by: ["0801", "0802", "0409", "0805", "1003", "0025", "0026"]
 nick_input: sign-off
 completed:
 ---
@@ -25,7 +25,9 @@ several nodes and ends with its story battle (`chapter-1.md`).
 This ticket builds the map itself: nodes, paths, travel, story-battle nodes,
 side-quest nodes, towns, and the map menu. **Skirmishes** (fixed and random)
 are 1008. It builds on the chapter format and campaign state from 0801, saving
-from 0802, the shop screen from 0409 and the camp screen from 1003.
+from 0802, the shop screen from 0409, the camp screen from 1003 and the
+Options screen from 0805 (the world map menu opens it; added to
+`blocked_by` 2026-10-01).
 
 ## Nick input
 

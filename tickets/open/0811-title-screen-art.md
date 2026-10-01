@@ -27,6 +27,14 @@ names only, glyph and half-block techniques). Nick disliked Claude-drawn
 *portraits* (0021), so offer lettering and scene options, not only drawn
 figures, and expect several rounds.
 
+**Added 2026-10-01:** Nick also wants an intro cinematic on the title
+(ticket 0036, built by 0817–0820). It is as long as the title song and ends
+on "our logo whatever it might be", held during the song's quiet pause
+(about 17 seconds). So the art chosen here is also the cinematic's last
+shot: it must look right alone on the screen, with no menu under it. When
+offering option C below, tell Nick the cinematic already covers moving
+pictures on the title.
+
 ## Nick input
 
 **Decision** with the `ask-nick` and `ascii-art` skills. Render real mockups
@@ -56,6 +64,9 @@ music (0807) starts at once or after a short fade in.
 - The layout must leave room for the web build's `Press any key` line
   where the menu goes (ticket 0034, `docs/design/title-screen.md`); show
   it in the mockups too.
+- Show one mockup of the art alone (no menu, no prompt), as the intro
+  cinematic's logo shot will show it (0036). Keep the drawing in one
+  function that 0817 can call.
 
 **Out (do not do):**
 - The exe icon (0902).
