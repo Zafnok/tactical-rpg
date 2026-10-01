@@ -1,5 +1,6 @@
-//! Headless test driver for screens (ADR-0007 layer 4): scripted key
-//! presses in, screen names and snapshots out. No window, no clock.
+//! Headless test driver for screens (ADR-0007 layer 4): scripted key and
+//! controller-button presses in, screen names and snapshots out. No window,
+//! no clock.
 //!
 //! Available to unit tests and, with the `harness` feature, to integration
 //! tests in `crates/ui/tests/`. See `crates/ui/README.md`.
@@ -16,8 +17,8 @@
 //! ```
 
 use crate::audio::{AudioRequest, MusicCommand};
-use crate::game::{Game, RawKeyEvent};
-use crate::input::{Chord, Layout};
+use crate::game::{Game, RawInputEvent};
+use crate::input::{Button, Chord, Layout};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
 use crate::storage::{MemoryStorage, Storage};
 
@@ -111,8 +112,8 @@ impl Harness {
     pub fn keys(&mut self, script: &str) -> &mut Self {
         for token in script.split_whitespace() {
             let chord = parse(token);
-            self.frame(&[RawKeyEvent::Down(chord)], FRAME_DT);
-            self.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
+            self.frame(&[RawInputEvent::Down(chord)], FRAME_DT);
+            self.frame(&[RawInputEvent::Up(chord.key)], FRAME_DT);
         }
         self
     }
@@ -125,8 +126,37 @@ impl Harness {
     /// On a chord [`Chord::parse`] rejects.
     pub fn hold(&mut self, chord: &str, seconds: f32) -> &mut Self {
         let chord = parse(chord);
-        self.advance(&[RawKeyEvent::Down(chord)], seconds);
-        self.frame(&[RawKeyEvent::Up(chord.key)], FRAME_DT);
+        self.advance(&[RawInputEvent::Down(chord)], seconds);
+        self.frame(&[RawInputEvent::Up(chord.key)], FRAME_DT);
+        self
+    }
+
+    /// Presses and releases each whitespace-separated controller button in
+    /// turn, e.g. `"DpadDown South"`, like [`keys`](Self::keys). The names
+    /// are button positions, as in `keymap.ron`.
+    ///
+    /// # Panics
+    ///
+    /// On a button [`Button::parse`] rejects.
+    pub fn pad(&mut self, script: &str) -> &mut Self {
+        for token in script.split_whitespace() {
+            let button = parse_button(token);
+            self.frame(&[RawInputEvent::PadDown(button)], FRAME_DT);
+            self.frame(&[RawInputEvent::PadUp(button)], FRAME_DT);
+        }
+        self
+    }
+
+    /// Holds the controller button `button` for `seconds` of frames (so a
+    /// held direction repeats), then releases it in one more frame.
+    ///
+    /// # Panics
+    ///
+    /// On a button [`Button::parse`] rejects.
+    pub fn hold_pad(&mut self, button: &str, seconds: f32) -> &mut Self {
+        let button = parse_button(button);
+        self.advance(&[RawInputEvent::PadDown(button)], seconds);
+        self.frame(&[RawInputEvent::PadUp(button)], FRAME_DT);
         self
     }
 
@@ -142,7 +172,7 @@ impl Harness {
     /// # Panics
     ///
     /// If that takes more than [`MAX_FRAMES`] frames.
-    fn advance(&mut self, first: &[RawKeyEvent], seconds: f32) {
+    fn advance(&mut self, first: &[RawInputEvent], seconds: f32) {
         let mut left = if seconds.is_finite() {
             seconds.max(0.0)
         } else {
@@ -162,7 +192,7 @@ impl Harness {
     }
 
     /// Runs one game frame, recording its audio.
-    fn frame(&mut self, events: &[RawKeyEvent], dt: f32) {
+    fn frame(&mut self, events: &[RawInputEvent], dt: f32) {
         let out = self.game.frame(events, dt);
         self.audio.push(out.audio.to_vec());
         self.music.extend_from_slice(out.music);
@@ -272,6 +302,13 @@ fn parse(chord: &str) -> Chord {
     }
 }
 
+fn parse_button(button: &str) -> Button {
+    match Button::parse(button) {
+        Ok(button) => button,
+        Err(e) => panic!("bad button in test script: {e}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -349,6 +386,56 @@ mod tests {
         seen.borrow_mut().clear();
         h.wait(1.0);
         assert!(seen.borrow().iter().all(|(a, _)| a.is_empty()));
+    }
+
+    #[test]
+    fn pad_presses_and_releases_each_button_over_two_frames() {
+        let (mut h, seen) = recorder();
+        h.pad(" South\tDpadDown  Start ");
+        let seen = seen.borrow();
+        let actions: Vec<_> = seen.iter().map(|(a, _)| a.clone()).collect();
+        assert_eq!(
+            actions,
+            [
+                vec![Action::Confirm],
+                vec![],
+                vec![Action::CursorDown],
+                vec![],
+                vec![Action::EndTurn],
+                vec![],
+            ]
+        );
+        assert!(
+            seen.iter()
+                .all(|&(_, dt)| (dt - FRAME_DT).abs() < f32::EPSILON)
+        );
+    }
+
+    #[test]
+    fn hold_pad_repeats_with_the_keyboard_timings_then_releases() {
+        let (mut h, seen) = recorder();
+        h.hold_pad("DpadDown", 0.5);
+        let downs = |seen: &Seen| {
+            let seen = seen.borrow();
+            let all = seen.iter().flat_map(|(a, _)| a.clone());
+            all.filter(|&a| a == Action::CursorDown).count()
+        };
+        // Exactly what a held Down key gives (`hold_repeats_then_releases`).
+        assert_eq!(downs(&seen), 1 + 1 + (500 - 300) / 55);
+        assert!((total_time(&seen) - (0.5 + FRAME_DT)).abs() < 1e-4);
+        let (mut keys, seen_keys) = recorder();
+        keys.hold("Down", 0.5);
+        assert_eq!(*seen.borrow(), *seen_keys.borrow());
+        // Released: waiting emits nothing more.
+        seen.borrow_mut().clear();
+        h.wait(1.0);
+        assert!(seen.borrow().iter().all(|(a, _)| a.is_empty()));
+    }
+
+    #[test]
+    #[should_panic(expected = "bad button in test script")]
+    fn bad_button_panics() {
+        Harness::with_layout(Layout::RightHanded).pad("f");
     }
 
     #[test]
@@ -489,7 +576,7 @@ mod tests {
         // `keys` presses in one frame and releases in the next.
         h.keys("f");
         assert!(h.last_frame_audio().is_empty());
-        h.frame(&[RawKeyEvent::Down(parse("f"))], FRAME_DT);
+        h.frame(&[RawInputEvent::Down(parse("f"))], FRAME_DT);
         assert_eq!(h.last_frame_audio(), [beep()]);
         h.wait(0.1);
         assert!(h.last_frame_audio().is_empty());

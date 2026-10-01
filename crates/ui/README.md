@@ -21,12 +21,14 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 
 ## How a frame runs
 
-1. `app` collects key presses/releases as `RawKeyEvent`s and calls
-   `game.frame(&events, dt)`.
+1. `app` collects key and controller-button presses/releases as
+   `RawInputEvent`s and calls `game.frame(&events, dt)`. Controllers go
+   through `input::Pads` first, which turns each pad's raw state into
+   button changes (ADR-0034).
 2. `Game` feeds them to `InputState`, which turns them into this frame's
-   `Action`s (presses, then key repeats). The raw presses also go into
-   `FrameInput::pressed_chords`, which only the Key bindings screen reads
-   (to capture a key for a slot).
+   `Action`s (presses, then repeats of the held cursor key or button). The
+   raw key presses also go into `FrameInput::pressed_chords`, which only
+   the Key bindings screen reads (to capture a key for a slot).
 3. Only the **top** screen's `update(ctx, input)` runs. It returns a
    `Transition`: `None`, `Push(screen)`, `Pop`, `Replace(screen)` or `Quit`.
    Popping the last screen also quits.

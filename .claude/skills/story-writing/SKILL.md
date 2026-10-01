@@ -24,7 +24,9 @@ stable id there; add new names there first, then to the game's names table,
 in text are name tokens: `{n:king}` for "Emeric", `{N:place.thornmarch}` for
 "The Thornmarch" at the start of a sentence (`assets/dialogue/README.md`,
 "Names"). Never write a registered display name literally; the validator
-rejects it. The lead is `{lead}`, never a name token. The story docs use
+rejects it. First names are `{n:<id>.first}` (`{n:retainer.first}` for
+"Hollis"); the other short forms (family names, a god's name or title) are
+in the registry's "Short forms" table. The lead is `{lead}`, never a name token. The story docs use
 display names; a rename is a find-and-replace across `docs/story/` in the
 same commit as the registry change.
 

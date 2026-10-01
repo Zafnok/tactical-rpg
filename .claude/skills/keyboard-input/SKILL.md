@@ -37,7 +37,7 @@ picture item there sits under a `// check-keys: keyboard picture` comment
 may use `KeyCode` or macroquad's key reads. Anywhere else is a bug.
 
 `cargo xtask check-keys` enforces this (CI `tickets` job and `run-gates`).
-It scans `crates/{ui,app,content}/src` for key types, macroquad key
+It scans `crates/{ui,app,content}/src` for key and button types, macroquad key
 reads, and string literals naming a key (`"f select"`, `"press f"`,
 `"[F]"`, `Space`, `Esc`, `Escape`, `Enter`, `Shift`, `arrows`, `WASD`).
 Text in `assets/` (`.ron` strings except `keymap.ron`: tips, item and skill
@@ -48,6 +48,28 @@ arrows" are fine there. Comments are
 not scanned, but doc comments should still name the action, not the key.
 Even the layout picker's own keys are data: the `layout_picker` section of
 `assets/data/keymap.ron`.
+
+## Controller buttons are keys too
+
+Since ticket 0219 ([ADR-0034](../../../docs/adr/0034-controller-input.md))
+a controller is a second source of the same `Action`s, and **every rule
+here applies to buttons exactly as to keys**: never match on a `Button`,
+never write a button name into game code or text, defaults only in
+`keymap.ron`'s `pad` table (Nick's, `controls.md` *Controller → Default
+buttons*; a test pins it).
+
+```
+app/src/pads.rs, pads/   gilrs / browser Gamepad API → PadState   (only pad reads)
+ui/src/input/pad.rs      Pads: PadState → Button down/up          (sticks, Switch swap, merging)
+assets/data/keymap.ron   `pad`: default buttons per action; `stick` thresholds
+ui/src/input.rs          Keymap + InputState: Button → Action     (same repeat as keys)
+```
+
+`Button::` may be named only where `Key::` may, plus
+`crates/app/src/pads.rs` and `crates/app/src/pads/` (`check-keys` enforces
+it). Buttons are named by position (`South`, not "A"); how they're shown to
+the player is ticket 0220, rebinding them 0816. Harness tests press them
+with `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`.
 
 ## Rules
 

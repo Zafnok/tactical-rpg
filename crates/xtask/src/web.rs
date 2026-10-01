@@ -1,8 +1,9 @@
 //! `cargo xtask web [--release] [--debug-tools]`: builds `trpg-app` for
 //! `wasm32-unknown-unknown` and packages the resulting binary with the web
-//! shell (`web/index.html`) and the vendored JS loaders (`web/mq_js_bundle.js`,
+//! shell (`web/index.html`), the vendored JS loaders (`web/mq_js_bundle.js`,
 //! and `web/sapp_jsutils.js` + `web/quad-storage.js` for `localStorage`,
-//! ticket 0207) into `dist/web/` (ticket 0206). `--debug-tools` turns on the
+//! ticket 0207) and our own controller plugin (`web/gamepad.js`, ticket
+//! 0219) into `dist/web/` (ticket 0206). `--debug-tools` turns on the
 //! app's `debug-tools` feature (Quick Battle, glyph sampler) for the Pages
 //! build (ADR-0023); shipped builds never pass it. The game's music tracks
 //! (`music/*.ogg`, not embedded: ADR-0026) are copied to `dist/web/music/`,
@@ -21,6 +22,7 @@ const SHELL_FILES: &[&str] = &[
     "mq_js_bundle.js",
     "sapp_jsutils.js",
     "quad-storage.js",
+    "gamepad.js",
 ];
 
 /// The music folder, at the repo root and in `dist/web/` (ADR-0026).
@@ -254,6 +256,7 @@ mod tests {
         fs::write(dir.join("web/mq_js_bundle.js"), "// bundle").unwrap();
         fs::write(dir.join("web/sapp_jsutils.js"), "// sapp_jsutils").unwrap();
         fs::write(dir.join("web/quad-storage.js"), "// quad-storage").unwrap();
+        fs::write(dir.join("web/gamepad.js"), "// gamepad").unwrap();
         dir
     }
 
@@ -427,6 +430,10 @@ mod tests {
         assert_eq!(
             fs::read_to_string(root.join("dist/web/quad-storage.js")).unwrap(),
             "// quad-storage"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("dist/web/gamepad.js")).unwrap(),
+            "// gamepad"
         );
         fs::remove_dir_all(&root).unwrap();
     }
@@ -640,6 +647,96 @@ version = "1.2.3"
             declared < bundle,
             "declare register_plugin before the bundle"
         );
+    }
+
+    /// Every name in `text` that starts with `prefix` (which isn't the
+    /// tail of a longer identifier), sorted, once each.
+    fn identifiers_starting(text: &str, prefix: &str) -> Vec<String> {
+        let is_ident = |c: char| c.is_ascii_alphanumeric() || c == '_';
+        let mut found: Vec<String> = text
+            .match_indices(prefix)
+            .filter(|&(at, _)| !text[..at].chars().next_back().is_some_and(is_ident))
+            .map(|(at, _)| {
+                let rest = text[at + prefix.len()..].chars();
+                let name: String = rest.take_while(|&c| is_ident(c)).collect();
+                format!("{prefix}{name}")
+            })
+            .collect();
+        found.sort();
+        found.dedup();
+        found
+    }
+
+    #[test]
+    fn identifiers_starting_finds_whole_names_once() {
+        let text = "a.trpg_pad_poll = f; x_trpg_pad_no(); trpg_pad_axis(trpg_pad_poll())";
+        assert_eq!(
+            identifiers_starting(text, "trpg_pad_"),
+            ["trpg_pad_axis", "trpg_pad_poll"]
+        );
+        assert!(identifiers_starting(text, "nope_").is_empty());
+    }
+
+    /// The number after `before` on the line of `text` that starts with it.
+    fn number_after(text: &str, before: &str) -> u32 {
+        let line = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix(before))
+            .unwrap_or_else(|| panic!("no line starting `{before}`"));
+        line.trim_end_matches(';').parse().unwrap()
+    }
+
+    #[test]
+    fn gamepad_js_provides_exactly_the_functions_the_app_imports() {
+        // Ticket 0219: a function missing on either side only shows up in
+        // the browser, as a warning and a pad that does nothing.
+        let root = real_repo_root();
+        let js = fs::read_to_string(root.join("web/gamepad.js")).unwrap();
+        let rust = fs::read_to_string(root.join("crates/app/src/pads/web.rs")).unwrap();
+        let provided: Vec<String> = identifiers_starting(&js, "importObject.env.trpg_pad_")
+            .iter()
+            .map(|name| name.replace("importObject.env.", ""))
+            .collect();
+        let imported: Vec<String> = identifiers_starting(&rust, "safe fn trpg_pad_")
+            .iter()
+            .map(|name| name.replace("safe fn ", ""))
+            .collect();
+        assert!(
+            imported.len() >= 5,
+            "found only {imported:?} in pads/web.rs"
+        );
+        assert_eq!(provided, imported);
+    }
+
+    #[test]
+    fn gamepad_js_version_matches_the_app() {
+        // The loader logs a version-mismatch error unless the JS plugin's
+        // `version` equals what `trpg_gamepad_crate_version()` returns.
+        let root = real_repo_root();
+        let js = fs::read_to_string(root.join("web/gamepad.js")).unwrap();
+        let rust = fs::read_to_string(root.join("crates/app/src/pads/web.rs")).unwrap();
+        assert_eq!(
+            number_after(&js, "var VERSION = "),
+            number_after(&rust, "const PLUGIN_VERSION: u32 = ")
+        );
+        assert!(js.contains("version: VERSION"));
+        assert!(js.contains(r#"name: "trpg_gamepad""#));
+        assert!(rust.contains("fn trpg_gamepad_crate_version() -> u32"));
+    }
+
+    #[test]
+    fn index_html_loads_gamepad_js_between_the_bundle_and_the_game() {
+        // The plugin registers itself with the bundle's
+        // `miniquad_add_plugin`, and must have done so before `load(...)`.
+        let html = fs::read_to_string(real_repo_root().join("web/index.html")).unwrap();
+        let at = |needle: &str| {
+            html.find(needle)
+                .unwrap_or_else(|| panic!("index.html has `{needle}`"))
+        };
+        let bundle = at(r#"<script src="mq_js_bundle.js">"#);
+        let gamepad = at(r#"<script src="gamepad.js">"#);
+        let load = at(r#"load("visions-of-shuyi.wasm")"#);
+        assert!(bundle < gamepad && gamepad < load);
     }
 
     #[test]

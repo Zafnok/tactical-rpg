@@ -108,8 +108,11 @@ impl Names {
         Cow::Owned(out)
     }
 
-    /// The first display name written literally in `text` (outside
-    /// tokens), with its id. See [`literal_form`] for what counts.
+    /// The longest display name written literally in `text` (outside
+    /// tokens), with its id; of equally long ones, the first by id. The
+    /// longest, so that a full name is reported as itself and not as one
+    /// of its short forms (`Hollis Marr` is `retainer`, not `family.marr`).
+    /// See [`literal_form`] for what counts.
     pub fn literal_in(&self, text: &str) -> Option<(&str, &str)> {
         let plain: Vec<&str> = lead::split_tokens(text)
             .filter_map(|part| match part {
@@ -117,13 +120,18 @@ impl Names {
                 Part::Token(_) => None,
             })
             .collect();
-        self.names.iter().find_map(|(id, name)| {
-            let form = literal_form(name)?;
-            plain
-                .iter()
-                .any(|t| contains_word(t, form))
-                .then_some((id.as_str(), form))
-        })
+        let mut longest: Option<(&str, &str)> = None;
+        for (id, name) in &self.names {
+            let Some(form) = literal_form(name) else {
+                continue;
+            };
+            if longest.is_none_or(|(_, l)| form.len() > l.len())
+                && plain.iter().any(|t| contains_word(t, form))
+            {
+                longest = Some((id.as_str(), form));
+            }
+        }
+        longest
     }
 }
 

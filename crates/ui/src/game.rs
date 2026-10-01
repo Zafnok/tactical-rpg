@@ -1,23 +1,40 @@
 //! [`Game`]: the whole UI behind one call per frame. `app` feeds it raw key
-//! events and the frame time and blits the buffer it returns; the test
-//! `Harness` drives it the same way without a window.
+//! and controller-button events and the frame time and blits the buffer it
+//! returns; the test `Harness` drives it the same way without a window.
 
 use crate::audio::{AudioRequest, MusicCommand, MusicState};
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
-use crate::input::{Action, Chord, InputState, Key};
+use crate::input::{Action, Button, Chord, InputState, Key};
 use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, ScreenStack};
 use crate::screens::{LayoutPickerScreen, TitleScreen};
 
-/// A keyboard event as `app` reports it.
+/// A keyboard or controller event as `app` reports it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RawKeyEvent {
+pub enum RawInputEvent {
     /// A key went down, with the Shift state at the time.
     Down(Chord),
     /// A key went up.
     Up(Key),
+    /// A controller button went down on some pad (its binding position,
+    /// from [`Pads::update`](crate::input::Pads::update)).
+    PadDown(Button),
+    /// A controller button went up on every pad.
+    PadUp(Button),
+}
+
+impl RawInputEvent {
+    /// The event for a change [`Pads::update`](crate::input::Pads::update)
+    /// reports: `button` pressed or released.
+    pub fn pad(button: Button, pressed: bool) -> Self {
+        if pressed {
+            Self::PadDown(button)
+        } else {
+            Self::PadUp(button)
+        }
+    }
 }
 
 /// The result of one frame.
@@ -110,7 +127,7 @@ impl Game {
     /// Runs one frame: applies `events` (in order), advances input by `dt`
     /// seconds, updates the top screen with the resulting actions, collects
     /// its audio requests and redraws. After a quit, frames do nothing.
-    pub fn frame(&mut self, events: &[RawKeyEvent], dt: f32) -> FrameOutput<'_> {
+    pub fn frame(&mut self, events: &[RawInputEvent], dt: f32) -> FrameOutput<'_> {
         self.audio_out.clear();
         self.music_out.clear();
         if !self.quit {
@@ -140,23 +157,28 @@ impl Game {
         self.music.update(dt, &mut self.music_out);
     }
 
-    fn step(&mut self, events: &[RawKeyEvent], dt: f32) {
+    fn step(&mut self, events: &[RawInputEvent], dt: f32) {
         // Bindings changed between frames (a test rebinding keys).
         self.sync_keymap();
         for &event in events {
-            if matches!(event, RawKeyEvent::Down(_)) && self.ctx.key_prompt == KeyPrompt::Waiting {
+            // Any key or any controller button ends the title's wait
+            // (`docs/design/title-screen.md`).
+            let press = matches!(event, RawInputEvent::Down(_) | RawInputEvent::PadDown(_));
+            if press && self.ctx.key_prompt == KeyPrompt::Waiting {
                 self.ctx.key_prompt = KeyPrompt::Pressed;
             }
             match event {
-                RawKeyEvent::Down(chord) => self.input.key_down(chord),
-                RawKeyEvent::Up(key) => self.input.key_up(key),
+                RawInputEvent::Down(chord) => self.input.key_down(chord),
+                RawInputEvent::Up(key) => self.input.key_up(key),
+                RawInputEvent::PadDown(button) => self.input.pad_down(button),
+                RawInputEvent::PadUp(button) => self.input.pad_up(button),
             }
         }
         let pressed = events
             .iter()
             .filter_map(|event| match event {
-                RawKeyEvent::Down(chord) => Some(*chord),
-                RawKeyEvent::Up(_) => None,
+                RawInputEvent::Down(chord) => Some(*chord),
+                _ => None,
             })
             .collect();
         let actions = self.input.update(dt);
@@ -256,13 +278,13 @@ mod tests {
     use crate::input::Layout;
     use crate::screen::tests::{ctx, ctx_with_cues};
 
-    fn down(key: Key) -> RawKeyEvent {
-        RawKeyEvent::Down(Chord::plain(key))
+    fn down(key: Key) -> RawInputEvent {
+        RawInputEvent::Down(Chord::plain(key))
     }
 
     fn tap(game: &mut Game, key: Key) -> bool {
         let quit = game.frame(&[down(key)], 0.0).quit;
-        game.frame(&[RawKeyEvent::Up(key)], 0.0);
+        game.frame(&[RawInputEvent::Up(key)], 0.0);
         quit
     }
 
@@ -343,10 +365,91 @@ mod tests {
         let mut web = ctx();
         web.key_prompt = KeyPrompt::Waiting;
         let mut game = Game::start(web);
-        game.frame(&[RawKeyEvent::Up(Key::Q)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::Q)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
         game.frame(&[down(Key::Q)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
+    }
+
+    fn pad_tap(game: &mut Game, button: Button) -> bool {
+        let quit = game.frame(&[RawInputEvent::PadDown(button)], 0.0).quit;
+        game.frame(&[RawInputEvent::PadUp(button)], 0.0);
+        quit
+    }
+
+    #[test]
+    fn pad_changes_become_pad_events() {
+        assert_eq!(
+            RawInputEvent::pad(Button::South, true),
+            RawInputEvent::PadDown(Button::South)
+        );
+        assert_eq!(
+            RawInputEvent::pad(Button::Start, false),
+            RawInputEvent::PadUp(Button::Start)
+        );
+    }
+
+    /// Ticket 0219: with the default buttons, the bottom face button
+    /// confirms and the right one cancels.
+    #[test]
+    fn pad_buttons_reach_the_top_screen() {
+        let mut game = Game::start(ctx());
+        assert!(!pad_tap(&mut game, Button::South));
+        assert_eq!(game.screens(), ["title", "placeholder"]);
+        pad_tap(&mut game, Button::East);
+        assert_eq!(game.screens(), ["title"]);
+        // Unbound buttons do nothing.
+        pad_tap(&mut game, Button::RightTrigger);
+        assert_eq!(game.screens(), ["title"]);
+        // D-pad up wraps to Quit; South chooses it.
+        pad_tap(&mut game, Button::DpadUp);
+        assert!(pad_tap(&mut game, Button::South));
+    }
+
+    #[test]
+    fn screens_see_held_buttons() {
+        let seen = std::rc::Rc::default();
+        let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
+        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        game.frame(&[RawInputEvent::PadUp(Button::South)], 0.0);
+        let seen = seen.borrow();
+        assert_eq!(seen[0].actions, [Action::Confirm]);
+        assert!(seen[0].is_held(Action::Confirm));
+        assert!(seen[1].actions.is_empty());
+        assert!(!seen[1].is_held(Action::Confirm));
+    }
+
+    /// The first-launch layout picker works with a pad (its D-pad and
+    /// Confirm), and the pad keeps working with the layout it picked.
+    #[test]
+    fn the_first_launch_picker_works_with_a_pad() {
+        let mut game = Game::start(first_launch());
+        pad_tap(&mut game, Button::DpadDown);
+        pad_tap(&mut game, Button::South);
+        assert_eq!(game.screens(), ["title"]);
+        assert_eq!(game.ctx().layout(), Some(Layout::LeftHanded));
+        assert_eq!(game.input.keymap(), &game.ctx().keymap);
+        pad_tap(&mut game, Button::South);
+        assert_eq!(game.screens(), ["title", "placeholder"]);
+        pad_tap(&mut game, Button::East);
+        assert_eq!(game.screens(), ["title"]);
+    }
+
+    /// Any controller button ends the title's wait too, bound or not;
+    /// releases don't.
+    #[test]
+    fn a_pad_button_moves_the_key_prompt_on() {
+        let mut web = ctx();
+        web.key_prompt = KeyPrompt::Waiting;
+        let mut game = Game::start(web);
+        game.frame(&[RawInputEvent::PadUp(Button::RightTrigger)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
+        game.frame(&[RawInputEvent::PadDown(Button::RightTrigger)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
+        // Native builds never wait.
+        let mut game = Game::start(ctx());
+        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        assert_eq!(game.ctx().key_prompt, KeyPrompt::Off);
     }
 
     #[test]
@@ -389,13 +492,13 @@ mod tests {
     fn quit_stops_further_frames() {
         let mut game = Game::start(ctx());
         game.frame(&[down(Key::Up)], 0.0);
-        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert!(out.quit);
         assert!(game.quit_requested());
         let before = game.buffer().clone();
         // Would open the placeholder if the game were still running.
-        game.frame(&[RawKeyEvent::Up(Key::F), down(Key::Up)], 0.0);
-        game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::F), down(Key::Up)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert_eq!(game.screens(), ["title"]);
         assert_eq!(game.buffer(), &before);
         assert!(game.frame(&[], 0.0).quit);
@@ -476,7 +579,7 @@ mod tests {
         let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
         assert_eq!(game.ctx().palette, ctx().palette);
         game.frame(&[down(Key::Right), down(Key::F)], 0.1);
-        game.frame(&[RawKeyEvent::Up(Key::F)], 0.0);
+        game.frame(&[RawInputEvent::Up(Key::F)], 0.0);
         let seen = seen.borrow();
         assert_eq!(seen[0].actions, [Action::CursorRight, Action::Confirm]);
         assert!((seen[0].dt - 0.1).abs() < f32::EPSILON);
@@ -498,7 +601,7 @@ mod tests {
         let seen = std::rc::Rc::default();
         let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
         let shifted = Chord::shifted(Key::Q);
-        game.frame(&[down(Key::Delete), RawKeyEvent::Down(shifted)], 0.0);
+        game.frame(&[down(Key::Delete), RawInputEvent::Down(shifted)], 0.0);
         let seen = seen.borrow();
         assert!(seen[0].actions.is_empty());
         assert_eq!(seen[0].pressed_chords, [Chord::plain(Key::Delete), shifted]);
@@ -574,7 +677,7 @@ mod tests {
         assert_eq!(out.audio, [beep(1.0)]);
         assert!(out.music.is_empty());
         // Each frame holds only its own requests.
-        let out = game.frame(&[RawKeyEvent::Up(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::F)], 0.0);
         assert!(out.audio.is_empty());
         assert!(game.ctx().audio.pending().is_empty());
     }
@@ -590,7 +693,7 @@ mod tests {
         };
         assert_eq!(out.music, [music("battle", load), half]);
         assert_eq!(game.music().target(), Some("battle"));
-        let out = game.frame(&[RawKeyEvent::Up(Key::D)], 0.25);
+        let out = game.frame(&[RawInputEvent::Up(Key::D)], 0.25);
         assert_eq!(out.music, [music("title", stop), music("battle", start)]);
         assert_eq!(game.music().current(), Some("battle"));
     }
@@ -601,7 +704,7 @@ mod tests {
         let out = game.frame(&[down(Key::Up)], 0.0);
         assert!(out.quit);
         assert_eq!(out.audio[1..], [beep(0.5)]);
-        let out = game.frame(&[RawKeyEvent::Up(Key::Up), down(Key::F)], 0.0);
+        let out = game.frame(&[RawInputEvent::Up(Key::Up), down(Key::F)], 0.0);
         assert!(out.audio.is_empty());
         assert!(out.music.is_empty());
     }
@@ -673,7 +776,7 @@ mod tests {
         for key in [Key::F; 5] {
             let quit = game.frame(&[down(key)], 0.0).quit;
             assert!(!quit);
-            music.extend(music_of(game.frame(&[RawKeyEvent::Up(key)], 0.5).audio));
+            music.extend(music_of(game.frame(&[RawInputEvent::Up(key)], 0.5).audio));
         }
         for _ in 0..60 {
             music.extend(music_of(game.frame(&[], 0.5).audio));
@@ -686,7 +789,7 @@ mod tests {
         let title = AudioRequest::PlayMusic {
             cue: "title".into(),
         };
-        assert_eq!(game.frame(&[RawKeyEvent::Up(Key::F)], 0.0).audio, [title]);
+        assert_eq!(game.frame(&[RawInputEvent::Up(Key::F)], 0.0).audio, [title]);
         assert!(game.frame(&[], 0.1).audio.is_empty());
     }
 }

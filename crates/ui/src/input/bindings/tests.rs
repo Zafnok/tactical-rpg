@@ -46,8 +46,10 @@ fn defaults_fill_the_first_slots_in_file_order() {
 fn default_bindings_give_the_default_keymap() {
     let def = def();
     for layout in Layout::ALL {
+        // The layout's keys, plus the controller buttons every keymap has.
+        let keys = LayoutBindings::defaults(&def, layout).keymap(def.repeat);
         assert_eq!(
-            LayoutBindings::defaults(&def, layout).keymap(def.repeat),
+            keys.with_default_pad(&def),
             Keymap::for_layout(&def, layout),
             "{layout}"
         );

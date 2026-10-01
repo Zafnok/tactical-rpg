@@ -2,6 +2,7 @@
 
 mod audio;
 mod keys;
+mod pads;
 mod render;
 mod storage;
 
@@ -11,6 +12,7 @@ use trpg_ui::{Ctx, Game, KeyPrompt, UiColor};
 
 use crate::audio::Audio;
 use crate::audio::device::Macroquad;
+use crate::pads::PadInput;
 use crate::render::Renderer;
 
 fn window_conf() -> Conf {
@@ -62,10 +64,12 @@ async fn main() {
         miniquad::date::now().to_bits(),
     )
     .await;
+    let mut pads = PadInput::new(ctx.content.keymap.stick);
     let mut game = Game::start(ctx);
     let mut running = true;
     loop {
-        let events = keys::poll();
+        let mut events = keys::poll();
+        events.extend(pads.poll());
         if running {
             let out = game.frame(&events, get_frame_time());
             audio.play(&mut speaker, out.audio, out.music);
