@@ -88,6 +88,20 @@ battle; say if any number of uses feels wrong (they are *tunable*).
    `progression.md` → *Actives, by class*); check it in a test.
 5. **Content validation** (`crates/content/src/skill/`): `Uses(0)` and a
    combat or spell active with `Uses` are errors with their position.
+   Also enforce Nick's rank rule (`progression.md` → *Superseding*: a
+   higher rank is the same skill with bigger numbers, nothing else). For
+   every family with more than one rank, comparing each rank with the one
+   below it, it is an error (naming both skills) unless:
+   - both are passives with the same number of effects, or both actives;
+   - each pair of effects is the same variant with the same non-number
+     fields: `when`, `stat`, `with`, `area` and every `radius` (a reach is
+     a fundamental, not a number to raise), the same flags (`single_strike`,
+     `double_crit`, `ignore_terrain`, `drain`, `this_combat`) and the same
+     cost kind;
+   - every number (stat amounts, `CombatMods` numbers, `power`, `collision`,
+     `tiles`, `range`, `post_move`, uses) is at least the lower rank's, and
+     at least one is higher. A cost in durability may be anything.
+   With `sanctuary_2` gone (step 4) the shipped data must pass.
 6. **UI** (`crates/ui/src/screens/battle/skills.rs`, `art_list.rs`): where a
    non-attack active shows `3 dur  Wpn 20/20` it shows its uses left and
    maximum the way a spell's uses are shown; with none left it is dimmed
@@ -114,6 +128,7 @@ battle; say if any number of uses feels wrong (they are *tunable*).
 - [ ] The skill menu shows the uses left; an active with none left is dimmed with the reason (snapshots).
 - [ ] A boss holding its tile braces while it has a use left and waits once it has none (tests); ordinary enemies still never do.
 - [ ] Old saves load (the new field defaults).
+- [ ] Content validation refuses a rank 2 that differs from its rank 1 in anything but bigger numbers: one test per case (a wider radius, another condition, another effect kind, a lower number, no number higher); `assets/data/skills.ron` passes.
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required

@@ -480,10 +480,25 @@ behind when you leave an unmastered class.
   - Learning a higher rank of a family replaces the lower rank. Only the
     highest rank a unit knows is active.
   - Learning a lower rank than one already known does nothing.
-  - A higher rank only has **bigger numbers** (Nick, 2026-10-01: "the way I
-    thought of class actives getting replaced is by higher numbers, not
-    fundamentals like range"). A skill that changes how it works (a wider
-    reach, a new effect) is a **new skill**, kept alongside the old one.
+  - **A higher rank is the same skill with bigger numbers, nothing else**
+    (Nick, 2026-10-01: "the way I thought of class actives getting replaced
+    is by higher numbers, not fundamentals like range", and "ensure that the
+    idea of promoting and getting enhanced actives only replaces truly
+    identical ones with stronger stat ones, and if they are not identical
+    then it adds the new skill doesn't replace"). This holds for actives
+    and passives:
+    - A rank 2 must do **exactly what rank 1 does**: the same kind of
+      effect, on the same targets, at the same reach, under the same
+      condition, for the same kind of cost. Only its numbers may differ,
+      and none may be lower.
+    - Anything else (a wider reach, other targets, a different condition, a
+      new kind of effect) is a **new skill of its own**. The unit gets it
+      **in addition**; the old skill stays.
+    - Example: Sword Focus 1 (crit +10 with a sword) → Sword Focus 2
+      (crit +20 with a sword) replaces. A heal reaching 2 tiles instead of
+      1 doesn't replace Sanctuary: the Priest gets it as a new skill and
+      keeps Sanctuary.
+    - The game's data is checked for this when it loads (ticket 0316).
 - An **active skill** is used on purpose:
   - **Combat actives** cost the attacking weapon's **durability** (Nick,
     ticket 0014), spell actives cost 1 extra use of the spell, and
