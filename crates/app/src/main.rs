@@ -51,7 +51,8 @@ async fn main() {
     storage::smoke_check(&mut *ctx.storage);
     let png = trpg_content::bundle::bytes(ATLAS_PNG_PATH).unwrap_or_default();
     let black = ctx.palette.get(UiColor::Black);
-    let mut renderer = match Renderer::new(ctx.content.font.clone(), png, black) {
+    let images = &ctx.content.images;
+    let mut renderer = match Renderer::new(ctx.content.font.clone(), png, black, images) {
         Ok(renderer) => renderer,
         Err(e) => return show_content_errors(&e).await,
     };
