@@ -44,7 +44,8 @@ fn relaunch(h: Harness, chained: bool) -> Harness {
 }
 
 /// From the title: New Game in Classic with the default lead, through the
-/// intro scene to the battle, its notes (0411) closed.
+/// intro scene to the battle, its notes (0411) and turn 1's `PLAYER PHASE`
+/// banner (0435) closed.
 fn to_battle(h: &mut Harness) {
     assert_eq!(h.screens(), ["title"]);
     // New Game is focused, with or without Load Game enabled.
@@ -53,6 +54,15 @@ fn to_battle(h: &mut Harness) {
     skip_scene(h);
     assert_eq!(h.screens(), ["title", "battle"]);
     close_notes(h);
+    close_phase_banner(h);
+}
+
+/// Closes turn 1's `PLAYER PHASE` banner (0435), which a battle starts
+/// under.
+fn close_phase_banner(h: &mut Harness) {
+    assert!(shows(h, "PLAYER PHASE"));
+    h.keys("f");
+    assert!(!shows(h, "PHASE"));
 }
 
 /// Whether the battle on screen shows its notes box.
@@ -258,8 +268,10 @@ fn a_continued_battle_restarts_from_its_first_turn() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
-    // From its start, so with its notes; and it is won as any other.
+    // From its start, so with its notes and its banner; and it is won as
+    // any other.
     close_notes(&mut h);
+    close_phase_banner(&mut h);
     win(&mut h);
 }
 
@@ -498,6 +510,7 @@ fn the_quick_battle_suspends_too() {
     let mut h = first_launch(false);
     h.keys("Down f");
     assert_eq!(h.screens(), ["title", "battle"]);
+    close_phase_banner(&mut h);
     let archer = battle(&h).unit(UnitId(3)).map(|u| u.pos);
     wait_at(
         &mut h,
