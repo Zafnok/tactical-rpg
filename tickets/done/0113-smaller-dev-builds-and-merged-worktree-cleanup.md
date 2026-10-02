@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-01
 ---
 
 # 0113 — Smaller dev builds and cleanup of merged worktrees' build folders
@@ -104,20 +104,20 @@ worktree path, so only third-party dependencies would be shared.
 
 ## Acceptance criteria
 
-- [ ] After `cargo test --workspace --no-run` in a fresh worktree, the total
+- [x] After `cargo test --workspace --no-run` in a fresh worktree, the total
       size of `target/debug/deps/*.exe` is at most half the baseline from
       step 1. Both numbers are in the Completion notes.
-- [ ] A panic in a test still prints `file:line`.
-- [ ] `cargo xtask clean-merged-targets --dry-run` lists every worktree with
+- [x] A panic in a test still prints `file:line`.
+- [x] `cargo xtask clean-merged-targets --dry-run` lists every worktree with
       a verdict and deletes nothing.
-- [ ] `cargo xtask clean-merged-targets` deletes `target/` only in worktrees
+- [x] `cargo xtask clean-merged-targets` deletes `target/` only in worktrees
       whose branch has a merged PR and no open PR, and never the current
       worktree's.
-- [ ] Unit tests cover `verdict`: merged → delete; open → keep; no PR →
+- [x] Unit tests cover `verdict`: merged → delete; open → keep; no PR →
       keep; merged and open → keep; merged but written 5 minutes ago → keep;
       merged but it is the current worktree → keep.
-- [ ] The `work-ticket` skill runs the command in *2. Start*.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] The `work-ticket` skill runs the command in *2. Start*.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -129,5 +129,49 @@ worktree path, so only third-party dependencies would be shared.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Sizes** (`cargo test --workspace --no-run` into an empty build folder, same
+commit, 21 test programs both times):
+
+| | Before | After |
+| - | - | - |
+| `target/debug/deps/*.exe` | 2.09 GB (2,247,990,632 bytes) | 0.71 GB (760,316,372 bytes), 34% |
+| whole `target/` | 3.81 GB | 1.80 GB |
+
+**Done:**
+- Root `Cargo.toml`: `[profile.dev] debug = "line-tables-only"` and
+  `debug = false` for third-party crates. A failing test still prints its
+  place (seen while writing the tests:
+  `panicked at crates\xtask\src\clean_targets.rs:669:9`).
+- `cargo xtask clean-merged-targets [--dry-run]` in
+  `crates/xtask/src/clean_targets.rs`. The decision is the pure `verdict`;
+  `git` and `gh` sit behind a `Tools` trait so the whole run is tested with
+  fakes on scratch folders. JSON is read with `serde_norway`; no new crates.
+- `work-ticket` skill *2. Start* runs it; `CLAUDE.md` *Environment* and the
+  `xtask` usage text name it.
+
+**Checked by hand** (needs `gh` and real worktrees, so not in a test):
+`--dry-run` listed all 56 worktrees with a verdict and deleted nothing; the
+real run then deleted the three `target/` folders it had named (10.9 GB,
+branches with a merged PR and no open one), kept this worktree's, and left
+all 56 worktrees and their files in place. Most merged worktrees had no
+`target/` left by then (cleaned by hand on 2026-10-01).
+
+**Deviations and additions:**
+- `verdict` takes `(place, pr_states, target)` instead of `(pr_states,
+  is_self, newest_write_age)`: `place` is main checkout / current worktree /
+  other, and `target` is only looked at when the rest says delete, because
+  finding the newest file means walking the whole folder.
+- Extra reasons to keep, all on the safe side: a branch whose PRs were
+  closed without merging; a `target/` that can't be read; a file dated in
+  the future counts as written just now. If the current worktree isn't in
+  git's list, or `gh`'s output isn't the expected list, nothing is deleted.
+- A delete that fails (a file in use) prints `FAILED` for that worktree,
+  carries on with the rest and exits 1.
+- `#[mutants::skip]` on the three `RealTools` functions that only spawn
+  `git`/`gh` (same reasoning as `RealWasmOpt` in `web.rs`).
+
+**Follow-ups:** none new; 0114 (fewer test programs) is the other half.
+
+**For Nick:** nothing to play. Builds in each session's folder are now about
+half the size, and each new ticket session clears the build folders of
+sessions whose work has merged. Chat sessions and their folders are untouched.
