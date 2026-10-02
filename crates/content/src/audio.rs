@@ -5,7 +5,8 @@
 //! Sound files are embedded (under `assets/audio/`). Music files are not:
 //! they live in the top-level `music/` folder shipped next to the game, so
 //! the bundle can't check them. [`load`] checks the embedded sounds only;
-//! a test checks the music folder with [`from_source`].
+//! a test checks the music folder with [`from_source`], including each
+//! track's `length_ms` against its file ([`ogg_length_ms`], ADR-0037).
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
@@ -35,6 +36,10 @@ pub const OWN: &str = "Own";
 
 /// Highest cue volume, in percent of the file's own loudness.
 pub const MAX_VOLUME: u8 = 100;
+
+/// How far a music cue's `length_ms` may be from its file's real length,
+/// in milliseconds.
+pub const LENGTH_TOLERANCE_MS: u32 = 20;
 
 /// The validated audio manifest.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -73,6 +78,11 @@ pub struct MusicCue {
     pub volume: u8,
     /// Whether it loops (the default) or plays once.
     pub looped: bool,
+    /// How long the track plays, in milliseconds (never 0): where the music
+    /// clock wraps a looped track (ADR-0037). The game can't measure it
+    /// (the player library gives no length), so it is data, checked
+    /// against the file by a test.
+    pub length_ms: u32,
     /// Who made it.
     pub credit: CreditRef,
 }
@@ -148,6 +158,7 @@ struct RawMusic {
     volume: u8,
     #[serde(default = "yes")]
     looped: bool,
+    length_ms: u32,
     credit: CreditRef,
 }
 
@@ -254,6 +265,44 @@ fn vorbis_format(bytes: &[u8]) -> Option<(u16, u32)> {
     }
     let channels = u16::from(*bytes.get(packet + 11)?);
     Some((channels, u32_at(bytes, packet + 12)?))
+}
+
+/// How long an OGG Vorbis file plays, in milliseconds (to the nearest): the
+/// granule position of its last page, which for Vorbis is the number of
+/// samples in the stream, over the sample rate in its header. `None` if
+/// `bytes` isn't a whole OGG Vorbis file.
+pub fn ogg_length_ms(bytes: &[u8]) -> Option<u32> {
+    let (_, rate) = vorbis_format(bytes)?;
+    let rate = u64::from(rate);
+    let samples = last_granule(bytes)?;
+    let ms = samples
+        .checked_mul(1000)?
+        .checked_add(rate / 2)?
+        .checked_div(rate)?;
+    u32::try_from(ms).ok()
+}
+
+/// The granule position of the Ogg page that ends `bytes`. The letters
+/// `OggS` can also turn up inside a page's audio data, so the page must
+/// run exactly to the end of the file. `None` too if no packet ends on
+/// that page (its position is then all ones).
+fn last_granule(bytes: &[u8]) -> Option<u64> {
+    let ends_file = |&at: &usize| {
+        bytes.get(at..at + 4) == Some(b"OggS")
+            && ogg_page_len(bytes, at).and_then(|len| at.checked_add(len)) == Some(bytes.len())
+    };
+    let at = (0..bytes.len()).rev().find(ends_file)?;
+    let granule = u64::from_le_bytes(bytes.get(at + 6..at + 14)?.try_into().ok()?);
+    (granule != u64::MAX).then_some(granule)
+}
+
+/// The length of the Ogg page starting at `at`: its 27-byte header, its
+/// segment table and the segments the table lists.
+fn ogg_page_len(bytes: &[u8], at: usize) -> Option<usize> {
+    let segments = usize::from(*bytes.get(at + 26)?);
+    let table = bytes.get(at + 27..at + 27 + segments)?;
+    let body: usize = table.iter().map(|&s| usize::from(s)).sum();
+    Some(27 + segments + body)
 }
 
 /// The bundle path of a sound file named in the manifest.
@@ -433,11 +482,17 @@ impl Check<'_> {
                     format!("music \"{id}\": file {MUSIC_DIR}/{f} not found"),
                 ),
                 Some(bytes) => {
-                    if let Some(why) = format_problem(f, &bytes) {
+                    let problem = format_problem(f, &bytes)
+                        .or_else(|| length_problem(m.length_ms, ogg_length_ms(&bytes)));
+                    if let Some(why) = problem {
                         self.err(&id, format!("music \"{id}\": {MUSIC_DIR}/{f}: {why}"));
                     }
                 }
             }
+        }
+        if m.length_ms == 0 {
+            let why = "length_ms is 0; it is the track's length in milliseconds";
+            self.err(&id, format!("music \"{id}\": {why}"));
         }
         self.volume(&id, m.volume);
         self.credit_ref(&id, &m.credit);
@@ -445,6 +500,7 @@ impl Check<'_> {
             file: m.file,
             volume: m.volume,
             looped: m.looped,
+            length_ms: m.length_ms,
             credit: m.credit,
         };
         self.manifest.music.insert(id, entry);
@@ -467,6 +523,20 @@ impl Check<'_> {
             }
         }
         self.manifest.pools.insert(id, music);
+    }
+}
+
+/// Why a music cue's `length_ms` doesn't fit its file, which plays for
+/// `actual` milliseconds ([`ogg_length_ms`]): more than
+/// [`LENGTH_TOLERANCE_MS`] off, or the file's length can't be read. The
+/// message gives the value to write.
+fn length_problem(length_ms: u32, actual: Option<u32>) -> Option<String> {
+    match actual {
+        None => Some("its length can't be read (no last Ogg page)".into()),
+        Some(ms) if ms.abs_diff(length_ms) > LENGTH_TOLERANCE_MS => Some(format!(
+            "it plays for {ms} ms, but length_ms is {length_ms}; write length_ms: {ms}"
+        )),
+        Some(_) => None,
     }
 }
 
@@ -512,8 +582,8 @@ mod tests {
         (id: "step_foot", files: ["sfx/step_1.ogg", "sfx/step_2.ogg"], volume: 60, credit: Credit("steps")),
     ],
     music: [
-        (id: "title", file: "title.ogg", volume: 80, credit: Credit("sunrise")),
-        (id: "sting", file: "sting.ogg", volume: 100, looped: false, credit: Own),
+        (id: "title", file: "title.ogg", volume: 80, length_ms: 2000, credit: Credit("sunrise")),
+        (id: "sting", file: "sting.ogg", volume: 100, looped: false, length_ms: 2000, credit: Own),
     ],
     pools: [
         (id: "skirmish", music: ["title", "sting"]),
@@ -550,12 +620,34 @@ mod tests {
         o
     }
 
-    /// A good file for `name`'s extension.
+    /// An Ogg page after the first: `granule` in its header and `body` as
+    /// its one segment.
+    fn ogg_page(granule: u64, body: &[u8]) -> Vec<u8> {
+        let mut p = b"OggS\0\x04".to_vec();
+        p.extend_from_slice(&granule.to_le_bytes());
+        p.extend_from_slice(&[0; 12]);
+        p.extend_from_slice(&[1, u8::try_from(body.len()).unwrap_or(u8::MAX)]);
+        p.extend_from_slice(body);
+        p
+    }
+
+    /// A whole OGG Vorbis file's framing: the first page of [`ogg`],
+    /// filled out to the 30 bytes it declares, then a last page that puts
+    /// the stream at `samples`.
+    fn ogg_file(rate: u32, samples: u64) -> Vec<u8> {
+        let mut o = ogg(2, rate);
+        o.resize(29 + 30, 0);
+        o.extend_from_slice(&ogg_page(samples, &[0; 40]));
+        o
+    }
+
+    /// A good file for `name`'s extension. An OGG plays for 2 s, the
+    /// `length_ms` of [`FULL`]'s tracks.
     fn good(name: &str) -> Vec<u8> {
         if has_extension(name, &["wav"]) {
             wav(2, SAMPLE_RATE, 1)
         } else {
-            ogg(2, SAMPLE_RATE)
+            ogg_file(SAMPLE_RATE, u64::from(SAMPLE_RATE) * 2)
         }
     }
 
@@ -618,6 +710,7 @@ mod tests {
             "music loops by default"
         );
         assert_eq!(m.music.get("sting").map(|t| t.looped), Some(false));
+        assert_eq!(title.map(|t| t.length_ms), Some(2000));
         assert_eq!(
             m.pools.get("skirmish"),
             Some(&vec!["title".to_owned(), "sting".to_owned()])
@@ -642,7 +735,9 @@ mod tests {
     }
 
     /// Music files aren't embedded, so the game can't check them; this
-    /// test checks the repo's `music/` folder instead (ADR-0026).
+    /// test checks the repo's `music/` folder instead (ADR-0026): every
+    /// file is there, is playable, and is as long as its cue's `length_ms`
+    /// says (ADR-0037). A wrong length fails with the value to write.
     #[test]
     fn every_music_file_is_in_the_music_folder() {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../music");
@@ -856,6 +951,127 @@ mod tests {
         assert_eq!(ok("a.ogg", b"ID3\x03".to_vec()).as_deref(), not_ogg);
         let short = ogg(2, 44_100)[..40].to_vec();
         assert_eq!(ok("a.ogg", short).as_deref(), not_ogg);
+    }
+
+    #[test]
+    fn an_ogg_length_is_its_last_granule_over_its_sample_rate() {
+        // The title track: 5,898,057 samples at 44.1 kHz.
+        assert_eq!(ogg_length_ms(&ogg_file(44_100, 5_898_057)), Some(133_743));
+        assert_eq!(ogg_length_ms(&ogg_file(44_100, 44_100)), Some(1000));
+        assert_eq!(ogg_length_ms(&ogg_file(22_050, 44_100)), Some(2000));
+        assert_eq!(ogg_length_ms(&ogg_file(44_100, 0)), Some(0));
+        // To the nearest millisecond, halves up.
+        assert_eq!(ogg_length_ms(&ogg_file(2000, 2)), Some(1));
+        assert_eq!(ogg_length_ms(&ogg_file(2000, 3)), Some(2));
+        assert_eq!(ogg_length_ms(&ogg_file(3000, 4)), Some(1));
+        assert_eq!(ogg_length_ms(&ogg_file(3000, 5)), Some(2));
+        // The page that counts is the last, whatever came before.
+        let mut two = ogg_file(44_100, 44_100);
+        two.extend_from_slice(&ogg_page(88_200, b"tail"));
+        assert_eq!(ogg_length_ms(&two), Some(2000));
+        // A page with an empty segment table ends the file too.
+        let mut bare = ogg_file(44_100, 44_100);
+        let mut page = ogg_page(132_300, &[]);
+        page.truncate(27);
+        page[26] = 0;
+        bare.extend_from_slice(&page);
+        assert_eq!(ogg_length_ms(&bare), Some(3000));
+    }
+
+    #[test]
+    fn oggs_inside_the_audio_data_is_not_a_page() {
+        // The letters, then bytes that would make a 27-byte "page" well
+        // short of the end of the file.
+        let mut body = b"OggS".to_vec();
+        body.resize(60, 0);
+        let mut o = ogg_file(44_100, 1);
+        o.extend_from_slice(&ogg_page(44_100, &body));
+        assert_eq!(ogg_length_ms(&o), Some(1000));
+        // And at the very end, where there is no room for a header.
+        let mut o = ogg_file(44_100, 1);
+        o.extend_from_slice(&ogg_page(88_200, b"....OggS"));
+        assert_eq!(ogg_length_ms(&o), Some(2000));
+    }
+
+    #[test]
+    fn a_file_without_a_readable_end_has_no_length() {
+        let whole = ogg_file(44_100, 44_100);
+        assert_eq!(ogg_length_ms(&whole), Some(1000));
+        // Cut short, or with something after the last page.
+        assert_eq!(ogg_length_ms(&whole[..whole.len() - 1]), None);
+        let mut junk = whole.clone();
+        junk.push(0);
+        assert_eq!(ogg_length_ms(&junk), None);
+        // No packet ends on the last page: it carries no position.
+        assert_eq!(ogg_length_ms(&ogg_file(44_100, u64::MAX)), None);
+        // A position too big to be a length, and a rate of 0.
+        assert_eq!(ogg_length_ms(&ogg_file(44_100, u64::MAX - 1)), None);
+        assert_eq!(ogg_length_ms(&ogg_file(1, u64::from(u32::MAX))), None);
+        assert_eq!(ogg_length_ms(&ogg_file(0, 44_100)), None);
+        // Not OGG Vorbis at all.
+        assert_eq!(ogg_length_ms(&wav(2, 44_100, 1)), None);
+        assert_eq!(ogg_length_ms(&ogg_page(44_100, &[0; 40])), None);
+        assert_eq!(ogg_length_ms(&[]), None);
+        // The header-only first page declares more than it holds.
+        assert_eq!(ogg_length_ms(&ogg(2, 44_100)), None);
+    }
+
+    /// [`FULL`] with the `sting` track's `length_ms` changed.
+    fn with_sting_length(length_ms: u32) -> String {
+        FULL.replace(
+            "length_ms: 2000, credit: Own",
+            &format!("length_ms: {length_ms}, credit: Own"),
+        )
+    }
+
+    #[test]
+    fn a_music_length_must_match_its_file() {
+        // `good` tracks play for 2000 ms; 20 ms either way is allowed.
+        for near in [1980, 2020] {
+            let errors = errors(&with_sting_length(near));
+            assert_eq!(errors, Vec::<String>::new(), "{near}");
+        }
+        for wrong in [1979, 2021] {
+            assert_eq!(
+                errors(&with_sting_length(wrong)),
+                [format!(
+                    "a.ron:9: music \"sting\": music/sting.ogg: it plays for 2000 ms, \
+                     but length_ms is {wrong}; write length_ms: 2000"
+                )]
+            );
+        }
+        // A file whose end can't be read.
+        let headers = Files {
+            sound: &|p: &str| Some(Cow::Owned(good(p))),
+            music: Some(&|_: &str| Some(Cow::Owned(ogg(2, SAMPLE_RATE)))),
+        };
+        assert_eq!(
+            errors_with(FULL, &headers),
+            [
+                "a.ron:8: music \"title\": music/title.ogg: its length can't be read (no last Ogg page)",
+                "a.ron:9: music \"sting\": music/sting.ogg: its length can't be read (no last Ogg page)",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_music_length_of_zero_is_refused() {
+        // Where the music folder can't be seen, any length but 0 passes.
+        let unseen = Files {
+            sound: &|p: &str| Some(Cow::Owned(good(p))),
+            music: None,
+        };
+        assert_eq!(
+            errors_with(&with_sting_length(1), &unseen),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            errors_with(&with_sting_length(0), &unseen),
+            ["a.ron:9: music \"sting\": length_ms is 0; it is the track's length in milliseconds"]
+        );
+        // The field is required.
+        let missing = FULL.replace("looped: false, length_ms: 2000, ", "looped: false, ");
+        assert_eq!(errors(&missing).len(), 1);
     }
 
     #[test]
