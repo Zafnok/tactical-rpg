@@ -5,10 +5,10 @@ type: feature
 milestone: M4 Enemy AI
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0504", "0801"]
 nick_input: none
-completed:
+completed: 2026-10-01
 ---
 
 # 0505 — Playtest runner and battle measures
@@ -118,29 +118,29 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `cargo xtask playtest <a battle in assets/battles> --runs 20` prints the
+- [x] `cargo xtask playtest <a battle in assets/battles> --runs 20` prints the
       report above and exits 0.
-- [ ] Same arguments twice → identical report except the speed line (and the
+- [x] Same arguments twice → identical report except the speed line (and the
       history comparison).
-- [ ] The report lists every try with who fell and on which turn, and the
+- [x] The report lists every try with who fell and on which turn, and the
       fallen-per-try distribution; a second run shows the first run's numbers
       next to its own.
-- [ ] `--runs 20` with 1 thread and with all threads → identical report
+- [x] `--runs 20` with 1 thread and with all threads → identical report
       except speed (test with an env var or flag for the thread count).
-- [ ] Unit tests in `trpg-bots`: `measures_count_fallen_player_units_only`,
+- [x] Unit tests in `trpg-bots`: `measures_count_fallen_player_units_only`,
       `measures_count_items_used_by_player_units`,
       `measures_turns_is_the_last_turn_started`, each on a small scripted
       battle.
-- [ ] Integration test `baseline_bot_plays_a_battle_to_the_end`: plays the
+- [x] Integration test `baseline_bot_plays_a_battle_to_the_end`: plays the
       shipped battle file (or `test_small` if 0801 provides one) for 5 seeds
       without a `CommandError`.
-- [ ] `trpg-app` and `trpg-ui` don't depend on `trpg-bots`
+- [x] `trpg-app` and `trpg-ui` don't depend on `trpg-bots`
       (`cargo tree -p trpg-app | grep trpg-bots` is empty; add this check to
       the test if cheap, else to `run-gates`).
-- [ ] `trpg-bots` doesn't depend on `trpg-ui` or `trpg-app`
+- [x] `trpg-bots` doesn't depend on `trpg-ui` or `trpg-app`
       (`cargo tree -p trpg-bots | grep -E "trpg-(ui|app)"` is empty; same
       place as the check above).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -151,3 +151,55 @@ None.
 
 ## Completion notes
 
+- **`crates/bots` (`trpg-bots`)**: `PlayerBot`, `BaselineBot` (the enemy AI
+  on the player's side), `play_battle` and `BattleMeasures`. It depends only
+  on `trpg-core` (`trpg-content` for its tests). A test in `xtask`
+  (`bots_stay_out_of_the_game`) reads the manifests: the game's crates never
+  name `trpg-bots`, and `trpg-bots` (and what it depends on) never names
+  `trpg-ui` or `trpg-app`. `cargo tree` agrees.
+- **`cargo xtask playtest`** (`crates/xtask/src/playtest.rs`) with the
+  report, `--json`, the history and `--threads`. Documented in
+  `cargo xtask playtest --help` and `docs/playtesting.md`, linked from the
+  roadmap.
+- On the two placeholder battles the baseline bot wins `quick` about 30% of
+  the time (it charges the lord in) and always loses `test` (it never
+  seizes, so the 3-turn limit runs out). That is the baseline being a
+  yardstick, not a player; the real bots are 0506.
+
+Deviations and choices (all technical):
+
+- `play_battle` returns `Result<BattleMeasures, Box<PlayError>>` (boxed for
+  clippy's large-error lint). The error carries the command, turn, phase and
+  `CommandError`.
+- `BattleMeasures` is started with `BattleMeasures::new(&state)` (the first
+  turn's `PhaseStarted` was emitted before the driver gets the state) and
+  has two command counts, `commands` and `player_commands`.
+- `BaselineBot::new(weights)` takes no seed: it has no randomness. The
+  runner hands every bot the try's seed when it builds it (`Bot::build`),
+  ready for 0506.
+- A try is labelled by its seed, and try `i` (from 0) plays seed
+  `--seed + i`, so the default prints `seeds 1–100` as in the ticket's
+  example and `--seed 17 --runs 1` replays `try 17`.
+- A try stopped by the turn cap reports the cap as its turns (the measures
+  saw turn cap + 1 start).
+- The median is the lower of the two middle tries for an even count, so it
+  is always a whole number of turns.
+- Speed is commands divided by the summed play time of the tries, so it
+  doesn't shrink or grow with the thread count more than the machine does.
+- History: one file per battle, mode and bot
+  (`target/playtest-history/quick-classic-baseline.jsonl`), one run per
+  line with the date (UTC) and short commit; `was …` is shown for the win
+  rate, median turns, mean fallen and mean items, plus a `previous` line.
+- The thread count is the `--threads` flag.
+- The army is the battle's player-slot characters fresh from the character
+  data (`battle_campaign`, as the debug Quick Battle). A campaign-level
+  army ("a lv 35 army") is 0510's.
+- New dependency: `serde_json` (MIT/Apache-2.0) in `xtask` only; `cargo deny`
+  passes. No new ADR: ADR-0033 already decided the crate and its limits.
+- `CLAUDE.md`'s crate list names `bots`.
+
+For 0506: `play_battle` doesn't guard against a bot that issues free
+commands (equip, talk) forever; a persona bot must always get to
+`EndPhase`.
+
+No gameplay rules decided; nothing changes in play. Follow-up tickets: none.

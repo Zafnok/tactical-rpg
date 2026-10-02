@@ -105,6 +105,10 @@ fn def() -> BattleDef {
             scene: "rook_joins".into(),
             once: true,
         }],
+        battle_notes: vec![BattleNote {
+            text: "Rook: joins if defeated.".into(),
+            units: vec![UnitId(5)],
+        }],
         difficulty: Difficulty::Normal,
         music: BattleMusic::Pool("skirmish".into()),
         seed: 3,
@@ -222,6 +226,10 @@ fn battle_setup_places_the_roster_in_its_slots() {
     assert_eq!(setup.rewind_charges, 3);
     assert_eq!(setup.seed, 3);
     assert_eq!(setup.triggers, def.triggers);
+    assert_eq!(setup.battle_notes, def.battle_notes);
+    // The battle keeps them, for the notes panel and the Objective page.
+    let (state, _) = BattleState::new(setup.clone());
+    assert_eq!(state.battle_notes(), def.battle_notes);
     assert_eq!(setup.objective, def.objective);
     assert_eq!(setup.map, def.map);
     assert!(Arc::ptr_eq(&setup.terrain, &tables.terrain));
