@@ -11,12 +11,17 @@
         (character: "test_lord", pos: (3, 5)),
         (character: "test_knight", pos: (4, 6)),
         (character: "test_archer", pos: (2, 4)),
+        // The caster (ticket 0410), numbered after the enemies so the
+        // other units keep their numbers.
+        (character: "test_mage", pos: (3, 6), after_enemies: true),
     ],
     enemies: [
         (template: "test_brigand", pos: (8, 2)),
         // In reach of every player unit on turn 1, for a first fight.
         (template: "test_brigand", pos: (7, 4)),
         (template: "test_raider", pos: (7, 1)),
+        // Weak to Fire, absorbs Frost; holds its tile (Nick, ticket 0410).
+        (template: "test_frost_elemental", pos: (8, 7), ai: Stationary),
     ],
     reinforcements: [
         (turn: 2, unit: (character: "test_rogue", pos: (12, 3))),

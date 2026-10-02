@@ -398,6 +398,42 @@ fn reinforcements_are_numbered_in_order() {
 }
 
 #[test]
+fn a_slot_marked_after_enemies_is_numbered_after_them() {
+    let c = content();
+    let late = OK.replace(
+        "(character: \"test_knight\", pos: (3, 6))",
+        "(character: \"test_knight\", pos: (3, 6), after_enemies: true),
+                 (character: \"test_lord\", pos: (2, 6), after_enemies: true)",
+    );
+    let def = load(&c, &late).unwrap_or_else(|e| panic!("{e:?}"));
+    let slots: Vec<_> = def
+        .player_slots
+        .iter()
+        .map(|s| (s.character.0.as_str(), s.id.0))
+        .collect();
+    // The lead first, the enemy, then the two marked slots in order, then
+    // the reinforcement.
+    assert_eq!(slots, [("lead", 1), ("test_knight", 3), ("test_lord", 4)]);
+    assert_eq!(def.enemies[0].id, UnitId(2));
+    assert_eq!(def.reinforcements[0].unit.id, UnitId(5));
+    // A marked slot before an unmarked one: the unmarked one still counts
+    // from 1.
+    let mixed = OK.replace(
+        "(character: \"lead\", pos: (3, 5))",
+        "(character: \"lead\", pos: (3, 5), after_enemies: true)",
+    );
+    let def = load(&c, &mixed).unwrap_or_else(|e| panic!("{e:?}"));
+    let ids: Vec<u32> = def.player_slots.iter().map(|s| s.id.0).collect();
+    assert_eq!(ids, [3, 1]);
+    assert_eq!(def.enemies[0].id, UnitId(2));
+    assert_eq!(def.reinforcements[0].unit.id, UnitId(4));
+    // Unmarked slots are numbered in order.
+    let plain = load(&c, OK).unwrap_or_else(|e| panic!("{e:?}"));
+    let ids: Vec<u32> = plain.player_slots.iter().map(|s| s.id.0).collect();
+    assert_eq!(ids, [1, 2]);
+}
+
+#[test]
 fn pack_errors() {
     let c = content();
     // A full pack is fine.

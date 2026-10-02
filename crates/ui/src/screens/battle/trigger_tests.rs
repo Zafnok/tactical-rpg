@@ -25,10 +25,13 @@ const ROGUE_AT: Pos = Pos::new(4, 5);
 /// starts at cell `(2 × (x + 10), y + 11)`).
 const ROGUE_CELL: (i32, i32) = (28, 16);
 
-/// The Quick Battle's units, with the rogue (unit 7, an enemy with
-/// `rogue_hp` HP) next to the lord, and the Quick Battle's triggers.
+/// The Quick Battle's first six units (without its elemental and its mage,
+/// which stand where these tests put the rogue and its like), with the
+/// rogue (unit 7, an enemy with `rogue_hp` HP) next to the lord, and the
+/// Quick Battle's triggers.
 fn rogue_setup(c: &Ctx, rogue_hp: StatValue) -> BattleSetup {
     let (map, mut units) = quick_units(c);
+    units.truncate(6);
     let def = &c.content.characters.characters[&CharacterId(ROGUE.into())];
     let classes = &c.content.classes;
     let mut rogue = character_unit(
