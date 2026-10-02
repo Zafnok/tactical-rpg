@@ -48,8 +48,9 @@ the battle screen (over glyph terrain and over the bought tilesets) and
 chose them: "I think we can go ahead and move forward with replacing our
 tile rendering and battler rendering with these bought sprites without
 regret". Units become bought map sprites in ticket 0436 and terrain bought
-tiles in 0437; how a sprite unit shows its side, "acted" and an effect is
-ticket 0039. **What is left of this ticket** is only the Claude-drawn
+tiles in 0437; a sprite unit shows its side by a coloured outline and
+"acted" by going grey (decided the same day, built in 0436); the effect
+mark is ticket 0039. **What is left of this ticket** is only the Claude-drawn
 one-colour class icons, which Nick didn't ask for and which may clash as
 the Claude-drawn portraits did. Don't start it unless Nick asks for icons
 (for example as a mark on the glyph look, if 0039 keeps that look

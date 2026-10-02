@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0433", "0110", "0039"]
+blocked_by: ["0433", "0110"]
 nick_input: sign-off
 completed:
 ---
@@ -44,17 +44,27 @@ decides how they reach `assets-private/`.
 
 ## Nick input
 
-**Answer first:** ticket 0039, question 1 (how a sprite unit shows its
-side and that it has acted), question 4 (standing or walking) and question
-6 (the effect mark). Build what it records. If 0039 put a question off,
-use the spike's look for that part and mark it *Claude's starting rule* in
-the PR: a 1-pixel outline in the side's colour, an acted unit drawn grey
-and darker, a standing front-facing frame, 0433's corner mark for an
-effect.
+**Decided 2026-10-02** (`look-and-feel.md`, *Battle map: bought tiles and
+unit sprites*): a sprite unit shows its side by a **1-pixel outline in the
+side's colour**, and an acted unit is drawn **grey and darker**. Nick: "A,
+and potentially A with C", where C is a small corner mark in the side's
+colour on the unit's tile.
 
-**Sign-off:** a rendered Quick Battle frame with the bought sprites, sent
-to Nick (never committed), and the list of which sprite each Chapter 1
-class and character uses.
+Two things 0039 still has open, with what to build if it hasn't answered
+by the time this ticket starts (mark each *Claude's starting rule* in the
+PR): sprites **stand still**, front-facing (question 4); a unit under an
+effect gets 0433's 3×3 corner mark in the `effect` colour, in the
+top-right corner (question 6). If 0039 has answered, build its answer.
+
+**Sign-off:** two rendered Quick Battle frames with the bought sprites,
+sent to Nick (never committed): **the outline alone, and the outline with
+a corner mark** (top-left corner, so it doesn't meet the effect mark). He
+picks one; record it in `look-and-feel.md` and leave the other out of the
+code. With them, the list of which sprite each Chapter 1 class and
+character uses.
+
+Nick wants this in before the Chapter 1 playtest (2026-10-02), so 0804
+waits for this ticket.
 
 ## Scope
 
@@ -63,8 +73,8 @@ class and character uses.
   one per character or class, as well as from 0433's grid.
 - A skin that paints **terrain as glyphs and units as sprites** (so this
   ticket doesn't wait for 0437).
-- The marks 0039 decided (side, acted, effect), the HP bar and the
-  fading-out of a falling unit, on sprites.
+- The side outline, the acted look and the effect mark (see *Nick
+  input*), the HP bar and the fading-out of a falling unit, on sprites.
 - A private tileset file naming the bought map sprite of every class and
   named character in the Quick Battle and Chapter 1, and an importer that
   copies those files into `assets-private/`.
@@ -103,15 +113,17 @@ class and character uses.
    terrain background and loses the terrain's glyphs under the sprite (as
    the glyph skin does under initials). Sprites are drawn top row first so
    a unit's head overlaps the tile above it and not the reverse.
-4. **Marks** per 0039. An outline needs the sprite's silhouette: draw the
+4. **Marks** (see *Nick input*). An outline needs the sprite's silhouette: draw the
    same frame four times, offset by one pixel up, down, left and right,
    in the side's colour, under the sprite. That needs a **solid-colour
    draw of a sprite** (every opaque pixel in one colour): add it to
    `Sprite` (the item, `app`'s renderer, the snapshot line, 0232's PNG
    renderer if done) and note it in the ADR. 0413 needs the same thing for
    its hit flash: whichever ticket lands first adds it, the other reuses
-   it. Acted: greyed and darker, by the same means or by opacity, as 0039
-   says. Never per-pixel rectangles (ADR-0038).
+   it. Acted: grey and darker (the spike moved each pixel 75% of the way
+   to its own grey and multiplied it by 0.6, *tunable*), which needs a
+   grey draw on the sprite item too; the outline dims with it. Never
+   per-pixel rectangles (ADR-0038).
 5. **Unit lookup**: character id, then class id, then `fallback` (0433).
    Write the Chapter 1 and Quick Battle table in the private tileset file
    from `assets/data/characters.ron` and `classes.ron`. Starting picks,

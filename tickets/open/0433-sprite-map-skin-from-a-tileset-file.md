@@ -39,8 +39,9 @@ Keep this ticket's scope as written; two things help them:
 - keep everything that depends on `tile_px` behind one value, so 0439 can
   double it while a battle runs.
 
-On the Chapter 1 critical path only if Nick says the playtest waits for
-the bought-art map (ticket 0039, question 3).
+**On the Chapter 1 critical path** since 2026-10-02: Nick said the
+playtest waits for the bought-art map, so 0804 waits for 0436 and 0437,
+which wait for this ticket.
 
 ## Nick input
 

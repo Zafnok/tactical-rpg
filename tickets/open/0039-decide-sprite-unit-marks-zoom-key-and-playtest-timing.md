@@ -26,12 +26,29 @@ The mockups are in `spike-renders/` in the bought-art folder on Nick's
 machine (see 0038's Completion notes). Make new ones the same way: the
 game's font atlas and palette, at 2×, never committed (ADR-0032).
 
+## Answered on 2026-10-02 (recorded in `look-and-feel.md`)
+
+- **Question 1:** "A, and potentially A with C". A sprite unit shows its
+  side by a 1-pixel outline in the side's colour; an acted unit is grey
+  and darker. Whether a corner mark is added to the outline is settled in
+  0436's sign-off, which renders both.
+- **Question 2:** put off by Nick: "I think we can ask this as we build
+  the zoom feature in another ticket? I will decide it later". It moved to
+  ticket 0439, which asks it before building. Not this ticket's any more.
+- **Question 3:** "A": the Chapter 1 playtest waits for the bought-art
+  map. 0436 and 0437 are in 0804's `blocked_by`, and the map-skin chain is
+  on the critical path in `docs/ROADMAP.md`.
+
+**Questions 4–7 below are what is left.** None of them blocks 0436, which
+has a starting rule for each (standing sprites, 0433's corner mark for an
+effect).
+
 ## Nick input
 
 **Decision** (`ask-nick`, at most three questions per message, with
 renders).
 
-**Asked on 2026-10-02:**
+**Asked on 2026-10-02 (answered, see above):**
 
 1. **How a sprite unit shows whose side it is on, and that it has acted.**
    With initials the letters were blue or red; a sprite has its own
@@ -74,11 +91,9 @@ renders).
 
 ## Scope
 
-**In:** the questions above, recorded in `look-and-feel.md` (questions 1,
-4–7) and `controls.md` (question 2: the default-keys table, the controller
-table and the required/optional lists); 0804's `blocked_by` and
-`docs/ROADMAP.md` per question 3; the lines in 0436, 0439, 0711 and 0706
-that the answers change.
+**In:** questions 4–7, recorded in `look-and-feel.md`; the lines in 0436
+(or its follow-up, if 0436 is done), 0805, 0711 and 0706 that the answers
+change.
 
 **Out (do not do):** building any of it; buying anything.
 
@@ -92,11 +107,12 @@ that the answers change.
 
 ## Acceptance criteria
 
-- [ ] Each question has an answer in `look-and-feel.md` or `controls.md`
-      with Nick's words, or a written note that Nick put it off and until
-      when.
-- [ ] 0436, 0439, 0804 (and 0711, 0706 if question 7 changes them) match
-      the answers.
+- [x] Questions 1 and 3 answered and recorded; question 2 moved to 0439
+      (2026-10-02).
+- [ ] Questions 4–7 each have an answer in `look-and-feel.md` with Nick's
+      words, or a written note that Nick put it off and until when.
+- [ ] 0436 or its follow-up (and 0805, 0711, 0706 where an answer changes
+      them) match the answers.
 - [ ] `cargo xtask ticket-lint` and `typos` pass.
 
 ## Tests required

@@ -6,8 +6,8 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0433", "0039"]
-nick_input: sign-off
+blocked_by: ["0433"]
+nick_input: decision
 completed:
 ---
 
@@ -30,10 +30,20 @@ sprite skin's tile size switchable while a battle is running.
 
 ## Nick input
 
-**Answer first:** ticket 0039, question 2: the default key in both
-layouts, the controller button, and whether the action is optional.
-Default keys are Nick's (`keyboard-input` skill, rule 4); don't pick them
-here. If 0039 hasn't answered that question, this ticket is blocked.
+**Decision, asked at the start of this ticket** (`ask-nick`, before any
+code): the default key in both layouts, the controller button, and
+whether the action is optional. Default keys are Nick's (`keyboard-input`
+skill, rule 4); don't pick them yourself. Asked once on 2026-10-02, Nick
+put it off to this ticket: "I think we can ask this as we build the zoom
+feature in another ticket? I will decide it later".
+
+What was offered then, to offer again with anything else that is free in
+`docs/design/controls.md`: `Q` in the right-handed layout and `P` in the
+left-handed one (finger mirrors, beside the other keys); the right
+trigger (`RT` / `R2` / `ZR`) on a controller (the left trigger is
+Rewind); optional, like Unit info and Rewind (may be left without a key).
+Record his answer in `controls.md`: the default-keys table, the
+controller table and the required/optional lists.
 
 **Sign-off:** Nick tries it in the Pages build after merge (the toggle on
 the test tileset from the debug menu if the bought-art skin isn't in yet).
@@ -63,8 +73,8 @@ the test tileset from the debug menu if the bought-art skin isn't in yet).
 
 1. **Action** (`keyboard-input` skill, *Adding an action*): `Action::ZoomMap`
    in `crates/content/src/keymap.rs`, in `Action::ALL`, required or
-   optional as 0039 says; defaults in `assets/data/keymap.ron` for both
-   layouts and the `pad` table exactly as 0039 recorded in `controls.md`;
+   optional as Nick answered; defaults in `assets/data/keymap.ron` for
+   both layouts and the `pad` table exactly as recorded in `controls.md`;
    a row in the Key bindings screen (`ROWS`).
 2. **Skin**: `SpriteSkin` gets a `zoom: u8` (1 or 2). `tile_px` and
    `unit_px` are multiplied by it; every `dest` is in whole console
@@ -93,6 +103,9 @@ the test tileset from the debug menu if the bought-art skin isn't in yet).
 
 ## Acceptance criteria
 
+- [ ] Nick's key, button and required-or-optional answer is in
+      `controls.md` with his words, and `keymap.ron` matches it (the
+      keymap-matches-design test).
 - [ ] Pressing the Zoom map key on the sprite skin switches between 1×
       and 2×; the cursor's tile is inside the view after each switch (a
       scene assertion, for cursor positions at each map corner).

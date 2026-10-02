@@ -45,6 +45,9 @@ Our maps are one terrain id per tile (`assets/maps/*.map`), written by
 Claude as text and later by the skirmish generator (0510). So the tile
 pictures must be **worked out from the terrain grid**, not hand-laid.
 
+Nick wants the bought-art map in before the Chapter 1 playtest
+(2026-10-02), so 0804 waits for this ticket.
+
 ## Nick input
 
 **Sign-off:** rendered frames of the Quick Battle map and the Chapter 1

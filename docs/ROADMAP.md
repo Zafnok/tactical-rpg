@@ -59,10 +59,12 @@ the whole Mega Tiles bundle and chose its tiles and map sprites for the
 battle map, with per-map lighting and a zoom key): after **0433** and
 **0110**, **0436** units as the bought map sprites → **0437** terrain from
 the bought tilesets (auto-tiling) → **0438** per-map lighting; **0439** the
-1× / 2× zoom toggle (after 0433). **0039** asks Nick what is still open
-(how a sprite unit shows its side, the zoom key, whether the playtest
-waits for this); 0436 and 0439 wait for it. Not on the Chapter 1 critical
-path unless 0039 says so.
+1× / 2× zoom toggle (after 0433; Nick picks its key when it is built).
+Nick wants the bought-art map in his Chapter 1 playtest, so **0432, 0433,
+0436 and 0437 are on the critical path** (0438 and 0439 are not). **0039**
+holds what is still open (whether sprites walk, the effect mark, whether
+players may pick the glyph look, face or bust in dialogue); nothing waits
+for it.
 
 ## Nick's queue (answer these first; any order within a row)
 
@@ -71,8 +73,8 @@ Design answers unblock most of the rules work. Suggested order:
 1. **0001** stats & combat · **0002** turn structure · **0003** weapons & items · **0004** magic · **0006** death & difficulty · **0007** setting, tone & story beats
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
-4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0110** make the private assets repo (the packs were bought 2026-10-02) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0039** sprite units' marks, the zoom key, whether the playtest waits for the bought-art map · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
-5. Anytime, low priority: **0012** title (then **0811** title art, then **0036** the title's intro cinematic) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
+4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0110** make the private assets repo (the packs were bought 2026-10-02) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0436** outline alone or with a corner mark (a sign-off) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
+5. Anytime, low priority: **0039** sprite units: walking, the effect mark, the glyph look as an option, face or bust · **0012** title (then **0811** title art, then **0036** the title's intro cinematic) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons · **0037** more building tiles (village, gate, throne), capturing, healing tiles
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
@@ -100,12 +102,16 @@ that a companion who dies in Classic still talks in the victory scene, so
 **0715** (script lines that depend on who is still in the army) joined row
 1 and **0716** (the Chapter 1 scenes rewritten with it) row 2, both in
 front of the playtest unless Nick says they can wait.
+Also 2026-10-02 (ticket 0038): Nick bought the art and wants the battle
+map drawn with it before he plays, so the map skin (0432, then 0433), the
+bought unit sprites (0436, which also needs 0110) and the bought terrain
+(0437) joined the table.
 
 ```
- 1  0022 0023 0024 0035 0110 0231 0316 0410 0435 0710 0714 0715 0801
- 2  0711 0716 0802 0807 0810
- 3  0413 0706 0809
- 4  0803
+ 1  0022 0023 0024 0035 0110 0231 0316 0410 0432 0435 0710 0714 0715 0801
+ 2  0433 0711 0716 0802 0807 0810
+ 3  0413 0436 0706 0809
+ 4  0437 0803
  5  0804  ◄── Nick plays Chapter 1
 ```
 

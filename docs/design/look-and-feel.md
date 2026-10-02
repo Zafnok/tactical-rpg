@@ -119,7 +119,12 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > the cast, I guess you need to help me locate some more itch bundles to
 > fill in with a similar style for rest of cast... or if these are
 > non-battle units, I think the generator can work" … "I paid $100 for all
-> these assets"
+> these assets" … [asked how a sprite unit shows its side and that it has
+> acted: A a coloured outline, B a tinted tile, C a corner mark, D the HP
+> bar only:] "A, and potentially A with C" … [asked which key and button
+> toggle the zoom:] "I think we can ask this as we build the zoom feature
+> in another ticket? I will decide it later" … [asked whether the Chapter 1
+> playtest waits for the bought-art map: A yes, B no:] "A"
 
 ## Rules
 
@@ -166,12 +171,22 @@ so they aren't in this repository (ADR-0032).
 - **Zoom:** a key and a controller button switch the map between **1×**
   (a 16-pixel tile, about 34×28 tiles on screen, render C) and **2×** (a
   32-pixel tile, about 17×14 tiles, render C2). The game **remembers** the
-  choice: the next battle opens at the same zoom. Ticket 0439; the default
-  key and button are Nick's to pick (ticket 0039).
-- **Not decided yet** (ticket 0039): how a sprite unit shows whose side it
-  is on, that it has acted and that it is under an effect (the renders used
-  a 1-pixel outline in the side's colour and a greyed sprite; the HP bar
-  stayed as below); whether sprites walk or stand still.
+  choice: the next battle opens at the same zoom. Ticket 0439. Nick picks
+  the default key and button when that ticket is built ("I will decide it
+  later").
+- **A sprite unit's side** (decided 2026-10-02): a **1-pixel outline in
+  its side's colour** (player blue, enemy red, ally green, neutral yellow)
+  around the sprite, as in renders B, C, C2 and C3. **Perhaps also a
+  small corner mark** in the same colour on its tile ("A, and potentially
+  A with C"): ticket 0436 renders the outline alone and with the corner
+  mark, and Nick picks.
+- **An acted sprite unit** is drawn grey and darker, as in the renders;
+  its outline dims with it. A change of brightness, not of hue, like the
+  glyph look's rule.
+- **The Chapter 1 playtest waits for the bought-art map** (decided
+  2026-10-02): units (0436) and terrain (0437) are in before Nick plays.
+- **Not decided yet** (ticket 0039): how a sprite unit shows that it is
+  under an effect; whether sprites walk or stand still.
 - Cursor, path line, HP bar and range tints keep their rules below.
 
 ### Units on the map (the glyph look)
@@ -444,7 +459,7 @@ black.
 - Combat screen: scale, where the scene is shown (box or full screen), a
   background behind the fighters, and the exact motions of the still
   battle images (ticket 0413).
-- Sprite units on the map: how they show their side, "has acted" and an
-  effect; whether they walk; whether players may pick the glyph look; the
-  zoom key and button (ticket 0039).
+- Sprite units on the map: the outline alone or with a corner mark
+  (0436); how they show an effect; whether they walk; whether players may
+  pick the glyph look (ticket 0039). The zoom key and button (0439).
 - More bought packs for fighters with no fitting art (tickets 0035, 0040).

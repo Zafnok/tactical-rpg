@@ -89,11 +89,22 @@ and unit sprites* and § *Combat screen*:**
   (Claude searches, Nick buys); characters who never fight may use the
   Character Generator.
 
-**Not decided, asked in 0039:** how a sprite unit shows its side, "has
-acted" and an effect; the zoom key and button; whether this must be in
-before the Chapter 1 playtest; whether sprites walk; whether players may
-pick the glyph look; face or bust in dialogue. Combat's layout (box or
-full screen) and background stay with 0413.
+**Answered the same day, after the PR opened:**
+
+- A sprite unit's side is a 1-pixel outline in the side's colour, and an
+  acted unit is grey and darker: "A, and potentially A with C" (C is a
+  corner mark; 0436 renders the outline alone and with it, and Nick
+  picks).
+- The zoom key and button: "I think we can ask this as we build the zoom
+  feature in another ticket? I will decide it later". 0439 asks it before
+  building.
+- The Chapter 1 playtest waits for the bought-art map ("A"): 0436 and
+  0437 joined 0804's `blocked_by` and the critical path.
+
+**Not decided, kept in 0039:** how a sprite unit shows an effect; whether
+sprites walk; whether players may pick the glyph look; face or bust in
+dialogue. Combat's layout (box or full screen) and background stay with
+0413.
 
 ***Claude's starting rule:*** unit sprites keep their own colours in every
 light (C3 was drawn that way and Nick didn't comment on it).
