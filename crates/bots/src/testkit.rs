@@ -86,6 +86,7 @@ pub(crate) fn start(units: Vec<Unit>) -> BattleState {
         seed: 1,
         triggers: vec![],
         mode: GameMode::Classic,
+        battle_notes: vec![],
     });
     state
 }

@@ -44,7 +44,7 @@ fn relaunch(h: Harness, chained: bool) -> Harness {
 }
 
 /// From the title: New Game in Classic with the default lead, through the
-/// intro scene to the battle.
+/// intro scene to the battle, its notes (0411) closed.
 fn to_battle(h: &mut Harness) {
     assert_eq!(h.screens(), ["title"]);
     // New Game is focused, with or without Load Game enabled.
@@ -52,6 +52,20 @@ fn to_battle(h: &mut Harness) {
     h.keys("f f Up f");
     skip_scene(h);
     assert_eq!(h.screens(), ["title", "battle"]);
+    close_notes(h);
+}
+
+/// Whether the battle on screen shows its notes box.
+fn notes_open(h: &Harness) -> bool {
+    let battle = h.flow().and_then(|f| f.battle());
+    battle.is_some_and(trpg_ui::screens::battle::BattleScreen::notes_open)
+}
+
+/// Closes the notes box a battle starts with.
+fn close_notes(h: &mut Harness) {
+    assert!(notes_open(h));
+    h.keys("f");
+    assert!(!notes_open(h));
 }
 
 /// Skips the scene on screen: Cancel, then Confirm on "Skip scene?".
@@ -180,6 +194,8 @@ fn suspend_then_continue_restores_the_battle_exactly() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle_text(&h), before);
     assert_eq!(charges(&h), 2);
+    // The battle carries on: its start-of-battle notes don't come up again.
+    assert!(!notes_open(&h));
     assert_eq!(stored(&h, SUSPEND_KEY), None, "a suspend save loads once");
     let played = campaign(&h);
     assert_eq!(played.chapter, "test");
@@ -242,7 +258,8 @@ fn a_continued_battle_restarts_from_its_first_turn() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
-    // And is won as any other.
+    // From its start, so with its notes; and it is won as any other.
+    close_notes(&mut h);
     win(&mut h);
 }
 
