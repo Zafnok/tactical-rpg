@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0714 — Dialogue speakers who aren't units
@@ -125,19 +125,19 @@ None.
 
 ## Acceptance criteria
 
-- [ ] A `.dlg` scene whose speakers are `retainer` and `rival` passes
+- [x] A `.dlg` scene whose speakers are `retainer` and `rival` passes
       `check_scene` with the embedded data (test).
-- [ ] A scene with a speaker in neither list still fails with
+- [x] A scene with a speaker in neither list still fails with
       `unknown character "<id>"` (the existing `unknown_characters` test
       still passes).
-- [ ] Each speaker problem in step 1 has a test that checks the message and
+- [x] Each speaker problem in step 1 has a test that checks the message and
       the line number.
-- [ ] The dialogue screen's name plate for `retainer` reads the names-table
+- [x] The dialogue screen's name plate for `retainer` reads the names-table
       entry ("Hollis Marr" today), not `retainer` (test).
-- [ ] Every Chapter 1 cast id in `docs/story/chapters/ch01.md`, *Cast on
+- [x] Every Chapter 1 cast id in `docs/story/chapters/ch01.md`, *Cast on
       screen*, can speak (test, see below).
-- [ ] `characters` and `generics` in `characters.ron` are unchanged.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] `characters` and `generics` in `characters.ron` are unchanged.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -158,5 +158,28 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Done as written.
+
+- `characters.ron` has a `speakers` list with the eight Chapter 1 cast ids;
+  `characters` and `generics` are untouched. `CharacterTable` carries
+  `speakers` and `can_speak`.
+- The four speaker problems are reported with the messages in step 1. An
+  id that fails the id rule gets only that error (it isn't also checked
+  for a name). "Both a character and a speaker" points at the character's
+  `id:` line, since `Validator::err` looks for that first; the other three
+  point at the line in `speakers`.
+- Step 6: the only lookups changed are `Checker::known`
+  (`dialogue/check.rs`) and `display_name` (`ui/src/screens/dialogue.rs`).
+  Battle, chapter, trigger and spell lookups still need a `characters`
+  entry, so a speaker can't be put on a map.
+- `is_id` is re-exported from `dialogue` (`pub(crate)`) so `character.rs`
+  can use it.
+- No snapshot changed.
+
+Deviation: `main` didn't compile its tests (`crates/bots/src/testkit.rs`
+was missing the `battle_notes` field after 0411 and 0505 crossed). This PR
+adds the same one line the other open PRs carry (`battle_notes: vec![]`),
+because no gate can run without it.
+
+Gameplay rules decided: none. Follow-up tickets: none. Nothing for Nick to
+try: nothing on screen changes until 0707 writes lines for these people.

@@ -382,6 +382,26 @@ fn a_character_without_a_portrait_gets_an_empty_frame() {
 }
 
 #[test]
+fn a_speaker_who_is_not_a_unit_is_named_by_the_names_table() {
+    let c = ctx();
+    let name = c
+        .content
+        .names
+        .get("retainer")
+        .unwrap_or_default()
+        .to_owned();
+    assert!(!name.is_empty() && name != "retainer", "{name}");
+    let s = full(scene(vec![
+        place(Side::Left, "retainer"),
+        say("retainer", "My lord."),
+    ]));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, PLATE_Y).contains(&name));
+    assert!(!row(&buf, PLATE_Y).contains("retainer"));
+    assert!(row(&buf, TEXT_BOX.y).starts_with(&format!("┌── {name} ─")));
+}
+
+#[test]
 fn a_character_without_an_entry_is_named_by_id() {
     let c = ctx();
     let s = full(scene(vec![
