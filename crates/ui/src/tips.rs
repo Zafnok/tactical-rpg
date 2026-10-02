@@ -8,10 +8,10 @@ use trpg_content::tip::{CURSOR_PLACEHOLDER, placeholders};
 
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
-use crate::input::{Action, Keymap};
+use crate::input::Action;
 use crate::screens::battle::layout::MAP_VIEW;
 use crate::storage::{Storage, StorageError};
-use crate::widgets::help::{cursor_keys_name, key_name};
+use crate::widgets::help::{HelpKeys, cursor_keys_name, key_name};
 
 /// [`Storage`] key under which the ids of the tips already shown are saved,
 /// one per line.
@@ -60,21 +60,23 @@ pub fn reset_tips(storage: &mut dyn Storage) -> Result<(), StorageError> {
     storage.delete(TIPS_SEEN_KEY)
 }
 
-/// `text` with each `{Action}` replaced by the key `keymap` binds to that
-/// action (its primary key), `{Cursor}` by the cursor keys, `{Select}` by
-/// the key that picks on the map ([`Keymap::select_action`]: Confirm's
-/// while Select has no key), and
+/// `text` with each `{Action}` replaced by the key `keys` binds to that
+/// action (its primary key, or on a controller its button), `{Cursor}` by
+/// the cursor keys, `{Select}` by the key that picks on the map
+/// ([`Keymap::select_action`]: Confirm's while Select has no key), and
 /// [`NOT_MAPPED`](crate::widgets::help::NOT_MAPPED) for one with no key.
 /// Anything else in braces is left alone.
-pub fn fill_placeholders(text: &str, keymap: &Keymap) -> String {
+///
+/// [`Keymap::select_action`]: crate::input::Keymap::select_action
+pub fn fill_placeholders(text: &str, keys: HelpKeys<'_>) -> String {
     let mut out = text.to_owned();
     for name in placeholders(text) {
         let keys = if name == CURSOR_PLACEHOLDER {
-            cursor_keys_name(keymap)
+            cursor_keys_name(keys)
         } else if name == Action::Select.name() {
-            key_name(keymap, keymap.select_action())
+            key_name(keys, keys.select_action())
         } else if let Some(action) = Action::from_name(name) {
-            key_name(keymap, action)
+            key_name(keys, action)
         } else {
             continue;
         };
@@ -123,7 +125,7 @@ mod tests {
     use trpg_content::{Chord, RepeatDef};
 
     use super::*;
-    use crate::input::Layout;
+    use crate::input::{Device, Keymap, Layout, PadKind};
     use crate::storage::MemoryStorage;
     use crate::widgets::help::NOT_MAPPED;
 
@@ -202,28 +204,70 @@ bb",
             ("Right", Action::CursorRight),
         ]);
         assert_eq!(
-            fill_placeholders("{Confirm}/{Cancel} {Cursor} {Confirm}", &km),
+            fill_placeholders(
+                "{Confirm}/{Cancel} {Cursor} {Confirm}",
+                HelpKeys::keyboard(&km)
+            ),
             "f/d arrows f"
         );
         // Unbound and unknown placeholders.
         assert_eq!(
-            fill_placeholders("{Rewind} {Nope} {", &km),
+            fill_placeholders("{Rewind} {Nope} {", HelpKeys::keyboard(&km)),
             format!("{NOT_MAPPED} {{Nope}} {{")
         );
         // A cursor action with no key: the whole cursor placeholder.
         let no_cursor = keymap(&[("f", Action::Confirm)]);
         assert_eq!(
-            fill_placeholders("{Cursor} {Confirm}", &no_cursor),
+            fill_placeholders("{Cursor} {Confirm}", HelpKeys::keyboard(&no_cursor)),
             "! not mapped f"
+        );
+    }
+
+    /// Ticket 0220: on a controller a tip names the pad's buttons.
+    #[test]
+    fn placeholders_show_the_buttons_on_a_pad() {
+        let content = trpg_content::load_embedded().unwrap();
+        let km = Keymap::for_layout(&content.keymap, Layout::RightHanded);
+        let text = "{Confirm}/{Cancel} {Cursor} {Select} {NextUnit} {Nope} {Debug}";
+        let on = |kind| fill_placeholders(text, HelpKeys::new(&km, Device::Pad(kind)));
+        assert_eq!(
+            on(PadKind::Xbox),
+            "A/B D-pad/stick A RB {Nope} ! not mapped"
+        );
+        assert_eq!(on(PadKind::Generic), on(PadKind::Xbox));
+        assert_eq!(
+            on(PadKind::PlayStation),
+            "✕/◯ D-pad/stick ✕ R1 {Nope} ! not mapped"
+        );
+        assert_eq!(
+            on(PadKind::Nintendo),
+            "A/B D-pad/stick A R {Nope} ! not mapped"
+        );
+        assert_eq!(
+            fill_placeholders(text, HelpKeys::keyboard(&km)),
+            "f/d arrows f s {Nope} F2"
+        );
+        // No buttons at all: every action, and the cursor, is not mapped.
+        let keys_only = keymap(&[("f", Action::Confirm)]);
+        let pad = HelpKeys::new(&keys_only, Device::Pad(PadKind::Xbox));
+        assert_eq!(
+            fill_placeholders("{Confirm} {Cursor}", pad),
+            format!("{NOT_MAPPED} {NOT_MAPPED}")
         );
     }
 
     #[test]
     fn select_shows_confirms_key_until_it_has_its_own() {
         let km = keymap(&[("f", Action::Confirm)]);
-        assert_eq!(fill_placeholders("{Select} {Confirm}", &km), "f f");
+        assert_eq!(
+            fill_placeholders("{Select} {Confirm}", HelpKeys::keyboard(&km)),
+            "f f"
+        );
         let split = keymap(&[("f", Action::Confirm), ("g", Action::Select)]);
-        assert_eq!(fill_placeholders("{Select} {Confirm}", &split), "g f");
+        assert_eq!(
+            fill_placeholders("{Select} {Confirm}", HelpKeys::keyboard(&split)),
+            "g f"
+        );
     }
 
     #[test]
@@ -252,16 +296,16 @@ bb",
             let text = tip(id);
             let with = |key| phrase.replace("{}", key);
             assert!(
-                fill_placeholders(&text, &default).contains(&with("f")),
+                fill_placeholders(&text, HelpKeys::keyboard(&default)).contains(&with("f")),
                 "{id}"
             );
             assert!(
-                fill_placeholders(&text, &split).contains(&with("g")),
+                fill_placeholders(&text, HelpKeys::keyboard(&split)).contains(&with("g")),
                 "{id}"
             );
         }
         // Menu and forecast wording stays on Confirm.
-        let forecast = fill_placeholders(&tip("forecast"), &split);
+        let forecast = fill_placeholders(&tip("forecast"), HelpKeys::keyboard(&split));
         assert!(forecast.contains("f attacks"), "{forecast}");
     }
 
@@ -271,7 +315,13 @@ bb",
         let text = "{Confirm} {Cursor} {Rewind}";
         let right = Keymap::for_layout(&content.keymap, Layout::RightHanded);
         let left = Keymap::for_layout(&content.keymap, Layout::LeftHanded);
-        assert_eq!(fill_placeholders(text, &right), "f arrows r");
-        assert_eq!(fill_placeholders(text, &left), "j wasd u");
+        assert_eq!(
+            fill_placeholders(text, HelpKeys::keyboard(&right)),
+            "f arrows r"
+        );
+        assert_eq!(
+            fill_placeholders(text, HelpKeys::keyboard(&left)),
+            "j wasd u"
+        );
     }
 }

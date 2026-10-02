@@ -7,7 +7,7 @@ use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::{Action, Chord, Key, Keymap, Layout};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::widgets::help::{all_key_names, cursor_keys_name, help_line, key_name};
+use crate::widgets::help::{HelpKeys, all_key_names, cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 
 /// Title text.
@@ -120,7 +120,7 @@ impl LayoutPickerScreen {
     /// Confirm key, from the active keymap (before any layout is chosen,
     /// the layout picker's own keys).
     pub fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let choose = Some(format!(
             "{} {}",
             all_key_names(km, Action::CursorUp),
@@ -133,8 +133,10 @@ impl LayoutPickerScreen {
     }
 
     /// The legend for `km`: `(keys, what they do)`; an action with no key
-    /// shows `! not mapped`.
+    /// shows `! not mapped`. Always its keyboard keys: the screen is about
+    /// the keyboard's layouts.
     pub fn legend(km: &Keymap) -> Vec<(String, &'static str)> {
+        let km = HelpKeys::keyboard(km);
         vec![
             (cursor_keys_name(km), "move"),
             (all_key_names(km, Action::Confirm), "select"),
