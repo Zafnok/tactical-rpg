@@ -23,6 +23,11 @@ download (URL and SHA-256) and its conversion to the lists at the top of
 `import.py`, then a cue and a credit in `audio.ron` and a row in
 `THIRD_PARTY_ASSETS.md`.
 
+A new music track, or one whose cut changes, also needs its length in
+`audio.ron` (`length_ms`, ADR-0037). `cargo test -p trpg-content` fails
+until it is right and prints the value to write
+(see [`assets/audio/README.md`](../../assets/audio/README.md)).
+
 ## What the script does
 
 For each **music** track (`MUSIC` in `import.py`):

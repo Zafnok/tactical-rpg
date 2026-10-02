@@ -467,8 +467,22 @@ fn music(h: &Harness) -> Vec<String> {
         .collect()
 }
 
-/// Quick Battle plays one track from the `skirmish` pool, and nothing in the
-/// battle (combat, rewind, the enemy phase, the next turn) changes it.
+/// Plays the Quick Battle in `h` through a fight, a rewind, the enemy phase
+/// and into turn 2, and checks that nothing asked for music or stopped it
+/// after the battle's start.
+fn nothing_changes_the_music(h: &mut Harness) {
+    let cues = h.audio_requests();
+    play_into_turn_two(h);
+    let music = |all: Vec<AudioRequest>| -> Vec<AudioRequest> {
+        let sound = |r: &AudioRequest| matches!(r, AudioRequest::PlaySound { .. });
+        all.into_iter().filter(|r| !sound(r)).collect()
+    };
+    assert_eq!(music(h.audio_requests()), music(cues));
+}
+
+/// Quick Battle (`Pool("skirmish")`) plays one track from the pool, asked
+/// for once at the start, and nothing in the battle (combat, rewind, the
+/// enemy phase, the next turn) changes it.
 #[test]
 fn quick_battle_keeps_one_skirmish_track() {
     let content = trpg_content::load_embedded().unwrap();
@@ -478,6 +492,34 @@ fn quick_battle_keeps_one_skirmish_track() {
     assert_eq!(cues.len(), 2, "{cues:?}");
     assert_eq!(cues[0], "title");
     assert!(pool.contains(&cues[1]), "{cues:?}");
+    nothing_changes_the_music(&mut h);
+    assert_eq!(music(&h), cues);
+}
+
+/// A battle whose file names a cue plays it, asked for once at the start,
+/// and keeps it the same way.
+#[test]
+fn a_battle_keeps_the_cue_its_file_names() {
+    let mut h = Harness::with_layout(Layout::RightHanded);
+    let quick = h.ctx_mut().content.battles.get_mut("quick").unwrap();
+    quick.music = trpg_core::BattleMusic::Cue("battle_bright".into());
+    // The track starts on the Preparations screen and stays on.
+    h.keys("Down f");
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    h.keys("Left f");
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    nothing_changes_the_music(&mut h);
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    // The track started once and was never stopped or started again.
+    let starts = h.music_commands().iter().filter(
+        |c| matches!(c, trpg_ui::audio::MusicCommand::Start { cue } if cue == "battle_bright"),
+    );
+    assert_eq!(starts.count(), 1, "{:?}", h.music_commands());
+}
+
+/// The lord fights, the fight is rewound, the turn ends through the enemy
+/// phase, and turn 2 opens.
+fn play_into_turn_two(h: &mut Harness) {
     // The lord attacks the brigand in reach, and the combat plays out.
     h.keys("f Right Right Right Up f")
         .wait(0.5)
@@ -487,16 +529,15 @@ fn quick_battle_keeps_one_skirmish_track() {
     // Rewind the fight (the hurt lord would fall in the enemy phase), then
     // end the turn through the enemy phase.
     h.keys("r").wait(0.5).keys("f f");
-    assert!(!shows(&h, "Rewind"), "{}", h.snapshot());
+    assert!(!shows(h, "Rewind"), "{}", h.snapshot());
     h.keys("Space Space");
-    assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
+    assert!(shows(h, "ENEMY PHASE"), "{}", h.snapshot());
     h.keys("f");
-    wait_for(&mut h, "PLAYER PHASE", 30.0);
+    wait_for(h, "PLAYER PHASE", 30.0);
     h.keys("f");
-    assert!(!shows(&h, "PHASE"));
+    assert!(!shows(h, "PHASE"));
     h.keys("d Down f");
-    assert!(shows(&h, "Turn 2"));
-    assert_eq!(music(&h), cues);
+    assert!(shows(h, "Turn 2"));
     assert_eq!(h.screens(), ["title", "battle"]);
 }
 

@@ -16,7 +16,7 @@
 //! assert_eq!(h.top_screen(), "title");
 //! ```
 
-use crate::audio::{AudioRequest, MusicCommand};
+use crate::audio::{AudioRequest, MusicClock, MusicCommand};
 use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Device, Layout, PadKind};
@@ -37,8 +37,58 @@ pub struct Harness {
     audio: Vec<Vec<AudioRequest>>,
     /// Every music command of the run, in order.
     music: Vec<MusicCommand>,
+    /// The simulated music player, for [`Ctx::music_clock`].
+    player: Player,
     /// The kind of controller [`pad`](Self::pad) presses buttons on.
     pad_kind: PadKind,
+}
+
+/// The Harness's stand-in for `app`'s music player (ADR-0037): which track
+/// "sounds" and for how long, worked out from the music commands and the
+/// frame times, so a screen that keeps time with the music is tested
+/// without a sound card or a clock.
+#[derive(Debug, Default)]
+struct Player {
+    /// Seconds a track takes to load: it sounds that long after its
+    /// `Start`.
+    load_delay: f64,
+    /// Whether no track ever sounds (the music files are missing).
+    silent: bool,
+    /// The track started last, and the seconds since its `Start`.
+    started: Option<(String, f64)>,
+}
+
+impl Player {
+    /// Lets `dt` seconds pass (nonsense frame times don't count, as in
+    /// [`Game`]).
+    fn advance(&mut self, dt: f32) {
+        if let Some((_, since)) = &mut self.started
+            && dt.is_finite()
+        {
+            *since += f64::from(dt.max(0.0));
+        }
+    }
+
+    /// What `app` would report: the track sounding and for how long.
+    fn playing(&self) -> Option<(&str, f64)> {
+        let (cue, since) = self.started.as_ref().filter(|_| !self.silent)?;
+        let elapsed = since - self.load_delay;
+        (elapsed >= 0.0).then_some((cue.as_str(), elapsed))
+    }
+
+    /// Follows one music command: a `Start` starts the count from 0; a
+    /// `Stop` (or a fresh `Load`) of that track ends it.
+    fn apply(&mut self, command: &MusicCommand) {
+        match command {
+            MusicCommand::Start { cue } => self.started = Some((cue.clone(), 0.0)),
+            MusicCommand::Stop { cue } | MusicCommand::Load { cue } => {
+                if self.started.as_ref().is_some_and(|(c, _)| c == cue) {
+                    self.started = None;
+                }
+            }
+            MusicCommand::Gain { .. } => {}
+        }
+    }
 }
 
 impl Harness {
@@ -102,8 +152,30 @@ impl Harness {
             game: game.with_debug_screens(true),
             audio: Vec::new(),
             music: Vec::new(),
+            player: Player::default(),
             pad_kind: PadKind::default(),
         }
+    }
+
+    /// Makes music take `seconds` to load: a track starts sounding, and
+    /// [`Ctx::music_clock`] starts counting, that long after the game
+    /// starts it (at once by default). Negative or NaN counts as 0.
+    pub fn music_load_delay(&mut self, seconds: f32) -> &mut Self {
+        self.player.load_delay = f64::from(seconds.max(0.0));
+        self
+    }
+
+    /// Makes no music ever sound, as when the music files are missing:
+    /// [`Ctx::music_clock`] stays `None`.
+    pub fn without_music(&mut self) -> &mut Self {
+        self.player.silent = true;
+        self
+    }
+
+    /// Where the music is in its track, as the screens saw it in the last
+    /// frame ([`Ctx::music_clock`]).
+    pub fn music_clock(&self) -> Option<&MusicClock> {
+        self.game.ctx().music_clock.as_ref()
     }
 
     /// From now on [`pad`](Self::pad) and [`hold_pad`](Self::hold_pad)
@@ -227,11 +299,17 @@ impl Harness {
         panic!("Harness: more than {MAX_FRAMES} frames in one hold or wait");
     }
 
-    /// Runs one game frame, recording its audio.
+    /// Runs one game frame as `app` does: reports the music sounding,
+    /// runs the frame, then records and "plays" its audio.
     fn frame(&mut self, events: &[RawInputEvent], dt: f32) {
+        self.player.advance(dt);
+        self.game.set_music_playing(self.player.playing());
         let out = self.game.frame(events, dt);
         self.audio.push(out.audio.to_vec());
         self.music.extend_from_slice(out.music);
+        for command in out.music {
+            self.player.apply(command);
+        }
     }
 
     /// Every audio request of the run so far, in order.
@@ -376,6 +454,7 @@ mod tests {
     use crate::screen::{FrameInput, Transition};
     use std::cell::RefCell;
     use std::rc::Rc;
+    use std::time::Duration;
 
     type Seen = Rc<RefCell<Vec<(Vec<Action>, f32)>>>;
 
@@ -654,6 +733,184 @@ mod tests {
         h.clear_audio();
         assert!(h.audio_requests().is_empty());
         assert!(h.music_commands().is_empty());
+    }
+
+    fn command(cue: &str, command: fn(String) -> MusicCommand) -> MusicCommand {
+        command(cue.into())
+    }
+
+    fn load(cue: String) -> MusicCommand {
+        MusicCommand::Load { cue }
+    }
+
+    fn start(cue: String) -> MusicCommand {
+        MusicCommand::Start { cue }
+    }
+
+    fn stop(cue: String) -> MusicCommand {
+        MusicCommand::Stop { cue }
+    }
+
+    #[test]
+    fn the_player_counts_from_a_start_to_its_stop() {
+        let mut p = Player::default();
+        assert_eq!(p.playing(), None);
+        p.advance(1.0);
+        p.apply(&command("a", load));
+        assert_eq!(p.playing(), None, "loaded, not started");
+        p.apply(&command("a", start));
+        assert_eq!(p.playing(), Some(("a", 0.0)));
+        p.advance(0.5);
+        p.advance(0.25);
+        assert_eq!(p.playing(), Some(("a", 0.75)));
+        // Nonsense frame times don't count.
+        for dt in [-1.0, f32::NAN, f32::INFINITY] {
+            p.advance(dt);
+        }
+        assert_eq!(p.playing(), Some(("a", 0.75)));
+        // A fade and other tracks' commands leave it playing.
+        let fade = MusicCommand::Gain {
+            cue: "a".into(),
+            gain: 0.5,
+        };
+        for other in [fade, command("b", load), command("b", stop)] {
+            p.apply(&other);
+        }
+        assert_eq!(p.playing(), Some(("a", 0.75)));
+        p.apply(&command("a", stop));
+        assert_eq!(p.playing(), None);
+        p.advance(1.0);
+        assert_eq!(p.playing(), None);
+        // The next track counts from its own start; loading a track again
+        // replaces it, as in `app`.
+        p.apply(&command("b", start));
+        p.advance(0.5);
+        assert_eq!(p.playing(), Some(("b", 0.5)));
+        p.apply(&command("b", load));
+        assert_eq!(p.playing(), None);
+    }
+
+    #[test]
+    fn the_player_sounds_after_its_load_delay_or_never() {
+        let mut p = Player {
+            load_delay: 0.5,
+            ..Player::default()
+        };
+        p.apply(&command("a", start));
+        assert_eq!(p.playing(), None);
+        p.advance(0.25);
+        assert_eq!(p.playing(), None);
+        p.advance(0.25);
+        assert_eq!(p.playing(), Some(("a", 0.0)));
+        p.advance(0.25);
+        assert_eq!(p.playing(), Some(("a", 0.25)));
+        p.silent = true;
+        assert_eq!(p.playing(), None);
+    }
+
+    /// The clock's cue and position, if the music sounds.
+    fn clock(h: &Harness) -> Option<(&str, f32)> {
+        h.music_clock().map(|c| (c.cue.as_str(), c.position))
+    }
+
+    /// Whether the title track sounds, `expected` seconds in (to 10 ms:
+    /// frame times are `f32`s).
+    fn title_at(h: &Harness, expected: f32) -> bool {
+        clock(h).is_some_and(|(cue, at)| cue == "title" && (at - expected).abs() < 0.01)
+    }
+
+    /// Ticket 0227: the title's music clock.
+    #[test]
+    fn the_title_music_clock_counts_up_and_wraps_at_the_track_length() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        assert_eq!(h.music_clock(), None);
+        // The title asks for its music in its first frame; the track
+        // sounds from then, so the next frame is the first to see a clock.
+        h.wait(0.0);
+        assert_eq!(h.music_clock(), None);
+        h.wait(1.0);
+        assert!(title_at(&h, 1.0), "{:?}", h.music_clock());
+        let length_ms = h.game().ctx().content.audio.music["title"].length_ms;
+        let length = Duration::from_millis(length_ms.into()).as_secs_f32();
+        assert!(length > 60.0, "{length}");
+        let clock_length = h.music_clock().map(|c| c.length).unwrap();
+        assert!((clock_length - length).abs() < 1e-4, "{clock_length}");
+        // Key presses are frames too.
+        h.wait(2.5).keys("Down Up");
+        let so_far = 3.5 + 4.0 * FRAME_DT;
+        assert!(title_at(&h, so_far), "{:?}", h.music_clock());
+        // To a quarter of a second before the end of the track ...
+        let mut left = length - 0.25 - so_far;
+        while left > 0.0 {
+            let step = left.min(30.0);
+            h.wait(step);
+            left -= step;
+        }
+        assert!(title_at(&h, length - 0.25), "{:?}", h.music_clock());
+        // ... and round to its start again.
+        h.wait(1.0);
+        assert!(title_at(&h, 0.75), "{:?}", h.music_clock());
+    }
+
+    #[test]
+    fn a_music_load_delay_starts_the_clock_late() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        h.music_load_delay(2.0).wait(0.0);
+        h.wait(1.5);
+        assert_eq!(h.music_clock(), None);
+        h.wait(1.0);
+        assert!(title_at(&h, 0.5), "{:?}", h.music_clock());
+        // A negative or NaN delay is none.
+        for delay in [-1.0, f32::NAN] {
+            let mut h = Harness::with_layout(Layout::RightHanded);
+            h.music_load_delay(2.0).music_load_delay(delay).wait(0.0);
+            h.wait(0.5);
+            assert!(title_at(&h, 0.5), "{delay}: {:?}", h.music_clock());
+        }
+    }
+
+    #[test]
+    fn without_music_the_clock_never_starts() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        h.without_music().wait(0.0);
+        h.wait(3.0);
+        assert_eq!(h.music_clock(), None);
+        // The game asked for its music all the same.
+        assert!(h.music_commands().contains(&command("title", start)));
+    }
+
+    /// The web title asks for its music at the first key press
+    /// (`docs/design/title-screen.md`), so its clock starts there.
+    #[test]
+    fn on_the_web_the_clock_starts_at_the_first_key_press() {
+        let mut h = Harness::on_web_with_layout(Layout::RightHanded);
+        h.wait(1.0);
+        assert_eq!(h.music_clock(), None);
+        // The press starts the music; the release is one frame later.
+        h.keys("f");
+        assert!(title_at(&h, FRAME_DT), "{:?}", h.music_clock());
+        h.wait(0.5);
+        assert!(title_at(&h, 0.5 + FRAME_DT), "{:?}", h.music_clock());
+    }
+
+    /// During a fade the clock is still the old track's; the new track's
+    /// starts when the fade ends (0.5 s, `audio.ron`).
+    #[test]
+    fn the_clock_follows_a_switch_of_track_once_the_fade_ends() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        h.wait(0.0).wait(1.0);
+        // Quick Battle plays a track from the skirmish pool, from its
+        // Preparations screen on.
+        h.keys("Down f");
+        assert_eq!(h.top_screen(), "preparations");
+        assert!(title_at(&h, 1.0 + 4.0 * FRAME_DT), "{:?}", h.music_clock());
+        h.wait(1.0);
+        let (cue, position) = clock(&h).unwrap();
+        let pool = &h.game().ctx().content.audio.pools["skirmish"];
+        assert!(pool.iter().any(|c| c == cue), "{cue}");
+        // The fade began with the `f` press, two frames before the wait.
+        let expected = 1.0 + 2.0 * FRAME_DT - 0.5;
+        assert!((position - expected).abs() < 0.05, "{position}");
     }
 
     #[test]

@@ -6,11 +6,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 use trpg_core::{
-    AiBehavior, BattleDef, BattleMap, CharacterId, ClassTable, Difficulty, Faction, ItemDef,
-    ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role, TerrainTable,
-    Trigger, Turn, Unit, UnitId, default_map_label,
+    AiBehavior, BattleDef, BattleMap, BattleMusic, CharacterId, ClassTable, Difficulty, Faction,
+    ItemDef, ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role,
+    TerrainTable, Trigger, Turn, Unit, UnitId, default_map_label,
 };
 
+use crate::audio::AudioManifest;
 use crate::bundle;
 use crate::character::{CharacterTable, RawLoadout, character_unit, check_map_labels};
 use crate::dialogue::DialogueTable;
@@ -45,6 +46,8 @@ pub struct BattleRefs<'a> {
     pub characters: &'a CharacterTable,
     /// Scenes, for the triggers.
     pub dialogue: &'a DialogueTable,
+    /// Music cues and pools, for the battle's music.
+    pub audio: &'a AudioManifest,
 }
 
 #[derive(Deserialize)]
@@ -74,6 +77,7 @@ struct RawBattle {
     #[serde(default)]
     triggers: Vec<Trigger>,
     difficulty: Difficulty,
+    music: BattleMusic,
     seed: u64,
 }
 
@@ -245,6 +249,7 @@ pub fn from_source(
     let default_pack = v.pack(&raw.default_pack, pack_cap);
     let solo_stock = v.solo_stock(&raw.solo_stock);
     let solo_bench = v.solo_bench(&raw.solo_bench);
+    v.music(&raw.music);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
         file,
@@ -278,6 +283,7 @@ pub fn from_source(
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
         difficulty: raw.difficulty,
+        music: raw.music,
         seed: raw.seed,
     })
 }
@@ -507,6 +513,20 @@ impl Checker<'_, '_> {
                 self.err("objective: turn limit 0".to_owned());
             }
         })
+    }
+
+    /// The music names a music cue, or a pool, of the audio manifest.
+    fn music(&mut self, music: &BattleMusic) {
+        let audio = self.refs.audio;
+        match music {
+            BattleMusic::Cue(cue) if !audio.music.contains_key(cue) => {
+                self.err(format!("music: no music cue \"{cue}\""));
+            }
+            BattleMusic::Pool(pool) if !audio.pools.contains_key(pool) => {
+                self.err(format!("music: no music pool \"{pool}\""));
+            }
+            _ => {}
+        }
     }
 
     /// The default pack's items: known consumables, at most `cap`.
