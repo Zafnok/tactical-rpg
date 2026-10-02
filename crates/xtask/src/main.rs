@@ -6,6 +6,7 @@
 mod check_keys;
 mod clean_targets;
 mod font_atlas;
+mod frame_png;
 mod playtest;
 mod private_assets;
 mod sfx;
@@ -25,6 +26,7 @@ check-keys                         fail on keys hard-coded in game code or text\
 clean-merged-targets [--dry-run]   delete target/ in worktrees whose PR has merged\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
+frame-png <out.png> [steps]        render a scripted game frame to a PNG (frame-png --help)\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
@@ -44,6 +46,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
+        Some("frame-png") => frame_png(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
@@ -178,6 +181,35 @@ fn test_card(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("test-card: {e}");
+            1
+        }
+    }
+}
+
+fn frame_png(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", frame_png::USAGE);
+        return 0;
+    }
+    let options = match frame_png::parse_args(args) {
+        Ok(options) => options,
+        Err(e) => {
+            eprintln!(
+                "{e}
+
+{}",
+                frame_png::USAGE
+            );
+            return 2;
+        }
+    };
+    match frame_png::run(&repo_root(), &options) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("frame-png: {e}");
             1
         }
     }
