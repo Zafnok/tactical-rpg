@@ -389,7 +389,7 @@ impl DialogueScreen {
     fn draw_text_box(&self, ctx: &Ctx, buf: &mut GlyphBuffer, view: &View) {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let (text_box, text_y) = self.text_box();
         buf.fill_rect(text_box, Cell::new(' ', c(UiColor::Text), bg));
         buf.draw_box(text_box, BoxStyle::Single, c(UiColor::PanelBorder), bg);

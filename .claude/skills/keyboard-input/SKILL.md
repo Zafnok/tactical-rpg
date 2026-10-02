@@ -24,7 +24,7 @@ player config          Storage key `keybindings`               (per-layout, 3 sl
 ui/src/input.rs        Keymap + InputState: Chord → Action      (fixed Esc = Cancel)
 screens                see only `FrameInput.actions` / `is_held(Action)`
 screens/key_bindings.rs  the player edits their slots (reads `pressed_chords` to capture)
-widgets/help.rs, tips  Action → key name for text
+widgets/help.rs, tips  Action → key or button name for text     (`ctx.help_keys()`)
 ```
 
 Files allowed to name `Key::…`, `Chord::…` or key names in strings:
@@ -63,13 +63,42 @@ app/src/pads.rs, pads/   gilrs / browser Gamepad API → PadState   (only pad re
 ui/src/input/pad.rs      Pads: PadState → Button down/up          (sticks, Switch swap, merging)
 assets/data/keymap.ron   `pad`: default buttons per action; `stick` thresholds
 ui/src/input.rs          Keymap + InputState: Button → Action     (same repeat as keys)
+ui/src/input/pad.rs      PadKind::button_name: the only table of button names
 ```
 
 `Button::` may be named only where `Key::` may, plus
 `crates/app/src/pads.rs` and `crates/app/src/pads/` (`check-keys` enforces
-it). Buttons are named by position (`South`, not "A"); how they're shown to
-the player is ticket 0220, rebinding them 0816. Harness tests press them
-with `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`.
+it). In code and data buttons are named by position (`South`, not "A");
+rebinding them is ticket 0816. Harness tests press them with
+`h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`, on the kind of
+pad set with `h.use_pad(PadKind::PlayStation)` (a generic one by default).
+
+### Text follows the device pressed last (ticket 0220, ADR-0036)
+
+Help bars, prompts and tips name **keys after a key press and the pad's
+buttons after a button press** (`controls.md`, *Switching between keyboard
+and controller*), and buttons are named as that pad labels them (`A`, `✕`,
+Nintendo's `A` on the right). You get this for free by following rule 2:
+
+- `ctx.help_keys()` is the keymap plus `ctx.device` (`Device::Keyboard` or
+  `Device::Pad(kind)`; `Game` keeps it up to date from
+  `InputState::device()`). Pass it to `key_name`, `all_key_names`,
+  `cursor_keys_name` and `fill_placeholders`. They return the key's name,
+  or the button's, or `! not mapped` when the action has none **on that
+  device** (an action can have a key and no button).
+- Never pass a bare keymap to them (it doesn't compile) and never branch
+  on `ctx.device` in a screen to pick a name yourself.
+- `HelpKeys::keyboard(&keymap)` only where the text is about the keyboard
+  whatever the player holds: the layout picker's key list, the debug hint.
+- A button's name comes only from `PadKind::button_name` (D-pad directions
+  are `↑ ↓ ← →`; the cursor is `D-pad/stick` via `cursor_keys_name`). A new
+  name needs its glyphs in the font: `assets/fonts/README.md`, *Our own
+  glyphs*; a test checks every name can be drawn.
+- Width: button names are longer than keys (`Options`, `D-pad/stick`).
+  A help line must still fit the row on every pad; test the longest one
+  (`the_longest_help_bar_fits_on_every_pad` in `tests/controller.rs`).
+- Tests that compare a controller run with a keyboard run compare
+  `h.snapshot_as(Device::Keyboard)`.
 
 ## Rules
 
@@ -86,7 +115,8 @@ with `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`.
    `RawKeyEvent::Text`) and ask `input::text_key` for their fixed
    Enter / Backspace / Escape, with `input::text_keys_help` as help line.
 2. **Name keys in text through the keymap.** Help bars:
-   `widgets::help::{key_name, all_key_names, cursor_keys_name, help_line}`.
+   `widgets::help::{key_name, all_key_names, cursor_keys_name, help_line}`,
+   given `ctx.help_keys()` (so they name buttons on a controller).
    Tips and other data text: `{ActionName}` / `{Cursor}` placeholders
    (`assets/data/tips.ron`, `crates/ui/src/tips.rs`). Never write `"f"`,
    `"[F]"`, `"Space"`, `"Esc"`, `"arrows"` or `"WASD"` into player text.
@@ -142,4 +172,6 @@ with `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`.
 - [ ] No key names in player text or data; placeholders/helpers used.
 - [ ] Works in both layouts and with a rebound key (test at least one).
 - [ ] Unbound optional actions don't panic and show `! not mapped`.
+- [ ] Text that names a key uses `ctx.help_keys()`, reads right on a pad
+      (Harness: `h.pad(…)` then look), and still fits its row.
 - [ ] `cargo xtask check-keys` passes.

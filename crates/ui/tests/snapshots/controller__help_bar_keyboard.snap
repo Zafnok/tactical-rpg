@@ -1,0 +1,6 @@
+---
+source: crates/ui/tests/controller.rs
+expression: help_rows(&quick_battle())
+---
+w danger zone: OFF · Shift+Space auto-end: OFF
+f select · e info · s next unit · r rewind · d menu · Space end turn

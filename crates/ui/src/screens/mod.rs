@@ -22,7 +22,7 @@ use crate::color::{Rgb, UiColor};
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::Action;
 use crate::screen::Ctx;
-use crate::widgets::help::key_name;
+use crate::widgets::help::{HelpKeys, key_name};
 
 /// Column at which `width` cells are centred in `buf` (rounded left).
 pub(crate) fn centre_x(buf: &GlyphBuffer, width: usize) -> i32 {
@@ -41,7 +41,9 @@ pub(crate) fn print_centred(buf: &mut GlyphBuffer, y: i32, text: &str, fg: Rgb, 
 /// `! not mapped` hint for it).
 pub(crate) fn debug_hint(ctx: &Ctx) -> Option<String> {
     let bound = ctx.keymap.primary(Action::Debug).is_some();
-    (ctx.debug_tools && bound).then(|| format!("{} debug", key_name(&ctx.keymap, Action::Debug)))
+    // The debug key is keyboard-only, so it is named on a controller too.
+    let keys = HelpKeys::keyboard(&ctx.keymap);
+    (ctx.debug_tools && bound).then(|| format!("{} debug", key_name(keys, Action::Debug)))
 }
 
 /// Prints the [`debug_hint`] right-aligned on row `y`, one cell in from the
