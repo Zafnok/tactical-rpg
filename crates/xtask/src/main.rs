@@ -17,7 +17,7 @@ const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
 check-keys                         fail on keys hard-coded in game code or text\n  \
-font-atlas <font.bdf> <out-dir>    build the font atlas from a BDF font\n  \
+font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
 
@@ -88,11 +88,12 @@ fn check_keys(args: &[String]) -> u8 {
 }
 
 fn font_atlas(args: &[String]) -> u8 {
-    let [font, out_dir] = args else {
-        eprintln!("usage: cargo xtask font-atlas <font.bdf> <out-dir>");
+    let Some((out_dir, fonts @ [_, ..])) = args.split_last() else {
+        eprintln!("usage: cargo xtask font-atlas <font.bdf>... <out-dir>");
         return 2;
     };
-    match font_atlas::run(Path::new(font), Path::new(out_dir)) {
+    let fonts: Vec<PathBuf> = fonts.iter().map(PathBuf::from).collect();
+    match font_atlas::run(&fonts, Path::new(out_dir)) {
         Ok(summary) => {
             println!("{summary}");
             0

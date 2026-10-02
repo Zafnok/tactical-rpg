@@ -57,6 +57,18 @@ play a turn with the new button.
 
 ## Implementation steps
 
+*Notes from 0220 (done):* every button already has an on-screen name
+(`PadKind::button_name`, `crates/ui/src/input/pad.rs`), stick directions
+and stick presses included; nobody has seen those last ones yet (`stick ↑`,
+`R-stick ↑`, `LS` / `RS`, PlayStation `L3` / `R3`), so show them in step
+1's mockup and let Nick change them (`controls.md`, *Notes from building it
+(ticket 0220)*). The slot cells should use that function, with `ctx.device`
+giving the pad's kind. The Key bindings screen's help line already names
+buttons on a pad (`KeyBindingsScreen::help(ctx)`), but its capture and
+clear hints still name `Escape` and `Delete`: replace them when the pad was
+used last. Bug 0230 (a Select *key* stops the pad's Confirm picking on the
+map) is separate; if it isn't fixed yet, don't work around it here.
+
 1. Mockup the controller view of the Key bindings screen (`ascii-art`
    skill), 2–3 options, before building.
 2. Config: extend 0217's `PlayerKeys` with one shared set of button
