@@ -214,6 +214,26 @@ fn the_focus_wraps_and_the_list_scrolls_with_it() {
     assert!(sounds(&mut c).is_empty());
 }
 
+/// The picker always lists every slot, but moving never divides by a
+/// count of none, and with one slot there is nowhere to move.
+#[test]
+fn moving_needs_two_slots() {
+    let mut c = ctx();
+    for n in 0..=1 {
+        let mut s = SlotPickerScreen::new(Purpose::Load, vec![Slot::Empty; n], None);
+        let moves = [Action::CursorDown, Action::CursorUp];
+        assert_eq!(press(&mut s, &mut c, &moves), "None");
+        assert_eq!(s.focused_slot(), 1);
+        assert!(sounds(&mut c).is_empty(), "{n} slots");
+    }
+    let mut s = SlotPickerScreen::new(Purpose::Load, vec![Slot::Empty; 2], None);
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    assert_eq!(s.focused_slot(), 2);
+    assert_eq!(sounds(&mut c), ["menu_move"]);
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    assert_eq!(s.focused_slot(), 1);
+}
+
 #[test]
 fn a_slot_row_shows_chapter_mode_army_and_playtime() {
     let c = saves();
@@ -312,7 +332,8 @@ fn loading_takes_only_a_slot_that_can_be_read() {
         assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
         assert_eq!(sounds(&mut c), [DENIED]);
         assert_eq!(s.message(), Some(error.to_string().as_str()));
-        assert_eq!(row(&render(&s, &c), MESSAGE_ROW).trim(), error.to_string());
+        // Under the panel.
+        assert_eq!(row(&render(&s, &c), 28).trim(), error.to_string());
         assert_eq!(s.result(), None);
         // Moving on clears the message.
         press(&mut s, &mut c, &[Action::CursorUp]);

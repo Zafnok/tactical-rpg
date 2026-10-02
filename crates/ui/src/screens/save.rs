@@ -258,9 +258,8 @@ impl SlotPickerScreen {
 
     /// Keeps the focused slot among those shown.
     fn scroll(&mut self) {
-        if self.focus < self.top {
-            self.top = self.focus;
-        } else if self.focus >= self.top + VISIBLE {
+        self.top = self.top.min(self.focus);
+        if self.focus >= self.top + VISIBLE {
             self.top = self.focus + 1 - VISIBLE;
         }
     }
@@ -498,7 +497,8 @@ impl Screen for SlotPickerScreen {
             LOAD_TITLE
         };
         let highlight = c(UiColor::TextHighlight);
-        buf.print(PANEL.x + 2, PANEL.y, &format!(" {title} "), highlight, bg);
+        // In the top border, its text over the slot numbers.
+        buf.print(SLOT_X - 1, PANEL.y, &format!(" {title} "), highlight, bg);
 
         buf.print(SLOT_X, HEADING_ROW, "Slot", dim, bg);
         buf.print(CHAPTER_X, HEADING_ROW, "Chapter", dim, bg);
