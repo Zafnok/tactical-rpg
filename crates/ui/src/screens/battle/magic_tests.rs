@@ -373,6 +373,11 @@ fn fire_on_the_elemental_shows_the_forecast_and_casts() {
         "Left/Right target · Up/Down art · f cast · d back"
     );
     assert!(!s.mode().picks_on_map(), "the forecast stays on Confirm");
+    // The caster is drawn at the end of its path while it aims; nobody
+    // else is moved.
+    assert_eq!(s.mode().drawn_pos(MAGE), Some(p(0, 4)));
+    assert_eq!(s.mode().drawn_pos(ELEMENTAL), None);
+    assert_eq!(s.mode().selection().map(|sel| sel.unit), Some(MAGE));
     let buf = render(&s, &c);
     // The spell and its uses, where a weapon's durability goes; `!` on the
     // strike; no marker of its own for Weak.
