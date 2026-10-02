@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0110"]
 nick_input: setup
-completed:
+completed: 2026-10-02
 ---
 
 # 0116 — Upload the private assets repo and add its build key
@@ -45,8 +45,9 @@ window (`cmd`), which is what Nick uses.
    gh repo create Zafnok/visions-of-shuyi-assets --private --description "Bought art for Visions of Shuyi. Must stay private." --source "D:/tactical-rpg/assets-private" --remote origin --push
    ```
 
-2. Make the read-only key the builds use, and give it to both repositories
-   (the key files are deleted again at the end; nothing else needs them):
+2. ~~Make the read-only key the builds use, and give it to both
+   repositories.~~ **Done 2026-10-02** (the key files are deleted again at
+   the end; nothing else needs them):
 
    ```bat
    ssh-keygen -q -t ed25519 -N "" -C "visions-of-shuyi builds" -f "%USERPROFILE%\shuyi-assets-key" && gh repo deploy-key add "%USERPROFILE%\shuyi-assets-key.pub" --repo Zafnok/visions-of-shuyi-assets --title "visions-of-shuyi builds (read-only)" && gh secret set PRIVATE_ASSETS_KEY --repo Zafnok/visions-of-shuyi < "%USERPROFILE%\shuyi-assets-key" && del "%USERPROFILE%\shuyi-assets-key" "%USERPROFILE%\shuyi-assets-key.pub"
@@ -104,13 +105,15 @@ Then tell Claude it is done.
 
 ## Acceptance criteria
 
-- [ ] `Zafnok/visions-of-shuyi-assets` is private and its `main` holds the
+- [x] `Zafnok/visions-of-shuyi-assets` is private and its `main` holds the
       commit named in `assets-private.rev`.
-- [ ] `cargo xtask private-assets` and `--library` work in a worktree that
+- [x] `cargo xtask private-assets` and `--library` work in a worktree that
       had no `assets-private/`.
-- [ ] A release dry run and a Pages run on `main` check out the bought art
-      at the pinned commit (run links in the Completion notes).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] A release dry run and a Pages run on `main` check out the bought art
+      at the pinned commit (run links in the Completion notes). *Both ran
+      on this ticket's branch, not on `main`: Nick asked for this PR to be
+      stacked on 0110's, which wasn't merged yet. See Completion notes.*
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -119,5 +122,59 @@ Then tell Claude it is done.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Nick ran both commands on 2026-10-02. Everything worked; nothing in the
+workflows, the action or the xtask command needed fixing, so this PR only
+closes the ticket.
+
+**Checked:**
+
+1. `Zafnok/visions-of-shuyi-assets` is private, default branch `main`, and
+   `git ls-remote` gives `7f960cb6e3c059aa0d98303c36fa463bb360e3b0`, the
+   commit in `assets-private.rev`.
+2. It has one deploy key, "visions-of-shuyi builds (read-only)", read-only.
+   `Zafnok/visions-of-shuyi` has the secret `PRIVATE_ASSETS_KEY`. Both key
+   files are gone from Nick's user folder.
+3. In the worktree, after removing the `assets-private/` that 0110 had
+   cloned from the local copy: `cargo xtask private-assets` fetched from
+   GitHub and left `README.md`, `.gitignore`, `.gitattributes` and `game/`;
+   `--library` added `library/tiny-tales/` (a hero's face opens as a PNG).
+   `git status` showed nothing under `assets-private/`.
+4. `cargo test -p trpg-content --features private-assets --test
+   private_assets` passed and `cargo build -p trpg-app --features
+   private-assets` built.
+5. **Release dry run, with the key**
+   (<https://github.com/Zafnok/visions-of-shuyi/actions/runs/37072823623>):
+   success. Each of `build-windows`, `build-linux`, `build-macos` and
+   `build-web` printed `Private assets: checking out 7f960cb6…`, checked
+   out only `game/`, and built with the feature (`--features
+   private-assets`, or `--private-assets` for web). No placeholder warning.
+6. **Pages run, with the key**
+   (<https://github.com/Zafnok/visions-of-shuyi/actions/runs/37072826249>):
+   the `build` job checked out the same commit, the *Check the content
+   loads with the bought art* step passed, and `cargo xtask web --release
+   --debug-tools --private-assets` built. The run is marked failed because
+   its `deploy` job was refused ("Branch … is not allowed to deploy to
+   github-pages due to environment protection rules"): the Pages
+   environment only takes `main`. Nothing was published.
+
+**Also seen:** a release dry run started before the key existed
+(<https://github.com/Zafnok/visions-of-shuyi/actions/runs/37072359624>)
+took the other path on all four platforms: the "building with the public
+placeholders" warning, and a successful build without the feature.
+
+**Deviations:**
+
+- Steps 5 and 6 ran on this ticket's branch instead of `main`: Nick asked
+  for this PR to be stacked on 0110's (#165) rather than wait for its
+  merge. The workflows and the action are the same files. What wasn't
+  seen is a Pages **deploy** from `main` with the art in it; that happens
+  on the first merge to `main` after #165. There is nothing to look at in
+  the game yet either way: `assets-private/game/` is empty until 0711 and
+  0436 import art.
+- The key command in this ticket was first written for Git Bash and failed
+  in Nick's Command Prompt before making anything; the ticket now has the
+  Command Prompt version.
+
+**Follow-up tickets:** none.
+
+**Gameplay rules decided:** none.

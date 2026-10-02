@@ -76,7 +76,7 @@ Design answers unblock most of the rules work. Suggested order:
 1. **0001** stats & combat · **0002** turn structure · **0003** weapons & items · **0004** magic · **0006** death & difficulty · **0007** setting, tone & story beats
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
-4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0116** upload the private assets repo and add its build key (two commands, in the ticket) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0436** outline alone or with a corner mark (a sign-off) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
+4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0436** outline alone or with a corner mark (a sign-off) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
 5. Anytime, low priority: **0039** sprite units: walking, the effect mark, the glyph look as an option, face or bust · **0012** title (then **0811** title art, then **0036** the title's intro cinematic) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons · **0037** more building tiles (village, gate, throne), capturing, healing tiles
 
@@ -112,19 +112,18 @@ bought unit sprites (0436, which also needs 0110) and the bought terrain
 same day: Nick said the playtest waits for it.
 
 ```
- 1  0022 0023 0024 0035 0116 0231 0316 0410 0432 0435 0710 0714 0715 0801
+ 1  0022 0023 0024 0035 0231 0316 0410 0432 0435 0710 0714 0715 0801
  2  0433 0711 0716 0802 0807 0810
  3  0413 0436 0706 0809
  4  0437 0440 0803
  5  0804  ◄── Nick plays Chapter 1
 ```
 
-Two row-1 tickets are Nick's: **0116** needs him to upload the private
-assets repo and add its build key (two commands; 0110 built the rest on
-2026-10-02, ADR-0040; 0711 and 0436, and so 0413, 0706, 0437 and 0803,
-wait on it), and **0035** is Harl's picture (0413 and 0706 wait on it;
-since 2026-10-02 Claude searches for candidate packs and Nick decides,
-together with 0040's other gaps).
+One row-1 ticket is Nick's: **0035** is Harl's picture (0413 and 0706
+wait on it; since 2026-10-02 Claude searches for candidate packs and Nick
+decides, together with 0040's other gaps). The private assets repo is
+done (0110 and 0116, 2026-10-02, ADR-0040): Nick uploaded it and added its
+build key, so 0711 and 0436 no longer wait on it.
 
 **0435** (found by 0411) adds the `PLAYER PHASE` banner missing at the
 start of a battle, which `turn-structure.md` asks for.
