@@ -44,6 +44,15 @@ What waits on the answer:
   Chapter 1 boss on a fort because there is no gate or throne.
 - The terrain data keeps a `heal_percent` field, 0 on every terrain.
 
+**Changed 2026-10-02 (ticket 0038):** the battle map is now drawn with
+the bought Tiny Tales tilesets (0437), and the glyph look stays as the
+public placeholder. So each new tile needs **both** looks. The bought
+World Map set has single-tile villages, towns, castles, towers and cave
+mouths (`Set_C_Icons`) and walled towns two tiles square; the Dungeons
+sets have doors, gates, stairs and chests; nothing in the bundle is a
+throne. Show the mockups in both looks, and say which new tile has no
+bought picture.
+
 ## Nick input
 
 **Decision**, with the `ask-nick` skill, after the Chapter 1 playtest

@@ -70,6 +70,53 @@ only some of the faces, small, so recheck everything on the real files.
 | `vowmaster` Crane | none (hood up, spectacles) | **Gap** |
 | `soldier` (generic) | none | **Gap** |
 
+## Checked on the bought files (2026-10-02, ticket 0038)
+
+Nick bought the whole Mega Tiles bundle. The files are sorted on his
+machine in `D:\tactical-rpg\Tiny Tales Bundle Assets\`; open `index.html`
+there to see each character's faces, battle picture and map sprite
+together. This replaces the preview-based notes above where they differ.
+
+- **Expressions**, the same 8 for every hero and for every face the
+  generator makes: `neutral`, `smile`, `stern`, `sad`, `surprise`,
+  `thinking`, `sly`, `unique`. So `happy` → smile, `angry` → stern,
+  `sad` → sad, `surprised` → surprise map directly; `sly` and `thinking`
+  are spare for the sheets' extra expressions (`smug`, `sneer`, `cold`,
+  `weary`…). Each exists as a 48×48 face and as an 80×80 bust (face or
+  bust in dialogue: ticket 0039, question 7).
+- **Faces exist only for the 16 heroes**, plus what the Character
+  Generator EX 1.2 makes. Its parts: six kinds of outfit (soldier, rogue,
+  brawler, commoner, traveller, simple dress), one wizard hat, many hair
+  styles, beards and moustaches; **no hoods, helmets, coifs or glasses**.
+- **What the real art shows**, against the table above:
+
+| Character | On the real files |
+| --------- | ----------------- |
+| `lead_m`, `lead_f` | Male and Female Fighter: good. He wears a blue coat with steel shoulder plates; she wears pink and carries a curved sabre, so their costumes don't match each other |
+| `poacher` Aske | The Archer is plainly a **female elf** (long blonde hair, pointed ears, a leaf in her hair). Not a 17-year-old boy. A generator face, or a pack from 0040 |
+| `rival` Dace | Samurai: dark blue hair in a ponytail, red coat, a long katana; reads as young and slight. Partial. The Magitek *Human Noble* still picture (dark hair, blue coat, sword) fits his look better but has no face |
+| `heretic` Rue | Witch: silver-blue hair, a big blue hat, a staff and an orb. As decided |
+| `retainer` Hollis | Still picture: *Faith and Evil* Church Knight (full helm, spear, tower shield): good for a Guard. Face: generator (soldier outfit, grey hair, full moustache); no coif |
+| `keeper` Piers | Still picture: Church Cleric (hooded, green-haired, reads as a young woman) or Church Wizard (a boy with a staff). Neither is a soft man of 34. Face: generator, no hood |
+| `sergeant` Tamsin | **Nothing mounted exists in all 37 products.** On foot, the *Magitek Dynasty* Dynasty Soldier (red and white, spear, red hair) is closest. Face: generator |
+| `vowmaster` Crane | Still picture: Church Archmage (old, mitre, white beard) or *Gods and Gallants* "Dark Sovereign Okuul" (a tall pointed hood, a scythe). Face: generator can't do the hood or spectacles |
+| `red_captain` Harl | No human axe fighter except the Amazon Warrior hero (a woman). Ticket 0035 |
+| `soldier` (generic) | Faces only from the generator; map sprites and still pictures for bandits, soldiers and church wardens exist |
+
+- **Later cast, found while looking:** the Heroes 2 **Amazon Warrior**
+  (a big axe; face, still picture and map sprite) fits Hedda Ravn, the
+  Brennish Raider of Chapter 5.
+- **Fighters with no fitting art get more bought packs** (Nick,
+  2026-10-02: "help me locate some more itch bundles to fill in with a
+  similar style for rest of cast... or if these are non-battle units, I
+  think the generator can work"): ticket 0040. A character who fights
+  takes their face from the same pack as their combat picture where that
+  pack has faces; a character who never fights may use a generator face.
+  **Either order works with 0040:** if 0040 is done, use the packs Nick
+  bought. If it isn't, give Aske, Piers, Tamsin and Hollis generator
+  faces now, tell Nick in the sign-off which ones are stand-ins, and add a
+  line to 0040 to swap them when a pack is bought.
+
 **Gaps** (Nick, 0021: "probably A or D"): first the Character Generator EX
 once Nick has bought it (its licence was checked in 0021: commercial use is
 fine); in combat a generated character uses its class's still image;

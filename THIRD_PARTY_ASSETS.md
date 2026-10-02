@@ -23,6 +23,45 @@ credits screen shows them all, except entries marked `hidden: true`
 (`every_third_party_asset_has_a_credit`) fails when a row has no credit or
 a credit has no row.
 
+## Bought art (private): purchase record
+
+Bought art that isn't in a build yet is recorded here as a list. A pack
+gets a row in the table below, and a credit, in the ticket that first puts
+it in the game (0706, 0413, 0436, 0437), in the form ticket 0110 sets.
+
+- **Mega Tiles, "2025 Bundle Sale"** (all 37 Mega Tiles products),
+  <https://megatiles.itch.io/>. Bought by Nick on **2026-10-02** for
+  **$99.99**. *Private*: the files are on Nick's machine and never in this
+  repository; the private repository is ticket 0110.
+  - **Licence**, the same text in every pack's `License.txt`: "You cannot
+    claim ownership of the assets (copyright/IP). Assets can be used both
+    in free and commercial games. Assets can be modified freely to fit the
+    needs of your game. Redistribution and reselling of the asset files or
+    derivatives as is without permission is strictly forbidden."
+  - **Character Generator EX 1.2** has its own EULA (Mechwolf Productions):
+    the pictures it makes "are owned by the End User and may be used for
+    personal, commercial, or non-commercial purposes", but may not be
+    distributed or sold "as is" outside a larger project, and the program
+    itself may not be redistributed.
+  - **Credits named in the packs:** produced and published by Megatiles.
+    Portraits and static battlers: Rayane Félix, Lunatic Red. Side-view
+    battlers and map sprites: Kodots Games Studio. *Wild Beasts* and other
+    battler packs: Lunatic Red, Inazuma. *Epic Monsters* and *Gods and
+    Gallants*: Aekashics. Generator software: Mechwolf Productions.
+  - **AI-assisted:** no (the store pages say no generative AI was used,
+    read 2026-09-30).
+  - **What we plan to use:** *Heroes: A New Beginning*, *Heroes 2:
+    Rebellious Souls* (faces, still battle pictures, map sprites); still
+    battler packs Vol.1–5 with their map sprite packs; *Gods and
+    Gallants*, *Epic Monsters*; the Human, Knights, Nobility, Orcs, Dark
+    Elves and Beastmen map sprite packs and the Mega Sprite Pack; the World
+    Map, Overworld, Dungeons 1 and 2 and Tower tilesets; *Battlebacks
+    Vol.1*; the Character Generator. Not planned: the Code Ark sci-fi packs
+    and UI kit, *Terrains Plus* and the two *Trees* packs (48-pixel tiles
+    in another style).
+
+## Shipped items
+
 | Item | Source URL | Version | License | License file | Used for | Added by ticket |
 | ---- | ---------- | ------- | ------- | ------------ | -------- | --------------- |
 | Terminus Font (`ter-u16n`, 8×16), converted to `assets/fonts/atlas.png` | https://terminus-font.sourceforge.net/ | 4.49.1 | OFL-1.1 | [`assets/fonts/Terminus-LICENSE.txt`](assets/fonts/Terminus-LICENSE.txt) | The game's only font (every glyph on screen); source BDF in `assets-src/fonts/`, unmodified. The atlas adds four glyphs of our own (`✕ ◯ □ △`, `assets-src/fonts/pad-shapes.bdf`, ticket 0220), which the OFL permits for a modified version not named after the font | 0203 |

@@ -1,7 +1,8 @@
 # Look and feel
 
 Decided: 2026-09-25
-Source: ticket 0011
+Source: ticket 0011 (attack forecast: 0404; bought portraits and battle art:
+0021; bought tiles and sprites on the battle map: 0038)
 
 Nick judged real renders, not descriptions. Every mockup was drawn with the
 game's own font atlas at in-game size. The final ones are in
@@ -96,6 +97,29 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > this would be expensive for just a single asset" … [Harl:] "let's just have
 > a follow up for this Harl character I can shop around and find more
 > contenders"
+>
+> **Bought sprites on the battle map** (2026-10-02, ticket 0038; Nick had
+> bought the whole Mega Tiles bundle and judged spike renders of the battle
+> screen: A today's glyphs, B glyph terrain with bought unit sprites, C the
+> bought tileset with bought unit sprites, C2 the same at double size, C3
+> the same darkened toward palette D, G1a/G1b a combat picture with a bought
+> background in the box over the map and full screen): "I'm really digging
+> these sprites... I think we can go ahead and move forward with replacing
+> our tile rendering and battler rendering with these bought sprites without
+> regret..." … "as for how the tilesets look, I'm between C, C2, and C3. But
+> I think this actually has an easy answer. 1. Per-map lighting effects
+> (i.e. if it takes place during what would be a low light time, it can be
+> shaded like with C3. Or if it's noon, it can be like C/C2. 2. A key/button
+> to toggle zoom (1x / 2x) with memory (i.e. going to next battle, keep the
+> setting)" … "for G1a and G1b I think both are a little off. The main thing
+> that's off though is that you put the enemy facing backwards... let's
+> always mirror the image to face the player when battling. Other than
+> that, I worry G1b won't be able to convey all the info, but maybe it can
+> work with some additional in-battle overlays or pop up messages" … "for
+> the cast, I guess you need to help me locate some more itch bundles to
+> fill in with a similar style for rest of cast... or if these are
+> non-battle units, I think the generator can work" … "I paid $100 for all
+> these assets"
 
 ## Rules
 
@@ -119,7 +143,38 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
   Moonlit**. That's a separate ticket (0806). Their mockup values are recorded
   below so they don't need re-deriving.
 
-### Units on the map
+### Battle map: bought tiles and unit sprites
+
+Decided 2026-10-02, ticket 0038. The renders Nick judged used bought files,
+so they aren't in this repository (ADR-0032).
+
+- **The battle map is drawn with the bought art**: terrain from the Tiny
+  Tales 16×16-pixel tilesets, and each unit as its Tiny Tales **map sprite**
+  (16 pixels wide, 20 tall, so a head overlaps the tile above). The art is
+  the same size as our map tile (16×16 pixels), so nothing is scaled.
+  Tickets 0436 (units) and 0437 (terrain).
+- **The glyph look below stays in the game** (ADR-0038): it is what a copy
+  of the public repository shows, since the bought files aren't in it.
+  Whether players may pick it is not decided (ticket 0039).
+- **Lighting is set per map.** A battle at noon shows the tiles as bought
+  (render C). A battle in low light (dusk, night, indoors by torchlight)
+  shows them darkened toward our earthy palette, as in render C3. Unit
+  sprites keep their own colours in every light, as they did in C3
+  *(Claude's starting rule: that is how C3 was drawn; Nick didn't comment
+  on it)*. Which lights exist and how dark each is: ticket 0438 *(values
+  tunable)*.
+- **Zoom:** a key and a controller button switch the map between **1×**
+  (a 16-pixel tile, about 34×28 tiles on screen, render C) and **2×** (a
+  32-pixel tile, about 17×14 tiles, render C2). The game **remembers** the
+  choice: the next battle opens at the same zoom. Ticket 0439; the default
+  key and button are Nick's to pick (ticket 0039).
+- **Not decided yet** (ticket 0039): how a sprite unit shows whose side it
+  is on, that it has acted and that it is under an effect (the renders used
+  a 1-pixel outline in the side's colour and a greyed sprite; the HP bar
+  stayed as below); whether sprites walk or stand still.
+- Cursor, path line, HP bar and range tints keep their rules below.
+
+### Units on the map (the glyph look)
 
 - A unit is drawn as **two letters: an initial pair from its name** (`Al`,
   `Be`), in its **faction colour** (player blue, enemy red, ally green, neutral
@@ -222,7 +277,23 @@ sprites.
   battle image, a small animated battle sprite and a map sprite. The still
   battler packs (e.g. *Vol.5 Faith and Evil*, *Vol.1 Monstrous Uprising*)
   add classes with a still battle image and a map sprite but **no face**.
-  Nothing has been bought yet; Nick buys when he's ready.
+- **Bought 2026-10-02:** Nick bought Mega Tiles' whole "2025 Bundle Sale"
+  (37 products, $99.99; his words: "I paid $100 for all these assets").
+  It holds both Heroes packs, the Character Generator EX, the still
+  battler packs Vol.1–5, *Gods and Gallants*, *Epic Monsters*, the map
+  sprite packs, five 16-pixel tilesets (World Map, Overworld, Dungeons 1
+  and 2, Tower), *Battlebacks Vol.1* (24 battle backgrounds), and some
+  packs we don't use (a sci-fi set, a sci-fi UI kit, three 48-pixel
+  terrain and tree packs in another style). The files are on Nick's
+  machine, outside this repository (ADR-0032; the private repository is
+  ticket 0110). The purchase record is in `THIRD_PARTY_ASSETS.md`.
+- **What the real files are** (checked 2026-10-02; earlier notes came
+  from store previews): a face is 48×48 pixels and a **bust is 80×80**,
+  and **both come in the same 8 expressions** (neutral, smile, stern,
+  sad, surprise, thinking, sly, unique), as single files and as a sheet;
+  a map sprite is a 48×80 sheet of 16×20 frames (3 walking frames, 4
+  directions); every tile is 16×16; a battle background is 336×248. Each
+  pack ships its art at 1×, 2× and 3×: we use the 1× files.
 - **No Claude-drawn character art.** Portraits and battle art are bought.
   Claude may only make **small edits** to bought art: recolours, a scar,
   spectacles, a missing expression made from an existing face. No new hair,
@@ -240,22 +311,36 @@ sprites.
 #### Dialogue portraits
 
 - **The face set faces**, not the large portraits: each Tiny Tales hero has
-  **8 expressions**; the large portrait has one. The faces are **48×48**
+  **8 expressions**. *(The reason given in 0021, that the large portrait
+  has only one expression, turned out wrong on the bought files: the 80×80
+  busts have the same 8. A bust at 3× fills the same 240 pixels as a face
+  at 5× and shows the shoulders and hat; Nick was sent the comparison on
+  2026-10-02 and hasn't chosen, so faces stay the rule until he does:
+  ticket 0039.)* The faces are **48×48**
   pixel art. They're drawn with square pixels at the largest whole scale that
   fits the existing 32×16-cell frame (0711 works out the size), so the
   dialogue layout doesn't change.
 - **Expressions:** the five the dialogue needs (`neutral`, `happy`, `angry`,
   `sad`, `surprised`) are mapped to the closest of the 8 per character
   (0706). A missing one may be made by a small edit.
+- **Characters who fight and have no fitting bought art**: Nick wants
+  more bought packs in a similar style (2026-10-02: "help me locate some
+  more itch bundles to fill in with a similar style for rest of cast").
+  Claude searches and checks each pack's licence and price; Nick decides
+  each purchase (ticket 0040; Harl is ticket 0035). **Characters who never
+  fight** may get a face from the Character Generator ("if these are
+  non-battle units, I think the generator can work").
 - **Characters no bought face fits** (in Chapter 1 likely Hollis, Harl,
-  Piers and Crane): first Mega Tiles' **Character Generator EX** ($49.99,
-  or in the $99.99 "2025 Bundle Sale"), a Windows program that makes new
+  Piers and Crane): first Mega Tiles' **Character Generator EX** (bought
+  with the bundle; version 1.2), a Windows program that makes new
   characters in the same style: a face with 8 expressions, a small animated
   battle sprite and a map sprite. Its licence (the same text as the packs)
   allows the characters it makes in a sold game. It makes **no big still
   battle image**, so in combat a generated character uses its class's
-  still image. It's early access (few outfits; casters, helmets and glasses
-  still promised), so some faces may not be possible yet. Otherwise, or on
+  still image. Version 1.2 has six kinds of outfit (soldier, rogue,
+  brawler, commoner, traveller, simple dress), one wizard hat, beards and
+  moustaches, and no hoods, helmets or glasses, so some faces aren't
+  possible yet. Otherwise, or on
   top, Claude's small edits, or rewriting the character's written look to
   fit a bought face (see *Combat screen* below; Nick allows it, done in
   0706 after purchase). **No commissions**: Nick vetoed them as too
@@ -276,6 +361,17 @@ sprites.
   picture; the game makes it lunge to strike, flash on a hit, shake, and fade
   when defeated. The packs' small animated battle sprites are **not** used
   there. Scale, the exact motions and the rest of the scene are ticket 0413.
+- **The two fighters always face each other** (decided 2026-10-02, ticket
+  0038): a picture that faces the wrong way is mirrored. In the mockups the
+  player's fighter stood on the left and the enemy on the right; the enemy
+  was drawn as bought and so faced away, which Nick called the main thing
+  wrong with them.
+- **Where the scene is shown is open** (ticket 0413). Nick saw two mockups
+  with a bought battle background behind the fighters, one in the box over
+  the map (art at its own size) and one filling the screen (art at double
+  size), and found both "a little off". His worry about the full-screen one
+  is that it "won't be able to convey all the info", though "maybe it can
+  work with some additional in-battle overlays or pop up messages".
 - **Classes with no hero art use a still image as a stand-in in Chapter 1**:
   - **Cleric:** the church cleric (*Faith and Evil*).
   - **Guard:** the church knight (*Faith and Evil*).
@@ -345,8 +441,10 @@ black.
 
 - Selection arrows `►Al◄` next to another unit: whole-glyph arrows would hide
   one of its letters (the 0416 bracket problem). Ask Nick before 0403 draws them.
-- Custom class icons vs initials (ticket 1006, after Chapter 1).
-- Combat screen: scale and the exact motions of the still battle images
-  (ticket 0413).
-- Map sprites: the Tiny Tales packs include 16×20 map sprites; whether they
-  replace name initials on the map is ticket 1006's question.
+- Combat screen: scale, where the scene is shown (box or full screen), a
+  background behind the fighters, and the exact motions of the still
+  battle images (ticket 0413).
+- Sprite units on the map: how they show their side, "has acted" and an
+  effect; whether they walk; whether players may pick the glyph look; the
+  zoom key and button (ticket 0039).
+- More bought packs for fighters with no fitting art (tickets 0035, 0040).

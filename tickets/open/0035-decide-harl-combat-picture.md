@@ -45,10 +45,35 @@ commissions ("expensive for just a single asset"). His words: "let's just
 have a follow up for this Harl character I can shop around and find more
 contenders".
 
+**Changed 2026-10-02 (ticket 0038).** Nick bought the whole Mega Tiles
+bundle (37 products) and all of it was checked for Harl:
+
+- No human man carries an axe anywhere in it. The axes belong to orcs,
+  nagas, the Heroes 2 **Amazon Warrior** (a woman; she fits Hedda Ravn of
+  Chapter 5), the **Warforged** (a golden construct with a halberd), a
+  centaur ("Tauromino") and "Water Kaiser Vyrlodhum".
+- **Water Kaiser Vyrlodhum** (*Gods and Gallants*) is the closest in
+  shape: a big man with a white beard and a huge axe. But he is hooded
+  with no visible face, wears a glowing blue spirit wolf, and is twice a
+  hero's height. Nick saw him in a combat mockup (spike render G2). Taking
+  the wolf off is more than the small edits `look-and-feel.md` allows.
+- On the **map**, Harl and his brigands have good human sprites: Human NPC
+  Advanced `Warrior_M*` (horned helmets, beards). Only the combat picture
+  and the face are missing.
+- The Character Generator can make his **face** (full beard, red hair,
+  soldier outfit; no kettle helm).
+
+Nick also changed who searches: "I guess you need to help me locate some
+more itch bundles to fill in with a similar style for rest of cast".
+**Claude now searches** for Harl's picture together with the other gaps
+(ticket 0040, which holds the search results and the shortlist); Nick
+still decides each purchase. Take Harl's candidates from 0040's shortlist
+(*human axe fighter*), render them as below, and record Nick's pick here.
+
 ## Nick input
 
-**Decision.** Nick shops around (itch.io or elsewhere) and brings candidate
-packs or links. For each, Claude checks and then renders:
+**Decision.** Claude brings candidate packs (0040's shortlist), and Nick
+may bring his own. For each, Claude checks and then renders:
 - **Licence** against ADR-0032: commercial game OK, modification OK, no
   royalties, not AI output without a human touch.
 - **Price:** Nick decides whether it's fine.
@@ -74,8 +99,8 @@ implementing the combat scene (0413).
 
 ## Implementation steps
 
-1. Collect Nick's candidates, plus up to three found by Claude (say which
-   are which).
+1. Collect the candidates: 0040's shortlist for a human axe fighter, plus
+   any Nick brings (say which are which).
 2. For each, record the store, licence text, price, whether it's
    AI-assisted, and the weapon.
 3. Render the mockups (as in 0021: the store preview in our frames, in the
