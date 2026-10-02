@@ -13,6 +13,7 @@ pub mod glyph_buffer;
 #[cfg(any(test, feature = "harness"))]
 pub mod harness;
 pub mod input;
+pub mod map_view;
 pub mod portrait;
 pub mod screen;
 pub mod screens;

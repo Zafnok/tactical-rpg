@@ -10,12 +10,12 @@ use trpg_core::{BattleState, Command, Objective, Phase, Pos, SkillId, UnitAction
 use super::BattleScreen;
 use super::mode::{MenuEntry, Mode};
 use super::testing::{battle_with, quick_units};
-use super::units::EFFECT_BLEND;
 use crate::FrameInput;
 use crate::color::{Rgb, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
+use crate::map_view::glyph::units::EFFECT_BLEND;
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, Screen};
 

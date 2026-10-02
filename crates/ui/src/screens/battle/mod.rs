@@ -51,14 +51,13 @@ use self::ai_phase::{AiAction, PACING};
 use self::banner::{Banner, BannerKind};
 
 use self::attack::Targeting;
-use self::camera::{Camera, tile_to_cell};
-use self::cursor::{Cursor, draw_cursor};
+use self::camera::Camera;
+use self::cursor::Cursor;
 use self::event_sounds::CueQueue;
 use self::layout::{
     HELP_BAR, HELP_ROW, MAP_VIEW, SIDE_PANEL, TILE_W_CELLS, VIEW_TILES_H, VIEW_TILES_W,
 };
 use self::mode::{Effect, MenuEntry, Mode, Selection};
-use self::path::path_overlays;
 use self::playback::{Playback, TIMINGS};
 use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
@@ -69,6 +68,10 @@ use crate::audio::{CURSOR_MOVE, MenuSound};
 use crate::color::{Palette, Rgb, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
+use crate::map_view::glyph::cursor::draw_cursor;
+use crate::map_view::glyph::path::path_overlays;
+use crate::map_view::glyph::tile_to_cell;
+use crate::map_view::glyph::units::{draw_fading_unit, draw_unit};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::tips::{draw_tip, fill_placeholders};
 use crate::widgets::help::{HelpKeys, SEPARATOR, cursor_keys_name, help_line, key_name};
@@ -1128,14 +1131,14 @@ impl BattleScreen {
         if !self.playing() {
             for unit in self.state.units() {
                 if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
-                    units::draw_unit(buf, &ctx.palette, unit, x, y);
+                    draw_unit(buf, &ctx.palette, unit, x, y);
                 }
             }
             return;
         }
         for (unit, fade) in self.shown_units() {
             if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
-                units::draw_fading_unit(buf, &ctx.palette, &unit, x, y, fade);
+                draw_fading_unit(buf, &ctx.palette, &unit, x, y, fade);
             }
         }
     }
@@ -1309,7 +1312,7 @@ impl BattleScreen {
         self.draw_terrain(ctx, buf, shown);
         for unit in shown.units() {
             if let Some((x, y)) = tile_to_cell(unit.pos, &self.camera) {
-                units::draw_unit(buf, &ctx.palette, unit, x, y);
+                draw_unit(buf, &ctx.palette, unit, x, y);
             }
         }
         r.draw(&ctx.palette, buf);

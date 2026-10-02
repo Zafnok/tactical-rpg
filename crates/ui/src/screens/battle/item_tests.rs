@@ -486,7 +486,7 @@ fn the_popup_is_drawn_on_the_row_above_the_healed_unit() {
             target: UnitId(2),
         },
     });
-    let (x, y) = super::camera::tile_to_cell(p(4, 5), &s.camera()).expect("in view");
+    let (x, y) = crate::map_view::glyph::tile_to_cell(p(4, 5), &s.camera()).expect("in view");
     let buf = render(&s, &c);
     assert_eq!(text(&buf, x, y - 1, 3), "+10");
     assert_eq!(

@@ -5,7 +5,7 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: high
-status: todo
+status: in-progress
 blocked_by: []
 nick_input: none
 completed:
