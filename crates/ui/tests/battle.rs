@@ -16,7 +16,7 @@ fn quick_battle() -> Harness {
 }
 
 /// The Quick Battle screen at the start of the battle: `test_small.map`
-/// centred in the viewport, three ready player units and three enemies, all
+/// centred in the viewport, four ready player units and four enemies, all
 /// at full HP, the cursor on the lord, the side panel showing the lord and
 /// its tile, and the help line.
 #[test]
@@ -78,7 +78,7 @@ fn wait_for(h: &mut Harness, text: &str, max: f32) {
 
 /// Each player unit in turn (the one under the cursor, then the next ready
 /// one) selected, kept where it stands, and told to Wait (no enemy is in
-/// reach, so the menu opens on Wait).
+/// reach, so the menu opens on Wait, the mage's too).
 fn wait_all(h: &mut Harness, units: usize) {
     for i in 0..units {
         if i > 0 {
@@ -96,7 +96,7 @@ fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     // Auto-end on (off by default): a message says so.
     h.keys("Shift+Space");
     assert!(row(&h, 30).starts_with("Auto-end: ON"), "{}", row(&h, 30));
-    wait_all(&mut h, 3);
+    wait_all(&mut h, 4);
     // The enemy phase's banner, then the enemies act, then the player's
     // turn 2.
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
@@ -120,7 +120,7 @@ fn a_full_turn_of_waits_then_space_ends_the_turn() {
     let mut h = quick_battle();
     // Auto-end is off by default (ticket 0420).
     assert!(row(&h, 30).ends_with("Shift+Space auto-end: OFF"));
-    wait_all(&mut h, 3);
+    wait_all(&mut h, 4);
     assert!(!shows(&h, "PHASE"));
     // Nobody ready: Space ends the turn without asking.
     h.keys("Space");
@@ -140,7 +140,7 @@ fn space_twice_ends_the_turn_with_units_ready() {
     let mut h = quick_battle();
     wait_all(&mut h, 1);
     h.keys("Space");
-    assert!(shows(&h, "End turn with 2 units ready?"));
+    assert!(shows(&h, "End turn with 3 units ready?"));
     assert!(shows(&h, "f yes / d no"));
     // No: back to the map.
     h.keys("d");
@@ -165,7 +165,7 @@ fn info_and_danger_zone_keys() {
     assert!(shows(&h, "Weapon ranks"));
     assert!(shows(&h, "Test Lord"));
     h.keys("s");
-    assert!(shows(&h, "Test Knight"));
+    assert!(shows(&h, "Test Mage"));
     h.keys("d");
     assert!(!shows(&h, "Weapon ranks"));
     assert!(row(&h, 30).ends_with("w danger zone: OFF · Shift+Space auto-end: OFF"));
@@ -254,7 +254,9 @@ fn arrows_move_the_cursor_and_the_panel_follows() {
 #[test]
 fn next_unit_jumps_between_ready_units() {
     let mut h = quick_battle();
-    // Reading order: archer (2, 4), lord (3, 5), knight (4, 6).
+    // Reading order: archer (2, 4), lord (3, 5), mage (3, 6), knight (4, 6).
+    h.keys("s");
+    assert_eq!(panel(&h)[4], "Test Mage");
     h.keys("s");
     assert_eq!(panel(&h)[4], "Test Knight");
     h.keys("s");

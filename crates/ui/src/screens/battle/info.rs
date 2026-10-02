@@ -2,7 +2,8 @@
 //! map and side panel. A 24 × 12 portrait area on the left (a placeholder
 //! box until portraits exist, 0703), then the unit's name, level, EXP, HP
 //! and stats as plain numbers (`Str 7`; no class caps, ticket 0423), and on
-//! the right its loadout, spells and skills.
+//! the right its loadout, spells and skills. Under the weapon ranks, the
+//! class's elemental affinities (`Fire  Weak`, ticket 0410).
 
 use trpg_core::skill::effect_bonuses;
 use trpg_core::{BattleState, EffectSource, StatKind, Stats, TimedEffect, Unit, WEAPON_SLOTS};
@@ -79,7 +80,7 @@ pub fn bonus_text(bonus: &Stats) -> String {
 }
 
 /// A range as text: `1` or `1-2`.
-fn range_text(min: u32, max: u32) -> String {
+pub(super) fn range_text(min: u32, max: u32) -> String {
     if min == max {
         min.to_string()
     } else {
@@ -138,7 +139,8 @@ pub fn draw_info(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleState, 
     draw_right(&mut pen, state, unit);
 }
 
-/// Under the portrait: Mov and movement type, class tags, weapon ranks.
+/// Under the portrait: Mov and movement type, class tags, weapon ranks,
+/// and the class's affinities if it has any.
 fn draw_left(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let class = state.classes().get(&unit.class);
     let mut y = PORTRAIT.y + PORTRAIT.h + 1;
@@ -172,6 +174,22 @@ fn draw_left(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
         y += 1;
         let x = pen.text(LEFT_X, y, &format!("{kind:?}"), UiColor::Text);
         pen.text(x.max(LEFT_X + 10), y, &format!("{rank:?}"), UiColor::Text);
+    }
+    let affinities = class.map(|c| c.affinities.as_slice()).unwrap_or_default();
+    if affinities.is_empty() {
+        return;
+    }
+    y += 2;
+    pen.text(LEFT_X, y, "Affinities", UiColor::TextHighlight);
+    for (element, affinity) in affinities {
+        y += 1;
+        let x = pen.text(LEFT_X, y, &format!("{element:?}"), UiColor::Text);
+        pen.text(
+            x.max(LEFT_X + 10),
+            y,
+            &format!("{affinity:?}"),
+            UiColor::Text,
+        );
     }
 }
 
@@ -309,7 +327,7 @@ fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
 }
 
 /// The three weapon slots (the equipped one marked `E`, durability `20/20`
-/// or `broken`), armour, accessory and spells with uses left.
+/// or `broken`), armour, accessory, then the spells ([`draw_spells`]).
 fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let x = RIGHT_X;
     let items = state.items();
@@ -390,6 +408,13 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
         }
         y += 4;
     }
+    draw_spells(pen, state, unit, y);
+}
+
+/// The spells block from row `y`: each learned spell with its uses left,
+/// the equipped one marked `E`.
+fn draw_spells(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit, y: i32) {
+    let x = RIGHT_X;
     pen.text(x, y, "Spells", UiColor::TextHighlight);
     let spells: Vec<_> = unit
         .learned
@@ -401,6 +426,9 @@ fn draw_right(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     }
     for (row, spell) in (y + 1..).zip(spells.into_iter().take(SPELL_ROWS)) {
         let uses = unit.spells.uses_left(&spell.id);
+        if unit.loadout.equipped_spell() == Some(&spell.id) {
+            pen.text(x, row, "E", UiColor::TextHighlight);
+        }
         pen.cut(x + 2, row, &spell.name, 28, UiColor::Text);
         let text = format!("{uses}/{}", spell.uses);
         let w = i32::try_from(text.len()).unwrap_or(0);

@@ -86,6 +86,9 @@ struct RawBattle {
 struct RawSlot {
     character: String,
     pos: (i32, i32),
+    /// Numbered after the enemies instead of in slot order.
+    #[serde(default)]
+    after_enemies: bool,
 }
 
 #[derive(Deserialize)]
@@ -205,12 +208,10 @@ pub fn from_source(
         v.err(format!("no map \"{}\"", raw.map));
         return Err(v.errors);
     };
-    if raw.preparations && !raw.default_pack.is_empty() {
-        v.err(PACK_WITH_PREPARATIONS.to_owned());
-    }
-    let slots = raw.player_slots.len();
-    let mut next_id = BattleDef::first_enemy_id(slots);
-    let players = v.players(&raw.player_slots, &map);
+    let slot_ids = slot_ids(&raw.player_slots, raw.enemies.len());
+    let early = raw.player_slots.iter().filter(|s| !s.after_enemies).count();
+    let mut next_id = BattleDef::first_enemy_id(early);
+    let players = v.players(&raw.player_slots, &slot_ids, &map);
     let enemies: Vec<Unit> = raw
         .enemies
         .iter()
@@ -221,6 +222,9 @@ pub fn from_source(
             unit
         })
         .collect();
+    // The slots numbered after the enemies come before the reinforcements.
+    let late = raw.player_slots.iter().filter(|s| s.after_enemies).count();
+    next_id = next_id.saturating_add(u32::try_from(late).unwrap_or(u32::MAX));
     let reinforcements: Vec<Reinforcement> = raw
         .reinforcements
         .iter()
@@ -246,9 +250,8 @@ pub fn from_source(
         .collect();
     let objective = v.objective(&raw.objective, &map, &everyone);
     let pack_cap = raw.pack_cap.unwrap_or(refs.items.rules.default_pack_cap);
-    let default_pack = v.pack(&raw.default_pack, pack_cap);
-    let solo_stock = v.solo_stock(&raw.solo_stock);
-    let solo_bench = v.solo_bench(&raw.solo_bench);
+    let default_pack = v.pack(&raw.default_pack, pack_cap, raw.preparations);
+    let (solo_stock, solo_bench) = v.solo(&raw.solo_stock, &raw.solo_bench);
     v.music(&raw.music);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
@@ -267,9 +270,11 @@ pub fn from_source(
         player_slots: raw
             .player_slots
             .iter()
-            .map(|s| PlayerSlot {
+            .zip(&slot_ids)
+            .map(|(s, &id)| PlayerSlot {
                 character: CharacterId(s.character.clone()),
                 pos: pos(s.pos),
+                id,
             })
             .collect(),
         enemies,
@@ -292,6 +297,26 @@ fn pos((x, y): (i32, i32)) -> Pos {
     Pos::new(x, y)
 }
 
+/// The unit id of each slot: the slots numbered in order from 1, skipping
+/// those marked `after_enemies`, which follow the `enemies` enemies in
+/// order.
+fn slot_ids(slots: &[RawSlot], enemies: usize) -> Vec<UnitId> {
+    let early = slots.iter().filter(|s| !s.after_enemies).count();
+    let (mut next_early, mut next_late) = (0, early + enemies);
+    slots
+        .iter()
+        .map(|s| {
+            let next = if s.after_enemies {
+                &mut next_late
+            } else {
+                &mut next_early
+            };
+            *next += 1;
+            BattleDef::slot_id(*next - 1)
+        })
+        .collect()
+}
+
 /// Collects the errors of one battle file.
 struct Checker<'a, 'r> {
     file: &'a str,
@@ -310,10 +335,10 @@ impl Checker<'_, '_> {
 
     /// The player units the slots would hold, with the characters' own
     /// data (the campaign's roster replaces them in play).
-    fn players(&mut self, slots: &[RawSlot], map: &BattleMap) -> Vec<Unit> {
+    fn players(&mut self, slots: &[RawSlot], ids: &[UnitId], map: &BattleMap) -> Vec<Unit> {
         let refs = self.refs;
         let mut units = Vec::new();
-        for (i, slot) in slots.iter().enumerate() {
+        for (i, (slot, &unit_id)) in slots.iter().zip(ids).enumerate() {
             let what = format!("player slot {} (\"{}\")", i + 1, slot.character);
             let id = CharacterId(slot.character.clone());
             let Some(def) = refs.characters.characters.get(&id) else {
@@ -321,14 +346,7 @@ impl Checker<'_, '_> {
                 continue;
             };
             let at = pos(slot.pos);
-            match character_unit(
-                def,
-                BattleDef::slot_id(i),
-                refs.classes,
-                refs.items,
-                Faction::Player,
-                at,
-            ) {
+            match character_unit(def, unit_id, refs.classes, refs.items, Faction::Player, at) {
                 Ok(unit) => {
                     self.place(&what, &unit, map, true);
                     units.push(unit);
@@ -529,8 +547,17 @@ impl Checker<'_, '_> {
         }
     }
 
-    /// The default pack's items: known consumables, at most `cap`.
-    fn pack(&mut self, items: &[String], cap: usize) -> Vec<ItemId> {
+    /// The stock and the bench of the battle played on its own.
+    fn solo(&mut self, stock: &[String], bench: &[String]) -> (Vec<ItemId>, Vec<CharacterId>) {
+        (self.solo_stock(stock), self.solo_bench(bench))
+    }
+
+    /// The default pack's items: known consumables, at most `cap`, and
+    /// none in a battle with `preparations`.
+    fn pack(&mut self, items: &[String], cap: usize, preparations: bool) -> Vec<ItemId> {
+        if preparations && !items.is_empty() {
+            self.err(PACK_WITH_PREPARATIONS.to_owned());
+        }
         if items.len() > cap {
             self.err(format!(
                 "default_pack: {} items, more than the pack cap {cap}",

@@ -1,6 +1,6 @@
 //! Tests of the Preparations screen on the debug Quick Battle
 //! (`assets/battles/quick.ron`): the test lord (swords), knight (spears,
-//! medium and heavy armour) and archer, the test scout left out of the
+//! medium and heavy armour), archer and mage, the test scout left out of the
 //! battle with a Steel Bow, a stock of three weapons, three armours, three
 //! accessories, six Potions and two Elixirs, and a pack cap of 6.
 
@@ -454,11 +454,12 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(s.prep().bench[0].loadout.weapon(0), None);
     assert_eq!(s.prep().bench[0].loadout.equipped, None);
-    // The archer (the unit above her) takes it in his second slot.
+    // The archer (two above her, past the mage) takes it in his second
+    // slot.
     update(
         &mut s,
         &mut c,
-        &[Cancel, CursorUp, Confirm, CursorDown, Confirm],
+        &[Cancel, CursorUp, CursorUp, Confirm, CursorDown, Confirm],
     );
     assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Archer"));
     assert_eq!(
@@ -472,7 +473,11 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
         Some("steel_bow")
     );
     // The scout can take a stock item too, by the same rules.
-    update(&mut s, &mut c, &[Cancel, CursorDown, Confirm, Confirm]);
+    update(
+        &mut s,
+        &mut c,
+        &[Cancel, CursorDown, CursorDown, Confirm, Confirm],
+    );
     assert_eq!(s.who(), Some(PrepUnit::Benched(0)));
     assert!(stock_texts(&s)[0].ends_with("can't use spears"));
 }

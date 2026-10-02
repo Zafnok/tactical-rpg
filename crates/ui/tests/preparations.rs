@@ -175,8 +175,9 @@ fn the_benched_scouts_bow_goes_to_the_archer() {
     let mut h = preparations();
     // The scout (last in the list): her only weapon back to the stock.
     h.keys("f Up f f f");
-    // The archer (above her): his second slot takes it (the last stock row).
-    h.keys("d Up f Down f Up f");
+    // The archer (two above her, past the mage): his second slot takes it
+    // (the last stock row).
+    h.keys("d Up Up f Down f Up f");
     assert!(
         shows(&h, "Weapon     Steel Bow       25/25"),
         "{}",
@@ -195,11 +196,11 @@ fn the_benched_scouts_bow_goes_to_the_archer() {
         .collect();
     assert_eq!(bows, ["iron_bow", "steel_bow"]);
     // The scout isn't in the battle, and in the army she has no bow now.
-    assert_eq!(state.units().len(), 6);
+    assert_eq!(state.units().len(), 8);
     let scout = |h: &Harness| {
         let campaign = h.flow().and_then(|f| f.campaign());
         let roster = &campaign.unwrap_or_else(|| panic!("no campaign")).roster;
-        roster[3].clone()
+        roster[4].clone()
     };
     assert_eq!(scout(&h).name, "Test Scout");
     assert_eq!(scout(&h).loadout.weapon_count(), 0);

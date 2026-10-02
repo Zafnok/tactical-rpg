@@ -4,6 +4,7 @@
 #![allow(clippy::print_stdout)]
 
 mod check_keys;
+mod clean_targets;
 mod font_atlas;
 mod sfx;
 mod tickets;
@@ -12,11 +13,13 @@ mod web;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::SystemTime;
 
 const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
 check-keys                         fail on keys hard-coded in game code or text\n  \
+clean-merged-targets [--dry-run]   delete target/ in worktrees whose PR has merged\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
@@ -31,6 +34,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
     match args.next().as_deref() {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
         Some("check-keys") => check_keys(&args.collect::<Vec<_>>()),
+        Some("clean-merged-targets") => clean_merged_targets(&args.collect::<Vec<_>>()),
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
@@ -85,6 +89,28 @@ fn check_keys(args: &[String]) -> u8 {
         eprintln!("  {error}");
     }
     1
+}
+
+fn clean_merged_targets(args: &[String]) -> u8 {
+    let dry_run = match clean_targets::parse_args(args) {
+        Ok(dry_run) => dry_run,
+        Err(e) => {
+            eprintln!("{e}");
+            return 2;
+        }
+    };
+    let repo_root = repo_root();
+    let tools = clean_targets::RealTools {
+        repo_root: &repo_root,
+    };
+    let print = |line| println!("{line}");
+    match clean_targets::run(&tools, &repo_root, SystemTime::now(), dry_run, print) {
+        Ok(outcome) => u8::from(outcome.failed),
+        Err(e) => {
+            eprintln!("clean-merged-targets: {e}");
+            1
+        }
+    }
 }
 
 fn font_atlas(args: &[String]) -> u8 {
@@ -332,6 +358,17 @@ mod tests {
     #[test]
     fn check_keys_rejects_args() {
         assert_eq!(check_keys(&args(&["--bogus"])), 2);
+    }
+
+    #[test]
+    fn clean_merged_targets_rejects_unknown_args() {
+        // Only the argument check: a real run needs `gh` and would delete
+        // build folders.
+        assert_eq!(clean_merged_targets(&args(&["--bogus"])), 2);
+        assert_eq!(
+            dispatch(args(&["clean-merged-targets", "--dry-run", "x"]).into_iter()),
+            2
+        );
     }
 
     #[test]

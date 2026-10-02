@@ -9,8 +9,8 @@ expression: h.snapshot()
 │ Test Lord    ││ Weapon     Iron Sword      20/20 ││ Steel Spear     can't use spears             │
 │ Test Knight  ││ Weapon     Steel Sword     25/25 ││ Iron Axe        can't use axes               │
 │ Test Archer  ││ Weapon     -                     ││ Iron Sword      Mt 5 Hit 90 Wt 2 Rng1 20/20  │
-│ Test Scout   ││ Armour     Leather Vest          ││                                              │
-│              ││ Accessory  -                     ││                                              │
+│ Test Mage    ││ Armour     Leather Vest          ││                                              │
+│ Test Scout   ││ Accessory  -                     ││                                              │
 │              ││                                  ││                                              │
 │              ││ AS 7 → 6 with Iron Sword         ││                                              │
 │              ││                                  ││                                              │
@@ -42,8 +42,8 @@ ccdddddddcccccccccdddddddddddddddddddccccccccccccccceeddddddddddddddddeeeeeeeeee
 cddddddddddddddccffffffffffffffffffffffffffffffffffcegggggggggggggggggggggggggggggggggggggggggggggge
 cffffffffffffffccffffffffffffffffffffffffffffffffffcegggggggggggggggggggggggggggggggggggggggggggggge
 cffffffffffffffccddddddddddddddddddddddddddddddddddcehhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhe
-cggggggggggggggccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe
 cffffffffffffffccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe
+cggggggggggggggccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe
 cffffffffffffffccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe
 cffffffffffffffccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe
 cffffffffffffffccffffffffffffffffffffffffffffffffffceffffffffffffffffffffffffffffffffffffffffffffffe

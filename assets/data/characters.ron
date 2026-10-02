@@ -77,9 +77,23 @@
             weapon_ranks: [(Axe, D)],
             loadout: (weapons: ["iron_axe"]),
         ),
+        // The debug Quick Battle's caster (ticket 0410): Fire from the
+        // class; Frost (a Mage's level-5 spell) and Heal as personal spells,
+        // so one unit can try every kind of cast.
+        (
+            id: "test_mage", class: "mage", level: 1,
+            map_label: Some("Ma"),
+            talent: Mag,
+            base: (16, 1, 6, 5, 5, 1, 5),
+            weapon_ranks: [],
+            personal_spells: [(1, "frost"), (1, "heal")],
+            loadout: (armour: Some("leather_vest")),
+        ),
     ],
     generics: [
         (id: "test_brigand", class: "brigand", level: 1, loadout: (weapons: ["iron_axe"])),
+        // The debug Quick Battle's elemental (Nick, ticket 0410).
+        (id: "test_frost_elemental", class: "frost_elemental", level: 1),
         (
             id: "test_raider", class: "raider", level: 2,
             loadout: (weapons: ["steel_axe", "iron_axe"]),

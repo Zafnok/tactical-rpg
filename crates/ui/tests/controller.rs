@@ -132,7 +132,7 @@ fn unused_buttons_do_nothing() {
 fn start_twice_ends_the_turn() {
     let mut h = quick_battle();
     h.pad("Start");
-    assert!(shows(&h, "End turn with 3 units ready?"));
+    assert!(shows(&h, "End turn with 4 units ready?"));
     // Cancel backs out; Start pressed twice ends the turn.
     h.pad("East");
     assert!(!shows(&h, "units ready?"));

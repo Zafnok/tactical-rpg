@@ -18,9 +18,9 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                    │ Test Lord    HP 19/19  ready │                   │                            │
                    │ Test Knight  HP 20/20  ready │                   │                            │
                    │ Test Archer  HP 17/17  ready │                   │                            │
+                   │ Test Mage    HP 16/16  ready │                   │                            │
                    └──────────────────────────────┘                   │                            │
-                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
-                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
+                    ♣♣♠♠··..........Fr▓▓▓▓▐▌▓▓..                      │                            │
                                                                       │                            │
                                                                       │                            │
                                                                       │                            │
@@ -51,9 +51,9 @@ aaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaboooooooooooooooooooooooooooooobaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkkkppjjqqjjjjjjjjrrssssrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkllppjjjjjjjjjjjjrrrrttrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkllppjjjjjjjjjjqqrrrrssrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -65,8 +65,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaauuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuua
-auuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaauuuuuuuua
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaatttttttttttttttttttttttttttttttttttttttttttttta
+attttttttttttttttttttttttttttttttttaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaatttttttta
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -84,10 +84,9 @@ m = fg:mountain bg:mountain_bg
 n = fg:peak bg:peak_bg
 o = fg:panel_bg bg:panel_border_focus
 p = fg:road bg:road_bg
-q = fg:player bg:grass_bg
+q = fg:enemy bg:grass_bg
 r = fg:stone bg:stone_bg
-s = fg:floor bg:floor_bg
-t = fg:wood bg:stone_bg
-u = fg:text_dim bg:black
+s = fg:wood bg:stone_bg
+t = fg:text_dim bg:black
 --- overlays ---
-over  224,286 16x2  hp_high
+over  288,302 16x2  hp_high

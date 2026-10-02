@@ -148,7 +148,13 @@ fn a_battle_campaign_has_the_battles_characters() {
     // Its slots' characters, then its bench.
     assert_eq!(
         names,
-        ["Test Lord", "Test Knight", "Test Archer", "Test Scout"]
+        [
+            "Test Lord",
+            "Test Knight",
+            "Test Archer",
+            "Test Mage",
+            "Test Scout"
+        ]
     );
     assert_eq!(game.gold, 0);
     // The Quick Battle's own stock, to try Preparations with.

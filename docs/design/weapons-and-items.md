@@ -350,7 +350,7 @@ Any unit can wear any accessory.
   shop**. It sells no unique items, only the basics up to the tier the
   player has unlocked (early on a Potion; later a stronger healing item,
   and so on). Which items are basics and what unlocks a tier: ticket 0038;
-  built in ticket 0430.
+  built in ticket 0435.
 - **Using an item** (*Claude's starting rule*, FE Vulnerary): `Item` in the
   action menu → pick a consumable from the pack → target the unit itself or an
   adjacent ally → the item is consumed and **the unit's action ends**.
