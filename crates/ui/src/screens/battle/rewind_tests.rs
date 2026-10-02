@@ -301,3 +301,36 @@ fn skipping_is_silent() {
     press(&mut s, &mut c, &[Cancel], 0.0);
     assert!(cues(&mut c).is_empty());
 }
+
+/// The rewind screen's map scene (ADR-0038): the battle as it was just
+/// before the highlighted action, with no cursor, range or path.
+#[test]
+fn the_scene_is_the_map_before_the_highlighted_action() {
+    let mut c = ctx();
+    let (mut s, start) = attacked(&mut c, 3);
+    let now = s.scene(&c);
+    assert_eq!(
+        now.unit(UnitId(1)).map(|u| (u.pos, u.acted)),
+        Some((s.state().units()[0].pos, true))
+    );
+    assert!(now.cursor.is_some());
+    press(&mut s, &mut c, &[Rewind], 0.0);
+    assert!(s.rewind().is_some());
+    let scene = s.scene(&c);
+    assert_eq!((scene.origin, scene.size), (now.origin, now.size));
+    let before: Vec<_> = start
+        .units()
+        .iter()
+        .map(|u| (u.id, u.pos, u.hp, u.acted))
+        .collect();
+    let shown: Vec<_> = scene
+        .units
+        .iter()
+        .map(|u| (u.id, u.pos, u.hp.0, u.acted))
+        .collect();
+    assert_eq!(shown, before);
+    assert_ne!(scene.units, now.units);
+    assert_eq!(scene.tiles, now.tiles);
+    assert_eq!(scene.cursor, None);
+    assert!(scene.path.is_empty());
+}

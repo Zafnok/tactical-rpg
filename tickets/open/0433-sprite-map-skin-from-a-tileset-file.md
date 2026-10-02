@@ -43,6 +43,16 @@ Keep this ticket's scope as written; two things help them:
 playtest waits for the bought-art map, so 0804 waits for 0436 and 0437,
 which wait for this ticket.
 
+**From 0432 (2026-10-01):** switching `ctx.map_skin` during a battle
+already works for the camera: the battle screen takes the view's size from
+the skin at the start of every frame and re-centres on the cursor when it
+changed. Two things it does not redo, because nothing could switch skins
+yet: the camera saved for the player's next phase, and the camera pan of an
+AI action already playing. Both were worked out for the old view size. If
+the debug menu can switch skins during an enemy phase, handle them here.
+`faction_color` and `hp_fill` are in `screens/battle/units.rs`; the path's
+geometry is in `map_view/glyph/path.rs` (tile size is a constant there).
+
 ## Nick input
 
 None. Nothing changes for players: the glyph skin stays the default, and

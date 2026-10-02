@@ -1,0 +1,46 @@
+---
+source: crates/ui/tests/battle.rs
+expression: start
+---
+origin (-10,-11) size 35x30
+ -11: -*35
+ -10: -*35
+  -9: -*35
+  -8: -*35
+  -7: -*35
+  -6: -*35
+  -5: -*35
+  -4: -*35
+  -3: -*35
+  -2: -*35
+  -1: -*35
+   0: -*10 sea*3 water*2 plain*2 forest*2 thicket*2 mountain*2 peak -*11
+   1: -*10 sea*2 water*2 plain*2 road*3 forest*2 mountain*3 -*11
+   2: -*10 sea water*2 bridge*2 road*3 plain*2 forest*2 plain*2 -*11
+   3: -*10 plain water*2 plain road plain*7 fort plain -*11
+   4: -*10 plain*2 road*3 plain*4 wall*4 plain -*11
+   5: -*10 plain forest road plain*2 fort plain*3 wall floor fort wall plain -*11
+   6: -*10 forest*2 road plain*6 wall floor*2 wall plain -*11
+   7: -*10 forest thicket road plain*6 wall*2 door wall plain -*11
+   8: -*35
+   9: -*35
+  10: -*35
+  11: -*35
+  12: -*35
+  13: -*35
+  14: -*35
+  15: -*35
+  16: -*35
+  17: -*35
+  18: -*35
+units 8
+  #1 Lo player exile [test_lord] (3,5) hp 19/19
+  #2 Kn player guard [test_knight] (4,6) hp 20/20
+  #3 Ar player archer [test_archer] (2,4) hp 17/17
+  #4 Br enemy brigand (8,2) hp 20/20
+  #5 Br enemy brigand (7,4) hp 20/20
+  #6 Ra enemy raider (7,1) hp 22/22
+  #7 Fr enemy frost_elemental (8,7) hp 30/30
+  #8 Ma player mage [test_mage] (3,6) hp 16/16
+cursor (3,5) corners 0.99
+path -

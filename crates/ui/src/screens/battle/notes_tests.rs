@@ -55,7 +55,7 @@ fn shows(s: &BattleScreen, c: &Ctx, text: &str) -> bool {
 /// The colours (text, background) of the left cell of `unit`'s tile.
 fn colours(s: &BattleScreen, c: &Ctx, unit: UnitId) -> (Rgb, Rgb) {
     let pos = s.state().unit(unit).unwrap().pos;
-    let (x, y) = tile_to_cell(pos, &s.camera()).unwrap();
+    let (x, y) = super::testing::tile_cell(s, c, pos).unwrap();
     let buf = render(s, c);
     let cell = buf.get(x, y).unwrap();
     (cell.fg, cell.bg)
@@ -282,4 +282,28 @@ fn a_command_behind_the_notes_waits_for_them() {
         turn: 1,
     };
     assert_eq!(s.banner().map(|b| b.kind), Some(enemy));
+}
+
+/// The map scene (ADR-0038) while the notes are up: the unit a note is
+/// about is highlighted in the on half of its blink, and no other unit is.
+#[test]
+fn the_scene_highlights_the_noted_unit_as_it_blinks() {
+    let mut c = ctx();
+    let mut s = started(&c);
+    assert!(s.notes_open());
+    let highlighted = |s: &BattleScreen, c: &Ctx| -> Vec<UnitId> {
+        let units = s.scene(c).units;
+        let lit = units.iter().filter(|u| u.highlight);
+        lit.map(|u| u.id).collect()
+    };
+    assert_eq!(highlighted(&s, &c), [BRIGAND]);
+    // Off for the second half of the blink, then on again.
+    frame(&mut s, &mut c, &[], BLINK_S * 1.1);
+    assert!(highlighted(&s, &c).is_empty());
+    frame(&mut s, &mut c, &[], BLINK_S);
+    assert_eq!(highlighted(&s, &c), [BRIGAND]);
+    // The notes closed: no unit is picked out.
+    frame(&mut s, &mut c, &[Action::Confirm], 0.0);
+    assert!(!s.notes_open());
+    assert!(highlighted(&s, &c).is_empty());
 }

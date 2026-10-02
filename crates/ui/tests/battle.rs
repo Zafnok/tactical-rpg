@@ -65,6 +65,28 @@ fn quick_battle_renders() {
     assert_snapshot!(h.snapshot());
 }
 
+/// What the Quick Battle's map shows at its start, as data (ADR-0038): the
+/// terrain, the units and the cursor on the lord. Moving the cursor one
+/// tile changes its line and nothing else.
+#[test]
+fn quick_battle_map_text() {
+    let mut h = quick_battle();
+    let start = h.map_text();
+    assert_snapshot!(start);
+    h.keys("Right");
+    let moved = h.map_text();
+    assert_eq!(start.lines().count(), moved.lines().count());
+    let changed: Vec<(&str, &str)> = start
+        .lines()
+        .zip(moved.lines())
+        .filter(|(a, b)| a != b)
+        .collect();
+    assert_eq!(changed.len(), 1, "{changed:?}");
+    let (was, is) = changed[0];
+    assert!(was.starts_with("cursor (3,5) corners "), "{was}");
+    assert!(is.starts_with("cursor (4,5) corners "), "{is}");
+}
+
 #[test]
 fn back_opens_the_map_menu() {
     let mut h = quick_battle();

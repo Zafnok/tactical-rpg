@@ -20,7 +20,9 @@ use crate::audio::{AudioRequest, MusicClock, MusicCommand};
 use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Device, Layout, PadKind};
+use crate::map_view::MapScene;
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
+use crate::screens::BattleScreen;
 use crate::storage::{MemoryStorage, Storage};
 
 /// Simulated length of one frame, in seconds (60 fps).
@@ -386,6 +388,24 @@ impl Harness {
         self.game.screen_mut()
     }
 
+    /// What the battle on the stack shows on its map (ADR-0038): the game
+    /// flow's battle, else a battle screen put on the stack itself. `None`
+    /// with no battle. Assert on this (or on the battle's state), not on
+    /// cells and colours, to check what happened.
+    pub fn map_scene(&self) -> Option<MapScene> {
+        let in_flow = self.flow().and_then(FlowScreen::battle);
+        let battle = in_flow.or_else(|| self.game.screen::<BattleScreen>())?;
+        Some(battle.scene(self.game.ctx()))
+    }
+
+    /// [`map_scene`](Self::map_scene) as text ([`MapScene::to_text`]);
+    /// empty with no battle.
+    pub fn map_text(&self) -> String {
+        let content = &self.game.ctx().content;
+        self.map_scene()
+            .map_or_else(String::new, |scene| scene.to_text(content))
+    }
+
     /// Whether the game has asked to quit.
     pub fn quit_requested(&self) -> bool {
         self.game.quit_requested()
@@ -650,6 +670,32 @@ mod tests {
         assert_eq!(h.top_screen(), "");
         assert!(h.screens().is_empty());
         assert!(h.quit_requested());
+    }
+
+    #[test]
+    fn map_scene_is_the_battle_on_the_stack() {
+        use crate::screens::BattleScreen;
+        use crate::screens::battle::quick_battle;
+        // No battle: no scene, no text.
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        assert_eq!(h.map_scene(), None);
+        assert_eq!(h.map_text(), "");
+        // The Quick Battle, inside the game flow.
+        h.keys("Down f");
+        assert_eq!(h.screens(), ["title", "battle"]);
+        let scene = h.map_scene().unwrap();
+        let battle = h.flow().and_then(FlowScreen::battle).unwrap();
+        assert_eq!(scene, battle.scene(h.game().ctx()));
+        assert_eq!(scene.units.len(), 8);
+        assert_eq!(h.map_text(), scene.to_text(&h.game().ctx().content));
+        assert!(h.map_text().starts_with("origin (-10,-11) size 35x30\n"));
+        // A battle screen on the stack itself.
+        let state = quick_battle(&embedded_ctx().content).unwrap();
+        let h = Harness::with_screen(Box::new(BattleScreen::new(state)));
+        let bare = h.map_scene().unwrap();
+        // The same map; only the cursor's pulse is a frame behind.
+        assert_eq!((bare.tiles, bare.units), (scene.tiles, scene.units));
+        assert_eq!(bare.cursor.map(|c| c.pos), scene.cursor.map(|c| c.pos));
     }
 
     #[test]

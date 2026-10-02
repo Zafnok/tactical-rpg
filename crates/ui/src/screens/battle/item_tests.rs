@@ -14,6 +14,7 @@ use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
+use crate::map_view::RangeKind;
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, Screen};
 
@@ -486,7 +487,7 @@ fn the_popup_is_drawn_on_the_row_above_the_healed_unit() {
             target: UnitId(2),
         },
     });
-    let (x, y) = super::camera::tile_to_cell(p(4, 5), &s.camera()).expect("in view");
+    let (x, y) = super::testing::tile_cell(&s, &c, p(4, 5)).expect("in view");
     let buf = render(&s, &c);
     assert_eq!(text(&buf, x, y - 1, 3), "+10");
     assert_eq!(
@@ -523,4 +524,44 @@ fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
     assert_eq!(s.mode().drawn_pos(UnitId(2)), None);
     // Its own tile is where the cursor goes for the user.
     assert_eq!(s.cursor().pos, p(4, 5));
+}
+
+/// The map scene (ADR-0038) while choosing who gets an item: its targets
+/// are a heal range, the user's own tile being where it will stand.
+#[test]
+fn the_scene_marks_who_an_item_can_target() {
+    let mut c = ctx();
+    // The lord and the knight beside it, both hurt.
+    let state = hurt_pair(&c, 5, 15, &["potion"]);
+    let mut s = lord_menu(&mut c, state);
+    step(&mut s, &mut c, &ITEM);
+    // The pack: no cursor, no range.
+    let scene = s.scene(&c);
+    assert_eq!(scene.cursor, None);
+    assert!(scene.tinted(RangeKind::Heal).is_empty());
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
+    let scene = s.scene(&c);
+    assert_eq!(scene.tinted(RangeKind::Heal), [p(3, 5), p(4, 5)]);
+    for kind in [RangeKind::Danger, RangeKind::Move, RangeKind::Attack] {
+        assert!(scene.tinted(kind).is_empty(), "{kind:?}");
+    }
+    assert_eq!(scene.cursor.map(|c| c.pos), Some(s.cursor().pos));
+    // The lord walks up to (3, 4) first: it is the only one hurt beside
+    // that tile, and the range is there, not where it started.
+    let state = hurt_pair(&c, 5, 15, &["potion"]);
+    let mut s = BattleScreen::new(state);
+    step(
+        &mut s,
+        &mut c,
+        &[Action::Confirm, Action::CursorUp, Action::Confirm],
+    );
+    wait(&mut s, &mut c, 1.0);
+    step(&mut s, &mut c, &ITEM);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
+    let scene = s.scene(&c);
+    assert_eq!(scene.tinted(RangeKind::Heal), [p(3, 4)]);
+    assert_eq!(scene.unit(UnitId(1)).map(|u| u.pos), Some(p(3, 4)));
+    assert_eq!(scene.cursor.map(|c| c.pos), Some(p(3, 4)));
 }

@@ -19,7 +19,7 @@ use super::magic::{
 use super::mode::{Effect, MenuEntry, Mode, Selection, menu_entries, open_menu};
 use super::sounds::step_sound;
 use super::testing::{battle_with, quick_units, through_ai_phases};
-use super::{BattleScreen, HealPopup, OVERLAY_BLEND, TERRAIN_FLASH_S, TerrainFlash, quick_battle};
+use super::{BattleScreen, HealPopup, TERRAIN_FLASH_S, TerrainFlash, quick_battle};
 use crate::FrameInput;
 use crate::audio::MenuSound;
 use crate::color::{Rgb, UiColor};
@@ -27,6 +27,8 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::harness::Harness;
 use crate::input::Action;
+use crate::map_view::RangeKind;
+use crate::map_view::glyph::OVERLAY_BLEND;
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, Screen};
 
@@ -645,10 +647,10 @@ fn casting_fire_on_a_forest_sets_it_burning_with_a_flash() {
 }
 
 #[test]
-fn a_flash_fades_from_the_overlay_blend_to_nothing() {
+fn a_flash_fades_from_full_strength_to_nothing() {
     let at = |t| TerrainFlash { pos: p(0, 0), t }.strength();
-    assert!((at(0.0) - OVERLAY_BLEND).abs() < 1e-6);
-    assert!((at(TERRAIN_FLASH_S / 4.0) - OVERLAY_BLEND * 0.75).abs() < 1e-6);
+    assert!((at(0.0) - 1.0).abs() < 1e-6);
+    assert!((at(TERRAIN_FLASH_S / 4.0) - 0.75).abs() < 1e-6);
     assert!(at(TERRAIN_FLASH_S).abs() < 1e-6);
     assert!(at(TERRAIN_FLASH_S * 3.0).abs() < 1e-6);
     assert!((TERRAIN_FLASH_S - 0.4).abs() < f32::EPSILON);
@@ -1056,4 +1058,74 @@ fn harness_heal_on_the_ally_beside_raises_its_hp_and_spends_a_use() {
     assert!(shows(info, "Test Mage"));
     assert!(shows(info, "7/8"));
     assert!(shows(info, "10/10"));
+}
+
+/// The map scene (ADR-0038) while a spell's target is picked: the units it
+/// can hit are an attack range (the ones it can heal, a heal range), each
+/// tile it can change is marked with what it would become, and a tile
+/// whose terrain changed flashes.
+#[test]
+fn the_scene_marks_a_spells_targets_its_tile_changes_and_the_flash() {
+    let mut c = ctx();
+    let state = field(&c, 18);
+    // The spell list: no cursor.
+    assert_eq!(spell_list(&mut c, state.clone()).scene(&c).cursor, None);
+    // The units a spell can be cast on, row by row.
+    let units = |s: &BattleScreen| {
+        let targets = targeting(s).targets().iter();
+        let mut at: Vec<Pos> = targets
+            .filter_map(|t| match t {
+                CastTarget::Unit(id) => s.state().unit(*id).map(|u| u.pos),
+                CastTarget::Tile(_) => None,
+            })
+            .collect();
+        at.sort_by_key(|p| (p.y, p.x));
+        at
+    };
+    let changing = |scene: &crate::map_view::MapScene| {
+        let tiles = scene.tiles.iter();
+        tiles.filter(|t| t.becomes.is_some()).count()
+    };
+    // Fire: the elemental and the brigand, and the two forests burning.
+    let mut s = casting(&mut c, state.clone(), 0);
+    let scene = s.scene(&c);
+    assert_eq!(units(&s), [p(1, 4), p(2, 4)]);
+    assert_eq!(scene.tinted(RangeKind::Attack), units(&s));
+    assert!(scene.tinted(RangeKind::Heal).is_empty());
+    let burning = c.content.terrain.display.id_of("burning");
+    assert!(burning.is_some());
+    assert_eq!(scene.tile(p(1, 5)).unwrap().becomes, burning);
+    assert_eq!(scene.tile(p(0, 6)).unwrap().becomes, burning);
+    assert_eq!(changing(&scene), 2);
+    assert!(scene.tiles.iter().all(|t| t.flashes.is_empty()));
+    let on = target_pos(s.state(), targeting(&s).target());
+    assert_eq!(scene.cursor.map(|c| Some(c.pos)), Some(on));
+    // Heal: the hurt knight, and no tile.
+    let heal = casting(&mut c, state, 2);
+    let scene = heal.scene(&c);
+    assert_eq!(units(&heal), [p(0, 5)]);
+    assert_eq!(scene.tinted(RangeKind::Heal), units(&heal));
+    assert!(scene.tinted(RangeKind::Attack).is_empty());
+    assert_eq!(changing(&scene), 0);
+    // Fire cast on the forest at (1, 5): it burns, and flashes for a while.
+    step(&mut s, &mut c, &[Action::NextUnit, Action::NextUnit]);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    let flashing = |s: &BattleScreen, c: &Ctx| {
+        let scene = s.scene(c);
+        let lit = scene.tiles.iter().filter(|t| !t.flashes.is_empty());
+        assert!(lit.count() <= 1);
+        assert_eq!(changing(&scene), 0);
+        let tile = scene.tile(p(1, 5)).unwrap().clone();
+        assert_eq!(tile.terrain, burning);
+        tile.flashes
+    };
+    let strengths = flashing(&s, &c);
+    assert_eq!(strengths.len(), 1);
+    assert!((strengths[0] - 1.0).abs() < 1e-6, "{strengths:?}");
+    wait(&mut s, &mut c, TERRAIN_FLASH_S / 2.0);
+    let strengths = flashing(&s, &c);
+    assert_eq!(strengths.len(), 1);
+    assert!((strengths[0] - 0.5).abs() < 1e-6, "{strengths:?}");
+    wait(&mut s, &mut c, TERRAIN_FLASH_S / 2.0);
+    assert!(flashing(&s, &c).is_empty());
 }
