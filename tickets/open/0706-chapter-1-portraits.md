@@ -23,7 +23,10 @@ portraits. In 0021 he chose **Mega Tiles' Tiny Tales packs** for both faces
 and combat art (`docs/design/look-and-feel.md`, *Portraits and battle art*;
 ADR-0032). This ticket **assigns bought faces** to the cast instead of
 drawing them. The files come from the private assets repo (0110) and use
-0711's PNG format (48×48 faces, 5 px per pixel).
+0711's PNG format. **Dialogue shows the 80×80 busts, cut to 64×64 and
+drawn at 4×** (Nick, ticket 0039; `look-and-feel.md`, *Dialogue
+portraits*), so wherever this ticket says "face", import the bust with
+that expression.
 
 **Waits for 0035** (added 2026-10-01): Harl's face must match his combat
 picture, and 0035 picks that picture (and may change his class, which 0803
@@ -82,8 +85,11 @@ together. This replaces the preview-based notes above where they differ.
   `thinking`, `sly`, `unique`. So `happy` → smile, `angry` → stern,
   `sad` → sad, `surprised` → surprise map directly; `sly` and `thinking`
   are spare for the sheets' extra expressions (`smug`, `sneer`, `cold`,
-  `weary`…). Each exists as a 48×48 face and as an 80×80 bust (face or
-  bust in dialogue: ticket 0039, question 7).
+  `weary`…). Each exists as a 48×48 face and as an 80×80 bust; dialogue
+  uses the bust (ticket 0039). The generator exports busts with "Crop
+  Face" off. The cut loses the tips of very tall ears or horns and the
+  edge of the widest shoulders: look at each pick in the frame, and use
+  0711's `--shift-x` for a bust that sits off-centre.
 - **Faces exist only for the 16 heroes**, plus what the Character
   Generator EX 1.2 makes. Its parts: six kinds of outfit (soldier, rogue,
   brawler, commoner, traveller, simple dress), one wizard hat, many hair

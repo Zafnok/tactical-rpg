@@ -28,7 +28,7 @@ None.
 **In:** `Settings` struct persisted via `Storage` key `settings`, Options
 screen reachable from title and map menu, a "Key bindings" row that opens 0815's screen.
 
-**Out:** controller bindings (0816, on the Key bindings screen); the key-binding screen itself (0815).
+**Out:** controller bindings (0816, on the Key bindings screen); the key-binding screen itself (0815); the "Map look: Pictures / Glyphs" row (0824, after this ticket and 0436; decided in 0039).
 
 **Audio (added by 0020):** music and sound volume settings, played through the
 0212 audio plumbing ([`docs/design/audio.md`](../../docs/design/audio.md)).

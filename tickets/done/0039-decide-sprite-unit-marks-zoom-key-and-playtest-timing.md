@@ -5,10 +5,10 @@ type: design-decision
 milestone: M3 Battle UI
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0038"]
 nick_input: decision
-completed:
+completed: 2026-10-02
 ---
 
 # 0039 — Decide: sprite units' marks, the zoom key, playtest timing
@@ -109,11 +109,11 @@ change.
 
 - [x] Questions 1 and 3 answered and recorded; question 2 moved to 0439
       (2026-10-02).
-- [ ] Questions 4–7 each have an answer in `look-and-feel.md` with Nick's
+- [x] Questions 4–7 each have an answer in `look-and-feel.md` with Nick's
       words, or a written note that Nick put it off and until when.
-- [ ] 0436 or its follow-up (and 0805, 0711, 0706 where an answer changes
+- [x] 0436 or its follow-up (and 0805, 0711, 0706 where an answer changes
       them) match the answers.
-- [ ] `cargo xtask ticket-lint` and `typos` pass.
+- [x] `cargo xtask ticket-lint` and `typos` pass.
 
 ## Tests required
 
@@ -121,5 +121,70 @@ change.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Decided (2026-10-02), in `look-and-feel.md` § *Battle map: bought tiles
+and unit sprites* and § *Dialogue portraits*, with Nick's words:**
+
+- **Question 4, do sprites walk:** "1C". A unit that can still act steps
+  on the spot; an acted unit stands still ("sure, unit can stand still if
+  exhausted"); a moving unit walks along its path and turns to face the
+  way it goes. Nick added: "make sure the hp
+  bar is not overlapping the sprite". The sprite now stands with its feet
+  directly on the HP bar ("sprite 0 … looks best to me", after seeing it 1
+  and 2 pixels higher), and HP bars are drawn over every sprite. The
+  Chapter 1 playtest waits for the walking ("B").
+- **Question 5, may players pick the glyph look:** yes, an Options entry
+  ("if both exist I guess we can add the option").
+- **Question 6, under an effect:** Nick asked what an effect is and for a
+  mark that isn't a square. Shown an up arrow for a bonus and a down arrow
+  for a penalty, he chose the arrow in the tile's top-right corner ("1A"),
+  one pixel higher than first drawn ("mark 1"). He then asked for the
+  marks to move: the arrows bounce, and a unit with both a bonus and a
+  penalty shows the two arrows taking turns ("B looks best", over the
+  stacked pair and a swirl).
+- **Asked by Nick along the way:** a sprite never covers the unit above
+  it; its head is shaved where it would ("A is best": only under another
+  unit). The HP bar is 14 pixels wide, one pixel in from each side,
+  always and in both looks ("glyph look should also have 14px hp bar").
+- **Question 7, face or bust:** busts, at 4×, filling the frame ("2C").
+  Nick asked for it after seeing the bust at 3× with empty space. The
+  bust is cut to its middle 64 columns and bottom 64 rows. This replaces
+  0021's rule (faces at 5×).
+
+***Claude's starting rules*** (Nick can veto any of them):
+
+- When another unit stands in the tile above, an effect mark sits 4
+  pixels lower, inside its own tile.
+- Marks on an acted unit keep moving, dimmed.
+- A unit walking through a tile an ally stands on is drawn in front of
+  the ally and isn't shaved there.
+- The marks' speeds are the mockup's (a bounce every 375 ms, a turn every
+  750 ms).
+- The arrows' colours (light blue up, purple down) are the mockup's
+  stand-ins.
+- "Map look: Pictures / Glyphs": Pictures is the default; it switches
+  terrain and units together, at once, and is remembered; a build without
+  the bought files doesn't show the entry.
+- A bust that sits off-centre may be cut a few columns to one side.
+- Stepping and walking speeds are the mockup's (a step every 250 ms, a
+  tile every 200 ms).
+
+**Follow-up tickets created:** 0440 (sprite units step on the spot and
+walk; on the critical path, in 0804's `blocked_by`), 0824 (the Options
+entry for the map look; after 0436 and 0805, not on the critical path),
+0441 (the glyph look's HP bar 14 pixels wide; small, waits for nothing).
+
+**Tickets changed:** 0436 (the sprite's height, bars over sprites, the
+14-pixel bar, shaved heads, the moving effect arrows and the scene
+saying bonus or penalty; walking and the
+Options entry moved out to 0440 and 0824), 0711 and 0706 (busts cut to
+64×64 at 4×), 0805 (the map-look row is 0824's), 0804 and
+`docs/ROADMAP.md` (0440), 1006.
+
+**Mockups** (bought art, never committed): `spike-renders/` in the
+bought-art folder, J1–J5 (walking, the HP bar), K and K2–K4 (effect marks),
+M–M3 (shaved heads, the 14-pixel bar),
+H2–H5 (faces and busts in the dialogue screen), L and L2 (the sprite's
+and the arrow's height).
+
+**Note for Nick:** the game has no poison or other lasting ailment. The
+green drop in K2 was only an example of what such a mark could look like.

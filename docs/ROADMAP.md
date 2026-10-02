@@ -57,14 +57,17 @@ look (ADR-0033); 0505 and 0508 now check it.
 **Bought art on the battle map** (Nick, 2026-10-02, ticket 0038: he bought
 the whole Mega Tiles bundle and chose its tiles and map sprites for the
 battle map, with per-map lighting and a zoom key): after **0433** and
-**0110**, **0436** units as the bought map sprites → **0437** terrain from
+**0110**, **0436** units as the bought map sprites (→ **0440** they step
+on the spot and walk along their path) → **0437** terrain from
 the bought tilesets (auto-tiling) → **0438** per-map lighting; **0439** the
 1× / 2× zoom toggle (after 0433; Nick picks its key when it is built).
 Nick wants the bought-art map in his Chapter 1 playtest, so **0432, 0433,
-0436 and 0437 are on the critical path** (0438 and 0439 are not). **0039**
-holds what is still open (whether sprites walk, the effect mark, whether
-players may pick the glyph look, face or bust in dialogue); nothing waits
-for it.
+0436, 0437 and 0440 are on the critical path** (0438 and 0439 are not).
+**0039** (done 2026-10-02) settled the rest: sprites step and walk (0440,
+which the playtest waits for), an up or down arrow marks a unit under an
+effect (0436), dialogue shows the busts at 4× (0711), and players may
+pick the glyph look in Options (**0824**, after 0436 and 0805; not on the
+critical path).
 
 ## Nick's queue (answer these first; any order within a row)
 
@@ -105,13 +108,14 @@ front of the playtest unless Nick says they can wait.
 Also 2026-10-02 (ticket 0038): Nick bought the art and wants the battle
 map drawn with it before he plays, so the map skin (0432, then 0433), the
 bought unit sprites (0436, which also needs 0110) and the bought terrain
-(0437) joined the table.
+(0437) joined the table. Ticket 0039 added 0440 (walking sprites) the
+same day: Nick said the playtest waits for it.
 
 ```
  1  0022 0023 0024 0035 0110 0231 0316 0410 0432 0435 0710 0714 0715 0801
  2  0433 0711 0716 0802 0807 0810
  3  0413 0436 0706 0809
- 4  0437 0803
+ 4  0437 0440 0803
  5  0804  ◄── Nick plays Chapter 1
 ```
 
