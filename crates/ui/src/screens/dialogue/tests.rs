@@ -5,6 +5,7 @@ use trpg_content::Step;
 use trpg_core::CharacterId;
 
 use super::*;
+use crate::audio::AudioRequest;
 use crate::screen::tests::ctx;
 
 /// One frame of `dt` seconds with `actions`, Confirm held if `held`.
@@ -382,6 +383,26 @@ fn a_character_without_a_portrait_gets_an_empty_frame() {
 }
 
 #[test]
+fn a_speaker_who_is_not_a_unit_is_named_by_the_names_table() {
+    let c = ctx();
+    let name = c
+        .content
+        .names
+        .get("retainer")
+        .unwrap_or_default()
+        .to_owned();
+    assert!(!name.is_empty() && name != "retainer", "{name}");
+    let s = full(scene(vec![
+        place(Side::Left, "retainer"),
+        say("retainer", "My lord."),
+    ]));
+    let buf = draw(&s, &c);
+    assert!(row(&buf, PLATE_Y).contains(&name));
+    assert!(!row(&buf, PLATE_Y).contains("retainer"));
+    assert!(row(&buf, TEXT_BOX.y).starts_with(&format!("┌── {name} ─")));
+}
+
+#[test]
 fn a_character_without_an_entry_is_named_by_id() {
     let c = ctx();
     let s = full(scene(vec![
@@ -635,4 +656,111 @@ fn replies_without_a_question_start_at_the_top() {
     let buf = draw(&s, &c);
     assert!(row(&buf, TEXT_Y).starts_with("│   > A.  "));
     assert!(row(&buf, TEXT_Y + 3).starts_with("│     D.  "));
+}
+
+fn music(cue: &str) -> Step {
+    Step::Music(MusicLine::Cue(cue.into()))
+}
+
+fn narrate(text: &str) -> Step {
+    Step::Narrate { text: text.into() }
+}
+
+/// The music requests made since the last call.
+fn music_requests(c: &mut Ctx) -> Vec<AudioRequest> {
+    let music = |r: &AudioRequest| !matches!(r, AudioRequest::PlaySound { .. });
+    c.audio.take().into_iter().filter(music).collect()
+}
+
+fn play_music(cue: &str) -> AudioRequest {
+    AudioRequest::PlayMusic { cue: cue.into() }
+}
+
+/// `@music` asks for the music when the scene reaches its line: the one
+/// before the first text box on the first frame, a later one with the text
+/// box after it, and `@music stop` fades the music out.
+#[test]
+fn music_changes_when_its_line_is_reached() {
+    let mut c = ctx();
+    let mut s = full(scene(vec![
+        music("village"),
+        narrate("One."),
+        narrate("Two."),
+        music("talk_calm"),
+        narrate("Three."),
+        Step::Music(MusicLine::Stop),
+    ]));
+    assert!(c.audio.pending().is_empty());
+    s.update(&mut c, &frame(&[], 0.0, false));
+    assert_eq!(music_requests(&mut c), [play_music("village")]);
+    // Not again on later frames, nor when revealing or reading on to a
+    // box without a @music before it.
+    s.update(&mut c, &frame(&[], 0.0, false));
+    press(&mut s, &mut c, Action::Confirm);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(s.page_lines(), ["Two."]);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(music_requests(&mut c), []);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(s.page_lines(), ["Three."]);
+    assert_eq!(music_requests(&mut c), [play_music("talk_calm")]);
+    // The line after the last text box is reached as the scene closes.
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(music_requests(&mut c), []);
+    let t = press(&mut s, &mut c, Action::Confirm);
+    assert!(matches!(t, Transition::Pop));
+    assert_eq!(music_requests(&mut c), [AudioRequest::StopMusic]);
+}
+
+/// Skipping asks only for the last `@music` passed, and a scene without
+/// one asks for nothing.
+#[test]
+fn skipping_asks_for_the_last_music_only() {
+    let mut c = ctx();
+    let mut s = full(scene(vec![
+        narrate("One."),
+        music("village"),
+        narrate("Two."),
+        music("talk_calm"),
+        narrate("Three."),
+    ]));
+    press(&mut s, &mut c, Action::Cancel);
+    let t = press(&mut s, &mut c, Action::Confirm);
+    assert!(matches!(t, Transition::Pop));
+    assert_eq!(music_requests(&mut c), [play_music("talk_calm")]);
+
+    let mut s = full(two_speakers("First."));
+    press(&mut s, &mut c, Action::Cancel);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(music_requests(&mut c), []);
+}
+
+/// A reply's reaction changes the music when it is picked; skipping to the
+/// choice asks for the music before it.
+#[test]
+fn music_around_a_choice() {
+    let mut c = ctx();
+    let reply = |text: &str, steps| trpg_content::ChoiceOption {
+        tone: "wry".into(),
+        text: text.into(),
+        steps,
+    };
+    let mut s = full(scene(vec![
+        narrate("One."),
+        music("village"),
+        narrate("Well?"),
+        Step::Choice {
+            options: vec![
+                reply("Yes.", vec![music("scene_sad"), narrate("Oh.")]),
+                reply("No.", vec![narrate("Good.")]),
+            ],
+        },
+    ]));
+    press(&mut s, &mut c, Action::Cancel);
+    press(&mut s, &mut c, Action::Confirm);
+    assert!(s.menu().is_some());
+    assert_eq!(music_requests(&mut c), [play_music("village")]);
+    press(&mut s, &mut c, Action::Confirm);
+    assert_eq!(s.page_lines(), ["Oh."]);
+    assert_eq!(music_requests(&mut c), [play_music("scene_sad")]);
 }

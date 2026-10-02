@@ -7,7 +7,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 
 | Module | What |
 | ------ | ---- |
-| `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console, palette colours, the text snapshot format |
+| `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console (cells, plus rectangles and sprites placed in pixels; see *What a frame holds*), palette colours, the text snapshot format |
 | `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
@@ -16,9 +16,67 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, the results of a won battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `ResultsScreen` (a won battle's gold, rewind bonus and EXP bars, then its level-up pages, 0810), `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
-| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it) |
+| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), sprite test |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
+
+## What a frame holds
+
+A `GlyphBuffer` is the whole frame. `app` draws it and knows nothing else
+about the game (ADR-0003, ADR-0038). It holds three kinds of thing:
+
+| Thing | What | Added with |
+| ----- | ---- | ---------- |
+| Cells | A glyph with a foreground and a background colour, one per 8×16-pixel cell. All text, boxes and menus | `print`, `fill_rect`, `draw_box`, `set`, … |
+| Rectangles (`Overlay`) | A solid colour in a rectangle of console pixels, for what whole cells can't draw (HP bars, the path line, the cursor's corners; ADR-0018) | `add_overlay` |
+| Sprites (`Sprite`) | Part of an image file, scaled into a rectangle of console pixels. Every picture (ADR-0038) | `add_sprite` |
+
+Rectangles and sprites are the frame's **items** (`Item`, `buf.items()`;
+`overlays()` and `sprites()` give one kind). Both follow the same rules:
+
+- **Layer.** `Layer::Under` items are drawn after the cells' backgrounds
+  and before their glyphs; `Layer::Over` items after the glyphs. Within a
+  layer, items are drawn in the order they were added, rectangles and
+  sprites alike.
+- **Clipping.** An item is clipped to the buffer; one wholly outside is
+  dropped.
+- **Items belong to the cells under them.** `fill_rect` and `blit` replace
+  cells, so they remove the parts of items over those cells (a box drawn
+  over half a picture hides that half). `blit` brings the source buffer's
+  items along, moved with its cells. So draw a panel first, then the items
+  on it.
+- `dim` and `blend_bg` change cells only.
+
+A sprite:
+
+```rust
+let card = ctx.content.images.id("images/test_card.png")?;   // an ImageId
+let mut sprite = Sprite::new(
+    card,
+    Rect::new(0, 0, 16, 16),     // src: the part of the image, in image pixels
+    Rect::new(16, 48, 80, 80),   // dest: where, in console pixels (here 5×)
+    Layer::Over,
+);
+sprite.flip_x = true;            // mirrored left to right
+sprite.opacity = 128;            // 255 = solid
+buf.add_sprite(sprite);
+```
+
+- The image table (`ctx.content.images`, `trpg_content::image`) lists every
+  PNG under `assets/` by path, with its size. `ui` never reads pixels; `app`
+  decodes the files into textures.
+- Clipping and cutting never move or rescale the picture: they only shrink
+  the sprite's `clip` (the part of `dest` that is drawn). `src` and `dest`
+  stay as given, and a cut sprite becomes up to four sprites with the same
+  `src` and `dest`.
+- Use whole-number scales (`dest` a multiple of `src`): the nearest image
+  pixel is drawn, so other scales look uneven.
+- In a snapshot each item is one line under `--- overlays ---`; a sprite's
+  is `over  sprite 16,48 80x80  images/test_card.png 0,0 16x16`, followed
+  by ` flip`, ` opacity=128` and ` clip=x,y wxh` when they apply
+  (`snapshot.rs`).
+- The "Sprite test" debug tool shows each of these on the test card; look
+  at it after touching how `app` draws items.
 
 ## How a frame runs
 

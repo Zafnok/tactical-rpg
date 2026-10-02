@@ -7,7 +7,7 @@
 //! While the lead's replies are up, the text box grows upward to list them
 //! under the line being answered (Nick, 0708: like Stardew Valley).
 
-use trpg_content::{Names, Scene, Side};
+use trpg_content::{MusicLine, Names, Scene, Side};
 use trpg_core::{LEAD_ID, LeadProfile};
 
 use crate::audio::MenuSound;
@@ -54,7 +54,8 @@ const BLINK_S: f32 = 0.5;
 /// everything Confirm does. Cancel asks whether to skip
 /// the scene. At a reply choice, the cursor keys move through the lead's
 /// replies and Confirm picks one; skipping stops at each choice. Pops when
-/// the scene ends or is skipped.
+/// the scene ends or is skipped. A `@music` line changes the music when the
+/// scene reaches it; skipping asks only for the last one passed.
 #[derive(Debug, Clone)]
 pub struct DialogueScreen {
     player: DialoguePlayer,
@@ -195,6 +196,29 @@ impl Screen for DialogueScreen {
     }
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        let transition = self.read(ctx, input);
+        // The music the scene reached this frame (or, the first frame,
+        // before its first text box).
+        match self.player.take_music() {
+            Some(MusicLine::Cue(cue)) => ctx.audio.play_music(&cue),
+            Some(MusicLine::Stop) => ctx.audio.stop_music(),
+            None => {}
+        }
+        transition
+    }
+
+    fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+        self.draw_scene(ctx, buf);
+    }
+
+    fn is_overlay(&self) -> bool {
+        self.overlay
+    }
+}
+
+impl DialogueScreen {
+    /// One frame of reading: the keys, then the typewriter.
+    fn read(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         if self.player.is_finished() {
             return Transition::Pop;
         }
@@ -258,7 +282,8 @@ impl Screen for DialogueScreen {
         Transition::None
     }
 
-    fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
+    /// The whole screen: caption, portraits and text box.
+    fn draw_scene(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let c = |u| ctx.palette.get(u);
         let blank = Cell::new(' ', c(UiColor::Text), c(UiColor::Black));
         if self.overlay {
@@ -290,23 +315,16 @@ impl Screen for DialogueScreen {
         }
         self.draw_text_box(ctx, buf, &view);
     }
-
-    fn is_overlay(&self) -> bool {
-        self.overlay
-    }
 }
 
-/// A character's display name: the name the player gave the lead, else
-/// the character entry's (their id if they have none).
+/// A character's or speaker's display name: the name the player gave the
+/// lead, else their entry in the names table (their id if they have none).
 fn display_name<'a>(ctx: &'a Ctx, lead: &'a LeadProfile, portrait: Portrait<'a>) -> &'a str {
     if portrait.character.0 == LEAD_ID {
         return &lead.name;
     }
-    ctx.content
-        .characters
-        .characters
-        .get(portrait.character)
-        .map_or(portrait.character.0.as_str(), |c| c.name.as_str())
+    let id = portrait.character.0.as_str();
+    ctx.content.names.get(id).unwrap_or(id)
 }
 
 /// One side's frame, portrait (the lead's by gender) and name plate.

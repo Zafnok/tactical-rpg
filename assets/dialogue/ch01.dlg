@@ -1,0 +1,372 @@
+# Chapter 1: The Letter (ticket 0707).
+# Beat sheet: docs/story/chapters/ch01.md. Continuity: docs/story/ledger.md.
+#
+# Scene ids, for 0803 to wire into chapters/ch01.ron and battles/ch01.ron:
+#
+#   Before the battle (intro_scenes, in this order)
+#     ch01_intro                 the opening caption, then the letter
+#     ch01_prebattle             the Red Company; the party gathers
+#
+#   In the battle (triggers, each once)
+#     ch01_first_turn            TurnStart(turn: 1, phase: Player)
+#     ch01_boss_engage_lead      CombatStart(unit: "red_captain", against: Some("lead"))
+#     ch01_boss_engage_sergeant  CombatStart(unit: "red_captain", against: Some("sergeant"))
+#     ch01_boss_engage           CombatStart(unit: "red_captain"): anyone else
+#     ch01_boss_half             HalfHp(unit: "red_captain")
+#     ch01_death_red_captain     UnitFell(unit: "red_captain")
+#     ch01_death_lead            UnitFell(unit: "lead"): game over in both modes
+#     ch01_death_<id>            UnitFell(unit: "<id>", mode: Some(Classic))
+#     ch01_retreat_<id>          UnitFell(unit: "<id>", mode: Some(Casual))
+#       for <id> = retainer, sergeant, poacher, keeper, heretic
+#
+#   After the battle (victory_scenes, in this order)
+#     ch01_victory
+#     ch01_tbc
+#
+# The lead has three reply choices: one each in ch01_intro, ch01_prebattle
+# and ch01_victory. Aske counts "twelve men, no, fourteen": the map's enemy
+# count should not contradict it (chapter-1.md allows 12-14 and the boss).
+#
+# ch01_victory is written for a battle everyone lived through. A companion
+# who died in Classic still speaks in it until 0715 and 0716.
+
+# ---------------------------------------------------------------------------
+# Before the battle
+# ---------------------------------------------------------------------------
+
+@scene ch01_intro
+> Three years after {n:event.ash_peace}.
+> The war is won. The soldiers who won it were never paid.
+> In {n:place.thornmarch}, a long way from any court, an exile chops wood.
+@caption {N:place.harrowby}, {n:place.thornmarch}
+@left  lead neutral
+@right retainer neutral
+> Dawn, in the yard behind a rented house. Two practice swords crack
+  together, wood on wood, as they have every morning for four years.
+retainer: Guard up, {n:family.veyne}. Higher. That eyebrow's had one scar
+  off me already, and I'm not proud of it.
+retainer[happy]: A bit proud.
+lead: Again.
+> Three strokes. The fourth takes the old man's sword out of his hand.
+retainer[surprised]: ...Huh. About time. Pick that up for me. My knees
+  won't.
+retainer[sad]: Then sit down, kid. A pedlar left this last night. No seal,
+  no name. I know the hand. So will you.
+> "Leave the march. Tonight. They are coming for everyone who was there
+  that night. Burn this."
+lead: {n:rival.first}.
+retainer: Four years, and not a word. Not to you. Not to his own father.
+  Then that.
+@choice
+* earnest: He's warning us. He still cares, {n:retainer.first}.
+  retainer[sad]: Aye. That's what worries me.
+* wry: Four years of silence, and now he's urgent.
+  retainer[happy]: Ha. He always did write like a man owed money.
+  retainer[sad]: He's not the one who's owed.
+* blunt: What does he want?
+  retainer[angry]: Us gone, by the look of it. What I'd ask is who's
+    coming, and how he knows.
+@endchoice
+retainer[sad]: "Everyone who was there." That's you. That's me. That's
+  him. And my girl, and she's past anyone coming for her.
+> He does not burn the letter. He folds it small, and puts it back inside
+  his coat.
+> Hooves on the ford road, coming hard.
+retainer[neutral]: That's the sergeant. She doesn't ride like that for good
+  news.
+@end
+
+@scene ch01_prebattle
+@caption The green, {n:place.harrowby}
+@left  retainer neutral
+@right sergeant angry
+sergeant: Captain! Your Former Grace! {N:red_captain.nickname} and his whole
+  sorry company took the toll-fort in the night. I rode up to ask why, and
+  he offered me my old job back.
+@left keeper surprised
+keeper: Sergeant! We heard the horse from the chapel. Is someone hurt? I've
+  brought bandages, and {n:heretic}, to, ah, to carry the bandages.
+sergeant[neutral]: Nobody's hurt yet, Keeper. He has a paper, with a lord's
+  seal he kept his thumb on, and three people he's paid to find. "The exile,
+  the old man, and the girl with the burned hands."
+sergeant[happy]: I'm not on it. I checked twice. That's going in the ledger,
+  under insults.
+keeper: Burned... but I only asked them to... Oh. Oh, {n:god.mother.name}.
+@right heretic angry
+heretic: What? What's everyone looking at? They're hands. And don't you
+  stare, heir. It's you at the top of that paper, not me.
+> {N:retainer.first} has not said a word. He turns, and walks back toward
+  the house.
+> Something drops out of the chapel yew: a thin boy, a long bow, two
+  rabbits.
+@left  poacher neutral
+@right sergeant happy
+poacher: Twelve men. No. Fourteen. Bad archers.
+sergeant: Morning, {n:faction.brennmark.adj}. Up a tree all night, counting
+  brigands for us? I'm touched.
+poacher[angry]: Nobody has touched you. And it is not for you. They killed
+  three deer last night and left two to rot. In my wood. I will help you,
+  noble. Once. For the deer.
+@left  keeper sad
+@right heretic angry
+keeper: {n:heretic}, the chapel cellar bars from the inside. I would ask
+  you to go down. I do know, with respect, what you are about to say.
+heretic: I'm not a cook, Keeper. I'm a girl who can light the oven without a
+  match. Different thing.
+@left  lead neutral
+@right retainer neutral
+> {N:retainer.first} comes back across the green with a long bundle of
+  oilcloth. It has been under the floorboards since the day they came.
+retainer: Wooden swords. Four years of wooden swords. Try not to cut
+  yourself on the real one.
+> {lead} takes the sword. The terms of {their} exile forbid it.
+retainer[sad]: They've come for three of us. There are forty people between
+  here and that fort who never did a thing to anyone. Your call,
+  {n:family.veyne}.
+@choice
+* earnest: We keep them away from the village.
+  @right poacher neutral
+  poacher: The miller's wife buys my rabbits. She pays too much. She thinks
+    I do not notice. I notice. Keep them away from her.
+  @right sergeant neutral
+* wry: Only fourteen? I'm insulted.
+  @right sergeant happy
+  sergeant: Ha! Finally, somebody said it. I've seen that lot fight, Your
+    Former Grace. Half of them couldn't hit the river from the bridge.
+* blunt: We hit the fort first.
+  @right heretic angry
+  heretic: Giving orders already, heir? Pity. It's the one I'd have given.
+  @right sergeant neutral
+@endchoice
+sergeant[happy]: Fourteen of {n:red_captain.first}'s finest, against an
+  exile, an old man, a keeper, a cook, a poacher and me. Put it on the
+  crown's tab.
+lead: Let's move.
+@end
+
+# ---------------------------------------------------------------------------
+# In the battle
+# ---------------------------------------------------------------------------
+
+@scene ch01_first_turn
+@left retainer neutral
+retainer: Stay close, kid. The first real one's always ugly.
+@end
+
+# Harl's first fight. A scene written for him and one character replaces
+# the general one (docs/design/battle-scenes-and-recruitment.md). The
+# general one meets Hollis and Rue, who are on his paper, and Aske and
+# Piers, who aren't.
+
+@scene ch01_boss_engage
+@right red_captain neutral
+red_captain: Three heads on my paper, three hundred crowns a head. If yours
+  isn't one of them, you're dying for nothing.
+red_captain[angry]: The war taught me not to mind which. Come on, then.
+@end
+
+@scene ch01_boss_engage_lead
+@left  lead neutral
+@right red_captain happy
+red_captain: Nothing personal, Your Grace. You're three hundred crowns and a
+  hot meal for my lads.
+lead: Who's paying?
+red_captain[neutral]: Ask me when I'm dead.
+@end
+
+@scene ch01_boss_engage_sergeant
+@left  sergeant neutral
+@right red_captain angry
+red_captain: {n:sergeant.last}. You left before pay-day. Bad habit.
+sergeant[angry]: I left after the farm, {n:red_captain.first}. You know I
+  did.
+red_captain: A lord paid for that farm. A lord's paying for this. Somebody
+  has to pay for something.
+sergeant[sad]: Then it's your bill, {n:red_captain.first}. I stopped signing
+  for it last winter.
+@end
+
+@scene ch01_boss_half
+@right red_captain angry
+red_captain: Hah. I bled worse than this at the passes, for a king who never
+  learned my name.
+red_captain: I'll not die owed. Not here. Not by you.
+@end
+
+# Said across the field: the lead may be nowhere near him.
+
+@scene ch01_death_red_captain
+@right red_captain sad
+red_captain: Hah... Still owed. Figures.
+red_captain: Your Grace! One thing, free of charge. The new lord of
+  {n:family.veyne} pays in good silver.
+red_captain: Your own crest on the order, and everything. Must be nice...
+  having friends.
+@end
+
+# The lead's fall is game over in both modes.
+
+@scene ch01_death_lead
+@left lead sad
+> The letter said to run. {lead} stayed.
+@end
+
+# The companions: a death quote in Classic, a retreat line in Casual
+# (docs/design/death-and-difficulty.md). They can fire in any order, so
+# none of them speaks to another companion by name.
+
+@scene ch01_death_retainer
+@left retainer sad
+retainer: Hnh. Guard was low. Mine, this time.
+retainer: Eyes front, {lead}. And if you ever see the boy again, tell
+  him... No. Leave it. He knows.
+@end
+
+@scene ch01_retreat_retainer
+@left retainer angry
+retainer: That's me done. Fifty-six, and beaten off a field by my own knees.
+retainer[neutral]: Guard up, {n:family.veyne}. Finish it. I'll have the
+  kettle on.
+@end
+
+@scene ch01_death_sergeant
+@left sergeant sad
+sergeant: Ah. That'll cost us.
+sergeant: Take the ledger off my belt, Your Former Grace. Four thousand, two
+  hundred and twelve crowns. Don't let them off a single one.
+@end
+
+@scene ch01_retreat_sergeant
+@left sergeant angry
+sergeant: That's a hole in me and a hole in the jacket. I only own the one
+  jacket.
+sergeant[neutral]: I'm out, Your Former Grace. Try not to win it too cheaply
+  without me.
+@end
+
+@scene ch01_death_poacher
+@left poacher surprised
+poacher: I counted wrong. There was one more.
+poacher[sad]: My silver is in my left boot. Send it north, noble. To my
+  {n:word.mother}. You owe me that.
+@end
+
+@scene ch01_retreat_poacher
+@left poacher angry
+poacher: I am hit. It is not deep. I will go and sit behind the mill and be
+  angry.
+poacher: Do not lose, noble. I will know.
+@end
+
+@scene ch01_death_keeper
+@left keeper surprised
+keeper: Oh. Oh, dear. That is... that is supposed to be on the inside.
+keeper[sad]: {N:god.mother.name} keep you all. I did a thing this autumn,
+  and I am sorry for it. I had hoped to say so myself, to the one it hurt.
+@end
+
+@scene ch01_retreat_keeper
+@left keeper surprised
+keeper: I'm hurt. I think. Yes. No, don't look, I'm the keeper, I'll look.
+keeper[sad]: I must withdraw. {N:god.mother.name} keep you. Also, please,
+  keep pressure on anything that leaks.
+@end
+
+@scene ch01_death_heretic
+@left heretic angry
+heretic: {N:god.pyre.name}'s teeth. Typical. First time in years I ate
+  every day.
+heretic[sad]: Don't stare, heir. The Keeper's stew was all right. It wasn't.
+  I'd have told him it was.
+@end
+
+@scene ch01_retreat_heretic
+@left heretic angry
+heretic: Ow! {N:god.pyre.name}'s teeth! Fine. Fine! I'm going.
+heretic: Don't you dare lose while I'm not looking, heir.
+@end
+
+# ---------------------------------------------------------------------------
+# After the battle
+# ---------------------------------------------------------------------------
+
+@scene ch01_victory
+@caption The toll-fort, noon
+> Behind them, one barn smokes at the edge of {n:place.harrowby}. Only the
+  one.
+@left  lead neutral
+@right sergeant neutral
+sergeant: Pay-day at last, {n:red_captain.first}. I'll mark the ledger: paid
+  in full.
+> Nobody laughs. She doesn't either. She crouches, closes his eyes with two
+  fingers, and takes a folded paper from inside his jacket.
+sergeant[sad]: ...Just a job. That's all it was.
+> His orders: three hundred crowns a head for the exile, the old man and
+  the girl. The seal is blue wax. The crest in it is the one {lead} cut from
+  {their} own coat four years ago.
+sergeant[neutral]: He wasn't lying, then. That's your crest, Your Former
+  Grace. I thought they took it off you with the house.
+@left keeper sad
+keeper: They did. The seal goes with the title. Nobody may use it but the
+  lord of {n:family.veyne}, and the lord of {n:family.veyne}, these three
+  years... Captain, I am sorry.
+> Everyone looks at {n:retainer.first}. {N:retainer.first} looks at the wax,
+  and says nothing at all.
+sergeant: {N:rival}, hero of the war. The Captain's boy. Somebody say
+  something. I'm no good in a quiet.
+@right heretic neutral
+heretic: I'll say something. I've seen that seal before, heir. On a cart. At
+  night. With children in it.
+@left lead neutral
+lead: Where?
+heretic[angry]: You tell me. Four years ago it was your family's to stamp.
+@left keeper sad
+keeper: Please. Not here. Somebody was told that {n:heretic} is in
+  {n:place.harrowby}, and only {n:faction.vigil} hunts a girl for her hands.
+  They will send others.
+@left poacher neutral
+poacher: Then I come also. You owe me eleven arrows, noble.
+heretic[neutral]: I'm not following you, heir. I'm walking behind you. Where
+  I can see your hands.
+@right sergeant happy
+sergeant: And I'll ride along as far as there's pay. ...Further, probably.
+@left  lead neutral
+@right retainer sad
+retainer: The boy's at {n:place.veyne_hall}, kid. One step off the march to
+  ask him and you're an outlaw, for good. Say the word anyway.
+@choice
+* earnest: He'll tell me why. I have to believe that.
+  retainer: Aye. I'd like to believe it too.
+* wry: I've always wanted to be an outlaw.
+  @right sergeant happy
+  sergeant: It's soldiering with worse food and better company. You'll take
+    to it.
+  @right retainer sad
+* blunt: {N:place.veyne_hall}. We leave now.
+  @right poacher neutral
+  poacher: Good. This fort smells of them.
+  @right retainer sad
+@endchoice
+retainer[neutral]: Go and pack. I'll find a spade. I've buried better men
+  than {n:red_captain}. I'll dig this one's hole myself. It's the least I
+  can do for him.
+> By dusk they are on the road out of {n:place.harrowby}. Past the boundary
+  stone, every step {lead} takes is against the king's law.
+@end
+
+@scene ch01_tbc
+@caption {N:place.veyne_hall}
+> Night. The old lord's study. The banner of {n:house.veyne} hangs where it
+  always hung, over a man who was not born under it.
+@left  rival neutral
+@right messenger neutral
+messenger: {N:vowmaster.title} asks whether it's done.
+> {N:rival.first} reads the report on his desk again. Three lines.
+  {N:faction.red_company} is dead, to a man. The exile is not.
+rival: ...Tell him it's done.
+@right clear
+> The messenger goes. {N:rival.first} burns the report in the candle flame,
+  then looks down for a long time at the blue sash across his chest, and
+  the full crest of {n:house.veyne} on it.
+rival[sad]: I told you to run, {n:family.veyne}.
+@end

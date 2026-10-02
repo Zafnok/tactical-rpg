@@ -14,6 +14,7 @@ pub mod dialogue;
 mod enums;
 pub mod error;
 pub mod font;
+pub mod image;
 pub mod item;
 pub mod keymap;
 pub mod map;
@@ -39,9 +40,10 @@ pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
 pub use battle::BattleRefs;
 pub use chapter::{ChapterDef, NewGameDef, battle_campaign, new_campaign};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
-pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
+pub use dialogue::{ChoiceOption, DialogueTable, MusicLine, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
+pub use image::{ImageId, ImageInfo, ImageTable};
 pub use keymap::{
     Action, Bindings, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS,
     StickDef,
@@ -63,6 +65,8 @@ pub struct Content {
     pub keymap: KeymapDef,
     /// Font atlas layout; the image is `bundle::bytes(font::ATLAS_PNG_PATH)`.
     pub font: FontAtlasDef,
+    /// Every other image in the bundle, by path, with its size (ADR-0038).
+    pub images: ImageTable,
     /// Terrain rules and looks.
     pub terrain: TerrainDef,
     /// Battle maps by id (file stem).
@@ -149,12 +153,13 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Ok(p) => portrait::load_all(p),
         Err(_) => Ok(BTreeMap::new()),
     };
+    let audio = audio::load();
     let dialogue = dialogue::load(
         characters.as_ref().ok(),
         portraits.as_ref().ok(),
         names.as_ref().ok(),
+        audio.as_ref().ok(),
     );
-    let audio = audio::load();
     let (battles, chapters, new_game) = load_story(
         maps.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -183,6 +188,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             ai: ai::load(),
             tips: tip::load(),
             audio,
+            images: ImageTable::load(),
             battles,
             chapters,
             new_game,
@@ -343,6 +349,7 @@ struct Loaded {
     ai: Result<AiWeights, Vec<ContentError>>,
     tips: Result<TipTable, Vec<ContentError>>,
     audio: Result<AudioManifest, Vec<ContentError>>,
+    images: Result<ImageTable, Vec<ContentError>>,
     battles: Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
     chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
     new_game: Result<NewGameDef, Vec<ContentError>>,
@@ -386,6 +393,7 @@ fn assemble(
         ai: take(units.ai, &mut errors),
         tips: take(units.tips, &mut errors),
         audio: take(units.audio, &mut errors),
+        images: take(units.images, &mut errors),
         battles: take(units.battles, &mut errors),
         chapters: take(units.chapters, &mut errors),
         new_game: take(units.new_game, &mut errors),
@@ -438,6 +446,7 @@ mod tests {
             ok_characters().ok().as_ref(),
             ok_portraits().ok().as_ref(),
             names::load().ok().as_ref(),
+            audio::load().ok().as_ref(),
         )
     }
 
@@ -469,6 +478,7 @@ mod tests {
             ai: ai::load(),
             tips: tip::load(),
             audio: audio::load(),
+            images: ImageTable::load(),
             battles,
             chapters,
             new_game,
@@ -541,6 +551,10 @@ mod tests {
             content.as_ref().map(|c| &c.audio),
             audio::load().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.images),
+            ImageTable::load().ok().as_ref()
+        );
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -553,9 +567,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 20] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "b",
-        "h", "g",
+    const NAMES: [&str; 21] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "j",
+        "b", "h", "g",
     ];
 
     #[test]
@@ -581,6 +595,7 @@ mod tests {
                     ai: Err(e("w")),
                     tips: Err(e("y")),
                     audio: Err(e("v")),
+                    images: Err(e("j")),
                     battles: Err(e("b")),
                     chapters: Err(e("h")),
                     new_game: Err(e("g")),
@@ -624,9 +639,14 @@ mod tests {
                     ai: if i == 14 { Err(e("w")) } else { ai::load() },
                     tips: if i == 15 { Err(e("y")) } else { tip::load() },
                     audio: if i == 16 { Err(e("v")) } else { audio::load() },
-                    battles: if i == 17 { Err(e("b")) } else { ok_story().0 },
-                    chapters: if i == 18 { Err(e("h")) } else { ok_story().1 },
-                    new_game: if i == 19 { Err(e("g")) } else { ok_story().2 },
+                    images: if i == 17 {
+                        Err(e("j"))
+                    } else {
+                        ImageTable::load()
+                    },
+                    battles: if i == 18 { Err(e("b")) } else { ok_story().0 },
+                    chapters: if i == 19 { Err(e("h")) } else { ok_story().1 },
+                    new_game: if i == 20 { Err(e("g")) } else { ok_story().2 },
                 },
             )
         };

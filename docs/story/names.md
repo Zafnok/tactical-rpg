@@ -69,8 +69,10 @@ just as it does a full name.
 | -- | ------------------ | --------- |
 | `retainer.first` | Hollis | `retainer` (Hollis Marr) |
 | `sergeant.first` | Tamsin | `sergeant` (Tamsin Rook) |
+| `sergeant.last` | Rook | `sergeant`: what Harl calls her (the other surnames: ticket 0713) |
 | `rival.first` | Dace | `rival` (Dace Marr) |
 | `vowmaster.first` | Absalom | `vowmaster` (Absalom Crane) |
+| `vowmaster.title` | the Master of Vows | `vowmaster`: his office in the Vigil, for people who don't say his name |
 | `red_captain.first` | Harl | `red_captain` (Harl Coster) |
 | `red_captain.nickname` | Red Harl | `red_captain`: what the Thornmarch calls him |
 | `sister.first` | Wren | `sister` (Wren Marr) |
@@ -82,6 +84,7 @@ just as it does a full name.
 | `battlemage.first` | Oriel | `battlemage` (Oriel Mast) |
 | `family.marr` | Marr | The family name of `retainer`, `rival` and `sister` |
 | `family.veyne` | Veyne | The lead's family name (also in `house.veyne` and `place.veyne_hall`) |
+| `faction.brennmark.adj` | Brennish | `faction.brennmark` without its article: the adjective ("a Brennish bow"), and what Tamsin calls Aske |
 | `god.mother.name` | Ama | `god.mother` (Ama, the Mother) |
 | `god.mother.title` | the Mother | `god.mother` |
 | `god.pyre.name` | Vael | `god.pyre` (Vael, the Pyre) |
@@ -155,6 +158,7 @@ just as it does a full name.
 | Id | Current name | What |
 | -- | ------------ | ---- |
 | `brother_tor` | Tor | Aske's older brother, burned at the Ashfields |
+| `messenger` | Messenger | A Vigil messenger with no name of his own: the name plate in Chapter 1's last scene |
 | `place.coldwell` | Coldwell | The farm the Red Company burned last winter |
 | `place.aldwater` | Aldwater Toll Bridge | Chapter 4 fixed skirmish |
 | `place.millhaven_road` | Millhaven Road | Chapter 4 fixed skirmish |
