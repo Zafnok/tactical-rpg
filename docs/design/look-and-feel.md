@@ -2,7 +2,8 @@
 
 Decided: 2026-09-25
 Source: ticket 0011 (attack forecast: 0404; bought portraits and battle art:
-0021; bought tiles and sprites on the battle map: 0038)
+0021; bought tiles and sprites on the battle map: 0038; walking sprites,
+effect marks, the glyph look as an option, busts in dialogue: 0039)
 
 Nick judged real renders, not descriptions. Every mockup was drawn with the
 game's own font atlas at in-game size. The final ones are in
@@ -125,6 +126,29 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > toggle the zoom:] "I think we can ask this as we build the zoom feature
 > in another ticket? I will decide it later" … [asked whether the Chapter 1
 > playtest waits for the bought-art map: A yes, B no:] "A"
+>
+> **Sprite units and dialogue busts** (2026-10-02, ticket 0039; Nick judged
+> animated mockups J1–J3 of sprites standing still, walking only when
+> moved, and stepping on the spot as well; K, four ways to mark a unit
+> under an effect; H2/H3, faces and busts in the dialogue screen): [do
+> sprites walk:] "1C - but make sure the hp bar is not overlapping the
+> sprite... right now it is" … [the effect mark, shown as a purple square:]
+> "what does under an effect mean here? like poison or something? can you
+> show what a poison mark might look like then rather than a square" …
+> [faces or busts:] "can you see if bust can be zoomed in more, it seems
+> like there's empty space on top and sides makes me think bust 4x might be
+> possible..." … [shown J4/J5 with the feet on the HP bar, K2 with an up
+> arrow for a bonus and a down arrow for a penalty in the tile's corner or
+> over the head, H4/H5 with busts at 4×:] "1A [the arrow in the tile's
+> corner] but I want the mark raised one more pixel up... maybe 2" … "2C"
+> [busts at 4×] … [may players pick the glyph look:] "if both exist I guess
+> we can add the option and we already have the decoupled art/engine logic
+> afaik" … "for walking with HP bar, can you raise the sprite 1-2 more
+> pixels?" … [shown sheet L, the sprite raised 0, 1 or 2 more pixels and
+> the arrow raised 1 or 2:] "let me see sprite up 1 mark up 2 vs sprite up
+> 0 mark up 1" … [shown the two side by side, L2:] "sprite 0 mark 1 looks
+> best to me" … [does the Chapter 1 playtest wait for the walking: A no, B
+> yes:] "B"
 
 ## Rules
 
@@ -160,7 +184,13 @@ so they aren't in this repository (ADR-0032).
   Tickets 0436 (units) and 0437 (terrain).
 - **The glyph look below stays in the game** (ADR-0038): it is what a copy
   of the public repository shows, since the bought files aren't in it.
-  Whether players may pick it is not decided (ticket 0039).
+- **Players may pick the look** (decided 2026-10-02, ticket 0039): an
+  Options entry, **"Map look: Pictures / Glyphs"**, like Dwarf Fortress on
+  Steam (new art or classic ASCII). Nick: "if both exist I guess we can
+  add the option". Pictures is the default. *(Claude's starting rules: the
+  entry switches terrain and units together; it changes the map at once
+  and is remembered; a build without the bought files has only glyphs and
+  doesn't show the entry.)* Ticket 0824.
 - **Lighting is set per map.** A battle at noon shows the tiles as bought
   (render C). A battle in low light (dusk, night, indoors by torchlight)
   shows them darkened toward our earthy palette, as in render C3. Unit
@@ -184,9 +214,44 @@ so they aren't in this repository (ADR-0032).
   its outline dims with it. A change of brightness, not of hue, like the
   glyph look's rule.
 - **The Chapter 1 playtest waits for the bought-art map** (decided
-  2026-10-02): units (0436) and terrain (0437) are in before Nick plays.
-- **Not decided yet** (ticket 0039): how a sprite unit shows that it is
-  under an effect; whether sprites walk or stand still.
+  2026-10-02): units (0436) and terrain (0437) are in before Nick plays,
+  and so is the walking below (0440; Nick, ticket 0039: "B").
+- **Sprites step on the spot and walk** (decided 2026-10-02, ticket 0039,
+  "1C"; like Fire Emblem on the GBA). Each map sprite has three walking
+  frames in four directions:
+  - A unit that **can still act steps on the spot**, facing the camera
+    (about four steps a second in the mockup, *tunable*).
+  - A unit that **has acted stands still** (and is grey). So "still" also
+    says "done" *(Claude's addition in the mockup; Nick chose the mockup
+    with it)*.
+  - A **moving unit walks along its path**, gliding from tile to tile with
+    its legs going, and **turns to face the way it walks** (about a fifth
+    of a second per tile in the mockup, *tunable*; the speed settings
+    still apply). When it arrives it faces the camera again.
+  Built in ticket 0440, after 0436; until then sprites stand still.
+- **The HP bar never overlaps the sprite's feet** (Nick: "make sure the hp
+  bar is not overlapping the sprite"). The sprite is drawn higher on its
+  tile, so its feet stand **directly on top of** the 2-pixel HP bar (the
+  16×20 sprite ends 2 pixels above the tile's bottom edge, and its head
+  reaches 6 pixels into the tile above). Nick saw it raised 1 and 2
+  pixels more and chose this ("sprite 0 … looks best to me"). HP bars are
+  drawn over every sprite: when one unit stands directly below another,
+  the upper unit's bar shows in front of the lower unit's hair, so HP is
+  never hidden.
+- **A sprite unit under an effect** (decided 2026-10-02, ticket 0039,
+  "1A"): a small **arrow in the top-right corner of its tile**: an **up
+  arrow for a bonus** (a stance such as Sidestep's avoid +20) and a **down
+  arrow for a penalty** (Pinning Shot's Mov −3, Pressure Point's Spd −3).
+  The arrow is 5 pixels wide with a dark edge and sits **1 pixel higher
+  than in the first mockup** (Nick: "mark 1"): with its edge it reaches 3
+  pixels above the tile's top edge and 1 pixel past its right edge. The
+  direction carries the meaning, not only the colour (light blue up,
+  purple down in the mockup, *tunable*). On an acted unit the arrow dims
+  with the sprite. *(Claude's starting rule: a unit with both a bonus and
+  a penalty shows both arrows, the up arrow above the down arrow.)* The
+  game has no poison or other lasting ailment today; if one is added it
+  gets its own small picture in the same corner (Nick was shown a green
+  drop as an example). The glyph look keeps its tinted background.
 - Cursor, path line, HP bar and range tints keep their rules below.
 
 ### Units on the map (the glyph look)
@@ -325,16 +390,20 @@ sprites.
 
 #### Dialogue portraits
 
-- **The face set faces**, not the large portraits: each Tiny Tales hero has
-  **8 expressions**. *(The reason given in 0021, that the large portrait
-  has only one expression, turned out wrong on the bought files: the 80×80
-  busts have the same 8. A bust at 3× fills the same 240 pixels as a face
-  at 5× and shows the shoulders and hat; Nick was sent the comparison on
-  2026-10-02 and hasn't chosen, so faces stay the rule until he does:
-  ticket 0039.)* The faces are **48×48**
-  pixel art. They're drawn with square pixels at the largest whole scale that
-  fits the existing 32×16-cell frame (0711 works out the size), so the
-  dialogue layout doesn't change.
+- **The busts, at 4×, filling the frame** (decided 2026-10-02, ticket
+  0039, "2C"; it replaces 0021's rule of the 48×48 faces at 5×, whose
+  reason, that the large portrait has only one expression, turned out
+  wrong on the bought files). Each Tiny Tales hero has an **80×80 bust in
+  8 expressions**. The bust is cut to its **middle 64 columns and bottom
+  64 rows** and drawn with square pixels at **4×**, which is exactly the
+  256×256 pixels of the existing 32×16-cell frame, so the dialogue layout
+  doesn't change. Against the faces: the whole hat and the shoulders show,
+  and a face is about four fifths as big. **What the cut loses:** the tips
+  of very tall ears or horns (the Fox Miko's ears) and the outer edge of
+  the widest shoulders. A bust that sits off-centre may be cut a few
+  columns to one side instead *(Claude's starting rule)*. Nick first saw
+  the bust at 3× with empty space around it and asked for it bigger ("makes
+  me think bust 4x might be possible"). Ticket 0711.
 - **Expressions:** the five the dialogue needs (`neutral`, `happy`, `angry`,
   `sad`, `surprised`) are mapped to the closest of the 8 per character
   (0706). A missing one may be made by a small edit.
@@ -460,6 +529,5 @@ black.
   background behind the fighters, and the exact motions of the still
   battle images (ticket 0413).
 - Sprite units on the map: the outline alone or with a corner mark
-  (0436); how they show an effect; whether they walk; whether players may
-  pick the glyph look (ticket 0039). The zoom key and button (0439).
+  (0436). The zoom key and button (0439).
 - More bought packs for fighters with no fitting art (tickets 0035, 0040).
