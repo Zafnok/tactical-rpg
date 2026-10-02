@@ -488,3 +488,70 @@ fn a_benched_unit_snapshot() {
     h.keys("f Up f");
     assert_snapshot!(h.snapshot());
 }
+
+/// Row `y` of the screen as drawn.
+fn drawn_row(s: &PreparationsScreen, c: &Ctx, y: i32) -> String {
+    let black = c.palette.get(UiColor::Black);
+    let mut buf = GlyphBuffer::new(100, 32, Cell::new(' ', black, black));
+    s.draw(c, &mut buf);
+    (0..100)
+        .map(|x| buf.get(x, y).map_or(' ', |cell| cell.glyph))
+        .collect()
+}
+
+#[test]
+fn down_on_the_tabs_opens_the_tab() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    assert_eq!(sounds(&mut s, &mut c, &[CursorDown]), ["menu_select"]);
+    assert_eq!(s.focus(), Focus::Units);
+    update(&mut s, &mut c, &[Cancel, CursorRight, CursorDown]);
+    assert_eq!((s.tab(), s.focus()), (Tab::Pack, Focus::Spare));
+}
+
+#[test]
+fn up_and_down_move_over_the_pack() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    // An Elixir and a Potion packed, then over to the pack.
+    update(&mut s, &mut c, &[CursorRight, Confirm, Confirm]);
+    update(&mut s, &mut c, &[CursorDown, Confirm, CursorRight]);
+    assert_eq!(s.focus(), Focus::Pack);
+    assert_eq!(s.packed().len(), 2);
+    // Down to the Potion: Confirm puts that one back.
+    assert_eq!(sounds(&mut s, &mut c, &[CursorDown]), ["menu_move"]);
+    update(&mut s, &mut c, &[Confirm]);
+    assert_eq!(s.packed(), [(ItemId::new("elixir"), 1)]);
+    assert_eq!(s.setup().stock.count(&potion()), 6);
+}
+
+/// A list longer than its box scrolls to keep the cursor in view and never
+/// draws over the box's border.
+#[test]
+fn a_long_list_scrolls_inside_its_box() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    let scout = s.prep.bench[0].clone();
+    for i in 0..30 {
+        let mut extra = scout.clone();
+        extra.name = format!("Extra {i}");
+        s.prep.bench.push(extra);
+    }
+    // 4 deployed units, the scout and 30 more: Up from the first wraps to
+    // the last.
+    update(&mut s, &mut c, &[Confirm, CursorUp]);
+    assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Extra 29"));
+    // The box spans rows 3..=27: 23 rows of names between its borders.
+    assert!(
+        drawn_row(&s, &c, 4).starts_with("│ Extra 7"),
+        "{}",
+        drawn_row(&s, &c, 4)
+    );
+    assert!(drawn_row(&s, &c, 26).starts_with("│ Extra 29"));
+    assert!(drawn_row(&s, &c, 27).starts_with("└──────────────┘"));
+    assert_eq!(drawn_row(&s, &c, 28).trim(), "");
+    // Back at the top, the first rows show again.
+    update(&mut s, &mut c, &[CursorDown]);
+    assert!(drawn_row(&s, &c, 4).starts_with("│ Test Lord"));
+    assert!(drawn_row(&s, &c, 26).starts_with("│ Extra 17"));
+}
