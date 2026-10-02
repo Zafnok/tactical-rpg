@@ -87,11 +87,16 @@ that are out of step, or is the feature broken in play?
 ## Completion notes
 
 **Done.** Only the tests were out of step; suspend, Continue and
-`Restart Battle` work in play. `crates/ui/tests/save.rs` got `banner_open`
-and `close_banner`, used by `to_battle` (after the notes), by
+`Restart Battle` work in play. `crates/ui/tests/save.rs` needed a
+`close_banner` helper, used by `to_battle` (after the notes), by
 `the_quick_battle_suspends_too` (the Quick Battle has no notes) and after
 the `Restart Battle` in `a_continued_battle_restarts_from_its_first_turn`.
 Nothing under `crates/*/src` changed, and no snapshot.
+
+**The same fix reached `main` first:** 0810 (PR #152) merged while this PR
+was open and made these three changes to `save.rs` itself (it had to, to
+get its own CI green). The merge took `main`'s version of the file, so this
+PR ends up changing no code: it records the bug and adds ticket 0115.
 
 What the tests now show about play: a battle started from New Game, the
 Quick Battle or `Restart Battle` opens on its notes (if any), then the
