@@ -4,14 +4,15 @@
 //! unit's combat actives, each with its cost and source. What can't be paid
 //! for is dimmed with the reason; what doesn't fit the attack isn't listed.
 //! Every check is [`BattleState::preview_attack`], so the list never offers
-//! what the core would refuse (ADR-0004).
+//! what the core would refuse (ADR-0004). An attack spell cast at a unit
+//! (0410) has the same list: `Attack`, then the unit's spell actives.
 
 use trpg_core::{
-    ArtDef, ArtId, ArtNote, BattleState, CommandError, CostError, Event, Faction, Pos, SkillCost,
-    SkillId, StatKind, Unit, UnitAction, UnitId,
+    ArtDef, ArtId, ArtNote, BattleState, CastTarget, CommandError, CostError, Equipped, Event,
+    Faction, Pos, SkillCost, SkillId, StatKind, Unit, UnitAction, UnitId,
 };
 
-use super::attack::weapon_durability;
+use super::attack::{spell_uses, weapon_durability};
 use super::info::stat_name;
 use super::layout::{MAP_VIEW, SIDE_PANEL};
 use super::skills::{skill_cost, skill_name, timed_text};
@@ -33,18 +34,26 @@ pub enum Technique {
 }
 
 impl Technique {
-    /// The attack on `target` with the weapon in `slot`, using this.
-    pub fn action(&self, target: UnitId, slot: usize) -> UnitAction {
+    /// The attack on `target` with `with` (a weapon's slot, or an attack
+    /// spell, which has no arts), using this.
+    pub fn action(&self, target: UnitId, with: &Equipped) -> UnitAction {
         let (art, active) = match self {
             Technique::Attack => (None, None),
             Technique::Art(id) => (Some(id.clone()), None),
             Technique::Active(id) => (None, Some(id.clone())),
         };
-        UnitAction::Attack {
-            target,
-            slot,
-            active,
-            art,
+        match with {
+            Equipped::Weapon(slot) => UnitAction::Attack {
+                target,
+                slot: *slot,
+                active,
+                art,
+            },
+            Equipped::Spell(spell) => UnitAction::Cast {
+                spell: spell.clone(),
+                target: CastTarget::Unit(target),
+                active,
+            },
         }
     }
 
@@ -106,19 +115,19 @@ fn choice(
     Some(ArtChoice { technique, reason })
 }
 
-/// The list for `unit` attacking `target` from `dest` with the weapon in
-/// `slot`: `Attack`, the weapon's arts (rank arts lowest rank first, then
-/// the weapon's own), then the unit's combat actives. `Attack` is always
-/// listed; it is dimmed (`out of range`) on a target only an art or active
-/// reaches (Close Shot, Long Shot: 0426).
+/// The list for `unit` attacking `target` from `dest` with `with` (the
+/// weapon in a slot, or an attack spell): `Attack`, a weapon's arts (rank
+/// arts lowest rank first, then the weapon's own), then the unit's combat
+/// actives. `Attack` is always listed; it is dimmed (`out of range`) on a
+/// target only an art or active reaches (Close Shot, Long Shot: 0426).
 pub fn art_choices(
     state: &BattleState,
     unit: UnitId,
     dest: Pos,
-    slot: usize,
+    with: &Equipped,
     target: UnitId,
 ) -> Vec<ArtChoice> {
-    let plain = Technique::Attack.action(target, slot);
+    let plain = Technique::Attack.action(target, with);
     let reason = match state.preview_attack(unit, dest, &plain) {
         Ok(_) => None,
         Err(CommandError::OutOfRange { .. }) => Some("out of range".to_owned()),
@@ -131,15 +140,17 @@ pub fn art_choices(
     let Some(u) = state.unit(unit) else {
         return out;
     };
-    let arts = u.arts_for(slot, state.classes(), state.items(), state.arts());
-    for art in arts {
-        let t = Technique::Art(art.id.clone());
-        out.extend(choice(state, unit, dest, &t.action(target, slot), t));
+    if let Equipped::Weapon(slot) = *with {
+        let arts = u.arts_for(slot, state.classes(), state.items(), state.arts());
+        for art in arts {
+            let t = Technique::Art(art.id.clone());
+            out.extend(choice(state, unit, dest, &t.action(target, with), t));
+        }
     }
     let actives = u.usable_skills(state.classes(), state.skills());
     for skill in actives.into_iter().filter(|s| s.is_combat()) {
         let t = Technique::Active(skill.id.clone());
-        out.extend(choice(state, unit, dest, &t.action(target, slot), t));
+        out.extend(choice(state, unit, dest, &t.action(target, with), t));
     }
     out
 }
@@ -220,19 +231,24 @@ pub fn list_origin(unit_y: i32, (w, h): (i32, i32)) -> (i32, i32) {
     (x, y)
 }
 
-/// Draws the list `menu` for the weapon in `slot` of `unit`, with the
-/// weapon's name and durability in its top border (`Iron Sword 20/20`).
+/// Draws the list `menu` for `unit` attacking with `with`, with the
+/// weapon's name and durability (`Iron Sword 20/20`) or the spell's name
+/// and uses (`Fire 6/10`) in its top border.
 pub fn draw_list(
     buf: &mut GlyphBuffer,
     palette: &Palette,
     state: &BattleState,
-    (unit, slot): (UnitId, usize),
+    (unit, with): (UnitId, &Equipped),
     menu: &Menu,
     unit_y: i32,
 ) {
     let (x, y) = list_origin(unit_y, menu.size());
     menu.draw(palette, buf, x, y);
-    let Some((name, left, max)) = weapon_durability(state, unit, slot) else {
+    let header = match with {
+        Equipped::Weapon(slot) => weapon_durability(state, unit, *slot),
+        Equipped::Spell(spell) => spell_uses(state, unit, spell),
+    };
+    let Some((name, left, max)) = header else {
         return;
     };
     let bg = palette.get(UiColor::PanelBg);
@@ -377,7 +393,7 @@ mod tests {
         let t = Technique::default();
         assert_eq!(t, Technique::Attack);
         assert_eq!(
-            t.action(UnitId(4), 1),
+            t.action(UnitId(4), &Equipped::Weapon(1)),
             UnitAction::Attack {
                 target: UnitId(4),
                 slot: 1,
@@ -387,7 +403,7 @@ mod tests {
         );
         let art = Technique::Art(ArtId::new("guard_break"));
         assert!(matches!(
-            art.action(UnitId(4), 0),
+            art.action(UnitId(4), &Equipped::Weapon(0)),
             UnitAction::Attack {
                 art: Some(_),
                 active: None,
@@ -396,12 +412,28 @@ mod tests {
         ));
         let active = Technique::Active(SkillId::new("keen_edge"));
         assert!(matches!(
-            active.action(UnitId(4), 0),
+            active.action(UnitId(4), &Equipped::Weapon(0)),
             UnitAction::Attack {
                 art: None,
                 active: Some(_),
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn with_a_spell_the_attack_is_a_cast_at_the_unit() {
+        let fire = Equipped::Spell(trpg_core::SpellId::new("fire"));
+        let cast = |active| UnitAction::Cast {
+            spell: trpg_core::SpellId::new("fire"),
+            target: CastTarget::Unit(UnitId(4)),
+            active,
+        };
+        assert_eq!(Technique::Attack.action(UnitId(4), &fire), cast(None));
+        let overcast = SkillId::new("overcast");
+        assert_eq!(
+            Technique::Active(overcast.clone()).action(UnitId(4), &fire),
+            cast(Some(overcast))
+        );
     }
 }

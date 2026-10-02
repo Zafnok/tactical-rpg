@@ -48,6 +48,16 @@ git switch main && git pull --ff-only
 git switch -c t<NNNN>-<slug>
 ```
 
+Then free disk space:
+
+```bash
+cargo xtask clean-merged-targets
+```
+
+It deletes the `target/` build folder of every other worktree whose PR has
+merged (never a worktree or a branch). If this command fails, carry on: it
+never blocks the ticket.
+
 Set `status: in-progress` in the ticket frontmatter.
 
 ## 3. Implement

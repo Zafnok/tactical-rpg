@@ -14,7 +14,7 @@ use trpg_content::{Content, ContentErrors};
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{LeadGender, LeadProfile};
 
-use crate::audio::AudioQueue;
+use crate::audio::{AudioQueue, MusicClock, pick_from_pool};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
@@ -218,11 +218,23 @@ pub struct Ctx {
     /// Sounds and music screens ask for this frame (ADR-0026), e.g.
     /// `ctx.audio.play_sound("menu_move")`. `Game` passes them to `app`.
     pub audio: AudioQueue,
+    /// Where the music that is sounding is in its track, for a screen that
+    /// keeps time with it (ADR-0037). `None` in silence: nothing asked
+    /// for, the track still loading (a fraction of a second to several
+    /// seconds), its file missing, or a track played once that has ended.
+    /// During a fade it is the track fading out. `app` (or the test
+    /// `Harness`) reports it each frame through
+    /// [`Game::set_music_playing`](crate::Game::set_music_playing).
+    pub music_clock: Option<MusicClock>,
     /// Seeds random music picks (e.g. a track from a pool), kept apart
     /// from core's simulation RNG (ADR-0019). A fixed
     /// [`DEFAULT_MUSIC_SEED`] here, so tests are repeatable; `app` sets it
     /// from the clock at startup so each launch picks differently.
     pub music_seed: u64,
+    /// Random music picks made so far, mixed into
+    /// [`music_seed`](Self::music_seed) so each pick rolls afresh
+    /// ([`Ctx::pick_music`]).
+    music_picks: u64,
     /// Who the player made the lead, for dialogue's name and pronoun
     /// tokens and the lead's portrait: a placeholder until a campaign
     /// starts (New Game asks the player), then the campaign's
@@ -275,7 +287,9 @@ impl Ctx {
             tips_enabled: false,
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),
+            music_clock: None,
             music_seed: DEFAULT_MUSIC_SEED,
+            music_picks: 0,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
             clock_s: 0.0,
             key_prompt: KeyPrompt::Off,
@@ -285,6 +299,17 @@ impl Ctx {
     /// The context for the content embedded in the binary.
     pub fn embedded() -> Result<Self, LoadError> {
         Self::new(trpg_content::load_embedded().map_err(LoadError::Content)?)
+    }
+
+    /// A music cue picked at random from the audio manifest's `pool`
+    /// ([`pick_from_pool`]): the n-th pick of this run uses
+    /// [`music_seed`](Self::music_seed) mixed with n, so a battle started
+    /// again may get another track. `None` if there is no such pool or it
+    /// is empty.
+    pub fn pick_music(&mut self, pool: &str) -> Option<String> {
+        let seed = self.music_seed ^ self.music_picks;
+        self.music_picks = self.music_picks.wrapping_add(1);
+        pick_from_pool(&self.content.audio, pool, seed).map(str::to_owned)
     }
 
     /// What help text names keys from: the active bindings on the device
@@ -534,8 +559,9 @@ pub(crate) mod tests {
         ctx
     }
 
-    /// [`ctx`] with a manifest holding these sound and music cues (the
-    /// real one is empty until tickets 0213/0214).
+    /// [`ctx`] with a manifest holding these sound and music cues too.
+    /// Each music cue loops and is 10 s long (an existing cue, e.g.
+    /// `title`, is replaced).
     pub(crate) fn ctx_with_cues(sounds: &[&str], music: &[&str]) -> Ctx {
         use trpg_content::{CreditRef, MusicCue, SoundCue};
         let mut ctx = ctx();
@@ -554,6 +580,7 @@ pub(crate) mod tests {
                 file: format!("{cue}.ogg"),
                 volume: 100,
                 looped: true,
+                length_ms: 10_000,
                 credit: CreditRef::Own,
             };
             audio.music.insert(cue.to_owned(), track);

@@ -6,8 +6,8 @@
 
 use insta::assert_snapshot;
 use trpg_core::{
-    ArtId, BattleState, ClassId, Command, EffectSource, Event, Faction, Objective, Pos, SkillId,
-    Unit, UnitId,
+    ArtId, BattleState, ClassId, Command, EffectSource, Equipped, Event, Faction, Objective, Pos,
+    SkillId, Unit, UnitId,
 };
 
 use super::BattleScreen;
@@ -170,7 +170,11 @@ fn guard_break_shows_cores_forecast_and_is_paid_when_attacking() {
     let state = swordsman(&c, 20);
     let art = Technique::Art(ArtId::new("guard_break"));
     let expected = state
-        .preview_attack(UnitId(1), p(7, 2), &art.action(UnitId(4), 0))
+        .preview_attack(
+            UnitId(1),
+            p(7, 2),
+            &art.action(UnitId(4), &Equipped::Weapon(0)),
+        )
         .unwrap();
     let mut s = lord_on_brigand(&mut c, state);
     choose(&mut s, &mut c, "Guard Break");
@@ -301,7 +305,11 @@ fn the_chosen_art_stays_across_targets_that_allow_it() {
     let art = Technique::Art(ArtId::new("guard_break"));
     let expected = s
         .state()
-        .preview_attack(UnitId(1), p(7, 2), &art.action(UnitId(6), 0))
+        .preview_attack(
+            UnitId(1),
+            p(7, 2),
+            &art.action(UnitId(6), &Equipped::Weapon(0)),
+        )
         .unwrap();
     assert_eq!(t.preview, expected);
 }
@@ -381,7 +389,7 @@ fn a_pin_shows_on_the_info_screen_with_when_it_ends() {
     let cmd = Command::Act {
         unit: UnitId(3),
         dest: p(8, 4),
-        action: art.action(UnitId(4), 0),
+        action: art.action(UnitId(4), &Equipped::Weapon(0)),
     };
     pinned.apply(&cmd).unwrap();
     let brigand = pinned.unit(UnitId(4)).unwrap();
@@ -445,7 +453,7 @@ fn a_boss_or_green_units_art_names_the_playback_and_the_players_doesnt() {
         .apply(&trpg_core::Command::Act {
             unit: UnitId(1),
             dest: p(7, 2),
-            action: Technique::Attack.action(UnitId(4), 0),
+            action: Technique::Attack.action(UnitId(4), &Equipped::Weapon(0)),
         })
         .unwrap();
     let pb = Playback::new(&events, state.units(), after.fallen(), TIMINGS)

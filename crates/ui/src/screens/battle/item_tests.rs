@@ -498,13 +498,13 @@ fn the_popup_is_drawn_on_the_row_above_the_healed_unit() {
 #[test]
 fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
     let mut c = ctx();
-    // The lord walks down to (3, 6), beside the knight at (4, 6).
+    // The lord walks right to (4, 5), above the knight at (4, 6).
     let state = placed(&c, p(3, 5), p(4, 6), 5);
     let mut s = BattleScreen::new(state);
     step(
         &mut s,
         &mut c,
-        &[Action::Confirm, Action::CursorDown, Action::Confirm],
+        &[Action::Confirm, Action::CursorRight, Action::Confirm],
     );
     wait(&mut s, &mut c, 1.0);
     assert!(
@@ -519,8 +519,8 @@ fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
     );
     step(&mut s, &mut c, &[Action::Confirm]);
     assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
-    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(3, 6)));
+    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(4, 5)));
     assert_eq!(s.mode().drawn_pos(UnitId(2)), None);
     // Its own tile is where the cursor goes for the user.
-    assert_eq!(s.cursor().pos, p(3, 6));
+    assert_eq!(s.cursor().pos, p(4, 5));
 }

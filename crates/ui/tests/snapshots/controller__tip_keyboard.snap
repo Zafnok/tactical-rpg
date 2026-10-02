@@ -19,8 +19,8 @@ expression: keys.snapshot()
                     ..≈≈≈≈..··..............╦╦..                      │                            │
                     ....Ar····....Br..▓▓▓▓▓▓▓▓..                      │                            │
                     ..♣♣··Lo..╦╦......▓▓░░╦╦▓▓..                      │                            │
-                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      │                            │
-                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
+                    ♣♣♣♣··MaKn........▓▓░░░░▓▓..                      │                            │
+                    ♣♣♠♠··..........Fr▓▓▓▓▐▌▓▓..                      │                            │
                                                                       │                            │
                                                                       │                            │
                                                                       │                            │
@@ -52,8 +52,8 @@ aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooorrjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabddddddddd
 aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaajjjjttoooojjjjrrjjuuuuuuuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaajjkkoovvjjssjjjjjjuuwwssuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaakkkkoojjvvjjjjjjjjuuwwwwuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjjjuuuuxxuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakkkkoovvvvjjjjjjjjuuwwwwuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjrruuuuxxuujjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
@@ -100,6 +100,8 @@ over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
 over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
+over  288,302 16x2  hp_high
+over  208,286 16x2  hp_high
 over  207,256 3x1  #786e50
 over  207,256 1x3  #786e50
 over  221,256 3x1  #786e50
