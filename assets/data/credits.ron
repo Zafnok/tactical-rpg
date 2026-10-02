@@ -1,0 +1,30 @@
+// Credits for third-party works that aren't music or sounds (ticket 0808).
+// The music and sound credits are in assets/audio/audio.ron and are never
+// repeated here; the credits screen shows both. Loaded and validated by
+// trpg_content::credits.
+//
+// Every row of THIRD_PARTY_ASSETS.md needs an entry in one of the two files
+// with the same source link (a test checks it). `hidden: true` keeps an
+// entry off the credits screen: use it only for software plumbing the
+// player never sees or hears. Hidden works are still listed in
+// THIRD_PARTY_ASSETS.md and ship with their license texts.
+(
+    credits: [
+        (id: "terminus", group: Fonts, title: "Terminus Font", author: "Dimitar Toshkov Zhekov",
+         source: "https://terminus-font.sourceforge.net/", license: "OFL-1.1"),
+
+        // The web build's JavaScript loaders (web/README.md).
+        (id: "mq_js_bundle", group: Software, title: "macroquad JS/WASM loader", author: "not-fl3",
+         source: "https://github.com/not-fl3/macroquad/blob/5e9b5ca912ac65962c05c0da842a4a70eaae34b9/js/mq_js_bundle.js",
+         license: "MIT", hidden: true),
+        (id: "quad_storage_js", group: Software, title: "quad-storage JS plugin", author: "optozorax",
+         source: "https://github.com/optozorax/quad-storage/blob/3760b953aec17d65cc4ca8edfa39c38e7337ec3a/js/quad-storage.js",
+         license: "MIT", hidden: true),
+        (id: "sapp_jsutils", group: Software, title: "sapp-jsutils", author: "not-fl3",
+         source: "https://github.com/not-fl3/sapp-jsutils", license: "MIT", hidden: true),
+        // The table of controller button layouts inside the gilrs crate.
+        (id: "sdl_gamecontrollerdb", group: Software, title: "SDL_GameControllerDB",
+         author: "Sam Lantinga and the SDL_GameControllerDB contributors",
+         source: "https://github.com/mdqinc/SDL_GameControllerDB", license: "Zlib", hidden: true),
+    ],
+)

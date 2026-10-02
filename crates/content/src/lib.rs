@@ -10,6 +10,7 @@ pub mod bundle;
 pub mod chapter;
 pub mod character;
 pub mod class;
+pub mod credits;
 pub mod dialogue;
 mod enums;
 pub mod error;
@@ -40,6 +41,7 @@ pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
 pub use battle::BattleRefs;
 pub use chapter::{ChapterDef, NewGameDef, battle_campaign, new_campaign};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
+pub use credits::{CreditEntry, CreditGroup, Credits};
 pub use dialogue::{ChoiceOption, DialogueTable, MusicLine, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
@@ -95,6 +97,8 @@ pub struct Content {
     pub tips: TipTable,
     /// Sound and music cues, pools and credits (ADR-0026).
     pub audio: AudioManifest,
+    /// Every third-party work, for the credits screen (ticket 0808).
+    pub credits: Credits,
     /// Battles by id (file stem).
     pub battles: BTreeMap<String, BattleDef>,
     /// Chapters by id (file stem).
@@ -169,6 +173,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         dialogue.as_ref().ok(),
         audio.as_ref().ok(),
     );
+    let credits = credits::load(audio.as_ref().ok());
     assemble(
         palette,
         KeymapDef::load(),
@@ -188,6 +193,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             ai: ai::load(),
             tips: tip::load(),
             audio,
+            credits,
             images: ImageTable::load(),
             battles,
             chapters,
@@ -369,6 +375,7 @@ struct Loaded {
     ai: Result<AiWeights, Vec<ContentError>>,
     tips: Result<TipTable, Vec<ContentError>>,
     audio: Result<AudioManifest, Vec<ContentError>>,
+    credits: Result<Credits, Vec<ContentError>>,
     images: Result<ImageTable, Vec<ContentError>>,
     battles: Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
     chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
@@ -413,6 +420,7 @@ fn assemble(
         ai: take(units.ai, &mut errors),
         tips: take(units.tips, &mut errors),
         audio: take(units.audio, &mut errors),
+        credits: take(units.credits, &mut errors),
         images: take(units.images, &mut errors),
         battles: take(units.battles, &mut errors),
         chapters: take(units.chapters, &mut errors),
@@ -483,6 +491,10 @@ mod tests {
         )
     }
 
+    fn ok_credits() -> Result<Credits, Vec<ContentError>> {
+        credits::load(audio::load().ok().as_ref())
+    }
+
     fn ok_units() -> Loaded {
         let (battles, chapters, new_game) = ok_story();
         Loaded {
@@ -498,6 +510,7 @@ mod tests {
             ai: ai::load(),
             tips: tip::load(),
             audio: audio::load(),
+            credits: ok_credits(),
             images: ImageTable::load(),
             battles,
             chapters,
@@ -572,6 +585,10 @@ mod tests {
             audio::load().ok().as_ref()
         );
         assert_eq!(
+            content.as_ref().map(|c| &c.credits),
+            ok_credits().ok().as_ref()
+        );
+        assert_eq!(
             content.as_ref().map(|c| &c.images),
             ImageTable::load().ok().as_ref()
         );
@@ -587,9 +604,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 21] = [
-        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "j",
-        "b", "h", "g",
+    const NAMES: [&str; 22] = [
+        "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "r",
+        "j", "b", "h", "g",
     ];
 
     #[test]
@@ -615,6 +632,7 @@ mod tests {
                     ai: Err(e("w")),
                     tips: Err(e("y")),
                     audio: Err(e("v")),
+                    credits: Err(e("r")),
                     images: Err(e("j")),
                     battles: Err(e("b")),
                     chapters: Err(e("h")),
@@ -659,14 +677,15 @@ mod tests {
                     ai: if i == 14 { Err(e("w")) } else { ai::load() },
                     tips: if i == 15 { Err(e("y")) } else { tip::load() },
                     audio: if i == 16 { Err(e("v")) } else { audio::load() },
-                    images: if i == 17 {
+                    credits: if i == 17 { Err(e("r")) } else { ok_credits() },
+                    images: if i == 18 {
                         Err(e("j"))
                     } else {
                         ImageTable::load()
                     },
-                    battles: if i == 18 { Err(e("b")) } else { ok_story().0 },
-                    chapters: if i == 19 { Err(e("h")) } else { ok_story().1 },
-                    new_game: if i == 20 { Err(e("g")) } else { ok_story().2 },
+                    battles: if i == 19 { Err(e("b")) } else { ok_story().0 },
+                    chapters: if i == 20 { Err(e("h")) } else { ok_story().1 },
+                    new_game: if i == 21 { Err(e("g")) } else { ok_story().2 },
                 },
             )
         };
