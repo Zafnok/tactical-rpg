@@ -3,7 +3,6 @@
 //! same flow.
 
 use super::{centre_x, draw_debug_hint, print_centred};
-use crate::audio::pick_from_pool;
 use crate::color::UiColor;
 use crate::flow::FlowScreen;
 use crate::glyph_buffer::{Cell, GlyphBuffer};
@@ -37,9 +36,6 @@ const QUIT: &str = "Quit";
 
 /// The title screen's music cue (`audio.md`).
 pub const TITLE_MUSIC: &str = "title";
-/// The music pool Quick Battle picks its track from: it is a test
-/// skirmish, and skirmishes pick at random from this pool (`audio.md`).
-pub const QUICK_BATTLE_MUSIC_POOL: &str = "skirmish";
 
 /// Fills `buf` with blank `text`-on-`black` cells.
 fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
@@ -58,12 +54,10 @@ pub struct TitleScreen {
     /// Menu item labels, in menu order.
     items: Vec<&'static str>,
     /// Whether the title music was asked for since this screen was last
-    /// shown. The screen has no "shown" hook, so a screen that changes the
-    /// music clears it and the next update asks again.
+    /// shown. The screen has no "shown" hook, so starting the game flow
+    /// (whose battles play their own music) clears it and the next update
+    /// asks again.
     music_on: bool,
-    /// Quick Battles started, mixed into the music seed so each one can
-    /// pick a different track.
-    battles_started: u64,
     /// Whether the "press any key" prompt ([`Ctx::key_prompt`]) is over.
     /// It shows once per launch.
     prompt_done: bool,
@@ -87,7 +81,6 @@ impl TitleScreen {
             menu: Menu::new(items.iter().map(|&i| MenuItem::new(i)).collect()).without_cancel(),
             items,
             music_on: false,
-            battles_started: 0,
             prompt_done: false,
         }
     }
@@ -96,19 +89,6 @@ impl TitleScreen {
     /// its menu.
     fn waiting(&self, ctx: &Ctx) -> bool {
         ctx.key_prompt != KeyPrompt::Off && !self.prompt_done
-    }
-
-    /// Plays a Quick Battle track: one from [`QUICK_BATTLE_MUSIC_POOL`],
-    /// kept for the whole battle (the battle screen asks for no music).
-    /// Ticket 0807 moves this to where battles start once battle files name
-    /// their music.
-    fn start_quick_battle_music(&mut self, ctx: &mut Ctx) {
-        let seed = ctx.music_seed ^ self.battles_started;
-        self.battles_started = self.battles_started.wrapping_add(1);
-        if let Some(cue) = pick_from_pool(&ctx.content.audio, QUICK_BATTLE_MUSIC_POOL, seed) {
-            ctx.audio.play_music(cue);
-            self.music_on = false;
-        }
     }
 
     /// The bottom help line: the cursor keys `move`, the Confirm key
@@ -156,12 +136,15 @@ impl Screen for TitleScreen {
                 Some(MenuEvent::Cancelled) | None => None,
             };
             match chosen {
-                Some(NEW_GAME) => return Transition::Push(Box::new(FlowScreen::new_game())),
+                Some(NEW_GAME) => {
+                    self.music_on = false;
+                    return Transition::Push(Box::new(FlowScreen::new_game()));
+                }
                 // The test data always builds (tested); should it ever
                 // not, the item does nothing.
                 Some(QUICK_BATTLE) => {
                     if let Some(flow) = FlowScreen::quick_battle(ctx) {
-                        self.start_quick_battle_music(ctx);
+                        self.music_on = false;
                         return Transition::Push(Box::new(flow));
                     }
                 }
@@ -196,8 +179,11 @@ impl Screen for TitleScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio::AudioRequest;
+    use crate::audio::{AudioRequest, pick_from_pool};
     use crate::screen::tests::ctx;
+
+    /// The pool the Quick Battle's file names (`assets/battles/quick.ron`).
+    const QUICK_BATTLE_MUSIC_POOL: &str = "skirmish";
 
     fn input(actions: &[Action]) -> FrameInput {
         FrameInput::new(actions.to_vec(), 0.0, vec![])
@@ -292,6 +278,19 @@ mod tests {
         assert_eq!(first.len(), 1);
         assert!(pool.contains(&first[0]), "{first:?}");
         // Back on top after the battle: the title music again, once.
+        assert_eq!(music_of(&mut t, &mut c, &[]), [TITLE_MUSIC]);
+        assert!(music_of(&mut t, &mut c, &[]).is_empty());
+    }
+
+    /// New Game's battles change the music too, so the title asks for its
+    /// own again once it is back on top.
+    #[test]
+    fn title_music_plays_again_after_new_game() {
+        let mut c = ctx();
+        let mut t = TitleScreen::new();
+        assert_eq!(music_of(&mut t, &mut c, &[]), [TITLE_MUSIC]);
+        // The mode screen keeps the title music: nothing asked.
+        assert!(music_of(&mut t, &mut c, &[Action::Confirm]).is_empty());
         assert_eq!(music_of(&mut t, &mut c, &[]), [TITLE_MUSIC]);
         assert!(music_of(&mut t, &mut c, &[]).is_empty());
     }

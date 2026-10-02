@@ -60,7 +60,9 @@ debug menu (unless a debug screen is already on top).
 The battle map is not drawn by the battle screen (ADR-0038). Each frame:
 
 1. `BattleScreen::scene(ctx)` builds a `MapScene`: the visible tiles (their
-   terrain and the ranges on them: danger, move, attack, heal), the units
+   terrain, whether it just changed and flashes, the ranges on them:
+   danger, move, attack, heal, and what a spell being aimed would turn
+   them into), the units
    on them (where each is drawn, HP, acted, under an effect, how far it has
    faded), the cursor (if shown) and the selected unit's path. Plain data:
    no colours, glyphs, cells or pixels.
@@ -97,8 +99,9 @@ path (3,5) (4,5)
 ```
 
 One line per row of tiles (`-` = off the map, `+` then a letter per range:
-`d` danger, `m` move, `a` attack, `h` heal; `*n` = `n` such tiles in a
-row), then the units, the cursor and the path.
+`d` danger, `m` move, `a` attack, `h` heal; `!` = flashing after its
+terrain changed; `>` then the terrain a spell would turn it into; `*n` =
+`n` such tiles in a row), then the units, the cursor and the path.
 
 ## Adding a screen
 

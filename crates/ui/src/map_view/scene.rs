@@ -1,5 +1,6 @@
-//! What is on the visible battle map, as plain data (ADR-0038): terrain,
-//! ranges, units, the cursor and the path. No colours, glyphs, cells or
+//! What is on the visible battle map, as plain data (ADR-0038): terrain
+//! (flashing where it just changed, or marked with what a spell would turn
+//! it into), ranges, units, the cursor and the path. No colours, glyphs, cells or
 //! pixels: a [`MapSkin`](super::MapSkin) turns a scene into those.
 
 use std::fmt::Write as _;
@@ -27,12 +28,19 @@ pub struct MapScene {
 }
 
 /// One visible tile.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct TileView {
     /// Its terrain; `None` = off the map.
     pub terrain: Option<TerrainId>,
+    /// How strongly it flashes after its terrain changed (0410): `1` at the
+    /// change, fading to `0`. One entry per change still flashing; usually
+    /// none.
+    pub flashes: Vec<f32>,
     /// The ranges it is in, in the order they are laid on.
     pub tints: Vec<RangeKind>,
+    /// The terrain the spell being aimed would turn it into (0410): shown
+    /// in place of its own, so the tile reads as terrain, not as a target.
+    pub becomes: Option<TerrainId>,
 }
 
 /// A range shown on the map.
@@ -248,7 +256,7 @@ impl MapScene {
     /// ```text
     /// origin (-10,-11) size 35x30
     ///  -11: -*35
-    ///    0: -*10 sea*2 plain+m*3 forest+da -*20
+    ///    0: -*10 sea*2 plain+m*3 forest+da burnt! plain>burning -*18
     /// units 1
     ///   #4 Br enemy brigand (7,3) hp 20/30 acted effect fade=0.25
     /// cursor (3,5) corners 1.00
@@ -258,7 +266,9 @@ impl MapScene {
     /// One line per row of tiles, headed by its map row: terrain string ids
     /// (`-` = off the map), `+` and a letter per range on the tile in the
     /// order laid on (`d` danger, `m` move, `a` attack, `h` heal), and `*n`
-    /// for `n` such tiles in a row. A unit of a named character has it in
+    /// for `n` such tiles in a row. `!` marks a tile flashing after its
+    /// terrain changed, and `>` is followed by the terrain a spell being
+    /// aimed would turn it into. A unit of a named character has it in
     /// brackets after its class. The cursor's number is its brightness.
     pub fn to_text(&self, content: &Content) -> String {
         let mut out = String::new();
@@ -315,18 +325,24 @@ impl MapScene {
 }
 
 /// A tile in [`MapScene::to_text`]: its terrain's string id (`-` off the
-/// map, `?n` for an id the content lacks), then `+` and its ranges' letters.
+/// map, `?n` for an id the content lacks), `!` if it flashes, `+` and its
+/// ranges' letters, then `>` and the terrain it would become.
 fn tile_text(content: &Content, tile: &TileView) -> String {
-    let mut text = match tile.terrain {
-        None => "-".to_owned(),
-        Some(id) => match content.terrain.display.get(id) {
-            Some(t) => t.id.clone(),
-            None => format!("?{}", id.0),
-        },
+    let name = |id: TerrainId| match content.terrain.display.get(id) {
+        Some(t) => t.id.clone(),
+        None => format!("?{}", id.0),
     };
+    let mut text = tile.terrain.map_or_else(|| "-".to_owned(), name);
+    if !tile.flashes.is_empty() {
+        text.push('!');
+    }
     if !tile.tints.is_empty() {
         text.push('+');
         text.extend(tile.tints.iter().map(|k| k.mark()));
+    }
+    if let Some(id) = tile.becomes {
+        text.push('>');
+        text.push_str(&name(id));
     }
     text
 }
@@ -488,6 +504,9 @@ mod tests {
         s.tint([p(3, 2)], RangeKind::Danger);
         s.tint([p(3, 2)], RangeKind::Attack);
         s.tint([p(0, 3)], RangeKind::Heal);
+        s.tile_mut(p(1, 3)).unwrap().flashes.push(0.5);
+        s.tile_mut(p(0, 2)).unwrap().becomes = id("forest");
+        s.tile_mut(p(2, 2)).unwrap().becomes = Some(TerrainId(998));
         s.push_unit(brigand(4, p(0, 2)));
         let mut lord = brigand(1, p(1, 3)).fading(0.25);
         lord.faction = Faction::Player;
@@ -506,8 +525,8 @@ mod tests {
         assert_eq!(
             s.to_text(&c.content),
             "origin (-1,2) size 5x3\n\
-             \x20  2: - plain plain+m*2 forest+da\n\
-             \x20  3: - plain+h plain ?999 -\n\
+             \x20  2: - plain>forest plain+m plain+m>?998 forest+da\n\
+             \x20  3: - plain+h plain! ?999 -\n\
              \x20  4: -*5\n\
              units 2\n\
              \x20 #4 Br enemy brigand (0,2) hp 20/30\n\

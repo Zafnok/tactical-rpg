@@ -245,6 +245,19 @@ code (imports change, nothing else), the second is the change.
   says to use the skin.
 - No new ADR: ADR-0038 covers all of this.
 
+**Merged with 0410 (spells), which landed on `main` while this PR was
+open.** 0410 drew two new things on the map from the battle screen; per
+ADR-0038 they are now in the scene and painted by the glyph skin, with
+0410's snapshots byte-identical:
+
+- `TileView::flashes`: a tile whose terrain just changed flashes
+  (`TerrainFlash::strength` is now `1` fading to `0`; how strongly that
+  tints is the skin's).
+- `TileView::becomes`: the terrain the spell being aimed would turn a tile
+  into, shown in its place.
+- A spell's unit targets are an attack or a heal range, like the others.
+- `to_text` marks them: `burnt!` flashes, `plain>burning` would change.
+
 **Follow-up tickets created:** none. A note was added to 0433 about what
 switching skins in the middle of a battle does and doesn't handle yet.
 

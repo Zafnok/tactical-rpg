@@ -6,7 +6,7 @@ pub mod cursor;
 pub mod path;
 pub mod units;
 
-use trpg_core::Pos;
+use trpg_core::{Pos, TerrainId};
 
 use super::scene::{MapScene, RangeKind};
 use super::skin::MapSkin;
@@ -125,26 +125,46 @@ const fn range_color(kind: RangeKind) -> UiColor {
     }
 }
 
-/// Draws the terrain of every tile, then tints it with its ranges, the
-/// first laid on undermost; tiles off the map are left as they are (blank).
+/// Draws terrain `id` on the tile whose left cell is `(x, y)`: its two
+/// glyphs in its colours. Nothing for a terrain the content lacks.
+fn draw_terrain(ctx: &Ctx, buf: &mut GlyphBuffer, id: TerrainId, (x, y): (i32, i32)) {
+    let Some(t) = ctx.content.terrain.display.get(id) else {
+        return;
+    };
+    let fg = named(&ctx.palette, &t.fg, UiColor::Text);
+    let bg = named(&ctx.palette, &t.bg, UiColor::Black);
+    for (i, glyph) in (0..).zip(t.glyphs) {
+        buf.set(x + i, y, Cell::new(glyph, fg, bg));
+    }
+}
+
+/// Draws every tile: its terrain (tiles off the map are left as they are,
+/// blank); a tile whose terrain just changed flashes, its background tinted
+/// towards its glyph colour, fading out; then its ranges tint it, the first
+/// laid on undermost; and a tile a spell would change is drawn as the
+/// terrain it would become instead (0410).
 fn draw_tiles(ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene, layout: &Layout) {
-    let display = &ctx.content.terrain.display;
     for dy in 0..layout.tiles.1 {
         for dx in 0..layout.tiles.0 {
             let Some(tile) = scene.tile_at(dx, dy) else {
                 continue;
             };
             let (x, y) = (layout.cell.0 + TILE_W_CELLS * dx, layout.cell.1 + dy);
-            if let Some(t) = tile.terrain.and_then(|id| display.get(id)) {
-                let fg = named(&ctx.palette, &t.fg, UiColor::Text);
-                let bg = named(&ctx.palette, &t.bg, UiColor::Black);
-                for (i, glyph) in (0..).zip(t.glyphs) {
-                    buf.set(x + i, y, Cell::new(glyph, fg, bg));
+            let cells = Rect::new(x, y, TILE_W_CELLS, 1);
+            if let Some(id) = tile.terrain {
+                draw_terrain(ctx, buf, id, (x, y));
+            }
+            for &strength in &tile.flashes {
+                if let Some(fg) = buf.get(x, y).map(|c| c.fg) {
+                    buf.blend_bg(cells, fg, OVERLAY_BLEND * strength);
                 }
             }
             for &kind in &tile.tints {
                 let color = ctx.palette.get(range_color(kind));
-                buf.blend_bg(Rect::new(x, y, TILE_W_CELLS, 1), color, OVERLAY_BLEND);
+                buf.blend_bg(cells, color, OVERLAY_BLEND);
+            }
+            if let Some(id) = tile.becomes {
+                draw_terrain(ctx, buf, id, (x, y));
             }
         }
     }
@@ -161,7 +181,7 @@ fn named(palette: &Palette, name: &str, fallback: UiColor) -> Rgb {
 #[cfg(test)]
 pub(crate) mod tests {
     use proptest::prelude::*;
-    use trpg_core::{ClassId, Faction, TerrainId, UnitId};
+    use trpg_core::{ClassId, Faction, UnitId};
 
     use super::*;
     use crate::map_view::scene::{CursorStyle, CursorView, TileView, UnitView};
@@ -354,6 +374,54 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_changed_tile_flashes_and_a_tile_a_spell_would_change_shows_what_it_becomes() {
+        let c = ctx();
+        let pal = &c.palette;
+        let display = &c.content.terrain.display;
+        let look = |name: &str| {
+            let t = display.get(display.id_of(name).unwrap()).unwrap();
+            let (fg, bg) = (pal.lookup(&t.fg).unwrap(), pal.lookup(&t.bg).unwrap());
+            (t.glyphs, fg, bg)
+        };
+        let (plain, forest) = (look("plain"), look("forest"));
+        let mut scene = MapScene::new(p(0, 0), (5, 1));
+        for tile in &mut scene.tiles {
+            tile.terrain = display.id_of("plain");
+        }
+        // Half a flash; a full flash under a range; two flashes at once.
+        scene.tile_mut(p(0, 0)).unwrap().flashes = vec![0.5];
+        scene.tile_mut(p(1, 0)).unwrap().flashes = vec![1.0];
+        scene.tile_mut(p(4, 0)).unwrap().flashes = vec![1.0, 0.5];
+        scene.tint([p(1, 0), p(2, 0), p(3, 0)], RangeKind::Attack);
+        // A forest-to-be, and a terrain the content lacks.
+        scene.tile_mut(p(2, 0)).unwrap().becomes = display.id_of("forest");
+        scene.tile_mut(p(3, 0)).unwrap().becomes = Some(TerrainId(999));
+        let mut buf = blank();
+        GlyphSkin.paint(&c, &scene, Rect::new(0, 0, 10, 1), &mut buf);
+        let cell = |x| *buf.get(x, 0).unwrap();
+        let (glyphs, fg, bg) = plain;
+        let attack = pal.get(UiColor::AttackRange);
+        // Towards the tile's own glyph colour, by the flash's strength.
+        let half = bg.lerp(fg, OVERLAY_BLEND * 0.5);
+        assert_eq!(cell(0), Cell::new(glyphs[0], fg, half));
+        assert_eq!(cell(1), Cell::new(glyphs[1], fg, half));
+        // The range goes over the flash.
+        let full = bg.lerp(fg, OVERLAY_BLEND);
+        assert_eq!(cell(2).bg, full.lerp(attack, OVERLAY_BLEND));
+        // What it would become replaces the tile, range and all…
+        assert_eq!(cell(4), Cell::new(forest.0[0], forest.1, forest.2));
+        assert_eq!(cell(5), Cell::new(forest.0[1], forest.1, forest.2));
+        // …unless the content lacks it.
+        assert_eq!(
+            cell(6),
+            Cell::new(glyphs[0], fg, bg.lerp(attack, OVERLAY_BLEND))
+        );
+        // Each flash tints in turn.
+        assert_eq!(cell(8).bg, full.lerp(fg, OVERLAY_BLEND * 0.5));
+        assert_ne!(forest, plain);
+    }
+
+    #[test]
     fn units_and_the_cursor_off_the_view_are_not_drawn() {
         let c = ctx();
         let area = Rect::new(0, 0, 4, 1);
@@ -378,13 +446,17 @@ pub(crate) mod tests {
 
     prop_compose! {
         fn any_tile()(
-            terrain in prop::option::of(0u16..14),
+            terrain in prop::option::of(0u16..24),
+            flashes in prop::collection::vec(0.0f32..1.0, 0..2),
             tints in prop::collection::vec(0usize..4, 0..3),
+            becomes in prop::option::of(0u16..24),
         ) -> TileView {
             let kinds = [RangeKind::Danger, RangeKind::Move, RangeKind::Attack, RangeKind::Heal];
             TileView {
                 terrain: terrain.map(TerrainId),
+                flashes,
                 tints: tints.into_iter().map(|i| kinds[i]).collect(),
+                becomes: becomes.map(TerrainId),
             }
         }
     }

@@ -686,7 +686,7 @@ mod tests {
         let scene = h.map_scene().unwrap();
         let battle = h.flow().and_then(FlowScreen::battle).unwrap();
         assert_eq!(scene, battle.scene(h.game().ctx()));
-        assert_eq!(scene.units.len(), 6);
+        assert_eq!(scene.units.len(), 8);
         assert_eq!(h.map_text(), scene.to_text(&h.game().ctx().content));
         assert!(h.map_text().starts_with("origin (-10,-11) size 35x30\n"));
         // A battle screen on the stack itself.

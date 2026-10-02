@@ -499,13 +499,13 @@ fn the_popup_is_drawn_on_the_row_above_the_healed_unit() {
 #[test]
 fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
     let mut c = ctx();
-    // The lord walks down to (3, 6), beside the knight at (4, 6).
+    // The lord walks right to (4, 5), above the knight at (4, 6).
     let state = placed(&c, p(3, 5), p(4, 6), 5);
     let mut s = BattleScreen::new(state);
     step(
         &mut s,
         &mut c,
-        &[Action::Confirm, Action::CursorDown, Action::Confirm],
+        &[Action::Confirm, Action::CursorRight, Action::Confirm],
     );
     wait(&mut s, &mut c, 1.0);
     assert!(
@@ -520,10 +520,10 @@ fn the_user_is_drawn_at_its_destination_while_choosing_an_item_target() {
     );
     step(&mut s, &mut c, &[Action::Confirm]);
     assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
-    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(3, 6)));
+    assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(4, 5)));
     assert_eq!(s.mode().drawn_pos(UnitId(2)), None);
     // Its own tile is where the cursor goes for the user.
-    assert_eq!(s.cursor().pos, p(3, 6));
+    assert_eq!(s.cursor().pos, p(4, 5));
 }
 
 /// The map scene (ADR-0038) while choosing who gets an item: its targets
@@ -547,21 +547,21 @@ fn the_scene_marks_who_an_item_can_target() {
         assert!(scene.tinted(kind).is_empty(), "{kind:?}");
     }
     assert_eq!(scene.cursor.map(|c| c.pos), Some(s.cursor().pos));
-    // The lord walks down to (3, 6) first: it is the only one hurt beside
+    // The lord walks up to (3, 4) first: it is the only one hurt beside
     // that tile, and the range is there, not where it started.
     let state = hurt_pair(&c, 5, 15, &["potion"]);
     let mut s = BattleScreen::new(state);
     step(
         &mut s,
         &mut c,
-        &[Action::Confirm, Action::CursorDown, Action::Confirm],
+        &[Action::Confirm, Action::CursorUp, Action::Confirm],
     );
     wait(&mut s, &mut c, 1.0);
     step(&mut s, &mut c, &ITEM);
     step(&mut s, &mut c, &[Action::Confirm]);
     assert!(matches!(s.mode(), Mode::ItemTarget(_)), "{:?}", s.mode());
     let scene = s.scene(&c);
-    assert_eq!(scene.tinted(RangeKind::Heal), [p(3, 6)]);
-    assert_eq!(scene.unit(UnitId(1)).map(|u| u.pos), Some(p(3, 6)));
-    assert_eq!(scene.cursor.map(|c| c.pos), Some(p(3, 6)));
+    assert_eq!(scene.tinted(RangeKind::Heal), [p(3, 4)]);
+    assert_eq!(scene.unit(UnitId(1)).map(|u| u.pos), Some(p(3, 4)));
+    assert_eq!(scene.cursor.map(|c| c.pos), Some(p(3, 4)));
 }

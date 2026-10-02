@@ -96,7 +96,7 @@ fn browsing_shows_the_terrain_the_units_and_the_cursor() {
         })
         .collect();
     assert_eq!(shown, units);
-    assert_eq!(shown.len(), 6);
+    assert_eq!(shown.len(), 8);
     for u in &scene.units {
         assert!(!u.acted && !u.has_effect && u.fade.abs() < f32::EPSILON);
     }

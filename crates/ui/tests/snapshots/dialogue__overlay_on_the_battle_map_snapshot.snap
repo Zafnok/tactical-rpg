@@ -20,7 +20,7 @@ expression: h.snapshot()
  ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║r..▓▓▓▓▓▓▓▓..                 │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ││
  ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║...▓▓░░╦╦▓▓..                 │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ││
  ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║...▓▓░░░░▓▓..                 │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ││
- ╚════════════════════════════════╝...▓▓▓▓▐▌▓▓..                 └────────────────────────────────┘│
+ ╚════════════════════════════════╝.Fr▓▓▓▓▐▌▓▓..                 └────────────────────────────────┘│
              Test Lord                                                      Test Knight            │
                                                                       │                            │
 ┌── Test Lord ─────────────────────────────────────────────────────────────────────────────────────┐
@@ -53,7 +53,7 @@ adeeeeeee丑丒丒专且丕世JJJJ世丕且专丒丒丗eeeeeeed与与与与与�
 adeeeee丑丝丞丞丞丟丠丠丠丠両両丠丠丠丠丟丞丞丞丢丗eeeeed不与与丣丣丣丣丣丣丣丣与与aaaaaaaaaaaaaaaaaceeeee丙xpppp两两两两严严两两两两ppppq东eeeeecc
 adeee丑丝丞丞丞丞丞丟丠丠丠丠並並丠丠丠丠丟丞丞丞丞丞丢丗eeed与与与丣丣丧丧丘丘丣丣与与aaaaaaaaaaaaaaaaaceee丙xpppppp两两两两严严两两两两ppppppq东eeecc
 ade丑丝丞丞丞丞丞丞丞丟丠丠丠丠並並丠丠丠丠丟丞丞丞丞丞丞丞丢丗ed与与与丣丣丧丧丧丧丣丣与与aaaaaaaaaaaaaaaaace丙xpppppppp两两两两严严两两两两ppppppppq东ecc
-adddddddddddddddddddddddddddddddddd与与与丣丣丣丣丨丨丣丣与与aaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccc
+adddddddddddddddddddddddddddddddddd与不不丣丣丣丣丨丨丣丣与与aaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccc
 a丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丩丩丩丩丩丩丩丩丩丩丩个个个个个个个个个个个丩丩丩丩丩丩丩丩丩丩丩丩c
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩丩c
 ccc丫丫丫丫丫丫丫丫丫丫丫cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -178,3 +178,4 @@ Z = fg:hair_brown bg:portrait_outline
 over  288,222 16x2  hp_high
 over  280,254 8x2  hp_high
 over  280,206 8x2  hp_high
+over  288,302 16x2  hp_high

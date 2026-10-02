@@ -15,7 +15,7 @@ fn quick_battle() -> Harness {
 }
 
 /// The Quick Battle screen at the start of the battle: `test_small.map`
-/// centred in the viewport, three ready player units and three enemies, all
+/// centred in the viewport, four ready player units and four enemies, all
 /// at full HP, the cursor on the lord, the side panel showing the lord and
 /// its tile, and the help line.
 #[test]
@@ -99,7 +99,7 @@ fn wait_for(h: &mut Harness, text: &str, max: f32) {
 
 /// Each player unit in turn (the one under the cursor, then the next ready
 /// one) selected, kept where it stands, and told to Wait (no enemy is in
-/// reach, so the menu opens on Wait).
+/// reach, so the menu opens on Wait, the mage's too).
 fn wait_all(h: &mut Harness, units: usize) {
     for i in 0..units {
         if i > 0 {
@@ -117,7 +117,7 @@ fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     // Auto-end on (off by default): a message says so.
     h.keys("Shift+Space");
     assert!(row(&h, 30).starts_with("Auto-end: ON"), "{}", row(&h, 30));
-    wait_all(&mut h, 3);
+    wait_all(&mut h, 4);
     // The enemy phase's banner, then the enemies act, then the player's
     // turn 2.
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
@@ -141,7 +141,7 @@ fn a_full_turn_of_waits_then_space_ends_the_turn() {
     let mut h = quick_battle();
     // Auto-end is off by default (ticket 0420).
     assert!(row(&h, 30).ends_with("Shift+Space auto-end: OFF"));
-    wait_all(&mut h, 3);
+    wait_all(&mut h, 4);
     assert!(!shows(&h, "PHASE"));
     // Nobody ready: Space ends the turn without asking.
     h.keys("Space");
@@ -161,7 +161,7 @@ fn space_twice_ends_the_turn_with_units_ready() {
     let mut h = quick_battle();
     wait_all(&mut h, 1);
     h.keys("Space");
-    assert!(shows(&h, "End turn with 2 units ready?"));
+    assert!(shows(&h, "End turn with 3 units ready?"));
     assert!(shows(&h, "f yes / d no"));
     // No: back to the map.
     h.keys("d");
@@ -186,7 +186,7 @@ fn info_and_danger_zone_keys() {
     assert!(shows(&h, "Weapon ranks"));
     assert!(shows(&h, "Test Lord"));
     h.keys("s");
-    assert!(shows(&h, "Test Knight"));
+    assert!(shows(&h, "Test Mage"));
     h.keys("d");
     assert!(!shows(&h, "Weapon ranks"));
     assert!(row(&h, 30).ends_with("w danger zone: OFF · Shift+Space auto-end: OFF"));
@@ -275,7 +275,9 @@ fn arrows_move_the_cursor_and_the_panel_follows() {
 #[test]
 fn next_unit_jumps_between_ready_units() {
     let mut h = quick_battle();
-    // Reading order: archer (2, 4), lord (3, 5), knight (4, 6).
+    // Reading order: archer (2, 4), lord (3, 5), mage (3, 6), knight (4, 6).
+    h.keys("s");
+    assert_eq!(panel(&h)[4], "Test Mage");
     h.keys("s");
     assert_eq!(panel(&h)[4], "Test Knight");
     h.keys("s");
@@ -488,8 +490,22 @@ fn music(h: &Harness) -> Vec<String> {
         .collect()
 }
 
-/// Quick Battle plays one track from the `skirmish` pool, and nothing in the
-/// battle (combat, rewind, the enemy phase, the next turn) changes it.
+/// Plays the Quick Battle in `h` through a fight, a rewind, the enemy phase
+/// and into turn 2, and checks that nothing asked for music or stopped it
+/// after the battle's start.
+fn nothing_changes_the_music(h: &mut Harness) {
+    let cues = h.audio_requests();
+    play_into_turn_two(h);
+    let music = |all: Vec<AudioRequest>| -> Vec<AudioRequest> {
+        let sound = |r: &AudioRequest| matches!(r, AudioRequest::PlaySound { .. });
+        all.into_iter().filter(|r| !sound(r)).collect()
+    };
+    assert_eq!(music(h.audio_requests()), music(cues));
+}
+
+/// Quick Battle (`Pool("skirmish")`) plays one track from the pool, asked
+/// for once at the start, and nothing in the battle (combat, rewind, the
+/// enemy phase, the next turn) changes it.
 #[test]
 fn quick_battle_keeps_one_skirmish_track() {
     let content = trpg_content::load_embedded().unwrap();
@@ -499,6 +515,31 @@ fn quick_battle_keeps_one_skirmish_track() {
     assert_eq!(cues.len(), 2, "{cues:?}");
     assert_eq!(cues[0], "title");
     assert!(pool.contains(&cues[1]), "{cues:?}");
+    nothing_changes_the_music(&mut h);
+    assert_eq!(music(&h), cues);
+}
+
+/// A battle whose file names a cue plays it, asked for once at the start,
+/// and keeps it the same way.
+#[test]
+fn a_battle_keeps_the_cue_its_file_names() {
+    let mut h = Harness::with_layout(Layout::RightHanded);
+    let quick = h.ctx_mut().content.battles.get_mut("quick").unwrap();
+    quick.music = trpg_core::BattleMusic::Cue("battle_bright".into());
+    h.keys("Down f");
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    nothing_changes_the_music(&mut h);
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    // The track started once and was never stopped or started again.
+    let starts = h.music_commands().iter().filter(
+        |c| matches!(c, trpg_ui::audio::MusicCommand::Start { cue } if cue == "battle_bright"),
+    );
+    assert_eq!(starts.count(), 1, "{:?}", h.music_commands());
+}
+
+/// The lord fights, the fight is rewound, the turn ends through the enemy
+/// phase, and turn 2 opens.
+fn play_into_turn_two(h: &mut Harness) {
     // The lord attacks the brigand in reach, and the combat plays out.
     h.keys("f Right Right Right Up f")
         .wait(0.5)
@@ -508,16 +549,15 @@ fn quick_battle_keeps_one_skirmish_track() {
     // Rewind the fight (the hurt lord would fall in the enemy phase), then
     // end the turn through the enemy phase.
     h.keys("r").wait(0.5).keys("f f");
-    assert!(!shows(&h, "Rewind"), "{}", h.snapshot());
+    assert!(!shows(h, "Rewind"), "{}", h.snapshot());
     h.keys("Space Space");
-    assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
+    assert!(shows(h, "ENEMY PHASE"), "{}", h.snapshot());
     h.keys("f");
-    wait_for(&mut h, "PLAYER PHASE", 30.0);
+    wait_for(h, "PLAYER PHASE", 30.0);
     h.keys("f");
-    assert!(!shows(&h, "PHASE"));
+    assert!(!shows(h, "PHASE"));
     h.keys("d Down f");
-    assert!(shows(&h, "Turn 2"));
-    assert_eq!(music(&h), cues);
+    assert!(shows(h, "Turn 2"));
     assert_eq!(h.screens(), ["title", "battle"]);
 }
 

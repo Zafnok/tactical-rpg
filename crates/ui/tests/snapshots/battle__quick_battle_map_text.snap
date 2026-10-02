@@ -33,12 +33,14 @@ origin (-10,-11) size 35x30
   16: -*35
   17: -*35
   18: -*35
-units 6
+units 8
   #1 Lo player exile [test_lord] (3,5) hp 19/19
   #2 Kn player guard [test_knight] (4,6) hp 20/20
   #3 Ar player archer [test_archer] (2,4) hp 17/17
   #4 Br enemy brigand (8,2) hp 20/20
   #5 Br enemy brigand (7,4) hp 20/20
   #6 Ra enemy raider (7,1) hp 22/22
+  #7 Fr enemy frost_elemental (8,7) hp 30/30
+  #8 Ma player mage [test_mage] (3,6) hp 16/16
 cursor (3,5) corners 1.00
 path -
