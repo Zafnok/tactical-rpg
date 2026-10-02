@@ -5,8 +5,8 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
-blocked_by: ["0811"]
+status: in-progress
+blocked_by: []
 nick_input: decision
 completed:
 ---
@@ -54,8 +54,11 @@ So "the brief pause" is about **17 seconds** (1:57 to 2:14).
 **What exists and what doesn't yet:**
 
 - The title today: `crates/ui/src/screens/title.rs` (plain text, a menu).
-  0811 decides the logo and title art; this ticket comes after it so the
-  mockups can end on the real logo.
+  0811 decides the logo and title art. This ticket does **not** wait for it
+  (Nick, 2026-10-02: "0811 shouldn't be a blocker for 0036"): the mockups
+  end on a stand-in logo (the game's name in plain letters, as the title
+  shows it today), and the storyboard's last shot is "the logo, whatever
+  0811 makes it".
 - `docs/design/title-screen.md`: on every build the title first shows
   `Press any key or button` (0034, 0032; built by 0226). On the web the
   music **can't** start before that first press, and the cinematic follows
@@ -186,10 +189,12 @@ Yes / no / later.
 ## Implementation steps
 
 1. Read `docs/design/title-screen.md`, `look-and-feel.md`, `audio.md`,
-   `world-structure.md`, `chapter-1.md` and 0811's result. Listen to the
+   `world-structure.md`, `chapter-1.md` and, if it is done, 0811's result.
+   Listen to the
    title song with the timing table in hand.
 2. Build the mockup page (scratchpad, published as an Artifact): the font
-   atlas, a real map, the logo from 0811, and store previews for character
+   atlas, a real map, the logo (0811's if it is done, else the stand-in
+   above), and store previews for character
    art (they stay in the scratchpad, `ascii-art` skill). It plays each
    storyboard against the song and can show Q1's options and Q3's zooms.
 3. Snippets: with the `story-writing` skill, pick candidate lines that give

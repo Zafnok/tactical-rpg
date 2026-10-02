@@ -31,7 +31,10 @@ figures, and expect several rounds.
 (ticket 0036, built by 0817–0820). It is as long as the title song and ends
 on "our logo whatever it might be", held during the song's quiet pause
 (about 17 seconds). So the art chosen here is also the cinematic's last
-shot: it must look right alone on the screen, with no menu under it. When
+shot: it must look right alone on the screen, with no menu under it. 0036
+does not wait for this ticket (it used a stand-in logo); if 0036 is done,
+read *Intro cinematic* in `docs/design/title-screen.md` for how the logo
+shot and the menu fit together before drawing mockups. When
 offering option C below, tell Nick the cinematic already covers moving
 pictures on the title.
 

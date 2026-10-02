@@ -35,8 +35,9 @@ only if a claim ever happens (`audio.md`).
 
 **Title intro cinematic** (Nick, 2026-10-01: a cinematic on the title as
 long as the title song, looping with it, ending on the logo): **0036**
-decide how it fits the menu, the storyboard and how zoom looks (after
-**0811** title art) → **0228** pan and zoom over a glyph scene → **0817**
+decide how it fits the menu, the storyboard and how zoom looks (it does
+not wait for **0811** title art; the logo shot shows whatever 0811 makes) →
+**0228** pan and zoom over a glyph scene → **0817**
 cinematic file format and player (also needs **0227**, the music clock,
 which has no open dependencies and can start any time) → **0818** character and conversation shots and
 **0819** the title plays it in time with the music → **0820** the real
@@ -77,7 +78,7 @@ Design answers unblock most of the rules work. Suggested order:
 2. **0005** level ups & classes (after 0001) · **0008** world structure · **0009** Chapter 1 scope (after 0007) · **0014** Combat Arts (after 0003) · **0016** the lord's unique class line (after 0005, 0009)
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
 4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0436** outline alone or with a corner mark (a sign-off) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
-5. Anytime, low priority: **0039** sprite units: walking, the effect mark, the glyph look as an option, face or bust · **0012** title (then **0811** title art, then **0036** the title's intro cinematic) · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
+5. Anytime, low priority: **0039** sprite units: walking, the effect mark, the glyph look as an option, face or bust · **0012** title (then **0811** title art) · **0036** the title's intro cinematic · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons · **0037** more building tiles (village, gate, throne), capturing, healing tiles
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
