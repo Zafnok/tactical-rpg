@@ -194,12 +194,19 @@ impl CreditsScreen {
     /// [`ROW_SECS`], a rest of [`REST_SECS`] at the bottom, then the top
     /// again and the same rest there. Silent. A list that fits on screen
     /// stays put.
+    ///
+    /// One frame rolls at most once round the list (every row and the
+    /// jump back to the top), so a huge frame time can't keep it busy; a
+    /// frame longer than that puts the list back at its top, resting.
     fn roll(&mut self, dt: f32) {
         if !self.rolling || self.max_top() == 0 || !dt.is_finite() {
             return;
         }
         self.wait -= dt;
-        while self.wait <= 0.0 {
+        for _ in 0..=self.max_top() {
+            if self.wait > 0.0 {
+                return;
+            }
             if self.more_below() {
                 self.top += 1;
                 self.wait += if self.more_below() {
@@ -211,6 +218,10 @@ impl CreditsScreen {
                 self.top = 0;
                 self.wait += REST_SECS;
             }
+        }
+        if self.wait <= 0.0 {
+            self.top = 0;
+            self.wait = REST_SECS;
         }
     }
 
@@ -629,6 +640,43 @@ mod tests {
         assert_eq!(s.top, 0, "back to the top after 2 s");
         pass(&mut s, &mut c, 1.75);
         assert_eq!(s.top, 0, "resting at the top again");
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 1);
+    }
+
+    #[test]
+    fn a_frame_rolls_at_most_once_round_the_list() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 2.0);
+        assert_eq!(s.top, 1);
+        // From row 1 with half a second to go, once round the list is 37
+        // steps: 35 rows down, the jump to the top, and row 1 again, due
+        // 21.5 s from now. A frame of 21.75 s does exactly that.
+        pass(&mut s, &mut c, 21.75);
+        assert_eq!(s.top, 1);
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 2, "the next row was a quarter second away");
+
+        // A frame that reaches past the 37th step (here, to the moment the
+        // 38th is due) puts the list back at the top, resting.
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 2.0);
+        pass(&mut s, &mut c, 22.0);
+        assert_eq!(s.top, 0);
+        pass(&mut s, &mut c, 1.75);
+        assert_eq!(s.top, 0, "resting");
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 1);
+
+        // So does a frame time far too large to count rows by.
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 5.0);
+        assert_eq!(s.top, 7);
+        pass(&mut s, &mut c, 1.0e30);
+        assert_eq!(s.top, 0);
+        pass(&mut s, &mut c, 1.75);
+        assert_eq!(s.top, 0, "resting");
         pass(&mut s, &mut c, 0.25);
         assert_eq!(s.top, 1);
     }
