@@ -541,7 +541,19 @@ mod tests {
         );
         assert_eq!(read_pin(&scratch.public()), Ok(scratch.one.clone()));
 
-        // Pushed.
+        // Pushed, but to another branch than `main`: the builds that ship
+        // can't be sure to find it there.
+        g(&checkout, &["push", "--quiet", "origin", "HEAD:side"]);
+        let error = scratch.pin().unwrap_err();
+        assert!(
+            error.starts_with(&format!(
+                "commit {new} isn't on the private repository's main branch"
+            )),
+            "{error}"
+        );
+        assert_eq!(read_pin(&scratch.public()), Ok(scratch.one.clone()));
+
+        // Pushed to `main`.
         g(&checkout, &["push", "--quiet", "origin", "HEAD:main"]);
         assert_eq!(
             scratch.pin(),
