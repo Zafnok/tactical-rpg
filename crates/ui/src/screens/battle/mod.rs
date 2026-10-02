@@ -967,6 +967,7 @@ impl BattleScreen {
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::RestartPrompt => help_line(&[confirm("restart"), cancel("back")]),
+            Mode::SuspendPrompt => help_line(&[confirm("suspend"), cancel("back")]),
 
             Mode::EndTurnPrompt { .. } => {
                 let [accept, also] = km.end_turn_accept_actions();
@@ -1193,6 +1194,7 @@ impl BattleScreen {
             | Mode::Objective
             | Mode::EndTurnPrompt { .. }
             | Mode::RestartPrompt
+            | Mode::SuspendPrompt
             | Mode::Info { .. } => return,
             Mode::AiAction(a) if !a.shows_cursor() => return,
             Mode::Selected(sel) => {
@@ -1308,15 +1310,20 @@ impl BattleScreen {
                 ];
                 map_menu::draw_dialog(buf, p, "", &lines);
             }
-            Mode::RestartPrompt => {
+            Mode::RestartPrompt | Mode::SuspendPrompt => {
                 let km = &ctx.keymap;
                 let yes_no = help_line(&[
                     (Some(key_name(km, Action::Confirm)), "yes"),
                     (Some(key_name(km, Action::Cancel)), "no"),
                 ])
                 .replace(SEPARATOR, " / ");
+                let question = if matches!(self.mode, Mode::SuspendPrompt) {
+                    map_menu::SUSPEND_QUESTION
+                } else {
+                    map_menu::RESTART_QUESTION
+                };
                 let lines = [
-                    (map_menu::RESTART_QUESTION.to_owned(), UiColor::Text),
+                    (question.to_owned(), UiColor::Text),
                     (yes_no, UiColor::TextDim),
                 ];
                 map_menu::draw_dialog(buf, p, "", &lines);

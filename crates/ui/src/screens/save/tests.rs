@@ -108,49 +108,73 @@ fn save_prompt_snapshot() {
     assert_snapshot!(h.snapshot());
 }
 
+/// Nick (PR #141): saving always opens on the first empty slot.
 #[test]
-fn saving_opens_on_the_first_empty_slot_or_the_one_last_used() {
+fn saving_opens_on_the_first_empty_slot() {
     let mut c = saves();
     let game = campaign(&c, "Mara", 10);
-    let s = SlotPickerScreen::save(&c, game.clone(), None);
+    let s = SlotPickerScreen::save(&c, game.clone());
     assert_eq!(s.name(), "save_slots");
     assert!(s.is_saving());
     assert_eq!(s.focused_slot(), 1);
+    assert!(!s.would_overwrite());
     fill(&mut c, 1, game.clone());
-    assert_eq!(
-        SlotPickerScreen::save(&c, game.clone(), None).focused_slot(),
-        3
-    );
-    let last = SlotPickerScreen::save(&c, game.clone(), Some(4));
-    assert_eq!(last.focused_slot(), 4);
-    // A slot number past the end is the last slot; 0 is no slot at all.
-    let past = SlotPickerScreen::save(&c, game.clone(), Some(99));
-    assert_eq!(past.focused_slot(), SLOTS);
-    assert_eq!(
-        SlotPickerScreen::save(&c, game.clone(), Some(0)).focused_slot(),
-        3
-    );
-    // Every slot full: the first.
+    // Slot 2 holds a save: the next empty one is 3.
+    assert_eq!(SlotPickerScreen::save(&c, game.clone()).focused_slot(), 3);
+    // An empty slot past the first screenful is scrolled into view.
+    for slot in 1..=24 {
+        fill(&mut c, slot, game.clone());
+    }
+    let s = SlotPickerScreen::save(&c, game.clone());
+    assert_eq!(s.focused_slot(), 25);
+    assert!(shows(&render(&s, &c), " 6-25 of 30 "));
+    // Every slot full: the first, which says it will be overwritten.
     for slot in 1..=SLOTS {
         fill(&mut c, slot, game.clone());
     }
-    assert_eq!(SlotPickerScreen::save(&c, game, None).focused_slot(), 1);
+    let s = SlotPickerScreen::save(&c, game);
+    assert_eq!(s.focused_slot(), 1);
+    assert!(s.would_overwrite());
 }
 
 #[test]
-fn loading_opens_on_the_first_save_or_the_one_last_used() {
+fn loading_opens_on_the_first_save() {
     let c = saves();
-    let s = SlotPickerScreen::load(&c, None);
+    let s = SlotPickerScreen::load(&c);
     assert!(!s.is_saving());
     assert_eq!(s.focused_slot(), 2);
-    assert_eq!(SlotPickerScreen::load(&c, Some(4)).focused_slot(), 4);
-    assert_eq!(SlotPickerScreen::load(&ctx(), None).focused_slot(), 1);
+    assert!(!s.would_overwrite(), "loading replaces nothing");
+    assert_eq!(SlotPickerScreen::load(&ctx()).focused_slot(), 1);
+}
+
+/// Nick (PR #141): a slot that would be overwritten says so before it is
+/// chosen.
+#[test]
+fn a_full_slot_says_it_will_be_overwritten() {
+    let mut c = saves();
+    let mut s = SlotPickerScreen::save(&c, campaign(&c, "Mara", 0));
+    assert_eq!(s.help(&c), "arrows choose · f save here · d back");
+    // Slot 2 holds a save.
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    assert!(s.would_overwrite());
+    assert_eq!(s.help(&c), "arrows choose · f overwrite · d back");
+    assert!(shows(&render(&s, &c), "f overwrite"));
+    // Slot 3 is empty; slot 5 can't be read, and would be replaced too.
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    assert!(!s.would_overwrite());
+    assert_eq!(s.help(&c), "arrows choose · f save here · d back");
+    press(&mut s, &mut c, &[Action::CursorDown, Action::CursorDown]);
+    assert_eq!(s.focused_slot(), 5);
+    assert!(s.would_overwrite());
+    // Loading never says it.
+    let s = SlotPickerScreen::load(&c);
+    assert_eq!(s.help(&c), "arrows choose · f load · d back");
 }
 
 #[test]
 fn the_focus_wraps_and_the_list_scrolls_with_it() {
     let mut c = saves();
-    let mut s = SlotPickerScreen::load(&c, Some(1));
+    let mut s = SlotPickerScreen::load(&c).at(1);
     let buf = render(&s, &c);
     assert!(
         row(&buf, FIRST_ROW).contains("01"),
@@ -193,7 +217,7 @@ fn the_focus_wraps_and_the_list_scrolls_with_it() {
 #[test]
 fn a_slot_row_shows_chapter_mode_army_and_playtime() {
     let c = saves();
-    let s = SlotPickerScreen::load(&c, None);
+    let s = SlotPickerScreen::load(&c);
     let buf = render(&s, &c);
     let army = c.content.new_game.roster.len();
     let title = save::next_chapter_title(&c.content, &campaign(&c, "Mara", 0));
@@ -220,7 +244,7 @@ fn a_slot_row_shows_chapter_mode_army_and_playtime() {
 fn saving_into_an_empty_slot_writes_it_at_once() {
     let mut c = saves();
     let game = campaign(&c, "Mara", 77);
-    let mut s = SlotPickerScreen::save(&c, game.clone(), None);
+    let mut s = SlotPickerScreen::save(&c, game.clone());
     assert!(shows(&render(&s, &c), &format!(" {SAVE_TITLE} ")));
     assert_eq!(s.help(&c), "arrows choose · f save here · d back");
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "Pop");
@@ -236,7 +260,7 @@ fn saving_over_a_slot_asks_first() {
     let mut c = saves();
     let game = campaign(&c, "Nell", 5);
     let before = read(c.storage.as_ref(), &slot_key(2)).unwrap();
-    let mut s = SlotPickerScreen::save(&c, game.clone(), Some(2));
+    let mut s = SlotPickerScreen::save(&c, game.clone()).at(2);
     // The key that opens the question doesn't answer it.
     let twice = [Action::Confirm, Action::Confirm];
     assert_eq!(press(&mut s, &mut c, &twice), "None");
@@ -264,7 +288,7 @@ fn saving_over_a_slot_asks_first() {
     let written = read(c.storage.as_ref(), &slot_key(2)).unwrap();
     assert_eq!(written, Some(SaveFile::chapter_cleared(game.clone())));
     // A slot that can't be read is asked about too, and can be replaced.
-    let mut s = SlotPickerScreen::save(&c, game.clone(), Some(5));
+    let mut s = SlotPickerScreen::save(&c, game.clone()).at(5);
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
     assert!(s.is_asking());
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "Pop");
@@ -275,7 +299,7 @@ fn saving_over_a_slot_asks_first() {
 #[test]
 fn loading_takes_only_a_slot_that_can_be_read() {
     let mut c = saves();
-    let mut s = SlotPickerScreen::load(&c, Some(1));
+    let mut s = SlotPickerScreen::load(&c).at(1);
     assert_eq!(s.help(&c), "arrows choose · f load · d back");
     // An empty slot.
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
@@ -284,7 +308,7 @@ fn loading_takes_only_a_slot_that_can_be_read() {
     assert!(!s.is_asking());
     // Junk, then another version's save: each says why, and nothing loads.
     for (slot, error) in [(5, SaveError::Corrupt), (6, SaveError::Incompatible)] {
-        let mut s = SlotPickerScreen::load(&c, Some(slot));
+        let mut s = SlotPickerScreen::load(&c).at(slot);
         assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
         assert_eq!(sounds(&mut c), [DENIED]);
         assert_eq!(s.message(), Some(error.to_string().as_str()));
@@ -296,7 +320,7 @@ fn loading_takes_only_a_slot_that_can_be_read() {
         sounds(&mut c);
     }
     // A save.
-    let mut s = SlotPickerScreen::load(&c, None);
+    let mut s = SlotPickerScreen::load(&c);
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "Pop");
     assert_eq!(sounds(&mut c), ["menu_select"]);
     let expected = SaveFile::chapter_cleared(campaign(&c, "Mara", 3725));
@@ -310,8 +334,8 @@ fn loading_takes_only_a_slot_that_can_be_read() {
 fn cancel_goes_back_without_a_result() {
     let mut c = saves();
     for mut s in [
-        SlotPickerScreen::load(&c, None),
-        SlotPickerScreen::save(&c, campaign(&c, "Mara", 0), None),
+        SlotPickerScreen::load(&c),
+        SlotPickerScreen::save(&c, campaign(&c, "Mara", 0)),
     ] {
         // Nothing after the key that closes the picker counts.
         let back = [Action::Cancel, Action::Confirm];
@@ -345,7 +369,7 @@ impl Storage for ReadOnly {
 fn a_failed_save_says_so_and_stays_open() {
     let mut c = ctx();
     c.storage = Box::new(ReadOnly);
-    let mut s = SlotPickerScreen::save(&c, campaign(&c, "Mara", 0), None);
+    let mut s = SlotPickerScreen::save(&c, campaign(&c, "Mara", 0));
     assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
     assert_eq!(sounds(&mut c), [DENIED]);
     assert_eq!(s.message(), Some("Save storage error: disk full"));
@@ -358,7 +382,7 @@ fn a_failed_save_says_so_and_stays_open() {
 #[test]
 fn slot_picker_snapshot() {
     let c = saves();
-    let picker = SlotPickerScreen::load(&c, Some(4));
+    let picker = SlotPickerScreen::load(&c).at(4);
     let mut h = Harness::from_game(crate::Game::new(c, Box::new(picker)));
     h.wait(0.0);
     assert_snapshot!(h.snapshot());
@@ -368,7 +392,7 @@ fn slot_picker_snapshot() {
 #[test]
 fn overwrite_question_snapshot() {
     let c = saves();
-    let picker = SlotPickerScreen::save(&c, campaign(&c, "Mara", 0), Some(2));
+    let picker = SlotPickerScreen::save(&c, campaign(&c, "Mara", 0)).at(2);
     let mut h = Harness::from_game(crate::Game::new(c, Box::new(picker)));
     h.keys("f");
     assert_snapshot!(h.snapshot());

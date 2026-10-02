@@ -140,9 +140,13 @@ fn shows(h: &Harness, text: &str) -> bool {
     })
 }
 
-/// The map menu's `Suspend`: Units, Objective, (Options), Suspend.
+/// The map menu's `Suspend` (Units, Objective, (Options), Suspend), and
+/// Confirm on "Suspend the battle and return to the title?".
 fn suspend(h: &mut Harness) {
     h.keys("d Down Down f");
+    assert!(shows(h, "Suspend the battle and return to the title?"));
+    assert_eq!(h.screens(), ["title", "battle"], "not before the answer");
+    h.keys("f");
 }
 
 /// A battle with a rewind spent and two moves made, suspended.
@@ -303,8 +307,7 @@ fn save_after_victory_then_load_starts_the_next_chapter() {
     assert_eq!(players, ["Test Knight"]);
 }
 
-/// "No" saves nothing; backing out of the slots asks again; a second save
-/// opens on the slot last used and asks before overwriting it.
+/// "No" saves nothing; backing out of the slots asks again.
 #[test]
 fn the_save_prompt_can_be_declined_and_the_slots_backed_out_of() {
     let mut h = first_launch(false);
@@ -342,36 +345,43 @@ fn the_save_prompt_can_be_declined_and_the_slots_backed_out_of() {
     assert_eq!(h.screens(), ["title"]);
 }
 
-/// Saving twice in one run: the picker opens on the slot last used and
-/// asks before overwriting it.
+/// Saving again opens on the first empty slot, not the one used before
+/// (Nick, PR #141); a slot with a save says it will be overwritten and
+/// asks first.
 #[test]
-fn saving_again_asks_before_overwriting() {
+fn saving_again_opens_on_an_empty_slot_and_asks_before_overwriting() {
     let mut h = first_launch(true);
     to_battle(&mut h);
     win(&mut h);
-    h.keys("f Down Down f");
-    assert!(stored(&h, &slot_key(3)).is_some());
+    // Yes, the first empty slot (1).
+    h.keys("f f");
+    assert!(stored(&h, &slot_key(1)).is_some());
     assert_eq!(h.screens(), ["title", "battle"]);
-    // The next launch, and another game won.
+    // The next launch: Load Game opens on that save; back to the title.
     let mut h = relaunch(h, true);
     h.keys("Down f");
     assert_eq!(h.screens(), ["title", "save_slots"]);
     assert!(shows(&h, "arrows choose · f load · d back"));
-    // Back from loading: the title.
     h.keys("d");
     assert_eq!(h.screens(), ["title"]);
+    // Another game won: the slots open on slot 2, the first empty one.
     h.keys("Up");
     to_battle(&mut h);
     win(&mut h);
-    let first = stored(&h, &slot_key(3));
+    let first = stored(&h, &slot_key(1));
     h.keys("f");
-    // No slot used this run: the first empty one. Go to the full one.
-    h.keys("Down Down f");
-    assert!(shows(&h, "Overwrite slot 03?"), "{}", h.snapshot());
-    assert_eq!(stored(&h, &slot_key(3)), first);
+    assert!(shows(&h, "f save here"), "{}", h.snapshot());
+    // Up to the full slot: it says so, and asks.
+    h.keys("Up");
+    assert!(shows(&h, "f overwrite"), "{}", h.snapshot());
     h.keys("f");
+    assert!(shows(&h, "Overwrite slot 01?"), "{}", h.snapshot());
+    assert_eq!(stored(&h, &slot_key(1)), first);
+    // No: back to the list. Down to the empty slot and save there.
+    h.keys("d Down f");
     assert_eq!(h.screens(), ["title", "battle"]);
-    assert_eq!(stored(&h, &slot_key(1)), None);
+    assert_eq!(stored(&h, &slot_key(1)), first);
+    assert!(stored(&h, &slot_key(2)).is_some());
 }
 
 /// `text` as the suspend save and in slot 1 of an otherwise empty storage.

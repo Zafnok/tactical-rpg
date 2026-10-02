@@ -150,7 +150,8 @@ pub enum SlotOutcome {
 
 /// The [`SLOTS`](crate::save::SLOTS) save slots, 20 at a time: each with its chapter,
 /// game mode, army size and playtime. Confirm saves into the focused slot
-/// (after "Overwrite slot N?" if it holds something) or loads it; Cancel
+/// (the help line reads `overwrite` and "Overwrite slot N?" is asked if it
+/// holds something) or loads it; Cancel
 /// goes back. Pops either way; [`result`](Self::result) says which.
 #[derive(Debug, Clone)]
 pub struct SlotPickerScreen {
@@ -172,32 +173,26 @@ impl SlotPickerScreen {
     pub const NAME: &'static str = "save_slots";
 
     /// The picker for saving `campaign` (its chapter just won), focused on
-    /// slot `focus` (the one last used), else the first empty slot.
-    pub fn save(ctx: &Ctx, campaign: Campaign, focus: Option<usize>) -> Self {
+    /// the first empty slot (Nick, PR #141), so that Confirm never
+    /// overwrites a save by reflex; the first slot if none is empty.
+    pub fn save(ctx: &Ctx, campaign: Campaign) -> Self {
         let slots = save::slots(ctx.storage.as_ref(), &ctx.content);
         let empty = slots.iter().position(|s| *s == Slot::Empty);
-        Self::new(Purpose::Save(Box::new(campaign)), slots, focus, empty)
+        Self::new(Purpose::Save(Box::new(campaign)), slots, empty)
     }
 
-    /// The picker for loading, focused on slot `focus` (the one last used),
-    /// else the first slot with a save.
-    pub fn load(ctx: &Ctx, focus: Option<usize>) -> Self {
+    /// The picker for loading, focused on the first slot with a save.
+    pub fn load(ctx: &Ctx) -> Self {
         let slots = save::slots(ctx.storage.as_ref(), &ctx.content);
         let saved = slots.iter().position(|s| matches!(s, Slot::Saved(_)));
-        Self::new(Purpose::Load, slots, focus, saved)
+        Self::new(Purpose::Load, slots, saved)
     }
 
-    fn new(purpose: Purpose, slots: Vec<Slot>, slot: Option<usize>, or: Option<usize>) -> Self {
-        let last = slots.len().saturating_sub(1);
-        let focus = slot
-            .and_then(|n| n.checked_sub(1))
-            .or(or)
-            .unwrap_or(0)
-            .min(last);
+    fn new(purpose: Purpose, slots: Vec<Slot>, focus: Option<usize>) -> Self {
         let mut picker = Self {
             purpose,
             slots,
-            focus,
+            focus: focus.unwrap_or(0),
             top: 0,
             asking: false,
             message: None,
@@ -205,6 +200,24 @@ impl SlotPickerScreen {
         };
         picker.scroll();
         picker
+    }
+
+    /// The same picker focused on slot `slot` (1 to the number of slots).
+    #[cfg(test)]
+    fn at(mut self, slot: usize) -> Self {
+        self.focus = slot - 1;
+        self.scroll();
+        self
+    }
+
+    /// Whether Confirm on the focused slot would replace what it holds
+    /// (asked about first): saving, on a slot that isn't empty.
+    pub fn would_overwrite(&self) -> bool {
+        self.is_saving()
+            && self
+                .slots
+                .get(self.focus)
+                .is_some_and(|s| *s != Slot::Empty)
     }
 
     /// What the player did, once the screen has popped; `None` if they
@@ -293,16 +306,15 @@ impl SlotPickerScreen {
     /// Confirm on the focused slot. Returns whether the picker is done.
     fn confirm(&mut self, ctx: &mut Ctx) -> bool {
         self.message = None;
-        let slot = self.slots.get(self.focus);
         if self.is_saving() {
-            if slot.is_none_or(|s| *s == Slot::Empty) {
+            if !self.would_overwrite() {
                 return self.write(ctx);
             }
             self.asking = true;
             ctx.audio.menu(MenuSound::Select);
             return false;
         }
-        match slot {
+        match self.slots.get(self.focus) {
             Some(Slot::Saved(summary)) => {
                 let save = Box::new(summary.save.clone());
                 self.outcome = Some(SlotOutcome::Loaded(self.focused_slot(), save));
@@ -347,7 +359,10 @@ impl SlotPickerScreen {
             return help_line(&[confirm("yes"), cancel("no")]);
         }
         let choose = (Some(cursor_keys_name(km)), "choose");
-        let pick = confirm(if self.is_saving() {
+        // A slot with something in it says so before it is chosen.
+        let pick = confirm(if self.would_overwrite() {
+            "overwrite"
+        } else if self.is_saving() {
             "save here"
         } else {
             "load"

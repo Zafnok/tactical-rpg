@@ -113,13 +113,16 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
   from the saved campaign and the battle file, so `Restart Battle` after a
   `Continue` still gives turn 1.
 
-**Claude's starting rules** (the design doc was silent; Nick can veto any)
+**Claude's starting rules**, with Nick's answers on PR #141 (now in
+`death-and-difficulty.md`): 1, 3, 4, 8, 9, 10 agreed; 2 and 6 changed; 5
+fine for now, to be looked at in play; 7 explained below.
 
 1. **Title menu order.** `Continue` is at the top and highlighted, and only
    there while a battle is suspended. `Load Game` is under `New Game`, and
    greyed out until some slot has a save.
-2. **Suspend doesn't ask "are you sure?".** Choosing it saves and goes to
-   the title at once; `Continue` puts you straight back.
+2. ~~Suspend doesn't ask "are you sure?".~~ Nick: "make a confirmation
+   screen for this". `Suspend` now asks "Suspend the battle and return to
+   the title?" (Confirm: yes, Cancel: back to the map menu).
 3. **One suspended battle at a time.** Suspending again replaces the
    earlier one. Starting a `New Game` or loading a slot doesn't remove it:
    `Continue` is still there afterwards.
@@ -131,12 +134,19 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
    (after the last chapter: "Test Chapter (cleared)"), the mode, "3 units",
    the playtime as `1:02:05`. An empty slot reads "Empty". 20 of the 30
    slots fit on screen; the list scrolls.
-6. **Where the slot list opens.** Saving: on the slot you last used this
-   session, else the first empty one. Loading: on the first slot with a
-   save.
-7. **A save that can't be read is never deleted.** Its slot says why and
-   can be saved over (after the overwrite question); a suspend save that
-   can't be continued stays until the next `Suspend` replaces it.
+6. ~~Saving opens on the slot last used this session.~~ Nick: "let's make
+   it the first empty one and make sure it mentions if it will overwrite".
+   Saving always opens on the first empty slot; on a slot with a save the
+   help line reads `overwrite` instead of `save here`, and choosing it
+   asks "Overwrite slot 03?". Loading opens on the first slot with a save.
+7. **A save the game can't read is left alone, with a message.** Nick:
+   "we shouldn't have save integrity issues". Right: in normal play this
+   never shows. It exists for two cases: a save made by an older build
+   after an update changed what a save holds (likely during development,
+   on the Pages build; ticket 0821 guards it before release), and a file
+   damaged outside the game. Then the slot reads "This save is from an
+   incompatible version" or "This save can't be read" instead of the game
+   crashing, and the slot can be saved over.
 8. **After `Continue`** the cursor starts on the lead and the danger zone
    is off; only the battle itself is saved, not where you were looking.
 9. **If saving fails** (a full disk), `Suspend` stays in the battle and
@@ -146,8 +156,8 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
 
 **For Nick to try** (Pages build): New Game → win the test chapter → `Yes`
 → pick a slot → back at the title, `Load Game` → the slot. And: Quick
-Battle → move a unit, rewind once → map menu → `Suspend` → `Continue`: the
-same battle, the rewind charge still spent. Reload the page before
+Battle → move a unit, rewind once → map menu → `Suspend` → yes →
+`Continue`: the same battle, the rewind charge still spent. Reload the page before
 `Continue` to see it survive.
 
 **Follow-up tickets**

@@ -103,9 +103,6 @@ pub struct FlowScreen {
     rewards: Option<BattleRewards>,
     /// [`Ctx::clock_s`] when the campaign began, for its playtime.
     started_at: f64,
-    /// The save slot last saved to or loaded from: the slot picker opens
-    /// on it.
-    slot: Option<usize>,
 }
 
 impl FlowScreen {
@@ -120,7 +117,6 @@ impl FlowScreen {
             then: Then::Battle,
             rewards: None,
             started_at: 0.0,
-            slot: None,
         }
     }
 
@@ -128,7 +124,7 @@ impl FlowScreen {
     /// flow.
     pub fn load_game(ctx: &Ctx) -> Self {
         let mut flow = Self::new_game();
-        flow.stage = Stage::Slots(Box::new(SlotPickerScreen::load(ctx, None)));
+        flow.stage = Stage::Slots(Box::new(SlotPickerScreen::load(ctx)));
         flow
     }
 
@@ -430,7 +426,7 @@ impl FlowScreen {
             },
             Stage::SavePrompt(s) => match (s.result(), &self.campaign) {
                 (Some(true), Some(campaign)) => {
-                    let picker = SlotPickerScreen::save(ctx, campaign.clone(), self.slot);
+                    let picker = SlotPickerScreen::save(ctx, campaign.clone());
                     self.stage = Stage::Slots(Box::new(picker));
                 }
                 _ => self.next_chapter(ctx),
@@ -438,14 +434,8 @@ impl FlowScreen {
             Stage::Slots(s) => {
                 let saving = s.is_saving();
                 match s.into_result() {
-                    Some(SlotOutcome::Saved(slot)) => {
-                        self.slot = Some(slot);
-                        self.next_chapter(ctx);
-                    }
-                    Some(SlotOutcome::Loaded(slot, file)) => {
-                        self.slot = Some(slot);
-                        self.begin_loaded(ctx, file.campaign);
-                    }
+                    Some(SlotOutcome::Saved(_)) => self.next_chapter(ctx),
+                    Some(SlotOutcome::Loaded(_, file)) => self.begin_loaded(ctx, file.campaign),
                     // Back from saving: the question again. Back from
                     // loading: the title.
                     None if saving => self.stage = Stage::SavePrompt(SavePromptScreen::new()),

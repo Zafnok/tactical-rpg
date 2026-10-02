@@ -2,7 +2,8 @@
 //! Confirm on an empty tile (`docs/design/controls.md`): `Units` (jump the
 //! cursor to one), `Objective` (what to do and the turn), `Options` (a
 //! placeholder until 0805), `Suspend` (0802: saves the battle and goes back
-//! to the title), `Restart Battle` (0801, with a confirm) and `End Turn`;
+//! to the title, after a confirm), `Restart Battle` (0801, with a confirm)
+//! and `End Turn`;
 //! and the end-turn prompt
 //! (`docs/design/turn-structure.md`).
 
@@ -23,7 +24,7 @@ pub enum MapEntry {
     /// Options (ticket 0805): disabled for now.
     Options,
     /// Save the whole battle to the one-time suspend save and go back to
-    /// the title (`death-and-difficulty.md`).
+    /// the title (`death-and-difficulty.md`), after a confirm.
     Suspend,
     /// Start the battle again from its first turn, with every rewind
     /// charge back (`death-and-difficulty.md`), after a confirm.
@@ -166,6 +167,9 @@ pub fn shown_limit(state: &BattleState) -> Option<Turn> {
 
 /// The restart question.
 pub const RESTART_QUESTION: &str = "Restart the battle from turn 1?";
+
+/// The suspend question.
+pub const SUSPEND_QUESTION: &str = "Suspend the battle and return to the title?";
 
 /// The end-turn question for `ready` units still ready.
 pub fn end_turn_question(ready: usize) -> String {

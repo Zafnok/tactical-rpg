@@ -404,6 +404,46 @@ fn objective_shows_the_goal_and_the_turn() {
 }
 
 /// The map menu beside the cursor on the lord, focused on `Units`.
+/// Nick (PR #141): Suspend asks before it leaves the battle.
+#[test]
+fn suspend_asks_first() {
+    let mut c = ctx();
+    let mut s = quick();
+    // The map menu: Units, Objective, (Options), Suspend.
+    let to_suspend = [
+        Action::Cancel,
+        Action::CursorDown,
+        Action::CursorDown,
+        Action::Confirm,
+    ];
+    assert_eq!(press(&mut s, &mut c, &to_suspend), "None");
+    assert_eq!(s.mode(), &Mode::SuspendPrompt);
+    assert!(!s.suspend_requested());
+    assert_eq!(s.help(&c), "f suspend · d back");
+    let buf = render(&s, &c);
+    assert!(shows(&buf, "Suspend the battle and return to the title?"));
+    assert!(shows(&buf, "f yes / d no"));
+    // Other keys do nothing; Cancel goes back to the menu, on Suspend.
+    let back = [Action::CursorDown, Action::Info, Action::Cancel];
+    assert_eq!(press(&mut s, &mut c, &back), "None");
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 3);
+    assert!(!s.suspend_requested());
+    assert!(!shows(&render(&s, &c), "Suspend the battle"));
+    // Asked again and confirmed: the screen closes, for the flow to save.
+    assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
+    assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "Pop");
+    assert!(s.suspend_requested());
+    assert!(!s.restart_requested());
+    // A failed save puts the battle back, saying why.
+    s.suspend_failed("no room".into());
+    assert!(!s.suspend_requested());
+    assert_eq!(s.toast(), Some("no room"));
+    assert_eq!(press(&mut s, &mut c, &[]), "None");
+}
+
 #[test]
 fn map_menu_snapshot() {
     let mut c = ctx();
