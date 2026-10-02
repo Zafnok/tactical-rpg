@@ -20,9 +20,9 @@ Nick decided on 2026-10-02 (ticket 0038, `docs/design/look-and-feel.md`,
 is drawn with the bought Tiny Tales tilesets. 0436 puts the unit sprites
 on the map; this ticket replaces the glyph terrain under them.
 
-**What was bought** (sorted on Nick's machine in
-`D:\tactical-rpg\Tiny Tales Bundle Assets\tilesets\<set>\`; 0110 decides
-how files reach `assets-private/`). Every tile is 16×16 pixels, our tile
+**What was bought** (sorted in the private assets repository, in
+`assets-private/library/tiny-tales/tilesets/<set>/`; ADR-0040 says how
+files reach the game). Every tile is 16×16 pixels, our tile
 size, and every set comes as Tiled files: `Images/*.png` (256×256, a
 16×16 grid of tiles), one `.tsx` per image, and `Sample Maps/*.tmx` with a
 rendered `.png`.
@@ -59,7 +59,7 @@ committed. Tell him plainly where a terrain has no good bought picture
 
 **In:**
 - An importer that turns a bought Tiled tileset into our tileset file and
-  one packed image in `assets-private/tilesets/`.
+  one packed image in `assets-private/game/tilesets/`.
 - Auto-tiling in the sprite skin: each tile's picture chosen from its own
   terrain and its neighbours'.
 - A table from each of our 16 terrain ids (`assets/data/terrain.ron`) to
@@ -106,7 +106,7 @@ committed. Tell him plainly where a terrain has no good bought picture
    <out-id>`: reads the `.tsx` corner tables (an XML reader crate is fine
    in `xtask` only; check its licence against ADR-0013), takes the tiles
    the mapping names, packs them into one PNG and writes the tileset RON
-   into `assets-private/tilesets/`. The mapping file (which bought terrain
+   into `assets-private/game/tilesets/`. The mapping file (which bought terrain
    stands for which of our terrain ids) is ours and may be committed: it
    holds names and numbers, no art.
 5. **Mapping**, outdoor (`world-map`, Standard): `plain` grass, `road`

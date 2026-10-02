@@ -10,6 +10,12 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Embeds the bought art in `assets-private/game/` over `assets/` (ADR-0040).
+# Turned on only by builds that ship (Pages, release.yml) and by hand to look
+# at the art; never by a gate, so tests always read the public placeholders.
+private-assets = []
+
 [dependencies]
 trpg-core = { path = "../core" }
 serde.workspace = true

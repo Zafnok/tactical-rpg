@@ -26,3 +26,7 @@ desktop.ini
 
 # Downloaded audio originals (ADR-0027: rebuilt by assets-src/audio/import.py)
 /assets-src/audio/originals/
+
+# Bought art (ADR-0040): its licence forbids redistribution and this repository
+# is public. `cargo xtask private-assets` checks the private repository out here.
+/assets-private/

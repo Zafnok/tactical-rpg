@@ -27,6 +27,24 @@ fn ticket_lint_on_the_real_repo_exits_0() {
 }
 
 #[test]
+fn private_assets_with_bad_arguments_prints_usage_and_exits_2() {
+    // Only bad arguments: a real run would fetch from the private repository
+    // into this checkout's `assets-private/`.
+    for bad in [&["--bogus"][..], &["--library", "--pin"]] {
+        let output = xtask()
+            .arg("private-assets")
+            .args(bad)
+            .output()
+            .unwrap_or_else(|e| panic!("spawn xtask: {e}"));
+        assert_eq!(output.status.code(), Some(2), "{bad:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr).trim(),
+            "usage: cargo xtask private-assets [--library | --pin]"
+        );
+    }
+}
+
+#[test]
 fn playtest_prints_the_report_and_exits_0() {
     let history = std::env::temp_dir().join(format!("xtask-cli-playtest-{}", std::process::id()));
     let output = xtask()
