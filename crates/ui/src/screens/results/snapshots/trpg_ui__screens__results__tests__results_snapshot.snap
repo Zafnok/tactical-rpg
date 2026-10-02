@@ -1,0 +1,79 @@
+---
+source: crates/ui/src/screens/results/tests.rs
+expression: h.snapshot()
+---
+                                                                                                    
+                                                                                                    
+                                                                                                    
+              ╔═ VICTORY ════════════════════════════════════════════════════════════╗              
+              ║                                                                      ║              
+              ║   Gold for clearing the map                   +500 (now 1500)        ║              
+              ║                                                                      ║              
+              ║   Rewinds unused                              3 of 3                 ║              
+              ║   Bonus EXP for each unit                     +21                    ║              
+              ║                                                                      ║              
+              ║   ────────────────────────────────────────────────────────────────   ║              
+              ║                                                                      ║              
+              ║   Test Lord     Exile    Lv 2  EXP ██░░░░░░░░░░░░░░░░░░ 11  LEVEL UP ║              
+              ║                                                                      ║              
+              ║   Test Knight   Guard    Lv 1  EXP ██████░░░░░░░░░░░░░░ 31           ║              
+              ║                                                                      ║              
+              ║   Test Archer   Archer   Lv 1  EXP ░░░░░░░░░░░░░░░░░░░░  0           ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ║                                                                      ║              
+              ╚══════════════════════════════════════════════════════════════════════╝              
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                             f continue                                             
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddccccdeeeeeeeeeeddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddccccccdddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddcccddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddgggggggggdddddeeeeeddddddddddeeedhheeeeeeeeeeeeeeeeeedddddccccccccdbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddgggggggggggdddeeeeeddddddddddeeedhhhhhheeeeeeeeeeeeeeddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabdddgggggggggggdddeeeeeedddddddddeeedeeeeeeeeeeeeeeeeeeeeddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaiiiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border_focus bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:text_dim bg:panel_bg
+f = fg:panel_border bg:panel_bg
+g = fg:player bg:panel_bg
+h = fg:exp_bar bg:panel_bg
+i = fg:text_dim bg:black

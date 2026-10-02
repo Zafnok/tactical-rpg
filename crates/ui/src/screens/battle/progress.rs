@@ -421,6 +421,14 @@ impl Progress {
         })
     }
 
+    /// The same sequence without its EXP bars, for the results screen
+    /// (0810), which shows every unit's bar itself; `None` if nothing is
+    /// left.
+    pub fn without_exp_bars(mut self) -> Option<Self> {
+        self.pages.retain(|p| !matches!(p, Page::Exp(_)));
+        (!self.pages.is_empty()).then_some(self)
+    }
+
     /// Every page, in order.
     pub fn pages(&self) -> &[Page] {
         &self.pages
@@ -524,8 +532,14 @@ impl Progress {
 /// The help line of an EXP bar, level-up or class page: skip and fast while
 /// it plays, then continue.
 pub fn help(p: &Progress, km: HelpKeys<'_>) -> String {
+    playing_help(p.page_played(), km)
+}
+
+/// The help line of something that plays by itself (an EXP bar, the
+/// results): skip and fast until it has `played`, then continue.
+pub(crate) fn playing_help(played: bool, km: HelpKeys<'_>) -> String {
     let confirm = key_name(km, Action::Confirm);
-    if p.page_played() {
+    if played {
         help_line(&[(Some(confirm), "continue")])
     } else {
         let hold = Some(format!("hold {confirm}"));
@@ -911,6 +925,22 @@ mod tests {
         assert!(mastery.waits());
         assert!(mastery.len(&T).abs() < f32::EPSILON);
         assert_eq!(cl.learned.len(), 1);
+    }
+
+    #[test]
+    fn without_exp_bars_keeps_the_other_pages_in_order() {
+        let pb = progress().without_exp_bars().unwrap();
+        assert_eq!(pb.pages().len(), 2);
+        assert!(matches!(pb.pages()[0], Page::LevelUp(_)));
+        assert!(matches!(pb.pages()[1], Page::Class(_)));
+        // EXP alone: nothing left.
+        let s = state();
+        let exp = [Event::ExpGained {
+            unit: UnitId(1),
+            amount: 10,
+        }];
+        let pb = Progress::new(&exp, s.units(), &s, T).unwrap();
+        assert_eq!(pb.without_exp_bars(), None);
     }
 
     #[test]

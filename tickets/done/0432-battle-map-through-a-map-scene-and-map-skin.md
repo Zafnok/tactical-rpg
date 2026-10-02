@@ -266,11 +266,10 @@ byte-identical. `main` did not build its tests at that point (0411 added
 `BattleSetup::battle_notes`, and 0505's `crates/bots/src/testkit.rs`,
 merged just before, didn't set it); the merge adds that one line.
 
-**A second break on `main`, fixed here so CI could pass:** the save tests
-(`crates/ui/tests/save.rs`, 0802) pressed their keys into turn 1's
-`PLAYER PHASE` banner, which 0435 added; the two landed separately and 11
-tests failed on `main`. The tests' helper now closes the banner. Test code
-only.
+**A second break on `main`** (11 save tests, 0802, pressing their keys
+into the `PLAYER PHASE` banner 0435 added) was fixed on `main` itself by
+0810 while this PR was open; this PR carries no change to
+`crates/ui/tests/save.rs`.
 
 **Follow-up tickets created:** none. A note was added to 0433 about what
 switching skins in the middle of a battle does and doesn't handle yet.

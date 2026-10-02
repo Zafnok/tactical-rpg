@@ -44,8 +44,8 @@ fn relaunch(h: Harness, chained: bool) -> Harness {
 }
 
 /// From the title: New Game in Classic with the default lead, through the
-/// intro scene to the battle, its notes (0411) and turn 1's `PLAYER PHASE`
-/// banner (0435) closed.
+/// intro scene to the battle, its notes (0411) and turn 1's banner (0435)
+/// closed.
 fn to_battle(h: &mut Harness) {
     assert_eq!(h.screens(), ["title"]);
     // New Game is focused, with or without Load Game enabled.
@@ -54,15 +54,7 @@ fn to_battle(h: &mut Harness) {
     skip_scene(h);
     assert_eq!(h.screens(), ["title", "battle"]);
     close_notes(h);
-    close_phase_banner(h);
-}
-
-/// Closes turn 1's `PLAYER PHASE` banner (0435), which a battle starts
-/// under.
-fn close_phase_banner(h: &mut Harness) {
-    assert!(shows(h, "PLAYER PHASE"));
-    h.keys("f");
-    assert!(!shows(h, "PHASE"));
+    close_banner(h);
 }
 
 /// Whether the battle on screen shows its notes box.
@@ -76,6 +68,13 @@ fn close_notes(h: &mut Harness) {
     assert!(notes_open(h));
     h.keys("f");
     assert!(!notes_open(h));
+}
+
+/// Closes the `PLAYER PHASE` banner that follows the notes.
+fn close_banner(h: &mut Harness) {
+    assert!(shows(h, "PLAYER PHASE"));
+    h.keys("f");
+    assert!(!shows(h, "PLAYER PHASE"));
 }
 
 /// Skips the scene on screen: Cancel, then Confirm on "Skip scene?".
@@ -94,8 +93,11 @@ fn win(h: &mut Harness) {
             action: UnitAction::Seize,
         },
     );
-    // The VICTORY banner, then the victory scene.
+    // The VICTORY banner, the results (0810: a press fills the bars, a
+    // press goes on), then the victory scene.
     h.keys("f");
+    assert_eq!(h.screens(), ["title", "results"]);
+    h.keys("f f");
     skip_scene(h);
     assert_eq!(h.screens(), ["title", "save_prompt"]);
 }
@@ -268,10 +270,10 @@ fn a_continued_battle_restarts_from_its_first_turn() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
-    // From its start, so with its notes and its banner; and it is won as
-    // any other.
+    // From its start, so with its notes and turn 1's banner; and it is won
+    // as any other.
     close_notes(&mut h);
-    close_phase_banner(&mut h);
+    close_banner(&mut h);
     win(&mut h);
 }
 
@@ -510,7 +512,7 @@ fn the_quick_battle_suspends_too() {
     let mut h = first_launch(false);
     h.keys("Down f");
     assert_eq!(h.screens(), ["title", "battle"]);
-    close_phase_banner(&mut h);
+    close_banner(&mut h);
     let archer = battle(&h).unit(UnitId(3)).map(|u| u.pos);
     wait_at(
         &mut h,
