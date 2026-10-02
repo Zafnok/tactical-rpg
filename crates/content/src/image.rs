@@ -190,7 +190,8 @@ mod tests {
 
     #[test]
     fn from_files_keeps_each_size_by_path() {
-        let (a, b) = (png_header(16, 24), png_header(MAX_SIDE, 1));
+        // The biggest image allowed is `MAX_SIDE` each way.
+        let (a, b) = (png_header(16, 24), png_header(MAX_SIDE, MAX_SIDE));
         let table = ImageTable::from_files([("x/b.png", &b[..]), ("a.png", &a[..])]);
         let table = table.unwrap_or_default();
         let sizes: Vec<_> = table.images.iter().collect();
@@ -208,7 +209,7 @@ mod tests {
                     &"x/b.png",
                     &ImageInfo {
                         width: MAX_SIDE,
-                        height: 1
+                        height: MAX_SIDE
                     }
                 ),
             ]
