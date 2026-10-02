@@ -1,5 +1,5 @@
 //! Tests of the dialogue screen: reveal timing, paging, skipping and the
-//! layout. Scripted runs and snapshots are in `crates/ui/tests/dialogue.rs`.
+//! layout. Scripted runs and snapshots are in `crates/ui/tests/it/dialogue.rs`.
 
 use trpg_content::Step;
 use trpg_core::CharacterId;
