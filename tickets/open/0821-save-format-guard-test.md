@@ -46,14 +46,17 @@ so 0901 is blocked by this ticket).
 
 ## Implementation steps
 
-1. Add `crates/core/tests/save_format.rs` and two fixtures under
+1. Add `crates/core/tests/it/save_format.rs` and two fixtures under
    `crates/core/tests/fixtures/`: `save_v1_chapter.ron` (a
    `SaveFile::chapter_cleared`) and `save_v1_suspend.ron` (a
    `SaveFile::suspended` of a battle with a few commands, at least one
    attack, a rewind charge spent). Build them once from the fixtures in
    `crates/core/src/battle/tests.rs` (`setup`, `cast`, `attack`) with a
    one-off test that prints `ron::to_string(&save)`, and commit the text.
-   Name the files after the version they hold.
+   Name the files after the version they hold. A crate keeps one
+   integration-test program (ticket 0114; an `xtask` test enforces it), so
+   first `git mv crates/core/tests/replay.rs crates/core/tests/it/replay.rs`
+   and add `tests/it/main.rs` with `mod replay;` and `mod save_format;`.
 2. The test, for each fixture named after the current `SAVE_VERSION`:
    - parse it as `SaveFile` (must succeed);
    - serialise it again and compare with the fixture text, byte for byte
@@ -72,7 +75,7 @@ so 0901 is blocked by this ticket).
 ## Acceptance criteria
 
 - [ ] Adding a field to `Unit` (try it locally, then revert) makes
-      `cargo test -p trpg-core --test save_format` fail with the message
+      `cargo test -p trpg-core --test it save_format::` fail with the message
       from step 3.
 - [ ] The fixtures are named after the version they hold, and the test
       fails if no fixture exists for the current `SAVE_VERSION`.

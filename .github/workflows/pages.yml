@@ -36,7 +36,7 @@ jobs:
       # content must still load with it laid over assets/.
       - name: Check the content loads with the bought art
         if: steps.private.outputs.features != ''
-        run: cargo test -p trpg-content --locked --features private-assets --test private_assets
+        run: cargo test -p trpg-content --locked --features private-assets --test it private_assets::
       # --debug-tools: Quick Battle on the title screen, for Nick's sign-offs
       # (ADR-0023). Only this workflow passes it.
       - env:
