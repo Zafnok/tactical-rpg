@@ -255,8 +255,8 @@ impl ResultsScreen {
             buf.set(x, RULE_ROW, Cell::new('─', c(UiColor::PanelBorder), bg));
         }
         // A blank row between units while they all fit that way.
-        let count = i32::try_from(self.rows.len()).unwrap_or(i32::MAX);
-        let step: usize = if count * 2 - 1 <= UNIT_ROWS { 2 } else { 1 };
+        let spaced = (0..UNIT_ROWS).step_by(2).len();
+        let step = if self.rows.len() <= spaced { 2 } else { 1 };
         let rows = (0..UNIT_ROWS).step_by(step).zip(&self.rows);
         for (dy, row) in rows {
             let y = UNIT_ROW + dy;
