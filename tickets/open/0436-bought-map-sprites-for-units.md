@@ -51,21 +51,27 @@ and potentially A with C", where C is a small corner mark in the side's
 colour on the unit's tile.
 
 **Decided 2026-10-02 in ticket 0039** (same section of
-`look-and-feel.md`; Nick judged mockups J4, J5, K2, L and L2 in the
-bought-art folder's `spike-renders/`):
+`look-and-feel.md`; Nick judged mockups J4, J5, K2–K4, L, L2 and M–M3 in
+the bought-art folder's `spike-renders/`):
 
 - **The HP bar never overlaps the sprite's feet.** The sprite is drawn
   higher on its tile: its feet stand directly on top of the 2-pixel HP bar
   (Nick saw it 1 and 2 pixels higher and chose this: "sprite 0 mark 1
   looks best to me"). HP bars
-  are drawn over every sprite, so a unit standing directly below another
-  never hides that unit's bar.
+  are drawn over every sprite. A sprite unit's bar is **14 pixels wide**,
+  one pixel in from each side of the tile, always.
+- **A sprite never covers the unit above it.** A sprite and its outline
+  aren't drawn inside a tile another unit stands on: the head is shaved
+  off at that tile's edge. With nobody above, the whole head shows.
 - **A unit under an effect** shows a small arrow in the **top-right corner
   of its tile**: an **up arrow for a bonus**, a **down arrow for a
   penalty**, 5 pixels wide with a dark edge, reaching 3 pixels above the tile's
   top edge (mockup L2, left panel). It replaces 0433's
-  3×3 placeholder square. A unit with both shows both, the up arrow above
-  the down arrow (*Claude's starting rule*; say so in the PR).
+  3×3 placeholder square. The up arrow **bounces** 1 pixel up and the
+  down arrow 1 pixel down; a unit with both shows one at a time, **the
+  two taking turns**. When another unit stands in the tile above, the
+  mark sits 4 pixels lower, inside its own tile (*Claude's starting
+  rule*; say so in the PR).
 - **Sprites step on the spot and walk along their path.** That is ticket
   0440, after this one. Here sprites **stand still**, front-facing.
 
@@ -148,6 +154,19 @@ waits for this ticket.
    (the mockup's stand-ins; Nick didn't comment on them); draw the image
    in white and tint it, or bake the colours in, whichever the sprite
    item supports. On an acted unit the arrow dims with the sprite.
+   **The marks move**, from the screen's animation clock (the one the
+   cursor pulse uses; put the scene's clock value in the `MapScene` if
+   the skin can't see it): the up arrow is drawn 1 pixel higher and the
+   down arrow 1 pixel lower for 375 ms out of every 750 ms; a unit with
+   both shows the up arrow for 750 ms, then the down arrow for 750 ms
+   (all *tunable*, in one place). A mark whose unit has another unit in
+   the tile directly above is drawn 4 pixels lower. **HP bar:** under a
+   sprite unit it covers tile columns 1 to 14 (14 pixels) and fills by
+   HP over those 14; the glyph skin's bar and its snapshots don't
+   change. **Shaving:** when another unit's tile is directly above, the
+   unit's sprite and outline are clipped at its own tile's top edge (the
+   sprite item's `clip`, 0231); otherwise they aren't clipped. The
+   walking case is 0440's.
 5. **Side and acted marks** (see *Nick input*). An outline needs the sprite's silhouette: draw the
    same frame four times, offset by one pixel up, down, left and right,
    in the side's colour, under the sprite. That needs a **solid-colour
@@ -196,8 +215,9 @@ waits for this ticket.
       unchanged.
 - [ ] With the private tileset present, the Quick Battle shows every unit
       as a sprite on glyph terrain, with the side mark, the acted look and
-      the HP bar, the feet above the bar, and an up or down arrow on a
-      unit under an effect (snapshot on a **public fixture** tileset with per-file
+      the 14-pixel HP bar, the feet above the bar, an up or down arrow on
+      a unit under an effect, and a unit standing below another clipped
+      at its tile's top edge (snapshot on a **public fixture** tileset with per-file
       unit images, made by `cargo xtask test-tileset`; never a bought
       file).
 - [ ] 0433's `the_skin_never_changes_the_game` and
@@ -212,8 +232,10 @@ waits for this ticket.
 - Unit: the tileset format's new entries and errors; unit lookup order;
   the frame rectangle for `(1, 0)` in a 48×80 sheet; draw order (top row
   first, bars and marks after every sprite); the outline's four offsets;
-  the sprite's height above the HP bar; which arrows a unit with a bonus,
-  a penalty or both gets (read from the `MapScene`).
+  the sprite's height above the HP bar; the bar's 14-pixel width and
+  fill; which arrows a unit with a bonus, a penalty or both gets (read
+  from the `MapScene`); the bounce and the taking of turns against the
+  clock; the clip and the lowered mark with and without a unit above.
 - Property: for any unit frame size up to the tile size plus 16 pixels,
   the sprite's `dest` is centred on its tile and bottom-aligned.
 - Snapshot / integration: Quick Battle under the mixed skin on the public

@@ -27,6 +27,11 @@ J4 with the feet above the HP bar; in the bought-art folder's
   with its legs going and turns to face the way it walks. When it arrives
   it faces the camera again.
 
+He also asked that a sprite never cover the unit above it ("can we have a
+clip mask to shave their head", then "A is best"): a sprite and its
+outline aren't drawn inside a tile another unit stands on. 0436 does that
+for standing units; this ticket does it for a walking one (mockup M2).
+
 He also said his Chapter 1 playtest **waits for this** ("B"), so 0804 has
 this ticket in `blocked_by` and it is on the critical path in
 `docs/ROADMAP.md`.
@@ -94,7 +99,14 @@ doesn't block the PR.
 4. **Sprite skin:** the unit's source frame is `(frame, row of facing)`
    in its sheet instead of 0436's fixed `(1, 0)`; `dest` moves by
    `offset × tile_px`, rounded to whole pixels. The outline, the HP bar
-   and the effect arrows move with it. 0433's generated test tileset has
+   and the effect arrows move with it. **Shaving:** no part of a walking
+   unit's sprite or outline is drawn inside a tile that another unit
+   stands on and that lies above the row the walker's feet are in (while
+   it glides sideways under someone, only the columns under that tile
+   are cut, so the sprite may need two sprite items with different
+   clips). A walker crossing a tile an ally stands on is drawn in front
+   of the ally and isn't cut there (*Claude's starting rule*; say so in
+   the PR). 0433's generated test tileset has
    one picture per unit: a tileset entry without walking frames ignores
    `facing` and `frame` and only glides. Say in the tileset format
    (`assets/tilesets/README.md`) how an entry declares that it has the
@@ -117,6 +129,9 @@ doesn't block the PR.
 - [ ] 0433's `the_skin_never_changes_the_game` and
       `every_scene_feature_is_painted` cover the three new fields under
       both sprite skins.
+- [ ] Test: a unit walking along the row below another unit has no
+      sprite pixel inside that unit's tile at any step (checked on the
+      sprite items' `dest` and `clip`), and is whole again once past.
 - [ ] Every glyph-skin snapshot is unchanged.
 - [ ] `git status` shows no bought file; the PR has no picture made from
       one.

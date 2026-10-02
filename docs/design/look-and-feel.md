@@ -149,7 +149,20 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > 0 mark up 1" … [shown the two side by side, L2:] "sprite 0 mark 1 looks
 > best to me" … [does the Chapter 1 playtest wait for the walking: A no, B
 > yes:] "B" … [told that an acted unit standing still was Claude's
-> addition:] "sure, unit can stand still if exhausted"
+> addition:] "sure, unit can stand still if exhausted" … [on the arrows:]
+> "I was thinking the mark itself could be animated a bit too, like
+> bouncing up and down for up/down arrows, and maybe changing between
+> colors for poison, etc" … "for the combined up/down arrow though, I
+> don't know how I feel about it, maybe it should be a swirl? or alternate
+> between the marks" … [shown K4, animated: both arrows stacked, the two
+> taking turns, a turning swirl:] "I think B [taking turns] looks best...
+> I am still seeing quite a bit of clipping with the unit when they are
+> vertically adjacent and in the walking animation with the glow it clips
+> heavily into the other units' health bar and feet... can we have a clip
+> mask to shave their head so it doesn't clip like that?" … [shown M and
+> M2: A shaved only under another unit, B always kept inside its own
+> tile:] "A is best" … "can we also adjust hp bar to be 1 less pixel left
+> and right? this would be always active"
 
 ## Rules
 
@@ -235,9 +248,22 @@ so they aren't in this repository (ADR-0032).
   16×20 sprite ends 2 pixels above the tile's bottom edge, and its head
   reaches 6 pixels into the tile above). Nick saw it raised 1 and 2
   pixels more and chose this ("sprite 0 … looks best to me"). HP bars are
-  drawn over every sprite: when one unit stands directly below another,
-  the upper unit's bar shows in front of the lower unit's hair, so HP is
-  never hidden.
+  drawn over every sprite, so HP is never hidden.
+- **A sprite unit's HP bar is 14 pixels wide**, one pixel in from each
+  side of its tile, always (Nick: "1 less pixel left and right"), so the
+  bars of units standing side by side don't run together. Its height,
+  colours and thresholds are the glyph look's. *(Claude's starting rule:
+  the glyph look's own bar stays the full 16 pixels; Nick was looking at
+  sprites.)*
+- **A sprite never covers the unit above it** (decided 2026-10-02, ticket
+  0039, "A is best"): a sprite and its coloured outline are **not drawn
+  inside a tile another unit stands on**, so a head or hat is shaved off
+  at the tile's edge instead of covering that unit's feet and HP bar. A
+  unit with nobody above it keeps its whole head, and heads still overlap
+  empty ground, trees and buildings. A walking unit is shaved the same
+  way while it passes under someone. *(Claude's starting rule: a unit
+  walking through a tile an ally stands on is drawn in front of the ally
+  and not shaved there, or it would vanish.)*
 - **A sprite unit under an effect** (decided 2026-10-02, ticket 0039,
   "1A"): a small **arrow in the top-right corner of its tile**: an **up
   arrow for a bonus** (a stance such as Sidestep's avoid +20) and a **down
@@ -247,12 +273,25 @@ so they aren't in this repository (ADR-0032).
   pixels above the tile's top edge and 1 pixel past its right edge. The
   direction carries the meaning, not only the colour (light blue up,
   purple down in the mockup, *tunable*). On an acted unit the arrow dims
-  with the sprite. *(Claude's starting rule: a unit with both a bonus and
-  a penalty shows both arrows, the up arrow above the down arrow.)* The
-  game has no poison or other lasting ailment today; if one is added it
-  gets its own small picture in the same corner (Nick was shown a green
-  drop as an example). The glyph look keeps its tinted background.
-- Cursor, path line, HP bar and range tints keep their rules below.
+  with the sprite.
+  - **The marks move** (Nick: "bouncing up and down for up/down arrows"):
+    the up arrow bounces 1 pixel up and the down arrow 1 pixel down (every
+    375 ms in the mockup, *tunable*).
+  - **A unit with both a bonus and a penalty** shows one arrow at a time:
+    **the two take turns** (every 750 ms in the mockup, *tunable*). Nick
+    saw them stacked and as a turning swirl too: "B looks best".
+  - **When another unit stands in the tile above**, the mark sits 4 pixels
+    lower, inside its own tile, so it doesn't touch that unit
+    *(Claude's starting rule, shown in mockup M)*.
+  - *(Claude's starting rule: marks on an acted unit keep moving, dimmed,
+    as in mockup K4.)*
+  - The game has no poison or other lasting ailment today. If one is
+    added it gets its own small picture in the same corner, **changing
+    between two colours** (Nick: "changing between colors for poison";
+    he was shown a green drop as an example).
+  The glyph look keeps its tinted background.
+- Cursor, path line and range tints keep their rules below; so does the
+  HP bar, except for its width.
 
 ### Units on the map (the glyph look)
 

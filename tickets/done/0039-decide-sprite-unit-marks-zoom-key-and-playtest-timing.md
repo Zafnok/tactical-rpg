@@ -137,7 +137,14 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 - **Question 6, under an effect:** Nick asked what an effect is and for a
   mark that isn't a square. Shown an up arrow for a bonus and a down arrow
   for a penalty, he chose the arrow in the tile's top-right corner ("1A"),
-  one pixel higher than first drawn ("mark 1").
+  one pixel higher than first drawn ("mark 1"). He then asked for the
+  marks to move: the arrows bounce, and a unit with both a bonus and a
+  penalty shows the two arrows taking turns ("B looks best", over the
+  stacked pair and a swirl).
+- **Asked by Nick along the way:** a sprite never covers the unit above
+  it; its head is shaved where it would ("A is best": only under another
+  unit). A sprite unit's HP bar is 14 pixels wide, one pixel in from each
+  side, always.
 - **Question 7, face or bust:** busts, at 4×, filling the frame ("2C").
   Nick asked for it after seeing the bust at 3× with empty space. The
   bust is cut to its middle 64 columns and bottom 64 rows. This replaces
@@ -145,8 +152,15 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 
 ***Claude's starting rules*** (Nick can veto any of them):
 
-- A unit with both a bonus and a penalty shows both arrows, the up arrow
-  above the down arrow.
+- When another unit stands in the tile above, an effect mark sits 4
+  pixels lower, inside its own tile.
+- Marks on an acted unit keep moving, dimmed.
+- A unit walking through a tile an ally stands on is drawn in front of
+  the ally and isn't shaved there.
+- The glyph look's HP bar stays the full 16 pixels wide; only sprite
+  units get the 14-pixel bar.
+- The marks' speeds are the mockup's (a bounce every 375 ms, a turn every
+  750 ms).
 - The arrows' colours (light blue up, purple down) are the mockup's
   stand-ins.
 - "Map look: Pictures / Glyphs": Pictures is the default; it switches
@@ -161,13 +175,15 @@ walk; on the critical path, in 0804's `blocked_by`), 0824 (the Options
 entry for the map look; after 0436 and 0805, not on the critical path).
 
 **Tickets changed:** 0436 (the sprite's height, bars over sprites, the
-effect arrows and the scene saying bonus or penalty; walking and the
+14-pixel bar, shaved heads, the moving effect arrows and the scene
+saying bonus or penalty; walking and the
 Options entry moved out to 0440 and 0824), 0711 and 0706 (busts cut to
 64×64 at 4×), 0805 (the map-look row is 0824's), 0804 and
 `docs/ROADMAP.md` (0440), 1006.
 
 **Mockups** (bought art, never committed): `spike-renders/` in the
-bought-art folder, J1–J5 (walking, the HP bar), K, K2 and K3 (effect marks),
+bought-art folder, J1–J5 (walking, the HP bar), K and K2–K4 (effect marks),
+M–M3 (shaved heads, the 14-pixel bar),
 H2–H5 (faces and busts in the dialogue screen), L and L2 (the sprite's
 and the arrow's height).
 
