@@ -177,6 +177,25 @@ pub fn end_turn_question(ready: usize) -> String {
     format!("End turn with {ready} {units} ready?")
 }
 
+/// The size (width, height) of the [`draw_dialog`] box of `lines` under
+/// `title`, in cells.
+pub fn dialog_size(title: &str, lines: &[(String, UiColor)]) -> (i32, i32) {
+    let widest = lines
+        .iter()
+        .map(|(l, _)| l.chars().count())
+        .chain(std::iter::once(title.chars().count() + 2))
+        .max()
+        .unwrap_or(0);
+    let w = i32::try_from(widest).unwrap_or(0) + 4;
+    let h = i32::try_from(lines.len()).unwrap_or(0) + 4;
+    (w, h)
+}
+
+/// The top row of a box `h` rows tall centred on the map view.
+pub const fn centred_top(h: i32) -> i32 {
+    MAP_VIEW.y + (MAP_VIEW.h - h) / 2
+}
+
 /// Draws a box of `lines` (text and colour) centred on the map view, one
 /// blank column and row inside a double border; `title` over the top
 /// border.
@@ -186,22 +205,23 @@ pub fn draw_dialog(
     title: &str,
     lines: &[(String, UiColor)],
 ) {
+    let (_, h) = dialog_size(title, lines);
+    draw_dialog_at(buf, palette, title, lines, centred_top(h));
+}
+
+/// [`draw_dialog`], with the box's top border on row `top` instead of
+/// centred top to bottom.
+pub fn draw_dialog_at(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    title: &str,
+    lines: &[(String, UiColor)],
+    top: i32,
+) {
     let c = |u| palette.get(u);
     let bg = c(UiColor::PanelBg);
-    let widest = lines
-        .iter()
-        .map(|(l, _)| l.chars().count())
-        .chain(std::iter::once(title.chars().count() + 2))
-        .max()
-        .unwrap_or(0);
-    let w = i32::try_from(widest).unwrap_or(0) + 4;
-    let h = i32::try_from(lines.len()).unwrap_or(0) + 4;
-    let rect = Rect::new(
-        MAP_VIEW.x + (MAP_VIEW.w - w) / 2,
-        MAP_VIEW.y + (MAP_VIEW.h - h) / 2,
-        w,
-        h,
-    );
+    let (w, h) = dialog_size(title, lines);
+    let rect = Rect::new(MAP_VIEW.x + (MAP_VIEW.w - w) / 2, top, w, h);
     buf.fill_rect(rect, Cell::new(' ', c(UiColor::Text), bg));
     buf.draw_box(rect, BoxStyle::Double, c(UiColor::PanelBorder), bg);
     if !title.is_empty() {
@@ -298,9 +318,9 @@ mod tests {
     fn the_unit_list_shows_hp_and_who_is_ready() {
         let mut s = quick_battle(&ctx().content).unwrap();
         wait(&mut s, 2);
-        assert_eq!(ready_players(&s), 2);
+        assert_eq!(ready_players(&s), 3);
         let (menu, ids) = unit_list(&s);
-        assert_eq!(ids, [UnitId(1), UnitId(2), UnitId(3)]);
+        assert_eq!(ids, [UnitId(1), UnitId(2), UnitId(3), UnitId(8)]);
         let rows: Vec<&str> = menu.items().iter().map(|i| i.label.as_str()).collect();
         assert_eq!(
             rows,
@@ -308,6 +328,7 @@ mod tests {
                 "Test Lord    HP 19/19  ready",
                 "Test Knight  HP 20/20  ready",
                 "Test Archer  HP 17/17  acted",
+                "Test Mage    HP 16/16  ready",
             ]
         );
     }

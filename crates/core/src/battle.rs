@@ -452,6 +452,19 @@ pub struct Reinforcement {
     pub unit: Unit,
 }
 
+/// A strategy hint the battle shows at its start and on the map menu's
+/// `Objective` page (`docs/design/magic.md`, "Battle notes"), e.g.
+/// `Frost Elemental: weak to Fire, absorbs Ice.` Plain data: it changes no
+/// rule.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BattleNote {
+    /// The hint, one line.
+    pub text: String,
+    /// The units it is about (the screen highlights them); may name units
+    /// that aren't on the map (a reinforcement, an empty player slot).
+    pub units: Vec<UnitId>,
+}
+
 /// Everything needed to start a battle. Content validation (map files,
 /// 0803) guarantees unique unit ids, one unit per tile and units on the map.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -492,6 +505,8 @@ pub struct BattleSetup {
     pub triggers: Vec<Trigger>,
     /// The campaign's mode (which fall scenes play).
     pub mode: GameMode,
+    /// The battle's strategy hints (0411).
+    pub battle_notes: Vec<BattleNote>,
 }
 
 /// What a unit does after moving. Ends its action.
@@ -1382,6 +1397,9 @@ pub struct BattleState {
     /// The campaign's mode.
     #[serde(default)]
     mode: GameMode,
+    /// The battle's strategy hints.
+    #[serde(default)]
+    battle_notes: Vec<BattleNote>,
 }
 
 /// A validated command, ready to carry out.
@@ -1662,6 +1680,7 @@ impl BattleState {
             fired: FiredSet::new(),
             recruited: Vec::new(),
             mode: setup.mode,
+            battle_notes: setup.battle_notes,
         };
         let mut events = Vec::new();
         if let Some(outcome) = state.judge() {
@@ -1790,6 +1809,11 @@ impl BattleState {
         self.objective
     }
 
+    /// The battle's strategy hints, in the battle file's order.
+    pub fn battle_notes(&self) -> &[BattleNote] {
+        &self.battle_notes
+    }
+
     /// Rewind charges the battle started with (the charges left are
     /// [`BattleHistory::charges_left`](crate::BattleHistory::charges_left)).
     pub fn rewind_charges(&self) -> u8 {
@@ -1847,6 +1871,16 @@ impl BattleState {
     /// luck.
     pub fn check(&self, cmd: &Command) -> Result<(), CommandError> {
         self.validate(cmd).map(|_| ())
+    }
+
+    /// The HP `unit` moving to `dest` and doing `action` (a heal spell
+    /// cast) would restore, without doing it; `None` if [`Self::apply`]
+    /// would refuse the `Act` or it isn't a heal.
+    pub fn preview_heal(&self, unit: UnitId, dest: Pos, action: &UnitAction) -> Option<StatValue> {
+        match self.plan(unit, dest, action).ok()?.1 {
+            Step::Heal { amount, .. } => Some(amount),
+            _ => None,
+        }
     }
 
     /// Replaces the battle's luck with a fresh [`SimRng`] seeded by `seed`;

@@ -15,8 +15,10 @@
 //!   roster member it deploys ([`PlayerSlot`]). A slot whose character isn't
 //!   in the roster (a Classic death) stays empty; a roster member without a
 //!   slot stays out of the battle. [`Campaign::battle_setup`] builds the
-//!   [`BattleSetup`]: slot `i`'s unit gets id `i + 1` (the battle file's
-//!   enemies are numbered after the slots, [`BattleDef::first_enemy_id`]),
+//!   [`BattleSetup`]: each slot's unit gets the slot's id (slot `i` has id
+//!   `i + 1` and the battle file's enemies are numbered after the slots,
+//!   [`BattleDef::first_enemy_id`]; a slot the file marks `after_enemies`
+//!   is numbered after them instead), the units in id order,
 //!   the battle's default pack (no Preparations yet, 0408), the campaign's
 //!   gold, stock and mode, and the rewind charges of the battle's
 //!   [`Difficulty`].
@@ -55,7 +57,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::art::ArtTable;
 use crate::battle::{
-    BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement, Trigger,
+    BattleNote, BattleSetup, BattleState, Event, GameMode, Objective, Outcome, Reinforcement,
+    Trigger,
 };
 use crate::class::ClassTable;
 use crate::geom::Pos;
@@ -115,6 +118,10 @@ pub struct PlayerSlot {
     pub character: CharacterId,
     /// Its starting tile.
     pub pos: Pos,
+    /// Its unit id in the battle: [`BattleDef::slot_id`] of its place among
+    /// the slots, or one after the enemies' for a slot the battle file
+    /// numbers after them.
+    pub id: UnitId,
 }
 
 /// The music a battle plays from start to end (`docs/design/audio.md`):
@@ -137,7 +144,7 @@ pub struct BattleDef {
     pub id: String,
     /// The battlefield.
     pub map: BattleMap,
-    /// Where roster members are placed, in unit order.
+    /// Where roster members are placed, each with its unit id.
     pub player_slots: Vec<PlayerSlot>,
     /// The other units on the map at the start, numbered from
     /// [`first_enemy_id`](Self::first_enemy_id).
@@ -157,6 +164,8 @@ pub struct BattleDef {
     pub objective: Objective,
     /// The battle's story moments (0705).
     pub triggers: Vec<Trigger>,
+    /// The battle's strategy hints (0411).
+    pub battle_notes: Vec<BattleNote>,
     /// Sets the rewind charges.
     pub difficulty: Difficulty,
     /// What plays during the battle.
@@ -289,13 +298,15 @@ impl Campaign {
 
     /// The battle `def` with this campaign's army (see the module docs).
     pub fn battle_setup(&self, def: &BattleDef, tables: &GameTables) -> BattleSetup {
-        let players = def.player_slots.iter().enumerate().filter_map(|(i, slot)| {
+        let players = def.player_slots.iter().filter_map(|slot| {
             let mut unit = self.member(&slot.character)?.clone();
-            unit.id = BattleDef::slot_id(i);
+            unit.id = slot.id;
             unit.pos = slot.pos;
             Some(unit)
         });
-        let units = players.chain(def.enemies.iter().cloned()).collect();
+        // In id order: a slot numbered after the enemies comes after them.
+        let mut units: Vec<Unit> = players.chain(def.enemies.iter().cloned()).collect();
+        units.sort_by_key(|u| u.id);
         BattleSetup {
             map: def.map.clone(),
             terrain: Arc::clone(&tables.terrain),
@@ -317,6 +328,7 @@ impl Campaign {
             seed: def.seed,
             triggers: def.triggers.clone(),
             mode: self.mode,
+            battle_notes: def.battle_notes.clone(),
         }
     }
 

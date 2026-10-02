@@ -1,0 +1,20 @@
+[package]
+name = "trpg-bots"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+# Dev tooling (ADR-0033): used only by `xtask` and tests. Never a dependency
+# of `trpg-ui` or `trpg-app`, and never depends on them (ADR-0038).
+[dependencies]
+trpg-core = { path = "../core" }
+
+[dev-dependencies]
+# The game's tables and battle files, for tests on real battles.
+trpg-content = { path = "../content" }

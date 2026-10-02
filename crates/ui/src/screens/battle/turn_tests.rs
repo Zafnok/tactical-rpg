@@ -61,6 +61,10 @@ fn assert_in_font(buf: &GlyphBuffer) {
     }
 }
 
+/// Where the Quick Battle's player units are among its units: the lord,
+/// the knight and the archer, then the mage after the enemies.
+const PLAYERS: [usize; 4] = [0, 1, 2, 7];
+
 /// Player unit `index` of the screen's battle waits where it stands.
 fn wait_unit(s: &mut BattleScreen, index: usize) {
     let u = &s.state().units()[index];
@@ -225,14 +229,17 @@ fn info_opens_on_any_unit_cycles_its_faction_and_closes_on_the_last_one() {
     press(&mut s, &mut c, &[Action::Info]);
     assert_eq!(info(&s), Some(1));
     assert_eq!(s.help(&c), "s next unit · a previous · d close");
-    // Players in reading order: archer (2, 4), lord (3, 5), knight (4, 6).
+    // Players in reading order: archer (2, 4), lord (3, 5), mage (3, 6),
+    // knight (4, 6).
     let mut visit = |a| {
         press(&mut s, &mut c, &[a]);
         info(&s)
     };
-    assert_eq!(visit(Action::CursorDown), Some(2));
+    assert_eq!(visit(Action::CursorDown), Some(8));
+    assert_eq!(visit(Action::NextUnit), Some(2));
     assert_eq!(visit(Action::NextUnit), Some(3));
     assert_eq!(visit(Action::PrevUnit), Some(2));
+    assert_eq!(visit(Action::CursorUp), Some(8));
     assert_eq!(visit(Action::CursorUp), Some(1));
     assert_eq!(visit(Action::CursorUp), Some(3));
     // Other keys do nothing; Cancel closes it on the archer.
@@ -400,7 +407,7 @@ fn objective_shows_the_goal_and_the_turn() {
     };
     assert_eq!(menu.focus(), 4);
     press(&mut s, &mut c, &[Action::CursorDown, Action::Confirm]);
-    assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 3 });
+    assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 4 });
 }
 
 /// The map menu beside the cursor on the lord, focused on `Units`.
@@ -484,9 +491,9 @@ fn end_turn_asks_while_units_are_ready_and_space_again_ends_it() {
     let mut s = quick();
     wait_unit(&mut s, 2);
     press(&mut s, &mut c, &[Action::EndTurn]);
-    assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 2 });
+    assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 3 });
     let buf = render(&s, &c);
-    assert!(shows(&buf, "End turn with 2 units ready?"));
+    assert!(shows(&buf, "End turn with 3 units ready?"));
     assert!(shows(&buf, "f yes / d no"));
     assert_eq!(s.help(&c), "Space yes · f yes · d no");
     // Cancel backs out; other keys wait.
@@ -507,7 +514,7 @@ fn end_turn_asks_while_units_are_ready_and_space_again_ends_it() {
 fn with_no_unit_ready_end_turn_ends_at_once() {
     let mut c = ctx();
     let mut s = quick();
-    for i in 0..3 {
+    for i in PLAYERS {
         wait_unit(&mut s, i);
     }
     press(&mut s, &mut c, &[]);
@@ -516,7 +523,7 @@ fn with_no_unit_ready_end_turn_ends_at_once() {
     assert_eq!(s.state().phase(), Phase::Enemy);
     // From the map menu, too.
     let mut s = quick();
-    for i in 0..3 {
+    for i in PLAYERS {
         wait_unit(&mut s, i);
     }
     press(
@@ -535,7 +542,7 @@ fn auto_end_is_off_by_default_and_toggles_on() {
     let mut s = quick();
     assert!(!s.auto_end());
     assert!(s.status(&c).ends_with("Shift+Space auto-end: OFF"));
-    for i in 0..3 {
+    for i in PLAYERS {
         wait_unit(&mut s, i);
     }
     press(&mut s, &mut c, &[]);
@@ -560,6 +567,7 @@ fn auto_end_is_off_by_default_and_toggles_on() {
     assert_eq!(s.toast(), None);
     wait_unit(&mut s, 0);
     wait_unit(&mut s, 1);
+    wait_unit(&mut s, 7);
     press(&mut s, &mut c, &[]);
     assert_eq!(s.state().phase(), Phase::Player);
     wait_unit(&mut s, 2);
@@ -580,6 +588,7 @@ fn auto_end_waits_for_the_combat_to_play() {
     // Only the lord is left to act.
     wait(&mut state, 1);
     wait(&mut state, 2);
+    wait(&mut state, 7);
     let mut s = BattleScreen::new(state);
     press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
     s.apply(&Command::Act {

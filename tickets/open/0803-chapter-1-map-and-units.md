@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0009", "0016", "0316", "0410", "0412", "0501", "0503", "0706", "0707", "0710", "0801", "0807"]
+blocked_by: ["0009", "0016", "0316", "0410", "0412", "0501", "0503", "0706", "0707", "0710", "0714", "0801", "0807"]
 nick_input: sign-off
 completed:
 ---
@@ -32,6 +32,11 @@ Also 0316 (non-attack skills cost uses per battle; Nick, 2026-10-01: the
 playtest waits for it): the winning replay and the difficulty numbers must
 be made with the final skill costs.
 
+**Blocker added 2026-10-02:** 0714. The cast is in `characters.ron` as
+**speakers** (ids that can talk but aren't units), so the script (0707)
+could be checked before this ticket. Step 2 moves the ones who fight into
+`characters`.
+
 ## Nick input
 
 **Sign-off** happens in the playtest ticket 0804.
@@ -56,7 +61,11 @@ don't make it obvious.
    defensible tile (a fort; `terrain.md` has no gate or throne yet). Sketch it in the PR description.
 2. **Roster:** real Chapter 1 characters from the story (replace
    `// PLACEHOLDER` entries; keep test fixtures in `tests/fixtures/` instead of
-   shipped data). Each character's base stats, **talent** stat, starting
+   shipped data). The five companions and the boss (`retainer`, `sergeant`,
+   `poacher`, `keeper`, `heretic`, `red_captain`) are in the file's
+   `speakers` list (0714): give each a `characters` entry and take the id
+   out of `speakers` (an id in both is an error). Whoever doesn't fight in
+   Chapter 1 stays a speaker. Each character's base stats, **talent** stat, starting
    weapon ranks and class records per `progression.md`; generic enemies use
    its generic-unit formula. Classes come from its class tree (which ones is
    `chapter-1.md`'s call: the lord's unique class (0016) + Rider, Archer,

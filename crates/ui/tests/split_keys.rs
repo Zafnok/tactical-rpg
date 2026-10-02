@@ -101,7 +101,7 @@ fn select_on_an_empty_tile_opens_the_map_menu_and_on_an_enemy_its_range() {
     assert!(help(&h).contains("d hide range"), "{}", help(&h));
 }
 
-/// The lord waits where it stands, so two units stay ready.
+/// The lord waits where it stands, so three units stay ready.
 fn one_wait(h: &mut Harness) {
     h.keys("f f");
     assert_eq!(help(h), "arrows choose · f confirm · d back");
@@ -114,10 +114,10 @@ fn confirm_end_turn_accepts_the_prompt_instead_of_end_turn_again() {
     one_wait(&mut h);
     // End turn opens the prompt; End turn again does nothing.
     h.keys("Space");
-    assert!(shows(&h, "End turn with 2 units ready?"));
+    assert!(shows(&h, "End turn with 3 units ready?"));
     assert_eq!(help(&h), "Enter yes · f yes · d no");
     h.keys("Space");
-    assert!(shows(&h, "End turn with 2 units ready?"));
+    assert!(shows(&h, "End turn with 3 units ready?"));
     assert!(!shows(&h, "ENEMY PHASE"));
     // Cancel backs out.
     h.keys("d");

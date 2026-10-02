@@ -19,8 +19,8 @@ expression: h.snapshot()
                     ..≈≈≈≈..··..............╦╦..                      ║                            ║
                     ....Ar····....Br..▓▓▓▓▓▓▓▓..                      ║                            ║
                     ..♣♣··Lo..╦╦......▓▓░░╦╦▓▓..                      ║                            ║
-                    ♣♣♣♣··..Kn........▓▓░░░░▓▓..                      ║                            ║
-                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      ║                            ║
+                    ♣♣♣♣··MaKn........▓▓░░░░▓▓..                      ║                            ║
+                    ♣♣♠♠··..........Fr▓▓▓▓▐▌▓▓..                      ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
@@ -52,8 +52,8 @@ aaaaaaaaaaaaaaaaaaaaqqffggrrrrssttoouuhhiiiihhhhaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaammggggmmssmmmmnnhhhhhhhhvvhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaammmmwwssssmmmmxxhhyyyyyyyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaammzzssAAmmBBmmmmnnyyCCvvyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaDDzzssmmAAmmmmmmnnyyCCCCyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaaiiEEssmmmmmmmmnnhhyyyyFFyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaDDzzssAAAAmmmmmmnnyyCCCCyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaiiEEssmmmmmmmmnnuuyyyyFFyyhhaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -108,6 +108,8 @@ over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
 over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
+over  288,302 16x2  hp_high
+over  208,286 16x2  hp_high
 under 224,263 10x3  path
 under 231,263 19x3  path
 over  245,259 1x11  path
