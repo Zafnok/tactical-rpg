@@ -106,9 +106,9 @@ fn restart_battle_goes_back_to_preparations_as_they_were_left() {
     h.keys(SET_UP);
     h.keys("Right f");
     let start = battle(&h);
-    // The lord waits where he stands, then the map menu's Restart Battle
+    // The `PLAYER PHASE` banner closes; the lord waits where he stands, then the map menu's Restart Battle
     // (after Units and Objective) and its confirm.
-    h.keys("f f f d Down Down f");
+    h.keys("f f f f d Down Down f");
     assert!(
         shows(&h, "Restart the battle from turn 1?"),
         "{}",
@@ -204,8 +204,9 @@ fn the_benched_scouts_bow_goes_to_the_archer() {
     };
     assert_eq!(scout(&h).name, "Test Scout");
     assert_eq!(scout(&h).loadout.weapon_count(), 0);
-    // Restart Battle: Preparations again, the trade as it was left.
-    h.keys("f f f d Down Down f f");
+    // Past the banner, Restart Battle: Preparations again, the trade as it
+    // was left.
+    h.keys("f f f f d Down Down f f");
     assert_eq!(h.screens(), ["title", "preparations"]);
     let prep = h.flow().and_then(|f| f.preparations());
     let prep = prep.unwrap_or_else(|| panic!("no preparations")).prep();

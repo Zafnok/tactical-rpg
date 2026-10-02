@@ -15,11 +15,11 @@ fn title() -> Harness {
 }
 
 /// At the title with the right-handed layout, then Quick Battle, chosen
-/// with the keyboard.
+/// with the keyboard, and its `PLAYER PHASE` banner closed.
 fn quick_battle() -> Harness {
     let mut h = title();
     // Quick Battle, then Preparations: Left wraps to `Fight!`.
-    h.keys("Down f Left f");
+    h.keys("Down f Left f f");
     h
 }
 
@@ -87,7 +87,7 @@ fn the_title_menu_works_with_a_pad() {
 #[test]
 fn quick_battle_starts_the_same_from_a_pad() {
     let mut h = title();
-    h.pad("DpadDown South DpadLeft South");
+    h.pad("DpadDown South DpadLeft South South");
     assert_eq!(as_keys(&mut h), quick_battle().snapshot());
 }
 
@@ -198,6 +198,8 @@ fn keys_and_buttons_work_side_by_side() {
     let mut mixed = title();
     mixed.pad("DpadDown").keys("f").pad("DpadLeft").keys("f");
     assert_eq!(mixed.screens(), ["title", "battle"]);
+    // The `PLAYER PHASE` banner.
+    mixed.pad("South");
     // Select the lord, move, drop the selection, open the map menu.
     mixed.keys("f").pad("DpadUp").keys("d").pad("East");
     let mut keys_only = quick_battle();
@@ -306,8 +308,8 @@ fn a_tip_names_the_buttons_of_the_pad_in_use() {
         let mut h = title();
         h.with_tips();
         match kind {
-            Some(kind) => h.use_pad(kind).pad("DpadDown South DpadLeft South"),
-            None => h.keys("Down f Left f"),
+            Some(kind) => h.use_pad(kind).pad("DpadDown South DpadLeft South South"),
+            None => h.keys("Down f Left f f"),
         };
         assert_eq!(h.screens(), ["title", "battle"]);
         h.wait(0.5);

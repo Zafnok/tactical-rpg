@@ -279,7 +279,9 @@ impl BattleScreen {
 
     /// [`BattleScreen::new`] for a battle just started with `events`: its
     /// notes (0411) show first, if it has any and isn't already decided,
-    /// then the scenes the events fire (a turn-1 trigger) play.
+    /// then the banners of the events (turn 1's `PLAYER PHASE`; the outcome
+    /// of a battle decided at its start) and the scenes they fire (a
+    /// turn-1 trigger), in the order of the events.
     pub fn start(state: BattleState, events: &[Event]) -> Self {
         let mut screen = Self::new(state);
         if !screen.state.battle_notes().is_empty() && screen.state.outcome().is_none() {
@@ -287,7 +289,7 @@ impl BattleScreen {
         }
         screen.queue.extend(events.iter().filter_map(|e| match e {
             Event::SceneTriggered { scene } => Some(Queued::Scene(scene.clone())),
-            _ => None,
+            _ => Banner::for_event(e).map(Queued::Banner),
         }));
         screen
     }

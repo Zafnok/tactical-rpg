@@ -566,6 +566,49 @@ fn auto_end_waits_for_the_combat_to_play() {
 
 // Banners.
 
+/// The Quick Battle as the flow starts it, and its start events.
+fn quick_start(c: &Ctx) -> (BattleState, Vec<Event>) {
+    let def = &c.content.battles[QUICK_BATTLE];
+    let lead = LeadProfile::new(DEFAULT_NAME, LeadGender::Male);
+    let campaign = battle_campaign(&c.content, def, GameMode::Classic, lead);
+    BattleState::new(campaign.battle_setup(def, &c.content.tables()))
+}
+
+#[test]
+fn a_battle_just_started_opens_on_turn_ones_player_phase_banner() {
+    let mut c = ctx();
+    let (state, events) = quick_start(&c);
+    // A screen on a given state (a unit test, a debug tool) has none.
+    assert_eq!(BattleScreen::new(state.clone()).banner(), None);
+    let mut s = BattleScreen::start(state.clone(), &events);
+    assert_eq!(phase_banner(&s), Some((Phase::Player, 1)));
+    let buf = render(&s, &c);
+    assert!(shows(&buf, "PLAYER PHASE"));
+    assert!(shows(&buf, "Turn 1"));
+    // Keys other than Confirm are ignored.
+    let before = s.cursor().pos;
+    press(&mut s, &mut c, &[Action::CursorRight, Action::Cancel]);
+    assert_eq!(s.cursor().pos, before);
+    assert_eq!(s.mode(), &Mode::default());
+    // It closes by itself after `PHASE_BANNER_S`.
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.9);
+    assert_eq!(phase_banner(&s), Some((Phase::Player, 1)));
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.2);
+    assert_eq!(s.banner(), None);
+    assert!(!shows(&render(&s, &c), "PLAYER PHASE"));
+    assert_eq!((s.state().turn(), s.state().phase()), (1, Phase::Player));
+    press(&mut s, &mut c, &[Action::CursorRight]);
+    assert_ne!(s.cursor().pos, before);
+    // Or on Confirm, which does nothing else (the cursor is on the lord:
+    // a second Confirm selects it).
+    let mut s = BattleScreen::start(state, &events);
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert_eq!(s.banner(), None);
+    assert_eq!(s.mode(), &Mode::default());
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::Selected(_)), "{:?}", s.mode());
+}
+
 #[test]
 fn phase_banners_close_after_a_second_or_on_confirm_and_the_enemy_phase_passes() {
     let mut c = ctx();

@@ -4,8 +4,9 @@
 //! (0708).
 
 use insta::assert_snapshot;
-use trpg_content::{ChoiceOption, Scene, Side, Step};
+use trpg_content::{ChoiceOption, MusicLine, Scene, Side, Step};
 use trpg_core::{CharacterId, LeadGender, LeadProfile};
+use trpg_ui::audio::{AudioRequest, MusicCommand};
 use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
 use trpg_ui::screens::DialogueScreen;
@@ -26,10 +27,11 @@ fn full_screen() -> Harness {
     h
 }
 
-/// In Quick Battle, then the debug menu's "Play test scene (overlay)".
+/// In Quick Battle (its `PLAYER PHASE` banner closed), then the debug
+/// menu's "Play test scene (overlay)".
 fn over_the_map() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down f Left f F2 Down Down Down f");
+    h.keys("Down f Left f f F2 Down Down Down f");
     assert_eq!(h.screens(), ["title", "battle", "dialogue"]);
     h
 }
@@ -268,4 +270,93 @@ fn two_reply_choice_snapshot() {
     h.keys("f f f f");
     assert!(row(&h, 23).contains("Isolde, will you lead the charge?"));
     assert_snapshot!(h.snapshot());
+}
+
+// --- Music (0710) -----------------------------------------------------------
+
+/// A game playing a scene with these lines: narration `One.` to `Four.`,
+/// with `@music village` before `Two.`, `@music talk_calm` before `Three.`
+/// and nothing after it.
+fn music_scene() -> Harness {
+    let narrate = |text: &str| Step::Narrate { text: text.into() };
+    let music = |cue: &str| Step::Music(MusicLine::Cue(cue.into()));
+    let scene = Scene {
+        id: "music".into(),
+        steps: vec![
+            narrate("One."),
+            music("village"),
+            narrate("Two."),
+            music("talk_calm"),
+            narrate("Three."),
+            narrate("Four."),
+        ],
+    };
+    let content = trpg_content::load_embedded();
+    assert!(content.is_ok());
+    let names = content.map(|c| c.names).unwrap_or_default();
+    Harness::with_screen(Box::new(DialogueScreen::new(
+        scene,
+        LeadProfile::new("Ellery", LeadGender::Male),
+        names,
+    )))
+}
+
+/// The music requests of the run so far.
+fn music_requests(h: &Harness) -> Vec<AudioRequest> {
+    let music = |r: &AudioRequest| !matches!(r, AudioRequest::PlaySound { .. });
+    h.audio_requests().into_iter().filter(music).collect()
+}
+
+fn play_music(cue: &str) -> AudioRequest {
+    AudioRequest::PlayMusic { cue: cue.into() }
+}
+
+/// `@music` mid-scene asks for the music when the scene reaches that line,
+/// not before, and the track starts.
+#[test]
+fn music_changes_when_the_scene_reaches_its_line() {
+    let mut h = music_scene();
+    h.wait(0.5);
+    assert!(row(&h, 24).contains("One."));
+    assert_eq!(music_requests(&h), []);
+    h.keys("f").wait(0.5);
+    assert!(row(&h, 24).contains("Two."));
+    assert_eq!(music_requests(&h), [play_music("village")]);
+    h.keys("f").wait(0.5);
+    assert!(row(&h, 24).contains("Three."));
+    assert_eq!(
+        music_requests(&h),
+        [play_music("village"), play_music("talk_calm")]
+    );
+    // Reading on asks for nothing more, and the mood track is what plays
+    // once the village one has faded out.
+    h.keys("f").wait(2.0);
+    assert!(row(&h, 24).contains("Four."));
+    assert_eq!(
+        music_requests(&h),
+        [play_music("village"), play_music("talk_calm")]
+    );
+    assert_eq!(h.game().music().current(), Some("talk_calm"));
+    assert_eq!(h.music_clock().map(|c| c.cue.as_str()), Some("talk_calm"));
+}
+
+/// Skipping a scene with two `@music` lines asks only for the last, so the
+/// music is the same as after watching it.
+#[test]
+fn skipping_asks_for_the_last_music_only() {
+    let mut h = music_scene();
+    h.keys("d f");
+    assert_eq!(music_requests(&h), [play_music("talk_calm")]);
+    let started: Vec<&str> = h
+        .music_commands()
+        .iter()
+        .filter_map(|c| match c {
+            MusicCommand::Start { cue, .. } => Some(cue.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(started, ["talk_calm"]);
+    // The scene is over; its music plays on.
+    assert_eq!(h.top_screen(), "");
+    assert_eq!(h.game().music().current(), Some("talk_calm"));
 }

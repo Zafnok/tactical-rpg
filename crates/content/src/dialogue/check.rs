@@ -1,6 +1,6 @@
 //! Checks on parsed scenes: who is on screen, known characters and
 //! expressions, text length, lead and name tokens, names written out, lead
-//! lines, reply choices, and scene ids unique across files.
+//! lines, reply choices, music cues, and scene ids unique across files.
 
 use std::collections::BTreeMap;
 
@@ -9,9 +9,10 @@ use trpg_core::lead::{self, LEAD_ID, PORTRAIT_FEMALE, PORTRAIT_MALE, Part};
 
 use super::parse::{ChoiceLines, ParsedScene};
 use super::{
-    ChoiceOption, MAX_LEAD_LINE_LEN, MAX_OPTION_LEN, MAX_REACTION_TEXTS, MAX_TEXT_LEN,
+    ChoiceOption, MAX_LEAD_LINE_LEN, MAX_OPTION_LEN, MAX_REACTION_TEXTS, MAX_TEXT_LEN, MusicLine,
     STANDARD_EXPRESSIONS, Side, Step,
 };
+use crate::audio::AudioManifest;
 use crate::character::CharacterTable;
 use crate::error::ContentError;
 use crate::names::{Names, is_name_id, name_token};
@@ -22,19 +23,21 @@ type Screen<'a> = [Option<&'a CharacterId>; 2];
 
 /// Checks one scene, replaying it to know who is on screen at each line.
 /// Character ids are checked against `characters`, expressions against
-/// `portraits`, and name tokens and names written out against `names`,
-/// when given.
+/// `portraits`, name tokens and names written out against `names`, and
+/// `@music` cues against `audio`, when given.
 pub fn check_scene(
     parsed: &ParsedScene,
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
     names: Option<&Names>,
+    audio: Option<&AudioManifest>,
 ) -> Vec<ContentError> {
     let mut c = Checker {
         file: &parsed.file,
         characters,
         portraits,
         names,
+        audio,
         errors: Vec::new(),
     };
     let mut state = State::default();
@@ -78,6 +81,7 @@ struct Checker<'a> {
     characters: Option<&'a CharacterTable>,
     portraits: Option<&'a PortraitTable>,
     names: Option<&'a Names>,
+    audio: Option<&'a AudioManifest>,
     errors: Vec<ContentError>,
 }
 
@@ -175,7 +179,12 @@ impl<'a> Checker<'a> {
                     );
                 }
             }
-            Step::Narrate { .. } | Step::Choice { .. } => {}
+            Step::Music(MusicLine::Cue(cue)) => {
+                if let Some(message) = self.audio.and_then(|a| music_problem(a, cue)) {
+                    self.err(line, message);
+                }
+            }
+            Step::Narrate { .. } | Step::Choice { .. } | Step::Music(MusicLine::Stop) => {}
         }
     }
 
@@ -369,6 +378,24 @@ impl<'a> Checker<'a> {
             )
         })
     }
+}
+
+/// What is wrong with `@music <cue>`, if anything: `cue` must be a music
+/// cue of the audio manifest (not a sound, nor a music pool).
+fn music_problem(audio: &AudioManifest, cue: &str) -> Option<String> {
+    if audio.music.contains_key(cue) {
+        return None;
+    }
+    let what = if audio.sounds.contains_key(cue) {
+        "a sound, not a music cue"
+    } else if audio.pools.contains_key(cue) {
+        "a music pool, not a music cue"
+    } else {
+        "not a music cue"
+    };
+    Some(format!(
+        "\"{cue}\" is {what}; music cues are listed in assets/audio/audio.ron"
+    ))
 }
 
 /// Who is on `screen`, in words: `test_lord is on the left and nobody on

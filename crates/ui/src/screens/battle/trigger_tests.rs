@@ -79,7 +79,7 @@ fn turn_start(turn: u32) -> Trigger {
 }
 
 #[test]
-fn a_scene_at_the_battles_start_plays_first_and_tips_wait() {
+fn a_scene_at_the_battles_start_plays_after_the_banner_and_tips_wait() {
     let mut c = ctx();
     let (map, units) = quick_units(&c);
     let (state, events) = BattleState::new(BattleSetup {
@@ -87,14 +87,24 @@ fn a_scene_at_the_battles_start_plays_first_and_tips_wait() {
         ..setup(&c, map, units, Objective::Rout { turn_limit: None })
     });
     let mut s = BattleScreen::start(state, &events);
-    assert_eq!(s.queued_scene(), Some("test_turn_3"));
-    assert_eq!(s.shown_tip(), None);
-    assert_eq!(frame(&mut s, &mut c, &[], 0.0), "Push(dialogue)");
+    // The events' order: the phase starts (its banner), then the scene.
+    assert!(s.banner().is_some());
     assert_eq!(s.queued_scene(), None);
     assert_eq!(frame(&mut s, &mut c, &[], 0.0), "None");
-    // Without scenes, `start` is `new`.
+    assert_eq!(s.shown_tip(), None);
+    assert_eq!(
+        frame(&mut s, &mut c, &[Action::Confirm], 0.0),
+        "Push(dialogue)"
+    );
+    assert_eq!(s.banner(), None);
+    assert_eq!(s.shown_tip(), None);
+    assert_eq!(s.queued_scene(), None);
+    assert_eq!(frame(&mut s, &mut c, &[], 0.0), "None");
+    // Without events, `start` is `new`.
     let q = quick_battle(&c.content).unwrap();
-    assert_eq!(BattleScreen::start(q, &[]).queued_scene(), None);
+    let s = BattleScreen::start(q, &[]);
+    assert_eq!(s.queued_scene(), None);
+    assert_eq!(s.banner(), None);
 }
 
 #[test]
