@@ -6,6 +6,7 @@ use insta::assert_snapshot;
 use trpg_content::TipTrigger;
 use trpg_core::{Command, Event, Objective, Phase, StatGains, UnitId};
 
+use super::banner::PHASE_BANNER_S;
 use super::testing::{battle_with, skirmish, skirmish_charged, through_ai_phases};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
@@ -78,6 +79,37 @@ fn the_first_battle_shows_the_start_tip_and_confirm_dismisses_it() {
     press(&mut s, &mut c, &[Action::Confirm]);
     assert_eq!(s.shown_tip(), None);
     assert!(!shows(&s, &c, "Your move"));
+    assert_eq!(s.mode(), &Mode::default());
+}
+
+#[test]
+fn the_start_tip_waits_for_the_first_player_phase_banner() {
+    let mut c = tipped();
+    let state = quick_battle(&c.content).unwrap();
+    let events = [Event::PhaseStarted {
+        turn: 1,
+        phase: Phase::Player,
+    }];
+    // The banner closes by itself: the tip shows.
+    let mut s = BattleScreen::start(state.clone(), &events);
+    press(&mut s, &mut c, &[]);
+    assert!(s.banner().is_some());
+    assert_eq!(s.shown_tip(), None);
+    assert!(!shows(&s, &c, "Your move"));
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.9);
+    assert_eq!(s.shown_tip(), None);
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.2);
+    assert_eq!(s.banner(), None);
+    assert_eq!(s.shown_tip(), Some(TipTrigger::FirstBattleStart));
+    assert!(shows(&s, &c, "Your move"));
+    // The Confirm that closes the banner doesn't also close the tip.
+    let mut c = tipped();
+    let mut s = BattleScreen::start(state, &events);
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert_eq!(s.banner(), None);
+    assert_eq!(s.shown_tip(), Some(TipTrigger::FirstBattleStart));
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert_eq!(s.shown_tip(), None);
     assert_eq!(s.mode(), &Mode::default());
 }
 
