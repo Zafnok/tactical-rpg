@@ -125,8 +125,9 @@ change.
 and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 
 - **Question 4, do sprites walk:** "1C". A unit that can still act steps
-  on the spot; an acted unit stands still; a moving unit walks along its
-  path and turns to face the way it goes. Nick added: "make sure the hp
+  on the spot; an acted unit stands still ("sure, unit can stand still if
+  exhausted"); a moving unit walks along its path and turns to face the
+  way it goes. Nick added: "make sure the hp
   bar is not overlapping the sprite". The sprite now stands with its feet
   directly on the HP bar ("sprite 0 … looks best to me", after seeing it 1
   and 2 pixels higher), and HP bars are drawn over every sprite. The
@@ -144,8 +145,6 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 
 ***Claude's starting rules*** (Nick can veto any of them):
 
-- An acted unit stands still while the others step. It was in the mockup
-  Nick chose, but he wasn't asked about it on its own.
 - A unit with both a bonus and a penalty shows both arrows, the up arrow
   above the down arrow.
 - The arrows' colours (light blue up, purple down) are the mockup's
@@ -168,7 +167,7 @@ Options entry moved out to 0440 and 0824), 0711 and 0706 (busts cut to
 `docs/ROADMAP.md` (0440), 1006.
 
 **Mockups** (bought art, never committed): `spike-renders/` in the
-bought-art folder, J1–J5 (walking, the HP bar), K and K2 (effect marks),
+bought-art folder, J1–J5 (walking, the HP bar), K, K2 and K3 (effect marks),
 H2–H5 (faces and busts in the dialogue screen), L and L2 (the sprite's
 and the arrow's height).
 

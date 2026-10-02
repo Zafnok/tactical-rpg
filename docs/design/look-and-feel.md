@@ -148,7 +148,8 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > the arrow raised 1 or 2:] "let me see sprite up 1 mark up 2 vs sprite up
 > 0 mark up 1" … [shown the two side by side, L2:] "sprite 0 mark 1 looks
 > best to me" … [does the Chapter 1 playtest wait for the walking: A no, B
-> yes:] "B"
+> yes:] "B" … [told that an acted unit standing still was Claude's
+> addition:] "sure, unit can stand still if exhausted"
 
 ## Rules
 
@@ -222,8 +223,7 @@ so they aren't in this repository (ADR-0032).
   - A unit that **can still act steps on the spot**, facing the camera
     (about four steps a second in the mockup, *tunable*).
   - A unit that **has acted stands still** (and is grey). So "still" also
-    says "done" *(Claude's addition in the mockup; Nick chose the mockup
-    with it)*.
+    says "done" (Nick: "sure, unit can stand still if exhausted").
   - A **moving unit walks along its path**, gliding from tile to tile with
     its legs going, and **turns to face the way it walks** (about a fifth
     of a second per tile in the mockup, *tunable*; the speed settings
