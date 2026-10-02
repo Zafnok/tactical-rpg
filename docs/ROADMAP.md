@@ -83,10 +83,13 @@ files), and 0803 now waits for 0710 and 0807 (it sets Chapter 1's music).
 the bought faces with it.
 Nick also put the combat scene (0413), Harl's picture (0035) and 0316
 (non-attack skills cost uses per battle) in front of the playtest.
+2026-10-02: 0714 (dialogue speakers who aren't units) was added to row 1
+and the script (0707) moved to row 2 behind it; without it the script
+couldn't pass its check until 0803, which waits for the script.
 
 ```
- 1  0022 0023 0024 0035 0110 0231 0316 0410 0707 0710 0801
- 2  0711 0802 0807 0810
+ 1  0022 0023 0024 0035 0110 0231 0316 0410 0710 0714 0801
+ 2  0707 0711 0802 0807 0810
  3  0413 0706 0809
  4  0803
  5  0804  ◄── Nick plays Chapter 1
