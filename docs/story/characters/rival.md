@@ -67,7 +67,7 @@ Id: `rival` · [Name registry](../names.md)
 
 | Where | What changes |
 | ----- | ------------ |
-| Ch1 | Offstage: his letter and his seal. Tease scene: he tells Crane "it's done" when it isn't. |
+| Ch1 | Offstage: his letter and his seal. Tease scene: he tells Crane's messenger "it's done" when it isn't. |
 | Ch4 | Face to face at Veyne Hall. Doesn't deny it. Escapes. |
 | Ch8 | Orders the Hounds against the ship, tries to stop the archers, too late. His father dies in front of him, telling him Wren is alive. |
 | Act 2 | Hunts the party in the Jade Reach, and begins to doubt. Summoned home, he meets the prince who came back Unfinished: what he was promised for Wren. He already knows Wren is alive (his father's last words, Ch8). At the end of Act 2 he learns where: she's the bearer being emptied to finish the prince. |

@@ -28,6 +28,10 @@ Not a blocker for the Chapter 1 script (0707): a writer who needs one of
 these before this ticket lands adds that one id first (`docs/story/names.md`,
 "New names get an id here first").
 
+**2026-10-02:** 0707 did that for one: `sergeant.last` ("Rook", Harl's
+name for Tamsin) is already in `names.md` and `names.ron`. Leave it as it
+is and add the other eight.
+
 ## Nick input
 
 None. The surname is the second word of the character's current name in
