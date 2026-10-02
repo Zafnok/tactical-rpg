@@ -895,7 +895,67 @@ fn a_zero_slot_class_holds_no_weapons() {
     assert_eq!(stock.weapons.len(), 2);
 }
 
+#[test]
+fn armour_the_new_class_cannot_wear_goes_to_the_stock() {
+    let t = items();
+    let heavy_only = ClassDef {
+        armour: vec![ArmourWeight::Heavy],
+        ..class()
+    };
+    let mut stock = Stock::default();
+    let mut u = equipped(&["sword"], Some("vest"), Some("ring"));
+    // Its own class wears it: nothing moves.
+    assert_eq!(u.fit_armour(&class(), &t, &mut stock), None);
+    assert_eq!(u.loadout.armour, Some(id("vest")));
+    assert_eq!(u.fit_armour(&heavy_only, &t, &mut stock), Some(id("vest")));
+    assert_eq!(u.loadout.armour, None);
+    assert_eq!(stock.count(&id("vest")), 1);
+    // The accessory and the weapons stay.
+    assert_eq!(u.loadout.accessory, Some(id("ring")));
+    assert_eq!(u.loadout.weapon_count(), 1);
+    // No armour: nothing to move.
+    assert_eq!(u.fit_armour(&heavy_only, &t, &mut stock), None);
+    // Armour missing from the table is left alone.
+    u.loadout.armour = Some(id("ghost"));
+    assert_eq!(u.fit_armour(&heavy_only, &t, &mut stock), None);
+    assert_eq!(u.loadout.armour, Some(id("ghost")));
+    assert_eq!(stock.items.len(), 1);
+}
+
 // ---- Pack and stock -----------------------------------------------------------
+
+#[test]
+fn seals_are_items_found_in_the_stock_by_kind() {
+    let mut t = items();
+    let seal = |name: &str, kind| {
+        ItemDef::Seal(SealDef {
+            name: name.into(),
+            kind,
+        })
+    };
+    t.items
+        .insert(id("t2"), seal("Tier 2 Seal", SealKind::Tier(2)));
+    t.items
+        .insert(id("t3"), seal("Tier 3 Seal", SealKind::Tier(3)));
+    t.items
+        .insert(id("re"), seal("Reclass Seal", SealKind::Reclass));
+    let t2 = t.get(&id("t2")).unwrap();
+    assert_eq!((t2.name(), t2.price()), ("Tier 2 Seal", 0));
+    assert_eq!(t.seal(&id("t3")).map(|s| s.kind), Some(SealKind::Tier(3)));
+    assert_eq!(t.seal(&id("potion")), None);
+    assert_eq!(t.seal(&id("ghost")), None);
+    assert_eq!(t.consumable(&id("t2")), None);
+    let mut stock = Stock::default();
+    assert_eq!(stock.seal(SealKind::Tier(2), &t), None);
+    for item in ["potion", "t3", "re", "vest"] {
+        stock.add(id(item));
+    }
+    assert_eq!(stock.seal(SealKind::Tier(2), &t), None);
+    assert_eq!(stock.seal(SealKind::Tier(3), &t), Some(&id("t3")));
+    assert_eq!(stock.seal(SealKind::Reclass, &t), Some(&id("re")));
+    stock.add(id("t2"));
+    assert_eq!(stock.seal(SealKind::Tier(2), &t), Some(&id("t2")));
+}
 
 #[test]
 fn pack_cap_limits_only_what_is_brought() {

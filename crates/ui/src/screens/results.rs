@@ -14,9 +14,8 @@ use trpg_core::progression::EXP_PER_LEVEL;
 use trpg_core::{BattleRewards, BattleState, Gold, Level};
 
 use super::battle::layout::MAP_VIEW;
-use super::battle::playing_help;
 use super::battle::progress::{
-    self, EXP_BAR_CELLS, PROGRESS_TIMINGS, Progress, ProgressTimings, exp_line,
+    self, EXP_BAR_CELLS, PROGRESS_TIMINGS, Progress, ProgressTimings, exp_line, playing_help,
 };
 use super::{centre_x, print_centred};
 use crate::color::UiColor;

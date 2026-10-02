@@ -5,9 +5,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use trpg_core::{
-    AccessoryDef, ArmourDef, ArtId, ConsumableDef, ConsumableEffect, DamageType, ItemDef, ItemId,
-    ItemTable, StatValue, Stats, UnitTag, WeaponDef, WeaponKind, WeaponRank, WeaponRules,
-    WeaponTrait,
+    AccessoryDef, ArmourDef, ArtId, ClassTable, ConsumableDef, ConsumableEffect, DamageType,
+    ItemDef, ItemId, ItemTable, SealDef, SealKind, StatValue, Stats, Tier, UnitTag, WeaponDef,
+    WeaponKind, WeaponRank, WeaponRules, WeaponTrait,
 };
 
 use crate::bundle;
@@ -36,6 +36,9 @@ struct RawFile {
     armour: Vec<RawArmour>,
     accessories: Vec<RawAccessory>,
     consumables: Vec<RawConsumable>,
+    /// Promotion and reclass seals (`progression.md`).
+    #[serde(default)]
+    seals: Vec<RawSeal>,
 }
 
 #[derive(Deserialize)]
@@ -136,6 +139,14 @@ struct RawConsumable {
     price: u32,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawSeal {
+    id: String,
+    name: String,
+    kind: SealKind,
+}
+
 /// Loads and validates the embedded item file.
 pub fn load() -> Result<ItemTable, Vec<ContentError>> {
     let display = bundle::display_path(ITEMS_PATH);
@@ -176,6 +187,10 @@ pub fn from_source(file: &str, source: &str) -> Result<ItemTable, Vec<ContentErr
     }
     for c in raw.consumables {
         v.consumable(c);
+    }
+    let mut kinds = Vec::new();
+    for s in raw.seals {
+        v.seal(s, &mut kinds);
     }
     if v.errors.is_empty() {
         Ok(ItemTable {
@@ -345,6 +360,64 @@ impl Validator<'_> {
         };
         self.add(&c.id, ItemDef::Consumable(def));
     }
+
+    /// A seal: a tier seal is for tier 2 or above (nothing promotes into
+    /// tier 1), and each kind has one seal (`seen` holds the kinds so far).
+    fn seal(&mut self, s: RawSeal, seen: &mut Vec<SealKind>) {
+        if matches!(s.kind, SealKind::Tier(tier) if tier < 2) {
+            self.err_at_item(
+                &s.id,
+                format!("seal \"{}\": a tier seal's tier must be at least 2", s.id),
+            );
+        }
+        if seen.contains(&s.kind) {
+            self.err_at_item(
+                &s.id,
+                format!("seal \"{}\": another seal is already {:?}", s.id, s.kind),
+            );
+        }
+        seen.push(s.kind);
+        let def = SealDef {
+            name: s.name,
+            kind: s.kind,
+        };
+        self.add(&s.id, ItemDef::Seal(def));
+    }
+}
+
+/// Checks the seals against the class tree (`progression.md`): every tier a
+/// class promotes into has its tier seal, and there is a Reclass Seal.
+pub fn check_seals(items: &ItemTable, classes: &ClassTable) -> Vec<ContentError> {
+    let file = bundle::display_path(ITEMS_PATH);
+    let has = |kind: SealKind| {
+        items
+            .items
+            .values()
+            .any(|d| matches!(d, ItemDef::Seal(s) if s.kind == kind))
+    };
+    let mut tiers: Vec<Tier> = classes
+        .classes
+        .values()
+        .flat_map(|c| &c.promotes_to)
+        .filter_map(|id| classes.get(id))
+        .map(|c| c.tier)
+        .collect();
+    tiers.sort_unstable();
+    tiers.dedup();
+    let mut errors: Vec<ContentError> = tiers
+        .into_iter()
+        .filter(|&tier| !has(SealKind::Tier(tier)))
+        .map(|tier| {
+            ContentError::new(
+                &file,
+                format!("no seal of kind Tier({tier}), but classes promote into tier {tier}"),
+            )
+        })
+        .collect();
+    if !has(SealKind::Reclass) {
+        errors.push(ContentError::new(&file, "no seal of kind Reclass"));
+    }
+    errors
 }
 
 #[cfg(test)]

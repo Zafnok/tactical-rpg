@@ -168,6 +168,16 @@ pub enum Queued {
     Scene(String),
 }
 
+/// Why the battle screen closes before the battle is over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Leaving {
+    /// `Restart Battle`: the game flow starts the battle again.
+    Restart,
+    /// `Suspend`: the game flow saves the battle and goes back to the
+    /// title.
+    Suspend,
+}
+
 /// The battle screen: the player browses the map with the cursor, selects
 /// and moves units ([`Mode`]), opens the map menu, ends the turn; phase and
 /// outcome banners show as the battle goes on, and the outcome's closes the
@@ -212,9 +222,9 @@ pub struct BattleScreen {
     /// The unit whose walk was shown since the last command: its move's
     /// steps have been heard.
     walked: Option<UnitId>,
-    /// The player chose `Restart Battle`: the screen closes, and the game
-    /// flow starts the battle again.
-    restart: bool,
+    /// The player chose `Restart Battle` or `Suspend`: the screen closes,
+    /// and the game flow does it.
+    leaving: Option<Leaving>,
     /// Where the cursor and camera were when the player phase ended: they
     /// go back there when the next one starts.
     player_view: Option<(Pos, Camera)>,
@@ -260,7 +270,7 @@ impl BattleScreen {
             progress: None,
             cues: CueQueue::default(),
             walked: None,
-            restart: false,
+            leaving: None,
             player_view: None,
             notes_t: 0.0,
         }
@@ -280,6 +290,16 @@ impl BattleScreen {
             Event::SceneTriggered { scene } => Some(Queued::Scene(scene.clone())),
             _ => Banner::for_event(e).map(Queued::Banner),
         }));
+        screen
+    }
+
+    /// A suspended battle carrying on (0802): the battle as `history`'s
+    /// commands left it, with its rewind points and the charges left.
+    /// `history` must have its content tables
+    /// ([`BattleHistory::restore_tables`]).
+    pub fn resume(history: BattleHistory) -> Self {
+        let mut screen = Self::new(history.state_at(history.len()));
+        screen.history = history;
         screen
     }
 
@@ -657,7 +677,20 @@ impl BattleScreen {
     /// Whether the player chose `Restart Battle` (the screen then pops,
     /// and the game flow starts the battle again).
     pub fn restart_requested(&self) -> bool {
-        self.restart
+        self.leaving == Some(Leaving::Restart)
+    }
+
+    /// Whether the player chose `Suspend` (the screen then pops, and the
+    /// game flow saves the battle and goes back to the title).
+    pub fn suspend_requested(&self) -> bool {
+        self.leaving == Some(Leaving::Suspend)
+    }
+
+    /// The suspend save couldn't be written: the battle goes on, showing
+    /// `message`.
+    pub fn suspend_failed(&mut self, message: String) {
+        self.leaving = None;
+        self.toast = Some((message, TOAST_S));
     }
 
     /// Applies `cmd` as if the player (or the AI) had sent it: scripted
@@ -942,7 +975,8 @@ impl BattleScreen {
                 self.cursor.jump(to);
                 self.follow(to);
             }
-            Effect::Restart => self.restart = true,
+            Effect::Restart => self.leaving = Some(Leaving::Restart),
+            Effect::Suspend => self.leaving = Some(Leaving::Suspend),
         }
     }
 
@@ -1006,7 +1040,7 @@ impl BattleScreen {
             return Some(help_line(&[confirm("close")]));
         }
         if let Some(p) = self.progress() {
-            return Some(progress_help(p, km));
+            return Some(progress::help(p, km));
         }
         let label = match self.banner()?.kind {
             BannerKind::Outcome(_) => "continue",
@@ -1044,6 +1078,7 @@ impl BattleScreen {
             }
             Mode::Objective => help_line(&[cancel("back")]),
             Mode::RestartPrompt => help_line(&[confirm("restart"), cancel("back")]),
+            Mode::SuspendPrompt => help_line(&[confirm("suspend"), cancel("back")]),
 
             Mode::EndTurnPrompt { .. } => {
                 let [accept, also] = km.end_turn_accept_actions();
@@ -1335,6 +1370,7 @@ impl BattleScreen {
             | Mode::Objective
             | Mode::EndTurnPrompt { .. }
             | Mode::RestartPrompt
+            | Mode::SuspendPrompt
             | Mode::Info { .. } => return,
             Mode::AiAction(a) if !a.shows_cursor() => return,
             Mode::Selected(sel) => {
@@ -1464,15 +1500,20 @@ impl BattleScreen {
                 ];
                 map_menu::draw_dialog(buf, p, "", &lines);
             }
-            Mode::RestartPrompt => {
+            Mode::RestartPrompt | Mode::SuspendPrompt => {
                 let km = ctx.help_keys();
                 let yes_no = help_line(&[
                     (Some(key_name(km, Action::Confirm)), "yes"),
                     (Some(key_name(km, Action::Cancel)), "no"),
                 ])
                 .replace(SEPARATOR, " / ");
+                let question = if matches!(self.mode, Mode::SuspendPrompt) {
+                    map_menu::SUSPEND_QUESTION
+                } else {
+                    map_menu::RESTART_QUESTION
+                };
                 let lines = [
-                    (map_menu::RESTART_QUESTION.to_owned(), UiColor::Text),
+                    (question.to_owned(), UiColor::Text),
                     (yes_no, UiColor::TextDim),
                 ];
                 map_menu::draw_dialog(buf, p, "", &lines);
@@ -1601,24 +1642,6 @@ fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
     }
 }
 
-/// The help line of an EXP bar or level-up page: skip and fast while it
-/// plays, then continue.
-fn progress_help(p: &Progress, km: HelpKeys<'_>) -> String {
-    playing_help(p.page_played(), km)
-}
-
-/// The help line of something that plays by itself (an EXP bar, the
-/// results): skip and fast until it has `played`, then continue.
-pub(crate) fn playing_help(played: bool, km: HelpKeys<'_>) -> String {
-    let confirm = key_name(km, Action::Confirm);
-    if played {
-        help_line(&[(Some(confirm), "continue")])
-    } else {
-        let hold = Some(format!("hold {confirm}"));
-        help_line(&[(Some(confirm), "skip"), (hold, "fast")])
-    }
-}
-
 /// `ON` or `OFF`.
 const fn on_off(on: bool) -> &'static str {
     if on { "ON" } else { "OFF" }
@@ -1702,7 +1725,7 @@ impl Screen for BattleScreen {
                 }
                 _ => self.step_mode(ctx, action),
             }
-            if self.restart {
+            if self.leaving.is_some() {
                 return Transition::Pop;
             }
         }
