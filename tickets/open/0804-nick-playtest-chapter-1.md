@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435"]
+blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435", "0714", "0715", "0716"]
 nick_input: sign-off
 completed:
 ---
@@ -35,6 +35,16 @@ for each: "sure", "yes"):
 - Non-attack skills cost uses per battle (0316, from Nick's review of
   0503). 0803 waits for it too, so its winning replay and difficulty
   numbers are made with the final skill costs.
+
+**Blocker added 2026-10-02:** 0714 (dialogue speakers who aren't units).
+The Chapter 1 script (0707) can't pass its check without it, and 0803
+needs the script.
+
+**Blockers added 2026-10-02 (by 0707):** 0715 and 0716. In Classic a
+companion who dies in the battle still talks in the victory scene; 0715
+lets a script mark lines by who is still in the army, and 0716 rewrites
+the Chapter 1 scenes with it. Nick hasn't been asked whether the playtest
+should wait for these; drop them from `blocked_by` if he says no.
 
 ## Nick input
 

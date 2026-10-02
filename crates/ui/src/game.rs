@@ -96,6 +96,8 @@ impl Game {
         } else {
             TitleScreen::new()
         };
+        // `Continue` and `Load Game` for the saves there are.
+        let title = title.refreshed(&ctx);
         let mut stack = ScreenStack::new(Box::new(title));
         if ctx.layout().is_none() {
             stack.push(Box::new(LayoutPickerScreen::new()));

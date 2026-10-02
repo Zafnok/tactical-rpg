@@ -1,8 +1,9 @@
 //! Scripted tests of the game flow (ticket 0801) through the real game:
 //! New Game → mode → lead → the test chapter (`assets/chapters/test.ron`:
 //! an intro scene, a battle where the lead seizes the fort at (5, 5)
-//! within 3 turns, a victory scene) → "To be continued" → title. Battles
-//! are won and lost with scripted commands.
+//! within 3 turns, a victory scene) → "Save your progress?" (declined
+//! here; `tests/save.rs` saves) → "To be continued" → title. Battles are
+//! won and lost with scripted commands.
 
 use insta::assert_snapshot;
 use trpg_core::{
@@ -49,11 +50,16 @@ fn to_notes() -> Harness {
     h
 }
 
-/// [`to_notes`], and the battle notes closed.
+/// [`to_notes`], and the battle notes closed, then the `PLAYER PHASE`
+/// banner after them.
 fn to_battle() -> Harness {
     let mut h = to_notes();
     h.keys("f");
     assert!(!notes_open(&h));
+    assert!(h.snapshot().contains("PLAYER PHASE"));
+    assert!(h.snapshot().contains("Turn 1/3"));
+    h.keys("f");
+    assert!(!h.snapshot().contains("PLAYER PHASE"));
     h
 }
 
@@ -107,8 +113,15 @@ fn confirm_until(h: &mut Harness, name: &str) {
     panic!("never reached {name}: {:?}", h.screens());
 }
 
+/// Answers "Save your progress?" with No.
+fn decline_save(h: &mut Harness) {
+    assert_eq!(h.screens(), ["title", "save_prompt"]);
+    h.keys("Down f");
+}
+
 /// Acceptance: New Game on the test chapter → skip the scenes → win with
-/// scripted commands → the victory scene → "To be continued" → title.
+/// scripted commands → the victory scene → the save prompt → "To be
+/// continued" → title.
 #[test]
 fn new_game_plays_the_test_chapter_to_the_end() {
     let mut h = to_battle();
@@ -129,6 +142,7 @@ fn new_game_plays_the_test_chapter_to_the_end() {
     assert_eq!(rewards.unused_charges, 3);
     assert_eq!(rewards.bonus_exp, 21);
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "to_be_continued"]);
     assert_snapshot!(h.snapshot());
     h.keys("f");
@@ -207,6 +221,9 @@ fn retry_after_a_defeat_restarts_the_battle() {
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
     assert!(notes_open(&h));
+    h.keys("f");
+    assert!(shows(&h, "PLAYER PHASE"), "{}", h.snapshot());
+    assert!(shows(&h, "Turn 1/3"));
     // Lose again, and go back to the title.
     for _ in 0..6 {
         send(&mut h, &Command::EndPhase);
@@ -239,8 +256,8 @@ fn restart_battle_from_the_map_menu() {
             action: UnitAction::Wait,
         },
     );
-    // The map menu: Units, Objective, (Options, Suspend), Restart Battle.
-    h.keys("d Down Down f");
+    // The map menu: Units, Objective, (Options), Suspend, Restart Battle.
+    h.keys("d Down Down Down f");
     assert!(
         shows(&h, "Restart the battle from turn 1?"),
         "{}",
@@ -255,6 +272,9 @@ fn restart_battle_from_the_map_menu() {
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
     assert!(notes_open(&h));
+    h.keys("f");
+    assert!(shows(&h, "PLAYER PHASE"), "{}", h.snapshot());
+    assert!(shows(&h, "Turn 1/3"));
 }
 
 /// Acceptance (0411): the test battle's two notes show in a box when the
@@ -285,6 +305,12 @@ fn battle_notes_show_at_the_start_and_on_the_objective_page() {
     assert!(!shows(&h, "BATTLE NOTES"));
     assert!(!shows(&h, "Brigand: guards"));
     assert_eq!(battle(&h), start);
+    // Then turn 1's `PLAYER PHASE` banner (0435), then the map.
+    assert!(shows(&h, "PLAYER PHASE"), "{}", h.snapshot());
+    assert!(shows(&h, "Turn 1/3"));
+    h.keys("f");
+    assert!(!shows(&h, "PLAYER PHASE"));
+    assert_eq!(battle(&h), start);
     // The map menu's Objective page: the objective, then the notes.
     h.keys("d Down f");
     assert!(shows(&h, "Seize the Fort"), "{}", h.snapshot());
@@ -313,9 +339,14 @@ fn the_phase_banner_waits_for_the_battle_notes() {
     h.keys("Left");
     assert!(notes_open(&h));
     assert!(!banner(&h));
-    assert!(!shows(&h, "ENEMY PHASE"));
+    assert!(!shows(&h, "PHASE"));
+    // The banners come in order: turn 1's player phase, then the enemy's.
     h.keys("f");
     assert!(!notes_open(&h));
+    assert!(banner(&h));
+    assert!(shows(&h, "PLAYER PHASE"), "{}", h.snapshot());
+    assert!(!shows(&h, "ENEMY PHASE"));
+    h.keys("f");
     assert!(banner(&h));
     assert!(shows(&h, "ENEMY PHASE"), "{}", h.snapshot());
 }
@@ -330,6 +361,9 @@ fn no_notes_box_for_a_battle_without_notes() {
     assert!(battle(&h).battle_notes().is_empty());
     assert!(!notes_open(&h));
     assert!(!shows(&h, "BATTLE NOTES"));
+    // It opens on the `PLAYER PHASE` banner.
+    assert!(shows(&h, "PLAYER PHASE"), "{}", h.snapshot());
+    h.keys("f");
     // The Objective page: only the objective and the turn.
     h.keys("d Down f");
     assert!(shows(&h, "Rout the enemy"), "{}", h.snapshot());
@@ -356,7 +390,8 @@ fn skirmish_pick(h: &mut Harness, n: u64) -> String {
 
 /// Ticket 0807: a story battle's cue starts with the battle (the intro
 /// scene still has the title's music), stays through turns, a rewind and
-/// the victory scene, and stops at "To be continued"; then the title's.
+/// the victory scene and the save prompt, and stops at "To be continued";
+/// then the title's.
 #[test]
 fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
     let mut h = title();
@@ -369,9 +404,9 @@ fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
     skip_scene(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(music(&h), ["title", "battle_easy"]);
-    // The battle notes closed. A move, rewound; then a whole turn: enemy
-    // phase, player phase.
-    h.keys("f");
+    // The battle notes closed, and the banner after them. A move, rewound;
+    // then a whole turn: enemy phase, player phase.
+    h.keys("f f");
     send(
         &mut h,
         &Command::Act {
@@ -392,6 +427,7 @@ fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
     assert_eq!(h.screens(), ["title", "dialogue"]);
     assert_eq!(music(&h), ["title", "battle_easy"]);
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "to_be_continued"]);
     assert_eq!(music(&h), ["title", "battle_easy", "-"]);
     h.keys("f").wait(0.1);
@@ -430,7 +466,7 @@ fn game_over_is_silent_and_retry_plays_the_battles_music_again() {
 fn restart_battle_asks_for_the_battles_music_again() {
     let mut h = to_battle();
     h.clear_audio();
-    h.keys("d Down Down f f f");
+    h.keys("d Down Down Down f f f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h).turn(), 1);
     assert_eq!(music(&h), [skirmish_pick(&mut h, 1)]);
@@ -444,7 +480,7 @@ fn restart_battle_asks_for_the_battles_music_again() {
     // The battle notes closed.
     h.keys("f");
     h.wait(2.0).clear_audio();
-    h.keys("d Down Down f f f").wait(2.0);
+    h.keys("d Down Down Down f f f").wait(2.0);
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(music(&h), ["battle_easy"]);
     assert!(h.music_commands().is_empty(), "{:?}", h.music_commands());
@@ -501,10 +537,11 @@ fn the_next_chapter_follows_a_victory() {
     // New Game, Classic, Start.
     h.keys("f f Up f");
     skip_scene(&mut h);
-    // The battle notes, then the VICTORY banner.
+    // The battle notes, turn 1's banner, then the VICTORY banner.
     seize(&mut h);
-    h.keys("f f");
+    h.keys("f f f");
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     assert_eq!(flow.chapter().map(|c| c.id.as_str()), Some("quick"));

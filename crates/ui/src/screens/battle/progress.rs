@@ -9,6 +9,13 @@
 //! [`Event::SpellLearned`]). Everything shown comes from the events; this
 //! only times and draws them.
 //!
+//! A class change (ticket 0603; between battles, on the class-choice
+//! screen) uses the same pages: a promotion ([`Event::Promoted`]) shows the
+//! level-up panel with `PROMOTED!`, `Guard → Iron Rider` and its stat
+//! bonus; a reclass ([`Event::Reclassed`]) shows the class box with
+//! `Guard → Mage`. Spells learned and items sent to the stock
+//! ([`Event::ItemStowed`]) are listed in the class box.
+//!
 //! Holding Confirm plays a page [`ProgressTimings::fast`] times as fast;
 //! pressing it finishes the page's animation (reveals every stat), and on a
 //! finished page that waits for the player, closes it. Cancel does the same
@@ -19,8 +26,8 @@ use std::collections::BTreeMap;
 use trpg_content::Portrait;
 use trpg_core::progression::EXP_PER_LEVEL;
 use trpg_core::{
-    BattleState, ClassId, ClassLevel, Event, Faction, Level, StatGains, StatKind, StatValue, Unit,
-    UnitId,
+    BattleState, ClassId, ClassLevel, ClassTable, Event, Faction, ItemTable, Level, SkillTable,
+    SpellTable, StatGains, StatKind, StatValue, Unit, UnitId,
 };
 
 use super::info::stat_name;
@@ -28,7 +35,9 @@ use super::layout::MAP_VIEW;
 use super::playback::BOX;
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
+use crate::input::Action;
 use crate::portrait::draw_portrait;
+use crate::widgets::help::{HelpKeys, help_line, key_name};
 
 /// How long each page's parts take, in seconds. *Tunable.*
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -89,6 +98,26 @@ pub struct LevelUpPage {
     pub gains: StatGains,
 }
 
+/// The stat bonus of one promotion (ticket 0603), shown like a level up.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PromotionPage {
+    /// The unit.
+    pub unit: UnitId,
+    /// Its name.
+    pub name: String,
+    /// Its character's portrait id, if it is a named character.
+    pub character: Option<String>,
+    /// The name of the class it left.
+    pub from: String,
+    /// The name of its new class.
+    pub to: String,
+    /// Each growable stat before the promotion ([`StatKind::GROWABLE`]
+    /// order).
+    pub before: [StatValue; 7],
+    /// The promotion bonus of each stat.
+    pub gains: StatGains,
+}
+
 /// A unit's class progress.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassPage {
@@ -96,7 +125,7 @@ pub struct ClassPage {
     pub unit: UnitId,
     /// Its name.
     pub name: String,
-    /// The class's name.
+    /// The class's name (`Guard → Mage` for a reclass).
     pub class: String,
     /// The class level before and after, if it rose.
     pub class_levels: Option<(ClassLevel, ClassLevel)>,
@@ -104,6 +133,10 @@ pub struct ClassPage {
     pub mastered: bool,
     /// Names of the skills and spells learned, in event order.
     pub learned: Vec<String>,
+    /// Whether the unit changed class with a Reclass Seal.
+    pub changed: bool,
+    /// Names of the items a class change sent to the stock, in event order.
+    pub stowed: Vec<String>,
 }
 
 /// One page of the sequence.
@@ -113,6 +146,8 @@ pub enum Page {
     Exp(ExpPage),
     /// A level up.
     LevelUp(LevelUpPage),
+    /// A promotion's stat bonus.
+    Promotion(PromotionPage),
     /// Class progress.
     Class(ClassPage),
 }
@@ -124,7 +159,9 @@ impl Page {
             Page::Exp(_) => t.exp_fill + t.exp_hold,
             // Seven stats: small, exact.
             #[allow(clippy::cast_precision_loss)]
-            Page::LevelUp(_) => t.level_intro + t.stat_reveal * StatKind::GROWABLE.len() as f32,
+            Page::LevelUp(_) | Page::Promotion(_) => {
+                t.level_intro + t.stat_reveal * StatKind::GROWABLE.len() as f32
+            }
             Page::Class(c) if c.waits() => 0.0,
             Page::Class(_) => t.class_hold,
         }
@@ -135,16 +172,49 @@ impl Page {
     pub fn waits(&self) -> bool {
         match self {
             Page::Exp(_) => false,
-            Page::LevelUp(_) => true,
+            Page::LevelUp(_) | Page::Promotion(_) => true,
             Page::Class(c) => c.waits(),
         }
     }
 }
 
 impl ClassPage {
-    /// A mastery or something learned is worth stopping for.
+    /// A mastery, something learned or a class change is worth stopping
+    /// for.
     fn waits(&self) -> bool {
-        self.mastered || !self.learned.is_empty()
+        self.mastered || !self.learned.is_empty() || self.changed || !self.stowed.is_empty()
+    }
+}
+
+/// The content tables that name what a unit gained.
+#[derive(Debug, Clone, Copy)]
+pub struct ProgressTables<'a> {
+    /// Classes.
+    pub classes: &'a ClassTable,
+    /// Skills.
+    pub skills: &'a SkillTable,
+    /// Spells.
+    pub spells: &'a SpellTable,
+    /// Items.
+    pub items: &'a ItemTable,
+}
+
+impl<'a> ProgressTables<'a> {
+    /// The tables of the battle `state`.
+    pub fn of(state: &'a BattleState) -> Self {
+        Self {
+            classes: state.classes(),
+            skills: state.skills(),
+            spells: state.spells(),
+            items: state.items(),
+        }
+    }
+
+    /// The name of class `id` (its id if it is missing).
+    fn class_name(&self, id: &ClassId) -> String {
+        self.classes
+            .get(id)
+            .map_or_else(|| id.0.clone(), |c| c.name.clone())
     }
 }
 
@@ -157,11 +227,16 @@ struct Gathered {
     class_levels: Option<(ClassLevel, ClassLevel)>,
     mastered: bool,
     learned: Vec<String>,
+    /// A promotion: the classes' names and the bonus.
+    promoted: Option<(String, String, StatGains)>,
+    /// A reclass: the classes' names.
+    reclassed: Option<(String, String)>,
+    stowed: Vec<String>,
 }
 
 impl Gathered {
-    /// Adds `event` (one of this unit's); `state` names skills and spells.
-    fn add(&mut self, event: &Event, state: &BattleState) {
+    /// Adds `event` (one of this unit's); `tables` names what it gained.
+    fn add(&mut self, event: &Event, tables: &ProgressTables<'_>) {
         match event {
             Event::ExpGained { amount, .. } => {
                 self.exp = Some(self.exp.unwrap_or(0).saturating_add(*amount));
@@ -181,21 +256,35 @@ impl Gathered {
                 self.mastered = true;
             }
             Event::SkillLearned { skill, .. } => {
-                let name = state.skills().get(skill).map(|s| s.name.clone());
+                let name = tables.skills.get(skill).map(|s| s.name.clone());
                 self.learned.extend(name);
             }
             Event::SpellLearned { spell, .. } => {
-                let name = state.spells().get(spell).map(|s| s.name.clone());
+                let name = tables.spells.get(spell).map(|s| s.name.clone());
                 self.learned.extend(name);
+            }
+            Event::Promoted {
+                from, to, gains, ..
+            } => {
+                self.class = Some(to.clone());
+                self.promoted = Some((tables.class_name(from), tables.class_name(to), *gains));
+            }
+            Event::Reclassed { from, to, .. } => {
+                self.class = Some(to.clone());
+                self.reclassed = Some((tables.class_name(from), tables.class_name(to)));
+            }
+            Event::ItemStowed { item, .. } => {
+                let name = tables.items.get(item).map(|i| i.name().to_owned());
+                self.stowed.extend(name);
             }
             _ => {}
         }
     }
 
     /// `unit`'s pages (as it was before the command): its EXP bar, a page
-    /// per level up (each starting from the stats the last one left) and
-    /// its class progress.
-    fn pages(self, unit: &Unit, state: &BattleState) -> Vec<Page> {
+    /// per level up (each starting from the stats the last one left), a
+    /// promotion's bonus, and its class progress.
+    fn pages(self, unit: &Unit, tables: &ProgressTables<'_>) -> Vec<Page> {
         let mut pages = Vec::new();
         let (id, name) = (unit.id, unit.name.clone());
         if let Some(gained) = self.exp {
@@ -220,12 +309,24 @@ impl Gathered {
                 *v = v.saturating_add(g);
             }
         }
-        if self.class_levels.is_some() || self.mastered || !self.learned.is_empty() {
-            let class_id = self.class.unwrap_or_else(|| unit.class.clone());
-            let class = state
-                .classes()
-                .get(&class_id)
-                .map_or_else(|| class_id.0.clone(), |c| c.name.clone());
+        if let Some((from, to, gains)) = self.promoted {
+            pages.push(Page::Promotion(PromotionPage {
+                unit: id,
+                name: name.clone(),
+                character: unit.character.as_ref().map(|c| c.0.clone()),
+                from,
+                to,
+                before: running,
+                gains,
+            }));
+        }
+        let changed = self.reclassed.is_some();
+        let progressed = self.class_levels.is_some() || self.mastered || changed;
+        if progressed || !self.learned.is_empty() || !self.stowed.is_empty() {
+            let class = match self.reclassed {
+                Some((from, to)) => format!("{from} → {to}"),
+                None => tables.class_name(&self.class.unwrap_or_else(|| unit.class.clone())),
+            };
             pages.push(Page::Class(ClassPage {
                 unit: id,
                 name,
@@ -233,6 +334,8 @@ impl Gathered {
                 class_levels: self.class_levels,
                 mastered: self.mastered,
                 learned: self.learned,
+                changed,
+                stowed: self.stowed,
             }));
         }
         pages
@@ -247,7 +350,10 @@ fn progress_unit(event: &Event) -> Option<UnitId> {
         | Event::ClassLeveledUp { unit, .. }
         | Event::ClassMastered { unit, .. }
         | Event::SkillLearned { unit, .. }
-        | Event::SpellLearned { unit, .. } => Some(*unit),
+        | Event::SpellLearned { unit, .. }
+        | Event::Promoted { unit, .. }
+        | Event::Reclassed { unit, .. }
+        | Event::ItemStowed { unit, .. } => Some(*unit),
         _ => None,
     }
 }
@@ -273,6 +379,17 @@ impl Progress {
         state: &BattleState,
         timings: ProgressTimings,
     ) -> Option<Self> {
+        Self::with_tables(events, before, &ProgressTables::of(state), timings)
+    }
+
+    /// [`Progress::new`] with the content `tables` instead of a battle's:
+    /// for events made outside a battle (a class change).
+    pub fn with_tables(
+        events: &[Event],
+        before: &[Unit],
+        tables: &ProgressTables<'_>,
+        timings: ProgressTimings,
+    ) -> Option<Self> {
         let mut gathered: Vec<(&Unit, Gathered)> = Vec::new();
         for event in events {
             let Some(id) = progress_unit(event) else {
@@ -286,12 +403,12 @@ impl Progress {
                 gathered.push((unit, Gathered::default()));
             }
             if let Some((_, g)) = gathered.iter_mut().find(|(u, _)| u.id == id) {
-                g.add(event, state);
+                g.add(event, tables);
             }
         }
         let pages: Vec<Page> = gathered
             .into_iter()
-            .flat_map(|(unit, g)| g.pages(unit, state))
+            .flat_map(|(unit, g)| g.pages(unit, tables))
             .collect();
         if pages.is_empty() {
             return None;
@@ -388,9 +505,9 @@ impl Progress {
         Some(p.from.saturating_add(moved.min(p.gained)))
     }
 
-    /// How many of the level-up page's stat rows are shown.
+    /// How many of the level-up (or promotion) page's stat rows are shown.
     pub fn stats_shown(&self) -> usize {
-        let Some(Page::LevelUp(_)) = self.page() else {
+        let Some(Page::LevelUp(_) | Page::Promotion(_)) = self.page() else {
             return 0;
         };
         let t = self.t - self.timings.level_intro;
@@ -401,6 +518,18 @@ impl Progress {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let n = (t / self.timings.stat_reveal.max(f32::EPSILON) + 1e-3) as usize;
         (n + 1).min(StatKind::GROWABLE.len())
+    }
+}
+
+/// The help line of an EXP bar, level-up or class page: skip and fast while
+/// it plays, then continue.
+pub fn help(p: &Progress, km: HelpKeys<'_>) -> String {
+    let confirm = key_name(km, Action::Confirm);
+    if p.page_played() {
+        help_line(&[(Some(confirm), "continue")])
+    } else {
+        let hold = Some(format!("hold {confirm}"));
+        help_line(&[(Some(confirm), "skip"), (hold, "fast")])
     }
 }
 
@@ -480,6 +609,10 @@ pub fn draw(
             let portrait = p.character.as_ref().and_then(|c| portraits.get(c));
             draw_level_up(buf, palette, p, portrait, progress.stats_shown());
         }
+        Some(Page::Promotion(p)) => {
+            let portrait = p.character.as_ref().and_then(|c| portraits.get(c));
+            draw_promotion(buf, palette, p, portrait, progress.stats_shown());
+        }
         Some(Page::Class(p)) => draw_class(buf, palette, p),
         None => {}
     }
@@ -516,6 +649,71 @@ fn draw_level_up(
     buf: &mut GlyphBuffer,
     palette: &Palette,
     page: &LevelUpPage,
+    portrait: Option<&Portrait>,
+    shown: usize,
+) {
+    let text = GainText {
+        banner: "LEVEL UP!",
+        name: &page.name,
+        line: format!("Lv {} → {}", page.level.saturating_sub(1), page.level),
+    };
+    draw_gains(
+        buf,
+        palette,
+        &text,
+        (&page.before, &page.gains),
+        portrait,
+        shown,
+    );
+}
+
+/// The banner of a promotion's page.
+pub const PROMOTED_BANNER: &str = "PROMOTED!";
+
+/// The level-up panel for a promotion: `PROMOTED!`, the name,
+/// `Guard → Iron Rider`, and the first `shown` stat rows with the bonus.
+fn draw_promotion(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    page: &PromotionPage,
+    portrait: Option<&Portrait>,
+    shown: usize,
+) {
+    let text = GainText {
+        banner: PROMOTED_BANNER,
+        name: &page.name,
+        line: format!("{} → {}", page.from, page.to),
+    };
+    draw_gains(
+        buf,
+        palette,
+        &text,
+        (&page.before, &page.gains),
+        portrait,
+        shown,
+    );
+}
+
+/// The words of the level-up panel.
+struct GainText<'a> {
+    /// The banner, e.g. `LEVEL UP!`.
+    banner: &'a str,
+    /// The unit's name.
+    name: &'a str,
+    /// What changed, e.g. `Lv 4 → 5`.
+    line: String,
+}
+
+/// Widest text in the level-up panel's text column.
+const LEVEL_TEXT_W: usize = 20;
+
+/// The level-up panel: portrait (or a placeholder box), `text`, and the
+/// first `shown` rows of the stats `before` with their `gains`.
+fn draw_gains(
+    buf: &mut GlyphBuffer,
+    palette: &Palette,
+    text: &GainText<'_>,
+    (before, gains): (&[StatValue; 7], &StatGains),
     portrait: Option<&Portrait>,
     shown: usize,
 ) {
@@ -556,17 +754,28 @@ fn draw_level_up(
     buf.print(
         x,
         LEVEL_BANNER_ROW,
-        "LEVEL UP!",
+        text.banner,
         c(UiColor::TextHighlight),
         bg,
     );
-    let name: String = page.name.chars().take(20).collect();
-    buf.print(x, LEVEL_BANNER_ROW + 2, &name, c(UiColor::Player), bg);
-    let lv = format!("Lv {} → {}", page.level.saturating_sub(1), page.level);
-    buf.print(x, LEVEL_BANNER_ROW + 3, &lv, c(UiColor::Text), bg);
+    let cut = |s: &str| s.chars().take(LEVEL_TEXT_W).collect::<String>();
+    buf.print(
+        x,
+        LEVEL_BANNER_ROW + 2,
+        &cut(text.name),
+        c(UiColor::Player),
+        bg,
+    );
+    buf.print(
+        x,
+        LEVEL_BANNER_ROW + 3,
+        &cut(&text.line),
+        c(UiColor::Text),
+        bg,
+    );
     for (i, kind) in StatKind::GROWABLE.iter().enumerate().take(shown) {
-        let gain = page.gains.0[i];
-        let row = stat_row(*kind, page.before[i], gain);
+        let gain = gains.0[i];
+        let row = stat_row(*kind, before[i], gain);
         let y = STAT_ROW + i32::try_from(i).unwrap_or(0);
         if gain > 0 {
             let n = buf.print(x, y, &row, c(UiColor::Text), bg);
@@ -580,14 +789,14 @@ fn draw_level_up(
     }
 }
 
-/// The class box: the name and `Exile  CL 3 → 4`, then `CLASS MASTERED!`
-/// and a `Learned: <name>` line each.
+/// The class box: the name and `Exile  CL 3 → 4`, then `CLASS MASTERED!`,
+/// a `Learned: <name>` line each, and a `To stock: <item>` line each.
 fn draw_class(buf: &mut GlyphBuffer, palette: &Palette, page: &ClassPage) {
     let c = |u| palette.get(u);
     let bg = c(UiColor::PanelBg);
     let mastery = i32::from(page.mastered);
-    let learned = i32::try_from(page.learned.len()).unwrap_or(0);
-    let h = 3 + mastery + learned;
+    let lines = page.learned.len() + page.stowed.len();
+    let h = 3 + mastery + i32::try_from(lines).unwrap_or(0);
     let rect = Rect::new(BOX.x, BOX.y, BOX.w, h);
     buf.fill_rect(rect, Cell::new(' ', c(UiColor::Text), bg));
     buf.draw_box(rect, BoxStyle::Double, c(UiColor::PanelBorderFocus), bg);
@@ -601,9 +810,11 @@ fn draw_class(buf: &mut GlyphBuffer, palette: &Palette, page: &ClassPage) {
         y += 1;
         buf.print(x, y, "CLASS MASTERED!", c(UiColor::TextHighlight), bg);
     }
-    for skill in &page.learned {
+    let learned = page.learned.iter().map(|s| format!("Learned: {s}"));
+    let stowed = page.stowed.iter().map(|s| format!("To stock: {s}"));
+    for line in learned.chain(stowed) {
         y += 1;
-        let line: String = format!("Learned: {skill}").chars().take(38).collect();
+        let line: String = line.chars().take(38).collect();
         buf.print(x, y, &line, c(UiColor::Text), bg);
     }
 }
@@ -875,6 +1086,171 @@ mod tests {
         let label: String = (20..28).map(|x| buf.get(x, 15).unwrap().glyph).collect();
         assert_eq!(label, "portrait");
         assert_eq!(buf.get(19, 15).unwrap().glyph, ' ');
+    }
+
+    /// The lord promotes (ticket 0603): its bonus, a spell and a weapon
+    /// sent to the stock.
+    fn promotion_events() -> Vec<Event> {
+        let lord = UnitId(1);
+        vec![
+            Event::Promoted {
+                unit: lord,
+                from: ClassId("exile".into()),
+                to: ClassId("blade_heir".into()),
+                gains: gains([6, 3, 0, 4, 5, 2, 2]),
+            },
+            Event::SpellLearned {
+                unit: lord,
+                spell: SpellId::new("fire"),
+            },
+            Event::ItemStowed {
+                unit: lord,
+                item: trpg_core::ItemId::new("iron_sword"),
+            },
+        ]
+    }
+
+    #[test]
+    fn a_promotion_shows_its_bonus_like_a_level_up_then_what_came_with_it() {
+        let s = state();
+        let before = s.units().to_vec();
+        let tables = ProgressTables::of(&s);
+        let mut pb = Progress::with_tables(&promotion_events(), &before, &tables, T).unwrap();
+        assert_eq!(
+            pb.pages()[0],
+            Page::Promotion(PromotionPage {
+                unit: UnitId(1),
+                name: "Test Lord".into(),
+                character: Some("test_lord".into()),
+                from: "Exile".into(),
+                to: "Blade Heir".into(),
+                before: [19, 6, 1, 7, 7, 4, 3],
+                gains: gains([6, 3, 0, 4, 5, 2, 2]),
+            })
+        );
+        let Page::Class(cl) = &pb.pages()[1] else {
+            panic!("{:?}", pb.pages())
+        };
+        assert_eq!(class_line(cl), "Blade Heir");
+        assert_eq!((cl.mastered, cl.changed), (false, false));
+        assert_eq!(
+            (&cl.learned, &cl.stowed),
+            (&vec!["Fire".into()], &vec!["Iron Sword".to_owned()])
+        );
+        assert_eq!(pb.pages().len(), 2);
+        // The stats are revealed one at a time, and the page waits.
+        assert!(pb.pages()[0].waits());
+        assert_eq!(pb.stats_shown(), 0);
+        pb.tick(T.level_intro + T.stat_reveal, false);
+        assert_eq!(pb.stats_shown(), 2);
+        pb.tick(60.0, false);
+        assert_eq!((pb.stats_shown(), pb.index()), (7, 0));
+        assert!(pb.page_played());
+        pb.confirm();
+        assert_eq!((pb.stats_shown(), pb.index()), (0, 1));
+        // Drawn: the banner and the classes where a level up has its own.
+        let c = ctx();
+        let p = &c.palette;
+        let blank = Cell::new(' ', p.get(UiColor::Text), p.get(UiColor::Black));
+        let mut buf = GlyphBuffer::new(100, 32, blank);
+        let Page::Promotion(page) = &pb.pages()[0] else {
+            panic!()
+        };
+        draw_promotion(&mut buf, p, page, None, 7);
+        let row = |buf: &GlyphBuffer, y: i32| {
+            (LEVEL_TEXT_X..LEVEL_PANEL.x + LEVEL_PANEL.w - 1)
+                .map(|x| buf.get(x, y).unwrap().glyph)
+                .collect::<String>()
+                .trim_end()
+                .to_owned()
+        };
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW), PROMOTED_BANNER);
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW + 2), "Test Lord");
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW + 3), "Exile → Blade Heir");
+        assert_eq!(row(&buf, STAT_ROW), "HP   19 → 25  +6");
+        assert_eq!(row(&buf, STAT_ROW + 2), "Mag   1");
+        // A level up's words, in the same places.
+        let level_up = LevelUpPage {
+            unit: page.unit,
+            name: "A name longer than twenty cells".into(),
+            character: None,
+            level: 5,
+            before: page.before,
+            gains: page.gains,
+        };
+        draw_level_up(&mut buf, p, &level_up, None, 1);
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW), "LEVEL UP!");
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW + 2), "A name longer than t");
+        assert_eq!(row(&buf, LEVEL_BANNER_ROW + 3), "Lv 4 → 5");
+        assert_eq!(row(&buf, STAT_ROW + 1), "");
+    }
+
+    #[test]
+    fn a_reclass_or_a_stowed_item_is_worth_stopping_for() {
+        let s = state();
+        let before = s.units().to_vec();
+        let lord = UnitId(1);
+        // Class ids missing from the table are shown as they are.
+        let reclassed = [Event::Reclassed {
+            unit: lord,
+            from: ClassId("exile".into()),
+            to: ClassId("gone".into()),
+        }];
+        let pb = Progress::new(&reclassed, &before, &s, T).unwrap();
+        let [Page::Class(cl)] = pb.pages() else {
+            panic!("{:?}", pb.pages())
+        };
+        assert_eq!(class_line(cl), "Exile → gone");
+        assert!(cl.changed && cl.learned.is_empty() && cl.stowed.is_empty());
+        assert!(pb.pages()[0].waits());
+        assert!(pb.pages()[0].len(&T).abs() < f32::EPSILON);
+        let stowed = [Event::ItemStowed {
+            unit: lord,
+            item: trpg_core::ItemId::new("leather_vest"),
+        }];
+        let pb = Progress::new(&stowed, &before, &s, T).unwrap();
+        let [Page::Class(cl)] = pb.pages() else {
+            panic!("{:?}", pb.pages())
+        };
+        assert_eq!((class_line(cl), cl.changed), ("Exile".to_owned(), false));
+        assert_eq!(cl.stowed, ["Leather Vest"]);
+        assert!(pb.pages()[0].waits());
+        // Its lines are drawn under the name's.
+        let c = ctx();
+        let p = &c.palette;
+        let blank = Cell::new(' ', p.get(UiColor::Text), p.get(UiColor::Black));
+        let mut buf = GlyphBuffer::new(100, 32, blank);
+        let page = ClassPage {
+            learned: vec!["Fire".into()],
+            ..cl.clone()
+        };
+        draw_class(&mut buf, p, &page);
+        let row = |y: i32| {
+            (BOX.x + 2..BOX.x + BOX.w - 1)
+                .map(|x| buf.get(x, y).unwrap().glyph)
+                .collect::<String>()
+                .trim_end()
+                .to_owned()
+        };
+        assert_eq!(row(BOX.y + 2), "Learned: Fire");
+        assert_eq!(row(BOX.y + 3), "To stock: Leather Vest");
+        // The box is as tall as its lines: its bottom border is next.
+        assert_eq!(buf.get(BOX.x, BOX.y + 4).unwrap().glyph, '╚');
+        // An item missing from the table has no line.
+        let ghost = [Event::ItemStowed {
+            unit: lord,
+            item: trpg_core::ItemId::new("ghost"),
+        }];
+        assert_eq!(Progress::new(&ghost, &before, &s, T), None);
+    }
+
+    #[test]
+    fn the_help_line_follows_the_page() {
+        let c = ctx();
+        let mut pb = progress();
+        assert_eq!(help(&pb, c.help_keys()), "f skip · hold f fast");
+        pb.confirm();
+        assert_eq!(help(&pb, c.help_keys()), "f continue");
     }
 
     #[test]

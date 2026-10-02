@@ -28,6 +28,10 @@ fn narrate(text: &str) -> Step {
     Step::Narrate { text: text.into() }
 }
 
+fn music(cue: &str) -> Step {
+    Step::Music(MusicLine::Cue(cue.into()))
+}
+
 fn characters() -> CharacterTable {
     crate::character::load(None, None, None).unwrap_or_default()
 }
@@ -39,12 +43,18 @@ fn names() -> Names {
 /// Every error for one file `t.dlg`, checked against the embedded
 /// (placeholder) characters and the names table.
 fn errors(src: &str) -> Vec<String> {
-    from_sources(&[("t.dlg", src)], Some(&characters()), None, Some(&names()))
-        .err()
-        .unwrap_or_default()
-        .iter()
-        .map(ToString::to_string)
-        .collect()
+    from_sources(
+        &[("t.dlg", src)],
+        Some(&characters()),
+        None,
+        Some(&names()),
+        None,
+    )
+    .err()
+    .unwrap_or_default()
+    .iter()
+    .map(ToString::to_string)
+    .collect()
 }
 
 /// The scenes of `src`, parsed without checks.
@@ -134,7 +144,13 @@ fn several_scenes_per_file_and_crlf() {
 #[test]
 fn a_valid_scene_loads() {
     let src = scene("test_lord[sad]: Hi.\n@left clear\n@left test_archer happy\ntest_archer: Yo.");
-    let table = from_sources(&[("t.dlg", src.as_str())], Some(&characters()), None, None);
+    let table = from_sources(
+        &[("t.dlg", src.as_str())],
+        Some(&characters()),
+        None,
+        None,
+        None,
+    );
     assert_eq!(
         table.map(|t| t.get("s").map(|s| s.steps.len())),
         Ok(Some(6))
@@ -145,7 +161,7 @@ fn a_valid_scene_loads() {
 #[test]
 fn without_characters_ids_are_not_checked() {
     let src = "@scene a\n@left nobody neutral\nnobody: Hi.\n@end\n";
-    assert!(from_sources(&[("t.dlg", src)], None, None, None).is_ok());
+    assert!(from_sources(&[("t.dlg", src)], None, None, None, None).is_ok());
     assert_eq!(
         errors(src),
         [
@@ -308,6 +324,32 @@ fn unknown_characters() {
 }
 
 #[test]
+fn speakers_who_are_not_units_may_be_placed_and_speak() {
+    let src = "@scene s\n@left retainer neutral\n@right rival angry\n\
+               retainer: Hold.\nrival[happy]: No.\n@end\n";
+    assert_eq!(errors(src), [] as [&str; 0]);
+    let characters = characters();
+    assert!(!characters.speakers.is_empty());
+    let (parsed, parse_errors) = parse_dlg("t.dlg", src);
+    assert_eq!(parse_errors, []);
+    assert_eq!(parsed.len(), 1);
+    for p in &parsed {
+        assert_eq!(
+            check_scene(p, Some(&characters), None, Some(&names()), None),
+            []
+        );
+    }
+    // Someone in neither list still fails, next to a speaker.
+    assert_eq!(
+        errors("@scene s\n@left retainer neutral\n@right mira neutral\nmira: Hey.\n@end\n"),
+        [
+            "t.dlg:3: unknown character \"mira\"",
+            "t.dlg:4: unknown character \"mira\"",
+        ]
+    );
+}
+
+#[test]
 fn speaker_not_on_screen() {
     assert_eq!(
         errors(&scene(
@@ -344,6 +386,7 @@ fn errors_with(src: &str, portraits: &PortraitTable) -> Vec<String> {
         &[("t.dlg", src)],
         Some(&characters()),
         Some(portraits),
+        None,
         None,
     )
     .err()
@@ -445,7 +488,7 @@ fn scene_without_text() {
 fn duplicate_scene_ids_across_files() {
     let a = "@scene one\n> x\n@end\n@scene two\n> x\n@end\n";
     let b = "\n@scene two\n> y\n@end\n@scene one\n> y\n@end\n";
-    let errs: Vec<String> = from_sources(&[("a.dlg", a), ("b.dlg", b)], None, None, None)
+    let errs: Vec<String> = from_sources(&[("a.dlg", a), ("b.dlg", b)], None, None, None, None)
         .err()
         .unwrap_or_default()
         .iter()
@@ -485,7 +528,7 @@ fn files_that_are_not_utf8() {
     let load = |files: &[(&str, Option<&str>)]| {
         let files: Vec<(String, Option<&str>)> =
             files.iter().map(|&(f, s)| (f.to_owned(), s)).collect();
-        load_files(&files, None, None, None)
+        load_files(&files, None, None, None, None)
             .map_err(|e| e.iter().map(ToString::to_string).collect::<Vec<_>>())
     };
     assert_eq!(load(&[("a.dlg", Some(ok))]).map(|t| t.scenes.len()), Ok(1));
@@ -509,7 +552,7 @@ mod names;
 
 #[test]
 fn embedded_test_scene_loads() {
-    let table = load(Some(&characters()), None, Some(&names()));
+    let table = load(Some(&characters()), None, Some(&names()), None);
     assert!(table.is_ok(), "{table:?}");
     let steps = table
         .ok()
@@ -536,14 +579,20 @@ fn embedded_test_scene_loads() {
 }
 
 /// The full example in `assets/dialogue/README.md` parses and passes every
-/// check except the character ids (its cast isn't in `characters.ron`).
+/// check except the character ids (its cast isn't in `characters.ron`). Its
+/// `@music` lines name real music cues.
 #[test]
 fn readme_example_is_valid() {
     let readme = bundle::file("dialogue/README.md").unwrap_or_default();
     let example = readme.split("```").nth(1).unwrap_or_default();
-    let table = from_sources(&[("README.md", example)], None, None, None);
+    let audio = crate::audio::load().ok();
+    assert!(audio.is_some());
+    let table = from_sources(&[("README.md", example)], None, None, None, audio.as_ref());
     assert!(table.is_ok(), "{table:?}");
     let table = table.unwrap_or_default();
+    let steps = &table.scenes["ch01_opening"].steps;
+    assert!(steps.contains(&music("talk_calm")));
+    assert!(steps.contains(&Step::Music(MusicLine::Stop)));
     assert_eq!(
         table.scenes.keys().collect::<Vec<_>>(),
         ["ch01_after_battle", "ch01_opening"]
@@ -565,6 +614,171 @@ fn step_text() {
     assert_eq!(Step::Caption { text: "c".into() }.text(), None);
     assert_eq!(place(Side::Left, "a", "sad").text(), None);
     assert_eq!(Step::Clear { side: Side::Left }.text(), None);
+    assert_eq!(music("talk_calm").text(), None);
+    assert_eq!(Step::Music(MusicLine::Stop).text(), None);
+}
+
+// --- Music ------------------------------------------------------------------
+
+/// Every error for `t.dlg`, with `@music` cues checked against the
+/// embedded audio manifest.
+fn errors_with_audio(src: &str) -> Vec<String> {
+    let audio = crate::audio::load().unwrap_or_default();
+    from_sources(&[("t.dlg", src)], None, None, None, Some(&audio))
+        .err()
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+}
+
+#[test]
+fn music_lines_parse_anywhere_in_a_scene() {
+    let src = "\
+@scene s
+@music talk_calm
+> One.
+@music  stop
+@choice
+* wry: Hm.
+  @music scene_sad
+  > Two.
+* blunt: No.
+@endchoice
+@music talk_calm
+@end
+";
+    let (parsed, errors) = parse_dlg("t.dlg", src);
+    assert_eq!(errors, []);
+    assert_eq!(
+        parsed[0].scene.steps,
+        [
+            music("talk_calm"),
+            narrate("One."),
+            Step::Music(MusicLine::Stop),
+            Step::Choice {
+                options: vec![
+                    ChoiceOption {
+                        tone: "wry".into(),
+                        text: "Hm.".into(),
+                        steps: vec![music("scene_sad"), narrate("Two.")],
+                    },
+                    ChoiceOption {
+                        tone: "blunt".into(),
+                        text: "No.".into(),
+                        steps: vec![],
+                    },
+                ],
+            },
+            music("talk_calm"),
+        ]
+    );
+    assert_eq!(parsed[0].step_lines, [2, 3, 4, 5, 11]);
+    assert_eq!(parsed[0].choice_lines[0].options[0].step_lines, [7, 8]);
+    assert_eq!(errors_with_audio(src), [] as [&str; 0]);
+}
+
+#[test]
+fn music_needs_exactly_one_argument() {
+    let needs = "@music needs one music cue id, or \"stop\"";
+    assert_eq!(
+        errors(&scene(
+            "@music\n@music talk_calm scene_sad\n@music stop now\n@music Talk\n> x"
+        )),
+        [
+            format!("t.dlg:4: {needs}"),
+            format!("t.dlg:5: {needs}"),
+            format!("t.dlg:6: {needs}"),
+            "t.dlg:7: \"Talk\" is not a valid id; use lowercase letters, digits and _".to_owned(),
+        ]
+    );
+}
+
+/// The music example in `assets/dialogue/README.md` is valid and names
+/// real music cues.
+#[test]
+fn readme_music_example_is_valid() {
+    let readme = bundle::file("dialogue/README.md").unwrap_or_default();
+    let example = readme.split("```").nth(3).unwrap_or_default();
+    assert_eq!(errors_with_audio(example), [] as [&str; 0]);
+    let (parsed, _) = parse_dlg("README.md", example);
+    assert_eq!(parsed[0].scene.id, "ch01_bad_news");
+    assert_eq!(parsed[0].scene.steps[0], music("talk_calm"));
+    assert_eq!(parsed[0].scene.steps[4], music("scene_sad"));
+}
+
+#[test]
+fn music_line_arguments() {
+    assert_eq!(MusicLine::Cue("talk_calm".into()).arg(), "talk_calm");
+    assert_eq!(MusicLine::Stop.arg(), "stop");
+    assert_eq!(MusicLine::STOP, "stop");
+}
+
+#[test]
+fn music_prints_as_written() {
+    let scene = Scene {
+        id: "s".into(),
+        steps: vec![
+            music("talk_calm"),
+            narrate("x"),
+            Step::Music(MusicLine::Stop),
+        ],
+    };
+    let printed = print_scene(&scene);
+    assert_eq!(
+        printed,
+        "@scene s\n@music talk_calm\n> x\n@music stop\n@end\n"
+    );
+    assert_eq!(scenes(&printed), [scene]);
+}
+
+/// `@music` must name a music cue of `assets/audio/audio.ron`: not an
+/// unknown id, a sound or a music pool. In a reply's reaction too.
+#[test]
+fn music_must_be_a_music_cue() {
+    let listed = "music cues are listed in assets/audio/audio.ron";
+    let src = "\
+@scene s
+@music no_such_cue
+@music menu_move
+@music skirmish
+@music talk_calm
+@music stop
+> x
+@choice
+* wry: Hm.
+  @music heal
+* blunt: No.
+@endchoice
+@end
+";
+    assert_eq!(
+        errors_with_audio(src),
+        [
+            format!("t.dlg:2: \"no_such_cue\" is not a music cue; {listed}"),
+            format!("t.dlg:3: \"menu_move\" is a sound, not a music cue; {listed}"),
+            format!("t.dlg:4: \"skirmish\" is a music pool, not a music cue; {listed}"),
+            format!("t.dlg:10: \"heal\" is a sound, not a music cue; {listed}"),
+        ]
+    );
+    // Without an audio manifest (it failed to load) cues aren't checked.
+    assert_eq!(errors(src), [] as [&str; 0]);
+}
+
+/// Every embedded script's `@music` cues are checked when the game's
+/// content loads.
+#[test]
+fn the_embedded_scripts_are_checked_against_the_audio_manifest() {
+    let mut audio = crate::audio::load().unwrap_or_default();
+    assert!(load(None, None, None, Some(&audio)).is_ok());
+    let files = [(
+        "t.dlg".to_owned(),
+        Some("@scene s\n@music talk_calm\n> x\n@end\n"),
+    )];
+    assert!(load_files(&files, None, None, None, Some(&audio)).is_ok());
+    audio.music.remove("talk_calm");
+    let errs = load_files(&files, None, None, None, Some(&audio)).err();
+    assert_eq!(errs.map(|e| e.len()), Some(1));
 }
 
 // --- Round trip -------------------------------------------------------------
@@ -600,6 +814,11 @@ fn arb_simple_step() -> impl Strategy<Value = Step> {
             }
         }),
         arb_text().prop_map(|text| Step::Narrate { text }),
+        // A cue named "stop" would print as `@music stop`.
+        arb_id()
+            .prop_filter("reserved", |s| s != MusicLine::STOP)
+            .prop_map(|cue| Step::Music(MusicLine::Cue(cue))),
+        Just(Step::Music(MusicLine::Stop)),
     ]
 }
 

@@ -8,7 +8,7 @@ use proptest::prelude::*;
 use super::*;
 use crate::class::ArmourWeight;
 use crate::combat::DamageType;
-use crate::item::{AccessoryDef, ArmourDef, ConsumableDef, ConsumableEffect};
+use crate::item::{AccessoryDef, ArmourDef, ConsumableDef, ConsumableEffect, SealDef, SealKind};
 use crate::stats::Stats;
 use crate::weapon::{WeaponKind, WeaponRank};
 
@@ -60,6 +60,13 @@ fn items() -> ItemTable {
                 name: "Potion".into(),
                 effect: ConsumableEffect::Heal(10),
                 price: 300,
+            }),
+        ),
+        (
+            "seal",
+            ItemDef::Seal(SealDef {
+                name: "Seal".into(),
+                kind: SealKind::Reclass,
             }),
         ),
     ];
@@ -175,6 +182,10 @@ fn kinds_stock_and_buy() {
     assert!(!stocks(ShopKind::Vendor, "sword"));
     assert!(!stocks(ShopKind::Blacksmith, "sword"));
     assert!(!stocks(ShopKind::Blacksmith, "potion"));
+    // No shop sells seals.
+    for kind in [ShopKind::Armoury, ShopKind::Vendor, ShopKind::Blacksmith] {
+        assert!(!stocks(kind, "seal"));
+    }
     assert!(ShopKind::Armoury.buys());
     assert!(ShopKind::Vendor.buys());
     assert!(!ShopKind::Blacksmith.buys());
@@ -241,6 +252,11 @@ fn sell_errors_change_nothing() {
     assert_eq!(
         sell(&armoury(), &t, &mut gold, &id("ghost")),
         Err(ShopError::UnknownItem(id("ghost")))
+    );
+    // No shop buys a seal.
+    assert_eq!(
+        sell(&armoury(), &t, &mut gold, &id("seal")),
+        Err(ShopError::NotBought(id("seal")))
     );
     assert_eq!(gold, 10);
 }
@@ -321,6 +337,7 @@ fn errors_display() {
         (ShopError::NothingToRepair(id("x")), "\"x\" needs no repair"),
         (ShopError::NoItem, "no such item"),
         (ShopError::NotAWeapon(id("x")), "\"x\" is not a weapon"),
+        (ShopError::NotBought(id("x")), "no shop buys \"x\""),
         (ShopError::UnknownItem(id("x")), "unknown item \"x\""),
     ];
     for (e, text) in cases {

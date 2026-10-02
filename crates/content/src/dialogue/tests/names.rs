@@ -30,7 +30,7 @@ fn unknown_name_ids() {
 #[test]
 fn without_a_names_table_only_the_id_syntax_is_checked() {
     let src = scene("> {n:anything} and {n:Bad}.");
-    let errs: Vec<String> = from_sources(&[("t.dlg", src.as_str())], None, None, None)
+    let errs: Vec<String> = from_sources(&[("t.dlg", src.as_str())], None, None, None, None)
         .err()
         .unwrap_or_default()
         .iter()
@@ -158,7 +158,7 @@ fn name_tokens_count_as_the_longest_name() {
 #[test]
 fn a_rename_reaches_every_use() {
     let src = scene("> {n:king} rode out. {n:king} came back.");
-    let table = from_sources(&[("t.dlg", src.as_str())], None, None, Some(&names()));
+    let table = from_sources(&[("t.dlg", src.as_str())], None, None, Some(&names()), None);
     let text = table
         .ok()
         .and_then(|t| {
@@ -185,8 +185,8 @@ fn a_rename_reaches_every_use() {
 #[test]
 fn readme_names_example_is_valid() {
     let readme = bundle::file("dialogue/README.md").unwrap_or_default();
-    let example = readme.split("```").nth(5).unwrap_or_default();
-    let table = from_sources(&[("README.md", example)], None, None, Some(&names()));
+    let example = readme.split("```").nth(7).unwrap_or_default();
+    let table = from_sources(&[("README.md", example)], None, None, Some(&names()), None);
     assert!(table.is_ok(), "{table:?}");
     let scene = table.unwrap_or_default().scenes.remove("ch01_road");
     let steps = scene.map(|s| s.steps).unwrap_or_default();

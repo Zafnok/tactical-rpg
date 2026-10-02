@@ -395,8 +395,13 @@ fn objective_shows_the_goal_and_the_turn() {
         panic!("{:?}", s.mode());
     };
     assert_eq!(menu.focus(), 1);
-    // Down skips the disabled Options and Suspend to Restart Battle, then
-    // End Turn.
+    // Down skips the disabled Options to Suspend, then Restart Battle,
+    // then End Turn.
+    press(&mut s, &mut c, &[Action::CursorDown]);
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 3);
     press(&mut s, &mut c, &[Action::CursorDown]);
     let Mode::MapMenu { menu, .. } = s.mode() else {
         panic!("{:?}", s.mode());
@@ -407,6 +412,46 @@ fn objective_shows_the_goal_and_the_turn() {
 }
 
 /// The map menu beside the cursor on the lord, focused on `Units`.
+/// Nick (PR #141): Suspend asks before it leaves the battle.
+#[test]
+fn suspend_asks_first() {
+    let mut c = ctx();
+    let mut s = quick();
+    // The map menu: Units, Objective, (Options), Suspend.
+    let to_suspend = [
+        Action::Cancel,
+        Action::CursorDown,
+        Action::CursorDown,
+        Action::Confirm,
+    ];
+    assert_eq!(press(&mut s, &mut c, &to_suspend), "None");
+    assert_eq!(s.mode(), &Mode::SuspendPrompt);
+    assert!(!s.suspend_requested());
+    assert_eq!(s.help(&c), "f suspend · d back");
+    let buf = render(&s, &c);
+    assert!(shows(&buf, "Suspend the battle and return to the title?"));
+    assert!(shows(&buf, "f yes / d no"));
+    // Other keys do nothing; Cancel goes back to the menu, on Suspend.
+    let back = [Action::CursorDown, Action::Info, Action::Cancel];
+    assert_eq!(press(&mut s, &mut c, &back), "None");
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 3);
+    assert!(!s.suspend_requested());
+    assert!(!shows(&render(&s, &c), "Suspend the battle"));
+    // Asked again and confirmed: the screen closes, for the flow to save.
+    assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "None");
+    assert_eq!(press(&mut s, &mut c, &[Action::Confirm]), "Pop");
+    assert!(s.suspend_requested());
+    assert!(!s.restart_requested());
+    // A failed save puts the battle back, saying why.
+    s.suspend_failed("no room".into());
+    assert!(!s.suspend_requested());
+    assert_eq!(s.toast(), Some("no room"));
+    assert_eq!(press(&mut s, &mut c, &[]), "None");
+}
+
 #[test]
 fn map_menu_snapshot() {
     let mut c = ctx();
@@ -566,6 +611,49 @@ fn auto_end_waits_for_the_combat_to_play() {
 }
 
 // Banners.
+
+/// The Quick Battle as the flow starts it, and its start events.
+fn quick_start(c: &Ctx) -> (BattleState, Vec<Event>) {
+    let def = &c.content.battles[QUICK_BATTLE];
+    let lead = LeadProfile::new(DEFAULT_NAME, LeadGender::Male);
+    let campaign = battle_campaign(&c.content, def, GameMode::Classic, lead);
+    BattleState::new(campaign.battle_setup(def, &c.content.tables()))
+}
+
+#[test]
+fn a_battle_just_started_opens_on_turn_ones_player_phase_banner() {
+    let mut c = ctx();
+    let (state, events) = quick_start(&c);
+    // A screen on a given state (a unit test, a debug tool) has none.
+    assert_eq!(BattleScreen::new(state.clone()).banner(), None);
+    let mut s = BattleScreen::start(state.clone(), &events);
+    assert_eq!(phase_banner(&s), Some((Phase::Player, 1)));
+    let buf = render(&s, &c);
+    assert!(shows(&buf, "PLAYER PHASE"));
+    assert!(shows(&buf, "Turn 1"));
+    // Keys other than Confirm are ignored.
+    let before = s.cursor().pos;
+    press(&mut s, &mut c, &[Action::CursorRight, Action::Cancel]);
+    assert_eq!(s.cursor().pos, before);
+    assert_eq!(s.mode(), &Mode::default());
+    // It closes by itself after `PHASE_BANNER_S`.
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.9);
+    assert_eq!(phase_banner(&s), Some((Phase::Player, 1)));
+    frame(&mut s, &mut c, &[], PHASE_BANNER_S * 0.2);
+    assert_eq!(s.banner(), None);
+    assert!(!shows(&render(&s, &c), "PLAYER PHASE"));
+    assert_eq!((s.state().turn(), s.state().phase()), (1, Phase::Player));
+    press(&mut s, &mut c, &[Action::CursorRight]);
+    assert_ne!(s.cursor().pos, before);
+    // Or on Confirm, which does nothing else (the cursor is on the lord:
+    // a second Confirm selects it).
+    let mut s = BattleScreen::start(state, &events);
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert_eq!(s.banner(), None);
+    assert_eq!(s.mode(), &Mode::default());
+    press(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::Selected(_)), "{:?}", s.mode());
+}
 
 #[test]
 fn phase_banners_close_after_a_second_or_on_confirm_and_the_enemy_phase_passes() {

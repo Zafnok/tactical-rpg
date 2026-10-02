@@ -14,6 +14,7 @@ real arcs → outline → per-chapter beat sheets → scripts in `assets/dialogu
 | [`characters/<id>.md`](characters/) | One sheet per character: want/need/flaw/arc, voice, portrait brief, supports | 0701 | ✅ 11 sheets, 2026-09-28 |
 | [`outline.md`](outline.md) | Acts and chapters; which arcs each chapter advances; the twists | 0701 | ✅ gate 2 approved 2026-09-28 |
 | [`chapters/chNN.md`](chapters/) | Scene-by-scene beat sheet per chapter | 0701 (ch01), later tickets | ✅ ch01 · later chapters ⏳ |
-| [`ledger.md`](ledger.md) | Continuity: what each character knows/did as of each chapter | 0701, updated by each script ticket | ✅ start of Chapter 1 |
+| [`ledger.md`](ledger.md) | Continuity: what each character knows/did as of each chapter | 0701, updated by each script ticket | ✅ start of Chapter 1 · after Chapter 1 (0707) |
 
 Scripts themselves live in `assets/dialogue/*.dlg` (format: ticket 0702).
+Written so far: Chapter 1, `ch01.dlg` (0707).

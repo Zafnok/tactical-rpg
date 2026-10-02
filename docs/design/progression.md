@@ -3,7 +3,8 @@
 Decided: 2026-09-25
 Source: ticket 0005 (fliers moved to tier 3+ by ticket 0017, 2026-09-25;
 the lord's line added by ticket 0016, 2026-09-25; per-class stat caps
-removed by ticket 0019, 2026-09-28)
+removed by ticket 0019, 2026-09-28; seals only between battles by ticket
+0603, 2026-09-30)
 
 ## Nick's words
 
@@ -154,6 +155,19 @@ can a MAX be constrained by class...?"):
 >
 > **Fixed or rising ceiling:** "3C" (the ceiling numbers, and whether they
 > rise with tier, are decided with the number scale in ticket 0013).
+
+Seals in battle (ticket 0603, 2026-09-30; asked before building promotion,
+because this doc first had tier seals as battle-pack consumables):
+
+> **Mid-battle, can a unit use a Reclass Seal, or only the tier seals?**
+> "Between battles only" (like Three Houses / FFT: class changes happen in
+> a menu outside battle).
+>
+> **Who can a seal be used on in battle (the user only, or an adjacent ally
+> too)?** "cannot be used in battle"
+>
+> **So no seal works in battle, and promotion is also a between-battles
+> thing?** "Yes: no seals in battle"
 
 So:
 
@@ -404,9 +418,14 @@ rates: an axe class gains HP and Str often and Def or Spd rarely.
   2. it uses the **seal for the target tier** (Nick: a separate seal per
      tier). The placeholder names are *Tier 2 Seal*, *Tier 3 Seal* and so
      on. Higher-tier seals are rarer; that rarity is how pacing is
-     controlled. A seal is a consumable in the battle pack, or used from the
-     between-battle menu. Prices and drops belong to the shop and chapter
-     tickets.
+     controlled. Prices and drops belong to the shop and chapter tickets.
+- **No seal works in a battle** (Nick, ticket 0603: "cannot be used in
+  battle"). A unit promotes **between battles**, from a menu, on the
+  class-choice screen. Seals sit in the party's **stock**; they are not
+  consumables and never take a battle-pack slot. A seal found during a
+  battle (a chest) goes to the stock. Example: Rex masters Swordsman in the
+  middle of a fight. He finishes that battle as a Swordsman, and you
+  promote him afterwards, before the next one.
 - **The character level doesn't reset** (Nick). EXP stays the same.
 - **Promotion bonus** (Nick: FE GBA-style big boost): for each stat,
   `bonus = max(0, new_class.base[stat] − old_class.base[stat])`. The bonus is
@@ -419,6 +438,10 @@ rates: an axe class gains HP and Str often and Def or Spd rarely.
   can't use are kept (for later reclasses) but unusable.
 - **Weapon slots:** if the new class has fewer slots (e.g. 0 for tier-3 magic
   classes), the extra weapons go to the party stock (`magic.md`).
+- **Armour:** if the new class can't wear the armour the unit has on (a
+  Raider in a leather vest promotes to Vanguard, which wears medium and
+  heavy only), it goes to the party stock too (*Claude's starting rule*,
+  the same as for the weapons).
 - Event: `Promoted { unit, from, to, gains }`.
 
 ## Reclass
@@ -432,6 +455,10 @@ round.
   (*placeholder name*; a rare resource, never sold in Chapter 1). It is
   **never free**, including a return to a class the unit already unlocked
   (Nick: "you have to spend the seal of whatever item each time").
+- Like promotion, a reclass happens **between battles only** (Nick, ticket
+  0603: "Between battles only"), on the same class-choice screen.
+- A seal can't be spent on the class the unit is **already in** (*Claude's
+  starting rule*: it would change nothing).
 - **Where a seal can take a unit** (Nick chose "any class whose requirements
   you meet"):
   - any **tier-1** class (not enemy-only, and not lord-only unless the unit
@@ -451,7 +478,7 @@ round.
   - From then on, level ups use the new class's growths and tier.
 - Passives are kept. Actives and class spells of a class that wasn't
   mastered stay behind (Nick; `magic.md`), and come back on returning to it.
-- Weapon ranks and slots follow the promotion rules above.
+- Weapon ranks, weapon slots and armour follow the promotion rules above.
 - **Open certification** (Three Houses style, entering any class by passing an
   exam) is **not** in the game (Nick).
 
@@ -983,4 +1010,8 @@ ranks, class records (usually just the starting class at class level 1), and
 - **Number scale:** all stats, hard ceilings and EXP numbers rescale with ticket 0013.
 - **How Combat Arts relate to actives:** decided in `combat-arts.md` (0014).
 - **Where the tier seals and Reclass Seals come from** (shops, chests, story):
-  chapter and shop data (0009 and later).
+  chapter and shop data (0009 and later). Until then no shop sells or buys
+  a seal.
+- **Which between-battle menu promotes and reclasses** (Preparations, camp,
+  a unit list): ticket 0606. Until it exists, the class-choice screen opens
+  from the debug menu only.

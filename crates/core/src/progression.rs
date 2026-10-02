@@ -24,6 +24,8 @@
 //!   Each class level reached may teach class spells; mastery teaches the
 //!   class's passives (its active becomes permanent through
 //!   [`Unit::usable_skills`], which reads the class records).
+//! - **Promotion and reclass** ([`promote`], [`reclass`]): see
+//!   [`class_change`].
 //! - **Tier tables** ([`ClassTable::min_gains`],
 //!   [`ClassTable::cp_per_class_level`]): a tier missing from a table uses
 //!   the highest tier it has (the tables never decrease, and content
@@ -368,6 +370,13 @@ fn learn_spells(unit: &mut Unit, classes: &ClassTable, events: &mut Vec<Event>) 
     }
     unit.learned.extend(known);
 }
+
+pub mod class_change;
+
+pub use class_change::{
+    ChangeTables, ClassChangeError, has_mastered, promote, promotion_gains, promotion_targets,
+    reclass, reclass_targets,
+};
 
 #[cfg(test)]
 mod tests;

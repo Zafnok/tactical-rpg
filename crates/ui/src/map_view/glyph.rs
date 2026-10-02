@@ -519,7 +519,7 @@ pub(crate) mod tests {
     proptest! {
         /// Whatever the scene and the area (even one partly off the
         /// console), the skin changes no cell outside the area and adds no
-        /// overlay outside its pixels.
+        /// item (rectangle or sprite) outside its pixels.
         #[test]
         fn glyph_skin_paints_only_the_area(
             scene in any_scene(),
@@ -537,8 +537,9 @@ pub(crate) mod tests {
                 }
             }
             let px = px_rect(area);
-            for o in buf.overlays() {
-                prop_assert_eq!(o.rect.intersect(&px), Some(o.rect), "{:?} in {:?}", o, area);
+            for item in buf.items() {
+                let seen = item.visible();
+                prop_assert_eq!(seen.intersect(&px), Some(seen), "{:?} in {:?}", item, area);
             }
         }
     }

@@ -42,5 +42,5 @@ units 8
   #6 Ra enemy raider (7,1) hp 22/22
   #7 Fr enemy frost_elemental (8,7) hp 30/30
   #8 Ma player mage [test_mage] (3,6) hp 16/16
-cursor (3,5) corners 1.00
+cursor (3,5) corners 0.99
 path -
