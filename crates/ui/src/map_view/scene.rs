@@ -91,6 +91,9 @@ pub struct UnitView {
     pub has_effect: bool,
     /// How far it has fallen (0404): `0` = standing … `1` = gone.
     pub fade: f32,
+    /// Whether it is picked out right now: a battle note on screen is
+    /// about it (0411). It blinks, so this goes on and off.
+    pub highlight: bool,
 }
 
 impl UnitView {
@@ -107,6 +110,7 @@ impl UnitView {
             hp: (unit.hp, unit.stats.hp),
             has_effect: !unit.effects.is_empty(),
             fade: 0.0,
+            highlight: false,
         }
     }
 
@@ -120,6 +124,12 @@ impl UnitView {
     #[must_use]
     pub fn fading(self, fade: f32) -> Self {
         Self { fade, ..self }
+    }
+
+    /// This unit picked out, or not.
+    #[must_use]
+    pub fn highlighted(self, highlight: bool) -> Self {
+        Self { highlight, ..self }
     }
 }
 
@@ -269,7 +279,8 @@ impl MapScene {
     /// for `n` such tiles in a row. `!` marks a tile flashing after its
     /// terrain changed, and `>` is followed by the terrain a spell being
     /// aimed would turn it into. A unit of a named character has it in
-    /// brackets after its class. The cursor's number is its brightness.
+    /// brackets after its class, and `highlight` if it is picked out. The
+    /// cursor's number is its brightness.
     pub fn to_text(&self, content: &Content) -> String {
         let mut out = String::new();
         let Pos { x, y } = self.origin;
@@ -369,6 +380,9 @@ fn unit_text(u: &UnitView) -> String {
     if u.fade > 0.0 {
         let _ = write!(text, " fade={:.2}", u.fade);
     }
+    if u.highlight {
+        text.push_str(" highlight");
+    }
     text
 }
 
@@ -393,6 +407,7 @@ mod tests {
             hp: (20, 30),
             has_effect: false,
             fade: 0.0,
+            highlight: false,
         }
     }
 
@@ -478,12 +493,14 @@ mod tests {
         assert_eq!(v.character, lord.character);
         assert!(v.character.is_some());
         assert_eq!(v.hp, (lord.hp, lord.stats.hp));
-        assert!(!v.acted && !v.has_effect);
+        assert!(!v.acted && !v.has_effect && !v.highlight);
         assert!(v.fade.abs() < f32::EPSILON);
         let mut hurt = lord.clone();
         hurt.hp = 3;
         hurt.acted = true;
         let v = UnitView::of(&hurt).at(p(9, 9)).fading(0.5);
+        assert!(!v.highlight && v.clone().highlighted(true).highlight);
+        assert!(!v.clone().highlighted(true).highlighted(false).highlight);
         assert_eq!((v.pos, v.hp.0, v.acted), (p(9, 9), 3, true));
         assert!((v.fade - 0.5).abs() < f32::EPSILON);
         assert_eq!(v.id, lord.id);
@@ -515,6 +532,7 @@ mod tests {
         lord.character = Some(CharacterId("test_lord".into()));
         lord.acted = true;
         lord.has_effect = true;
+        lord.highlight = true;
         s.push_unit(lord);
         s.cursor = Some(CursorView {
             pos: p(1, 3),
@@ -530,7 +548,7 @@ mod tests {
              \x20  4: -*5\n\
              units 2\n\
              \x20 #4 Br enemy brigand (0,2) hp 20/30\n\
-             \x20 #1 Lo player lord [test_lord] (1,3) hp 20/30 acted effect fade=0.25\n\
+             \x20 #1 Lo player lord [test_lord] (1,3) hp 20/30 acted effect fade=0.25 highlight\n\
              cursor (1,3) corners 0.76\n\
              path (1,3) (1,2)\n"
         );

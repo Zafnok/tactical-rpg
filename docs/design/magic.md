@@ -217,6 +217,21 @@ the ambush.`
   check.
 - Notes are chapter data, written with the chapter's content.
 
+How it works for now (0411; all *Claude's starting rules*, Nick may veto):
+
+- The notes come up in a `BATTLE NOTES` box before anything else in the
+  battle (a turn-1 scene and the first-battle tip wait for it). Only
+  Confirm closes it. Retry and `Restart Battle` show it again.
+- The box is in the middle of the map. If a unit it is about would be
+  hidden under it, it goes to the top of the map instead (or the bottom).
+- While the box is up, and while the `Objective` page is open, the units
+  the notes are about blink: their two letters swap colours with the tile
+  behind them, 0.4 seconds on, 0.4 off.
+- The `Objective` page shows the objective and the turn, then `Battle
+  notes` and the same lines.
+- A battle has at most 5 notes of at most 120 characters each, so they
+  always fit on screen.
+
 ## Terrain magic (fire and ice)
 
 A Fire or Ice attack spell can be cast **on an empty tile** in range instead

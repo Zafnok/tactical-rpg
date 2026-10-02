@@ -258,6 +258,14 @@ ADR-0038 they are now in the scene and painted by the glyph skin, with
 - A spell's unit targets are an attack or a heal range, like the others.
 - `to_text` marks them: `burnt!` flashes, `plain>burning` would change.
 
+**Merged with 0411 (battle notes) too.** The unit a note is about blinks
+(its tile's colours swapped): that is `UnitView::highlight` in the scene,
+painted by the glyph skin (`invert_tile` moved there), and the notes box
+asks the skin where the noted units' rows are. 0411's snapshots are
+byte-identical. `main` did not build its tests at that point (0411 added
+`BattleSetup::battle_notes`, and 0505's `crates/bots/src/testkit.rs`,
+merged just before, didn't set it); the merge adds that one line.
+
 **Follow-up tickets created:** none. A note was added to 0433 about what
 switching skins in the middle of a battle does and doesn't handle yet.
 

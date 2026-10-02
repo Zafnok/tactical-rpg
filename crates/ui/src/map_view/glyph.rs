@@ -35,14 +35,17 @@ impl MapSkin for GlyphSkin {
         (area.w.max(0) / TILE_W_CELLS, area.h.max(0))
     }
 
-    /// Terrain, then the ranges tinting it, then the units, the path and the
-    /// cursor.
+    /// Terrain, then the ranges tinting it, then the units (a highlighted
+    /// one with its tile's colours swapped), the path and the cursor.
     fn paint(&self, ctx: &Ctx, scene: &MapScene, area: Rect, buf: &mut GlyphBuffer) {
         let layout = Layout::new(scene, area);
         draw_tiles(ctx, buf, scene, &layout);
         for unit in &scene.units {
             if let Some((x, y)) = tile_to_cell(unit.pos, &layout) {
                 units::draw_unit(buf, &ctx.palette, unit, x, y);
+                if unit.highlight {
+                    units::invert_tile(buf, x, y);
+                }
             }
         }
         let color = ctx.palette.get(UiColor::Path);
@@ -304,6 +307,7 @@ pub(crate) mod tests {
             hp: (30, 30),
             has_effect: false,
             fade: 0.0,
+            highlight: false,
         }
     }
 
@@ -330,6 +334,8 @@ pub(crate) mod tests {
         // A range off the map still tints.
         scene.tint([p(4, 4)], RangeKind::Heal);
         scene.push_unit(brigand(p(4, 2)));
+        // A highlighted unit: its tile's colours swapped.
+        scene.push_unit(brigand(p(2, 3)).highlighted(true));
         scene.path = vec![p(2, 2), p(3, 2)];
         scene.cursor = Some(CursorView {
             pos: p(5, 2),
@@ -353,7 +359,8 @@ pub(crate) mod tests {
         assert_eq!(cell(15, 5), Cell::new('r', pal.get(UiColor::Enemy), moved));
         // (2, 3) plain; (3, 3) unknown and (4, 3) off the map: untouched;
         // (4, 4) off the map but tinted.
-        assert_eq!(cell(10, 6).glyph, plain.glyphs[0]);
+        assert_eq!(cell(10, 6), Cell::new('B', bg, pal.get(UiColor::Enemy)));
+        assert_eq!(cell(11, 6), Cell::new('r', bg, pal.get(UiColor::Enemy)));
         assert_eq!(cell(12, 6), fill());
         assert_eq!(cell(14, 6), fill());
         let healed = Cell {
@@ -365,7 +372,8 @@ pub(crate) mod tests {
         // Overlays in order: the unit's HP bar, the path, the cursor.
         let colors: Vec<Rgb> = buf.overlays().iter().map(|o| o.color).collect();
         let path = pal.get(UiColor::Path);
-        let mut expect = vec![pal.get(UiColor::HpHigh), path];
+        let hp = pal.get(UiColor::HpHigh);
+        let mut expect = vec![hp, hp, path];
         expect.extend([path; 6]);
         expect.extend([pal.get(UiColor::Cursor); 8]);
         assert_eq!(colors, expect);
@@ -466,13 +474,14 @@ pub(crate) mod tests {
             pos in any_pos(),
             label in "[A-Za-z]{0,4}",
             hp in -5..40i32,
-            flags in 0u8..4,
+            flags in 0u8..8,
             fade in -0.5f32..1.5,
         ) -> UnitView {
             UnitView {
                 label,
                 acted: flags & 1 != 0,
                 has_effect: flags & 2 != 0,
+                highlight: flags & 4 != 0,
                 hp: (hp, 30),
                 fade,
                 ..brigand(pos)

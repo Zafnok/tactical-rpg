@@ -85,7 +85,7 @@ Nick also put the combat scene (0413), Harl's picture (0035) and 0316
 (non-attack skills cost uses per battle) in front of the playtest.
 
 ```
- 1  0022 0023 0024 0035 0110 0231 0316 0410 0707 0710 0801
+ 1  0022 0023 0024 0035 0110 0231 0316 0410 0435 0707 0710 0801
  2  0711 0802 0807 0810
  3  0413 0706 0809
  4  0803
@@ -96,6 +96,9 @@ Two row-1 tickets are Nick's: **0110** starts with him buying the art
 packs and making the private assets repo (0711, 0413, 0706 and so 0803
 wait on it), and **0035** is him shopping for Harl's picture (0413 and
 0706 wait on it).
+
+**0435** (found by 0411) adds the `PLAYER PHASE` banner missing at the
+start of a battle, which `turn-structure.md` asks for.
 
 The `01xx` gates (0103–0106) aren't needed by the game itself but should land
 early so every later PR is checked by them.
@@ -125,5 +128,6 @@ early so every later PR is checked by them.
   bots (after 0803) → 0507 trained AlphaZero-style bot (research) and 0508
   recording Nick's play to calibrate the bots (after 0802) → 0509
   autobalancing battles with the bots → 0510 generating skirmishes to order
-  (after 1007, 1008). Targets: `docs/design/playtest-bots.md`. Not on the
-  Chapter 1 critical path; 0504 can start any time.
+  (after 1007, 1008). Targets: `docs/design/playtest-bots.md`; how to run
+  them and read the report: [`docs/playtesting.md`](playtesting.md). Not on
+  the Chapter 1 critical path; 0504 can start any time.

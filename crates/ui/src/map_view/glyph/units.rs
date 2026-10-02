@@ -90,6 +90,18 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i
     buf.add_overlay(bar(px + width, HP_BAR_W - width, UiColor::Black));
 }
 
+/// Swaps the text and background colours of the tile whose left cell is
+/// `(x, y)`: how a highlighted unit (one a battle note is about, 0411) is
+/// picked out.
+pub fn invert_tile(buf: &mut GlyphBuffer, x: i32, y: i32) {
+    for i in 0..TILE_W_CELLS {
+        if let Some(&cell) = buf.get(x + i, y) {
+            let (fg, bg) = (cell.bg, cell.fg);
+            buf.set(x + i, y, Cell { fg, bg, ..cell });
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

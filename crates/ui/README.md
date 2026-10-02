@@ -64,7 +64,7 @@ The battle map is not drawn by the battle screen (ADR-0038). Each frame:
    danger, move, attack, heal, and what a spell being aimed would turn
    them into), the units
    on them (where each is drawn, HP, acted, under an effect, how far it has
-   faded), the cursor (if shown) and the selected unit's path. Plain data:
+   faded, whether it is picked out by a battle note), the cursor (if shown) and the selected unit's path. Plain data:
    no colours, glyphs, cells or pixels.
 2. `ctx.map_skin.paint(ctx, &scene, MAP_VIEW, buf)` paints it. The only
    skin so far is the `GlyphSkin` (`map_view/glyph`): today's look.
