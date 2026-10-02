@@ -146,6 +146,26 @@ fn the_bars_wait_then_fill_over_their_time() {
 }
 
 #[test]
+fn other_timings_wait_and_fill_as_long_as_they_say() {
+    let mut s = screen().with_timings(0.25, 4.0);
+    wait(&mut s, 0.25);
+    assert_eq!(shown(&s), [90, 10, 0]);
+    wait(&mut s, 2.0);
+    assert_eq!(shown(&s), [100, 20, 0]);
+    assert!(!s.filled());
+    wait(&mut s, 2.0);
+    assert_eq!(shown(&s), [111, 31, 0]);
+    assert!(s.filled());
+    // No fill time: full once the wait is over.
+    let mut s = screen().with_timings(0.25, 0.0);
+    assert_eq!(shown(&s), [90, 10, 0]);
+    assert!(!s.filled());
+    wait(&mut s, 0.25);
+    assert_eq!(shown(&s), [111, 31, 0]);
+    assert!(s.filled());
+}
+
+#[test]
 fn holding_confirm_fills_faster_and_a_press_fills_at_once() {
     let mut s = screen();
     frame(&mut s, &[], &[Action::Confirm], INTRO_S / 4.0);
@@ -179,9 +199,13 @@ fn a_press_on_full_bars_shows_the_level_up_which_waits_for_its_own() {
         assert!(shows(&buf, "Test Lord"));
         assert!(shows(&buf, "Lv 1 → 2"));
         assert!(!shows(&buf, "Str   6 → 7   +1"));
+        // The help is the page's: it is still revealing its stats.
+        assert!(shows(&buf, "f skip · hold f fast"));
+        assert!(!shows(&buf, "f continue"));
         // It reveals its stats and then waits, however long.
         assert!(!wait(&mut s, 30.0));
         assert!(shows(&drawn(&s), "Str   6 → 7   +1"));
+        assert!(shows(&drawn(&s), "f continue"));
         assert!(!press(&mut s, Action::CursorDown));
         assert!(press(&mut s, key), "{key:?} closes the last page");
     }
@@ -247,6 +271,9 @@ fn a_battle_without_clear_gold_shows_no_gold_line() {
         &buf,
         &format!("{BONUS_LABEL}                     +21")
     ));
+    // The rule under the lines, with the panel's margin on both sides.
+    let rule = format!("║   {}   ║", "─".repeat(64));
+    assert_eq!(row_text(&buf, PANEL.y + 7), rule);
 }
 
 #[test]

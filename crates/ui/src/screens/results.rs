@@ -90,6 +90,9 @@ pub struct ResultsScreen {
     /// Seconds since the screen opened.
     t: f32,
     timings: ProgressTimings,
+    /// Seconds before the bars start to fill, and seconds they take.
+    intro_s: f32,
+    fill_s: f32,
     /// The level-up pages still to show after the bars.
     pages: Option<Progress>,
     /// Whether the bars are done with and the pages are up.
@@ -130,9 +133,24 @@ impl ResultsScreen {
             rows,
             t: 0.0,
             timings,
+            intro_s: INTRO_S,
+            fill_s: FILL_S,
             pages,
             paging: false,
         }
+    }
+
+    /// The same screen with its bars waiting `intro_s` seconds and filling
+    /// over `fill_s` (the game uses [`INTRO_S`] and [`FILL_S`]).
+    #[must_use]
+    pub fn with_timings(mut self, intro_s: f32, fill_s: f32) -> Self {
+        (self.intro_s, self.fill_s) = (intro_s, fill_s);
+        self
+    }
+
+    /// Seconds from the screen opening to full bars.
+    fn full_at(&self) -> f32 {
+        self.intro_s + self.fill_s
     }
 
     /// The units' rows.
@@ -152,12 +170,15 @@ impl ResultsScreen {
 
     /// Whether the bars are full (at once, when there are none).
     pub fn filled(&self) -> bool {
-        self.rows.is_empty() || self.t >= INTRO_S + FILL_S
+        self.rows.is_empty() || self.t >= self.full_at()
     }
 
     /// How much of each unit's bonus the bars show: 0 to 1.
     fn fill(&self) -> f32 {
-        ((self.t - INTRO_S) / FILL_S).clamp(0.0, 1.0)
+        if self.filled() {
+            return 1.0;
+        }
+        ((self.t - self.intro_s) / self.fill_s).clamp(0.0, 1.0)
     }
 
     /// The EXP `row`'s bar shows, counted from its old EXP (so past
@@ -184,7 +205,7 @@ impl ResultsScreen {
         } else if self.filled() {
             self.paging = true;
         } else {
-            self.t = INTRO_S + FILL_S;
+            self.t = self.full_at();
         }
         self.over()
     }
@@ -291,7 +312,7 @@ impl Screen for ResultsScreen {
             }
         } else if !self.filled() {
             let speed = if held { self.timings.fast } else { 1.0 };
-            self.t = (self.t + dt * speed).min(INTRO_S + FILL_S);
+            self.t = (self.t + dt * speed).min(self.full_at());
         }
         Transition::None
     }
