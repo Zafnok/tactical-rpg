@@ -19,7 +19,7 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
     ],
     enemies: [
         (template: "brigand", level: Some(2), pos: (14, 4)),
-        (template: "archer", pos: (15, 6), ai: Guard),
+        (template: "frost_elemental", pos: (15, 6), ai: Guard, id: "frost_1"),
         (
             character: "garth", pos: (20, 2), ai: Stationary, boss: true,
             loadout: Some((weapons: ["steel_axe"], armour: None, accessory: None)),
@@ -36,6 +36,10 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
     triggers: [
         (when: CombatStart(unit: "garth"), scene: "ch01_garth", once: true),
     ],
+    battle_notes: [
+        (text: "Frost Elemental: weak to Fire, absorbs Ice.", units: ["frost_1"]),
+        (text: "Garth never leaves the gate.", units: ["garth"]),
+    ],
     difficulty: Normal,
     music: Cue("battle_bright"),        // or Pool("skirmish")
     seed: 12345,
@@ -49,7 +53,7 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
 | `id` | The battle's id: must match the file name. |
 | `map` | A map id (`assets/maps/<id>.map`). |
 | `player_slots` | Where each roster member goes: `(character, pos)`. A slot whose character isn't in the army (e.g. dead in Classic) stays empty; roster members without a slot sit the battle out. The first slot's unit is unit 1, the next unit 2, … A slot with `after_enemies: true` is numbered after the enemies instead (and before the reinforcements): for adding a unit to a battle without renumbering the others. |
-| `enemies` | The other units on the map at the start (numbered after the slots). Each is a generic `template` (from `characters.ron`'s `generics`) **or** a named `character`, written bare (`template: "brigand"`). Optional: `level: Some(n)` (templates only; a character's level is its own), `ai` (`Aggressive` default, `Guard`, `Stationary`, `Healer`), `loadout: Some((weapons: [...], armour: Some(..), accessory: Some(..)))` instead of the template's or character's, `boss: true`, `name: Some("Garth")` (a display name; the map label becomes its first two letters). Enemies carry no consumables (`weapons-and-items.md`). |
+| `enemies` | The other units on the map at the start (numbered after the slots). Each is a generic `template` (from `characters.ron`'s `generics`) **or** a named `character`, written bare (`template: "brigand"`). Optional: `level: Some(n)` (templates only; a character's level is its own), `ai` (`Aggressive` default, `Guard`, `Stationary`, `Healer`), `loadout: Some((weapons: [...], armour: Some(..), accessory: Some(..)))` instead of the template's or character's, `boss: true`, `name: Some("Garth")` (a display name; the map label becomes its first two letters), `id: "frost_1"` (written bare: a name for `battle_notes` to point at this unit). Enemies carry no consumables (`weapons-and-items.md`). |
 | `reinforcements` | Units that arrive later: `(turn, unit: <an enemy entry>)`, numbered after the enemies. One on an occupied tile waits (`turn-structure.md`). |
 | `preparations` | Whether the Preparations screen comes first. **Not built yet (0408)**: `true` is refused. |
 | `pack_cap` | How many consumables the pack may hold, written bare (`pack_cap: 3`). Default: `default_pack_cap` in `items.ron` (6). |
@@ -57,6 +61,7 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
 | `clear_gold` | Gold for winning. Default 0. |
 | `objective` | `Rout()`, `DefeatUnit(unit: "garth")` (a character among the enemies or reinforcements), `Seize(pos: (x, y), by_lord: true)`, `Survive(turns: 8)`. The first three take an optional `turn_limit: Some(n)`. |
 | `triggers` | The battle's story moments (0705, ADR-0030): `(when: …, scene: "id", once: true)`, with `when` one of `TurnStart(turn, phase)`, `UnitEntersArea(who: Character("id") \| Faction(Player), area: (x, y, w, h))`, `CombatStart(unit, against: Some("id"))`, `HalfHp(unit)`, `UnitFell(unit, mode: Some(Classic), recruit: true)`, `Talk(a, b)`. |
+| `battle_notes` | Strategy hints (0411, `magic.md` "Battle notes"): `(text: "…", units: [...])`. Shown in a `BATTLE NOTES` box when the battle starts and under the objective on the map menu's `Objective` page; the `units` (optional) blink on the map meanwhile. Each of `units` is an enemy's or reinforcement's `id`, or a character in the battle (every unit of it). A note changes no rule. Default: none, and no box. |
 | `difficulty` | The map's tier: `Easy`, `Normal`, `Hard`, `Finale` → 2 / 3 / 5 / 8 rewind charges (`death-and-difficulty.md`). |
 | `music` | **Required.** What plays from the battle's start to its end, through both phases (`docs/design/audio.md`): `Cue("battle_bright")`, one music cue of `assets/audio/audio.ron` (a story battle's chosen theme), or `Pool("skirmish")`, one of its pools, from which a track is picked at random each time the battle starts (skirmishes). Restarting or retrying the battle picks again; rewinding never changes the track. |
 | `seed` | Seed of the battle's random numbers. |
@@ -83,7 +88,11 @@ All reported at once, naming the entry (`player slot 2 ("bors")`,
 - two named units of one side with the same map label (ADR-0018; fix with a
   `map_label` in `characters.ron`); generic units may share one;
 - every trigger problem `trpg_content::check_triggers` finds (unknown
-  scene, a character not in the battle, an area off the map, …).
+  scene, a character not in the battle, an area off the map, …);
+- a unit `id` used twice, or that is also a character in the battle;
+- a battle note with no text, more than one line or over 120 characters;
+  more than 5 notes; a note unit that is neither an `id` nor a character in
+  the battle, or that is listed twice.
 
 The test files `test.ron` (the test chapter's battle) and `quick.ron` (the
 debug Quick Battle) are placeholders until Chapter 1 (0803).

@@ -10,7 +10,7 @@ use trpg_ui::input::Layout;
 /// `Class change: promote` (`reclass` one further down).
 fn class_change(reclass: bool) -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("F2 Down Down Down Down Down");
+    h.keys("F2 Down Down Down Down Down Down");
     if reclass {
         h.keys("Down");
     }

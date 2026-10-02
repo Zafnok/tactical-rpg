@@ -20,6 +20,11 @@
 //     weapon the unit can wield starts equipped.
 // generics: generic unit templates (class + character level); their stats
 //   come from the class (progression.md, "Generic units").
+// speakers: ids of people who talk in dialogue (.dlg) but aren't units: no
+//   class, stats or loadout, only a name, which is the id's entry in
+//   names.ron. A speaker can't be put on a map or named in a battle or
+//   chapter file; for that they need an entry in characters (and then come
+//   out of speakers: a character can already speak).
 (
     characters: [
         // The lead (ticket 0708): the player picks the gender and first
@@ -88,5 +93,12 @@
             id: "test_raider", class: "raider", level: 2,
             loadout: (weapons: ["steel_axe", "iron_axe"]),
         ),
+    ],
+    // speakers: ids that may speak in dialogue (.dlg) but aren't units
+    // (yet). Each needs a name in names.ron. 0803 moves the Chapter 1
+    // party and the boss up into `characters` with real stats.
+    speakers: [
+        "retainer", "sergeant", "poacher", "keeper", "heretic",
+        "red_captain", "rival", "vowmaster",
     ],
 )

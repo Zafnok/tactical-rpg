@@ -95,8 +95,7 @@ impl<'a> Checker<'a> {
     }
 
     fn known(&self, id: &CharacterId) -> bool {
-        self.characters
-            .is_none_or(|t| t.characters.contains_key(id))
+        self.characters.is_none_or(|t| t.can_speak(id))
     }
 
     /// Checks one step (not a choice) on `line` and applies it to `state`.

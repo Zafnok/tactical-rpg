@@ -1,4 +1,4 @@
-//! Named characters and generic unit templates
+//! Named characters, generic unit templates and dialogue speakers
 //! (`assets/data/characters.ron`).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -11,6 +11,7 @@ use trpg_core::{
 };
 
 use crate::bundle;
+use crate::dialogue::is_id;
 use crate::enums::{RawStatKind, RawWeaponKind, RawWeaponRank};
 use crate::error::ContentError;
 use crate::names::{NAMES_PATH, Names};
@@ -95,13 +96,22 @@ pub fn check_map_labels(map: &str, units: &[Unit]) -> Vec<ContentError> {
     errors
 }
 
-/// Every named character and generic template, by id.
+/// Every named character and generic template, by id, and the speakers.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CharacterTable {
     /// Named characters.
     pub characters: BTreeMap<CharacterId, CharacterDef>,
     /// Generic unit templates.
     pub generics: BTreeMap<String, GenericTemplate>,
+    /// Ids that may speak in dialogue but aren't units.
+    pub speakers: BTreeSet<CharacterId>,
+}
+
+impl CharacterTable {
+    /// Whether `id` may appear in dialogue: a named character or a speaker.
+    pub fn can_speak(&self, id: &CharacterId) -> bool {
+        self.characters.contains_key(id) || self.speakers.contains(id)
+    }
 }
 
 #[derive(Deserialize)]
@@ -109,6 +119,8 @@ pub struct CharacterTable {
 struct RawFile {
     characters: Vec<RawCharacter>,
     generics: Vec<RawGeneric>,
+    #[serde(default)]
+    speakers: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -168,7 +180,7 @@ struct RawGeneric {
 /// checked against `classes` when given (skipped if the class file failed to
 /// load); loadouts against `classes` and `items` when both are given. A
 /// named character's display name is `names`' entry for its id (its id if
-/// the names table failed to load).
+/// the names table failed to load); a speaker needs an entry too.
 pub fn load(
     classes: Option<&ClassTable>,
     items: Option<&ItemTable>,
@@ -237,6 +249,29 @@ pub fn from_source(
         }
         table.generics.insert(g.id.clone(), template);
     }
+    for id in &raw.speakers {
+        if !is_id(id) {
+            v.err(
+                id,
+                format!("speaker \"{id}\": ids are lowercase letters, digits and _"),
+            );
+            continue;
+        }
+        let speaker = CharacterId(id.clone());
+        if table.characters.contains_key(&speaker) {
+            v.err(
+                id,
+                format!(
+                    "\"{id}\" is both a character and a speaker; a character can already \
+                     speak, so remove it from speakers"
+                ),
+            );
+        } else if table.speakers.insert(speaker) {
+            v.name(id, &format!("speaker \"{id}\""));
+        } else {
+            v.err(id, format!("duplicate speaker id \"{id}\""));
+        }
+    }
     if v.errors.is_empty() {
         Ok(table)
     } else {
@@ -255,10 +290,12 @@ struct Validator<'a> {
 }
 
 impl<'a> Validator<'a> {
-    /// Records an error about entry `id` (positioned at its `id:` line).
+    /// Records an error about entry `id` (positioned at its `id:` line, or
+    /// for a speaker, which has none, at the first line with `"<id>"`).
     fn err(&mut self, id: &str, message: String) {
         let e = ContentError::new(self.file, message);
-        let line = line_of(self.source, &format!("id: \"{id}\""));
+        let line = line_of(self.source, &format!("id: \"{id}\""))
+            .or_else(|| line_of(self.source, &format!("\"{id}\"")));
         self.errors.push(match line {
             Some(l) => e.at(l, None),
             None => e,
@@ -563,6 +600,104 @@ mod tests {
             errors,
             [
                 "ch.ron:4: character \"hero\" has no name: add \"hero\": \"<name>\" to \
+                 assets/data/names.ron"
+            ]
+        );
+    }
+
+    /// One character, `hero` (line 4), and `speakers` on line 9.
+    fn with_speakers(speakers: &str) -> String {
+        file(&[character("hero", "swordsman", "")], "").replace(
+            "generics: [],",
+            &format!("generics: [],\n    speakers: [{speakers}],"),
+        )
+    }
+
+    #[test]
+    fn speakers_load_and_can_speak() {
+        let table = names(&[
+            ("hero", "Hero"),
+            ("dace", "Dace Marr"),
+            ("crane_2", "Crane"),
+        ]);
+        let t = from_source(
+            "ch.ron",
+            &with_speakers("\"dace\", \"crane_2\""),
+            Some(&classes()),
+            Some(&items()),
+            Some(&table),
+        );
+        assert!(t.is_ok(), "{t:?}");
+        let t = t.unwrap_or_default();
+        let id = |s: &str| CharacterId(s.into());
+        assert_eq!(t.speakers, BTreeSet::from([id("crane_2"), id("dace")]));
+        // Speakers aren't units.
+        assert_eq!(t.characters.len(), 1);
+        assert!(t.can_speak(&id("hero")));
+        assert!(t.can_speak(&id("dace")));
+        assert!(t.can_speak(&id("crane_2")));
+        assert!(!t.can_speak(&id("nobody")));
+    }
+
+    #[test]
+    fn a_file_without_speakers_loads() {
+        let t = load_src(&file(&[character("hero", "swordsman", "")], ""));
+        assert!(t.is_ok(), "{t:?}");
+        let t = t.unwrap_or_default();
+        assert!(t.speakers.is_empty());
+        assert!(t.can_speak(&CharacterId("hero".into())));
+    }
+
+    #[test]
+    fn speaker_ids_are_checked() {
+        assert_eq!(
+            errors(&with_speakers("\"Dace\", \"the.rival\", \"\"")),
+            [
+                "ch.ron:9: speaker \"Dace\": ids are lowercase letters, digits and _",
+                "ch.ron:9: speaker \"the.rival\": ids are lowercase letters, digits and _",
+                "ch.ron:9: speaker \"\": ids are lowercase letters, digits and _",
+            ]
+        );
+    }
+
+    #[test]
+    fn duplicate_speakers() {
+        assert_eq!(
+            errors(&with_speakers("\"dace\", \"crane\", \"dace\"")),
+            ["ch.ron:9: duplicate speaker id \"dace\""]
+        );
+    }
+
+    #[test]
+    fn a_speaker_who_is_a_character_is_an_error() {
+        assert_eq!(
+            errors(&with_speakers("\"dace\", \"hero\"")),
+            [
+                "ch.ron:4: \"hero\" is both a character and a speaker; a character can \
+                 already speak, so remove it from speakers"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_speaker_without_a_name_is_an_error() {
+        let table = names(&[("hero", "Hero"), ("dace", "Dace Marr")]);
+        let errors: Vec<String> = from_source(
+            "ch.ron",
+            &with_speakers("\"dace\", \"crane\""),
+            Some(&classes()),
+            Some(&items()),
+            Some(&table),
+        )
+        .err()
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+        assert_eq!(
+            errors,
+            [
+                "ch.ron:9: speaker \"crane\" has no name: add \"crane\": \"<name>\" to \
                  assets/data/names.ron"
             ]
         );
@@ -974,6 +1109,22 @@ mod tests {
             let unit = g.unit(UnitId(0), &classes, &items, Faction::Enemy, Pos::new(0, 0));
             assert!(unit.is_ok_and(|u| armed(&u)), "{}", g.id);
         }
+        // The Chapter 1 cast (docs/story/chapters/ch01.md, "Cast on
+        // screen") can speak, as characters or as speakers.
+        for id in [
+            "lead",
+            "retainer",
+            "sergeant",
+            "poacher",
+            "keeper",
+            "heretic",
+            "red_captain",
+            "rival",
+            "vowmaster",
+        ] {
+            assert!(t.can_speak(&CharacterId(id.into())), "{id}");
+        }
+        assert!(!t.can_speak(&CharacterId("test_brigand".into())));
         // The Quick Battle's caster: Fire from its class, Frost and Heal
         // of its own.
         let mage = &t.characters[&CharacterId("test_mage".into())];

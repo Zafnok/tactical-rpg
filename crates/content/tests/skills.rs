@@ -117,6 +117,7 @@ fn battle_with(units: Vec<Unit>, forests: &[Pos]) -> BattleState {
         seed: 1,
         triggers: vec![],
         mode: trpg_core::GameMode::Classic,
+        battle_notes: vec![],
     })
     .0
 }

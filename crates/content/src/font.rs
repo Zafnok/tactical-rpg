@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::bundle;
 use crate::error::ContentError;
+pub use crate::image::png_size;
 use crate::ron_loader::parse_ron;
 
 /// Path of the glyph map inside the asset bundle.
@@ -196,23 +197,10 @@ fn describe(c: char) -> String {
     format!("'{}' (U+{:04X})", c.escape_debug(), u32::from(c))
 }
 
-/// Width and height from a PNG's header, or `None` if `bytes` isn't a PNG.
-pub fn png_size(bytes: &[u8]) -> Option<(u32, u32)> {
-    const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
-    // Signature, then the IHDR chunk: length (4), type (4), width (4), height (4).
-    let header = bytes.get(..24)?;
-    if &header[..8] != SIGNATURE || &header[12..16] != b"IHDR" {
-        return None;
-    }
-    let be = |at: usize| {
-        u32::from_be_bytes([header[at], header[at + 1], header[at + 2], header[at + 3]])
-    };
-    Some((be(16), be(20)))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::image::png_header;
 
     /// A valid atlas holding exactly the required glyphs, 16 per row.
     fn required_only() -> FontAtlasDef {
@@ -222,14 +210,6 @@ mod tests {
             columns: 16,
             glyphs: REQUIRED_GLYPHS.chars().zip(0..).collect(),
         }
-    }
-
-    fn png_header(w: u32, h: u32) -> Vec<u8> {
-        let mut v = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
-        v.extend(w.to_be_bytes());
-        v.extend(h.to_be_bytes());
-        v.extend([8, 6, 0, 0, 0]);
-        v
     }
 
     fn rows_for(def: &FontAtlasDef) -> u32 {
@@ -337,23 +317,6 @@ mod tests {
             problems[0].ends_with(&format!("but the image only holds {cells} cells")),
             "{problems:?}"
         );
-    }
-
-    #[test]
-    fn png_size_reads_header() {
-        assert_eq!(png_size(&png_header(256, 288)), Some((256, 288)));
-        // Distinct bytes, so any byte-order slip shows.
-        assert_eq!(
-            png_size(&png_header(0x0102_0304, 0x0506_0708)),
-            Some((0x0102_0304, 0x0506_0708))
-        );
-        assert_eq!(png_size(&png_header(256, 288)[..23]), None);
-        let mut bad = png_header(1, 1);
-        bad[0] = 0;
-        assert_eq!(png_size(&bad), None);
-        let mut bad = png_header(1, 1);
-        bad[12] = b'X';
-        assert_eq!(png_size(&bad), None);
     }
 
     #[test]

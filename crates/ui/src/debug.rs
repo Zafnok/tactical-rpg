@@ -3,13 +3,16 @@
 //! 0011); the portrait viewer shows every portrait (ticket 0703); the test
 //! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
 //! menu was opened from (ticket 0704). "Key bindings" opens the Key bindings
-//! screen (ticket 0815) until the Options menu (0805) does. The class-choice
+//! screen (ticket 0815) until the Options menu (0805) does. The sprite test
+//! draws the test card as sprite items (ticket 0231). The class-choice
 //! screen opens on a test unit, to promote or reclass it (ticket 0603),
 //! until the between-battle menus exist.
 
 mod portrait_viewer;
+mod sprite_test;
 
 pub use portrait_viewer::PortraitViewerScreen;
+pub use sprite_test::SpriteTestScreen;
 
 use crate::audio::MenuSound;
 use crate::color::{Palette, UiColor};
@@ -27,29 +30,33 @@ use trpg_content::palette::REQUIRED_COLORS;
 /// Names of every screen the debug key does nothing on: the debug screens,
 /// and the Key bindings screen (the Debug key is a key like any other while
 /// it captures one, and is refused as reserved).
-pub const SCREENS: [&str; 4] = [
+pub const SCREENS: [&str; 5] = [
     DebugMenuScreen::NAME,
     GlyphSamplerScreen::NAME,
     PortraitViewerScreen::NAME,
     KeyBindingsScreen::NAME,
+    SpriteTestScreen::NAME,
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 7] = [
+const TOOLS: [&str; 8] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
     "Play test scene (overlay)",
     "Key bindings",
+    "Sprite test",
     "Class change: promote",
     "Class change: reclass",
 ];
 /// Index of "Key bindings" in [`TOOLS`].
 const KEY_BINDINGS_TOOL: usize = 4;
+/// Index of "Sprite test" in [`TOOLS`].
+const SPRITE_TEST_TOOL: usize = 5;
 /// Index of "Class change: promote" in [`TOOLS`].
-const PROMOTE_TOOL: usize = 5;
+const PROMOTE_TOOL: usize = 6;
 /// Index of "Class change: reclass" in [`TOOLS`].
-const RECLASS_TOOL: usize = 6;
+const RECLASS_TOOL: usize = 7;
 /// The scene the "Play test scene" tools play.
 pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
@@ -96,6 +103,9 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(KEY_BINDINGS_TOOL)) => {
                     return Transition::Push(Box::new(KeyBindingsScreen::new(ctx)));
+                }
+                Some(MenuEvent::Chosen(SPRITE_TEST_TOOL)) => {
+                    return Transition::Push(Box::new(SpriteTestScreen));
                 }
                 Some(MenuEvent::Chosen(tool @ (PROMOTE_TOOL | RECLASS_TOOL))) => {
                     let kind = if tool == PROMOTE_TOOL {
@@ -487,6 +497,10 @@ mod tests {
         );
         assert_eq!(
             outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(sprite_test)"
+        );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(class_change)"
         );
         assert_eq!(
@@ -498,15 +512,11 @@ mod tests {
         // change tools without their test character.
         ctx.content.dialogue.scenes.clear();
         ctx.content.characters.characters.clear();
-        let mut menu = DebugMenuScreen::new();
-        // (The menu opens on its first tool; up wraps to the last.)
-        for a in [
-            [CursorUp, Confirm],
-            [CursorUp, Confirm],
-            [CursorUp, CursorUp],
-            [CursorUp, Confirm],
-        ] {
-            let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
+        for downs in [2, 3, PROMOTE_TOOL, RECLASS_TOOL] {
+            let mut menu = DebugMenuScreen::new();
+            let mut a = vec![CursorDown; downs];
+            a.push(Confirm);
+            let frame = FrameInput::new(a, 0.0, vec![]);
             assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
         }
         assert_eq!(
@@ -515,10 +525,12 @@ mod tests {
                 "debug_menu",
                 "glyph_sampler",
                 "portrait_viewer",
-                "key_bindings"
+                "key_bindings",
+                "sprite_test"
             ]
         );
         assert_eq!(TOOLS[KEY_BINDINGS_TOOL], "Key bindings");
+        assert_eq!(TOOLS[SPRITE_TEST_TOOL], "Sprite test");
         assert_eq!(TOOLS[PROMOTE_TOOL], "Class change: promote");
         assert_eq!(TOOLS[RECLASS_TOOL], "Class change: reclass");
     }
