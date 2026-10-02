@@ -34,26 +34,29 @@ the read-only key. Until then:
 
 ## Nick input
 
-**Setup.** Two commands, run once, in this order. Each can be pasted into a
-terminal as it is.
+**Setup.** Two commands, run once, in this order, in a **Command Prompt**
+window (`cmd`), which is what Nick uses.
 
-1. Create the private repository and upload the files (about 370 MB; it
-   takes a few minutes):
+1. ~~Create the private repository and upload the files.~~ **Done
+   2026-10-02:** the repository is private and its `main` is the commit
+   named above.
 
-   ```bash
+   ```bat
    gh repo create Zafnok/visions-of-shuyi-assets --private --description "Bought art for Visions of Shuyi. Must stay private." --source "D:/tactical-rpg/assets-private" --remote origin --push
    ```
 
 2. Make the read-only key the builds use, and give it to both repositories
    (the key files are deleted again at the end; nothing else needs them):
 
-   ```bash
-   ssh-keygen -q -t ed25519 -N "" -C "visions-of-shuyi builds" -f "$HOME/shuyi-assets-key" && gh repo deploy-key add "$HOME/shuyi-assets-key.pub" --repo Zafnok/visions-of-shuyi-assets --title "visions-of-shuyi builds (read-only)" && gh secret set PRIVATE_ASSETS_KEY --repo Zafnok/visions-of-shuyi < "$HOME/shuyi-assets-key" && rm "$HOME/shuyi-assets-key" "$HOME/shuyi-assets-key.pub"
+   ```bat
+   ssh-keygen -q -t ed25519 -N "" -C "visions-of-shuyi builds" -f "%USERPROFILE%\shuyi-assets-key" && gh repo deploy-key add "%USERPROFILE%\shuyi-assets-key.pub" --repo Zafnok/visions-of-shuyi-assets --title "visions-of-shuyi builds (read-only)" && gh secret set PRIVATE_ASSETS_KEY --repo Zafnok/visions-of-shuyi < "%USERPROFILE%\shuyi-assets-key" && del "%USERPROFILE%\shuyi-assets-key" "%USERPROFILE%\shuyi-assets-key.pub"
    ```
 
-Then tell Claude it is done. Don't change anything in
-`D:\tactical-rpg\assets-private\` before the first command: the upload must
-contain the commit named above.
+   (The first version of this command was written for Git Bash, with
+   `$HOME` and `rm`, and failed in Command Prompt before making anything.
+   In Git Bash, put `$HOME/` for `%USERPROFILE%\` and `rm` for `del`.)
+
+Then tell Claude it is done.
 
 ## Scope
 
