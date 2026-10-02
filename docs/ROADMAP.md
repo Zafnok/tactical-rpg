@@ -125,5 +125,6 @@ early so every later PR is checked by them.
   bots (after 0803) → 0507 trained AlphaZero-style bot (research) and 0508
   recording Nick's play to calibrate the bots (after 0802) → 0509
   autobalancing battles with the bots → 0510 generating skirmishes to order
-  (after 1007, 1008). Targets: `docs/design/playtest-bots.md`. Not on the
-  Chapter 1 critical path; 0504 can start any time.
+  (after 1007, 1008). Targets: `docs/design/playtest-bots.md`; how to run
+  them and read the report: [`docs/playtesting.md`](playtesting.md). Not on
+  the Chapter 1 critical path; 0504 can start any time.
