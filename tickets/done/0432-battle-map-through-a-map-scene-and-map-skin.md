@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: high
-status: in-progress
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-01
 ---
 
 # 0432 — Battle map through a map scene and a map skin
@@ -147,24 +147,24 @@ None. Nothing a player sees changes.
 
 ## Acceptance criteria
 
-- [ ] `git diff --stat` shows no `.snap` file changed.
-- [ ] `grep -rn "TILE_W_CELLS\|TILE_PX\|VIEW_TILES_" crates/ui/src` finds
+- [x] `git diff --stat` shows no `.snap` file changed.
+- [x] `grep -rn "TILE_W_CELLS\|TILE_PX\|VIEW_TILES_" crates/ui/src` finds
       matches only under `crates/ui/src/map_view/glyph*`.
-- [ ] `BattleScreen` no longer calls `buf.set`, `blend_bg` or
+- [x] `BattleScreen` no longer calls `buf.set`, `blend_bg` or
       `add_overlay` for anything inside `MAP_VIEW` except through the
       skin.
-- [ ] Unit: `scene()` in each mode that shows ranges (selected, threat,
+- [x] Unit: `scene()` in each mode that shows ranges (selected, threat,
       move-after, targeting, skill target, item target, danger zone on)
       lists the tints the old code drew; the cursor is `None` in the modes
       that hid it.
-- [ ] Property `glyph_skin_paints_only_the_area`: for any scene and area,
+- [x] Property `glyph_skin_paints_only_the_area`: for any scene and area,
       cells and items outside `area` are untouched.
-- [ ] Property `scene_units_are_visible`: every `UnitView::pos` lies inside
+- [x] Property `scene_units_are_visible`: every `UnitView::pos` lies inside
       `origin..origin + size`.
-- [ ] Harness test: `map_text()` of the Quick Battle start is pinned as an
+- [x] Harness test: `map_text()` of the Quick Battle start is pinned as an
       insta snapshot; after `keys` that move the cursor one tile, only the
       cursor line changes.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -176,5 +176,78 @@ None. Nothing a player sees changes.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done (2026-10-01).** The battle screen no longer draws its map. Each
+frame `BattleScreen::scene(ctx)` builds a `MapScene` and
+`ctx.map_skin.paint(ctx, &scene, MAP_VIEW, buf)` paints it. The only skin
+is the `GlyphSkin`, which is the old drawing code, moved. Every existing
+snapshot is byte-identical; one snapshot was added (the Quick Battle's
+`map_text()`).
+
+Where things are:
+
+- `crates/ui/src/map_view/scene.rs`: `MapScene`, `TileView`, `RangeKind`,
+  `UnitView`, `CursorView`, `CursorStyle`, and `MapScene::to_text`.
+- `map_view/skin.rs`: the `MapSkin` trait.
+- `map_view/glyph.rs` and `map_view/glyph/{units,cursor,path}.rs`: the
+  `GlyphSkin`. `TILE_W_CELLS`, `TILE_PX`, `HP_BAR_W` and the cursor's pixel
+  offsets are private to it.
+- `Ctx::map_skin` (`Rc<dyn MapSkin>`, the glyph skin by default,
+  `map_view::default_skin()`).
+- `Harness::map_scene()` and `map_text()`; `BattleScreen::scene()`.
+- `crates/ui/README.md` has a *Map view* section with the rules.
+
+The PR has two code commits, as the ticket asked: the first only moves
+code (imports change, nothing else), the second is the change.
+
+**Deviations from the plan:**
+
+- **`BattleScreen::new(state)` keeps its signature** (it takes no `Ctx`,
+  and 78 call sites in tests and other open branches use it). The screen
+  holds the view's size in tiles: it starts as the default skin's, and is
+  taken from `ctx.map_skin` at the start of every frame; if it changed,
+  the camera is re-centred on the cursor. `scene()` is right even before
+  the first update (it asks the skin itself). `Camera::centred_on` and
+  `follow` take the view size as an argument, as planned.
+- **The rewind screen's map goes through the scene too** (`scene()` gives
+  the map before the highlighted action when the rewind screen is open).
+  The ticket didn't list it, but it drew terrain and units itself.
+- **`faction_color` and `hp_fill` stay in `screens/battle/units.rs`.**
+  The panels, the forecast, the info screen and the combat box use them,
+  and they are about palette names and bar maths, not about tiles. The
+  glyph skin imports them; 0433's skin can too.
+- **`CursorStyle` moved to `map_view::scene`** (it is part of
+  `CursorView`); `screens::battle::cursor::CursorStyle` still works (a
+  re-export), so ADR-0024's path is still right.
+- **`OVERLAY_BLEND` moved to the glyph skin** (`map_view::glyph`): how
+  strongly a range tints a tile is that skin's look.
+- **`draw_fading_unit` is gone**: `draw_unit` takes a `UnitView`, which
+  carries the fade.
+- **`tile_to_cell` takes a `Layout`** (a scene placed in an area) instead
+  of a `Camera`: the glyph skin can paint any scene into any area, which
+  the `glyph_skin_paints_only_the_area` property needs.
+- **`MapSkin::tile_cells`** was added (a provided method: the cells
+  `tile_px` touches), so the menu and popup placement don't each convert
+  pixels to cells. `menu_origin` now takes the tile's cells, so a skin
+  with bigger tiles puts the menu beside the whole tile.
+- **`MapScene::cursor` is `None` when the cursor is off the visible
+  tiles** (during an AI action's camera pan), not only in the modes that
+  hide it: the scene holds what is on the visible map.
+- **`to_text`** adds the unit's id (`#4`) and, for a named character, its
+  id in brackets, to the ticket's line, and counts equal tiles in a row
+  (`plain*3`) so rows stay short.
+- The glyph skin cuts a map label longer than two letters to two (labels
+  are always two; this only keeps the skin inside its tile for any scene).
+- **Existing tests:** three helpers that used `tile_to_cell(pos, camera)`
+  or `layout::TILE_W_CELLS` / `VIEW_TILES_W` now use a test helper
+  (`testing::tile_cell`), the literal `2`, or the scene's size. Nothing
+  else was rewritten (0434 does that).
+- Step 10: the cinematic player (0817) isn't done, and its ticket already
+  says to use the skin.
+- No new ADR: ADR-0038 covers all of this.
+
+**Follow-up tickets created:** none. A note was added to 0433 about what
+switching skins in the middle of a battle does and doesn't handle yet.
+
+**Gameplay rules decided here:** none. Nothing a player sees changed.
+
+**For Nick:** nothing to try. The game looks and plays exactly as before.
