@@ -43,6 +43,18 @@ which has no open dependencies and can start any time) → **0818** character an
 shots (after Chapter 1's map, faces and script) → **1010** the overworld
 shot (after the world map, 1007). Not on the Chapter 1 critical path.
 
+**Replaceable graphics** (Nick, 2026-10-01: swapping the map's glyphs for
+sprites from image files must be a small job; ADR-0038): **0229** pictures
+in the frame as sprite items (no open dependencies; 0711 and 0413 now draw
+bought art with it, so it is on the Chapter 1 critical path) → **0230**
+`cargo xtask frame-png`, a picture of any scripted frame without a window.
+**0432** the battle map is painted by a map skin from a plain-data map
+scene, look unchanged (no open dependencies) → **0433** a sprite skin read
+from a tileset file, behind the debug menu, and **0434** battle tests read
+the scene instead of cells. Bots and play records already never touch the
+look (ADR-0033); 0505 and 0508 now check it. Which art ships on the map
+stays Nick's decision (1006).
+
 ## Nick's queue (answer these first; any order within a row)
 
 Design answers unblock most of the rules work. Suggested order:
@@ -67,11 +79,13 @@ What's still open between now and Nick's playtest (0804), by dependency depth
 2026-10-01 from the tickets' `blocked_by` lists, after a dependency check:
 done tickets were dropped, 0711 now waits for 0110 (it needs the bought
 files), and 0803 now waits for 0710 and 0807 (it sets Chapter 1's music).
+0229 (pictures as sprite items, ADR-0038) was added to row 1: 0711 draws
+the bought faces with it.
 Nick also put the combat scene (0413), Harl's picture (0035) and 0316
 (non-attack skills cost uses per battle) in front of the playtest.
 
 ```
- 1  0022 0023 0024 0035 0110 0316 0410 0707 0710 0801
+ 1  0022 0023 0024 0035 0110 0229 0316 0410 0707 0710 0801
  2  0711 0802 0807 0810
  3  0413 0706 0809
  4  0803
@@ -97,7 +111,8 @@ early so every later PR is checked by them.
   bars → 0816 rebinding (after 0815). Not on the Chapter 1 critical path;
   0219 can land any time after 0032. Steam-specific gaps: 0903.
 - Class tiers 4 and up; tier-3 class skills (1001).
-- Custom 16×16 class icons vs name initials on the map (1006).
+- Custom 16×16 class icons vs name initials on the map (1006, after the
+  sprite map skin, 0433).
 - Audio still open after 0020: a banter conversation track, the crit sound of
   a spell with no element, fliers' movement (`docs/design/audio.md`).
   World-map / capital / camp / shop music: 0025–0028.

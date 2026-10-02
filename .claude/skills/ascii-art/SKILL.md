@@ -16,7 +16,8 @@ mood D "Earthy painterly".
 Because cells are tall, a shape that looks square in a text editor looks
 **tall** in game. For glyph art (title screens, UI), make shapes about twice as
 many columns as rows. Bought portraits and battle images are PNGs with
-square pixels, drawn as overlays (0711), so the problem doesn't apply to them.
+square pixels, drawn as sprite items (0229, 0711; ADR-0038), so the problem
+doesn't apply to them.
 
 ## Portraits and battle art: bought, not drawn
 
@@ -46,6 +47,10 @@ The old 32×32 text portraits (`assets/portraits/*.portrait`) are
 placeholders only, until 0711 and 0706 replace them.
 
 ## Map terrain
+
+These are the rules of the **glyph skin**, the game's default map look
+(ADR-0038). Another skin (a tileset of sprites, 0433) has its own data and
+doesn't change these files.
 
 - Two glyphs per tile. Terrain must be readable **without** colour (different
   glyph shapes), and distinct **with** colour: glyph in `<terrain>`,

@@ -27,7 +27,8 @@ assume the likely answers: **bought faces** sliding past, and snippets in
 **the game's dialogue screen**. If 0036 decided otherwise, it has updated
 this ticket; follow the design doc where the two differ.
 
-Character art is bought and drawn as pixel overlays (0711, ADR-0032).
+Character art is bought and drawn as sprite items (0711, ADR-0032,
+ADR-0038).
 Claude never draws character art.
 
 ## Nick input

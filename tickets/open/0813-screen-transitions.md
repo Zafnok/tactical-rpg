@@ -41,6 +41,11 @@ Sub-question: the same transition everywhere, or only between big steps
 - A transition done in `ui` over the glyph buffer (e.g. dimming every
   cell's colours toward black), driven by the frame clock `ui` already gets
   (ADR-0004: no clock in `core`). Input is ignored while it plays.
+- The transition covers **everything in the frame**: cells, rectangles and
+  sprite items (0229, ADR-0038), so portraits and any sprite skin fade or
+  wipe with the text. `GlyphBuffer::dim` changes only cells; if 0229 is
+  done, treat items as well (rectangles by colour, sprites by `opacity`,
+  or cut them for a wipe). If it isn't, add a line to 0229.
 - Used between the screens Nick names.
 - Respect 0805's animation setting if it exists (`anim_speed`): Fast halves
   the time. If 0805 isn't done, add a note there.

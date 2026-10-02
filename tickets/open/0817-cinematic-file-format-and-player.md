@@ -87,13 +87,20 @@ shots.
 4. **Player**: `CinematicPlayer::new(ctx, id)` builds what the shots need
    once (each battle's scene: draw the whole map and its units at their
    starting places into one `GlyphBuffer`; move `BattleScreen::draw_terrain`'s
-   body into a function both can call, and use `units::draw_unit`).
+   body into a function both can call, and use `units::draw_unit`). If the
+   map skin (0432, ADR-0038) is done, build a `MapScene` of the whole map
+   instead and paint it with `ctx.map_skin`, so the cinematic follows
+   whatever skin the battle uses; if it isn't, do as written here (0432
+   then moves this code behind the skin).
    `CinematicPlayer::draw(&self, ctx, t, buf)` draws the current shot:
    - `MapPan`: the scene as a 0228 backdrop over the whole console, centre
      moving from `from` to `to` with an ease-in-out on `progress`.
    - `Logo`: 0811's title art, drawn by the same function `TitleScreen`
      uses (make it shareable; don't copy it).
-   - Fades: `buf.dim` and the backdrop's brightness by `fade`.
+   - Fades: `buf.dim` and the backdrop's brightness by `fade`. A fade must
+     cover everything in the frame: cells, rectangles and sprite items
+     (ADR-0038). `dim` only changes cells, so if 0229 is done, fade items
+     too (rectangles by colour, sprites by `opacity`).
 5. **Debug tool** (`crates/ui/src/debug.rs`, `TOOLS`): "Play test
    cinematic", a screen that advances `t` by `dt` and loops; Cancel closes
    it. Help line per the `keyboard-input` skill.
