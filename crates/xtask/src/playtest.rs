@@ -697,13 +697,14 @@ fn utc_stamp(secs: u64) -> String {
         |year: u64| year.is_multiple_of(4) && !year.is_multiple_of(100) || year.is_multiple_of(400);
     let mut days = secs / 86_400;
     let mut year = 1970;
-    loop {
+    // Bounded, so a wrong count of days can't spin forever.
+    for candidate in 1970..=9999 {
+        year = candidate;
         let length = if leap(year) { 366 } else { 365 };
         if days < length {
             break;
         }
         days -= length;
-        year += 1;
     }
     let february = if leap(year) { 29 } else { 28 };
     let mut month = 1;

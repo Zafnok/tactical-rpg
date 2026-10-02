@@ -79,11 +79,18 @@ mod tests {
     use crate::BaselineBot;
     use crate::testkit::{content, enemy, player, rigged, start, weak};
 
-    /// Ends every Player phase at once.
-    struct Passive;
+    /// Ends every Player phase at once. It gives up (panics) when asked for
+    /// more phases than any test here plays, so a driver that never stops
+    /// fails a test instead of hanging it.
+    #[derive(Default)]
+    struct Passive {
+        phases: u32,
+    }
 
     impl PlayerBot for Passive {
         fn choose(&mut self, _: &BattleState) -> Command {
+            self.phases += 1;
+            assert!(self.phases <= 100, "the try never stops");
             Command::EndPhase
         }
     }
@@ -126,7 +133,7 @@ mod tests {
     fn the_enemy_phase_is_played_by_the_ai() {
         // The player does nothing; the enemy walks over and fells them.
         let state = start(vec![weak(player(1, 8)), rigged(enemy(2, 0))]);
-        let measures = play_battle(state, &mut Passive, &content().ai, 60).unwrap();
+        let measures = play_battle(state, &mut Passive::default(), &content().ai, 60).unwrap();
         assert_eq!(measures.outcome, Some(Outcome::Defeat));
         assert_eq!(measures.player_fallen.len(), 1);
         assert_eq!(measures.player_fallen[0].0, UnitId(1));
@@ -139,7 +146,7 @@ mod tests {
     fn a_try_stops_when_the_turn_cap_has_passed() {
         // Nobody moves: the battle never ends.
         let state = start(vec![player(1, 8), stationary(enemy(2, 0))]);
-        let measures = play_battle(state, &mut Passive, &content().ai, 3).unwrap();
+        let measures = play_battle(state, &mut Passive::default(), &content().ai, 3).unwrap();
         assert_eq!(measures.outcome, None);
         // Turns 1 to 3 are played in full; turn 4 only starts.
         assert_eq!(measures.turns, 4);
@@ -149,7 +156,8 @@ mod tests {
     #[test]
     fn a_turn_cap_of_zero_plays_nothing() {
         let state = start(vec![player(1, 8), stationary(enemy(2, 0))]);
-        let measures = play_battle(state.clone(), &mut Passive, &content().ai, 0).unwrap();
+        let measures =
+            play_battle(state.clone(), &mut Passive::default(), &content().ai, 0).unwrap();
         assert_eq!(measures, BattleMeasures::new(&state));
     }
 

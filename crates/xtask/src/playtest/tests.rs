@@ -398,8 +398,14 @@ fn now_is_after_2023() {
 fn git_commit_is_the_short_hash_or_unknown() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let commit = git_commit(&root);
-    assert!(commit.len() >= 7, "{commit}");
-    assert!(commit.chars().all(|c| c.is_ascii_hexdigit()), "{commit}");
+    // A copy of the sources without their history (cargo-mutants makes
+    // one) has no commit.
+    if root.join(".git").exists() {
+        assert!(commit.len() >= 7, "{commit}");
+        assert!(commit.chars().all(|c| c.is_ascii_hexdigit()), "{commit}");
+    } else {
+        assert_eq!(commit, "unknown");
+    }
     let nowhere = temp_dir("no-repo");
     assert_eq!(git_commit(&nowhere), "unknown");
     std::fs::remove_dir_all(&nowhere).unwrap();
