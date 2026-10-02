@@ -5,10 +5,10 @@ type: feature
 milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0801", "0602"]
 nick_input: decision
-completed:
+completed: 2026-10-01
 ---
 
 # 0810 — Show what a won battle earned
@@ -78,14 +78,14 @@ whether it can be skipped with Cancel like combat playback (0418).
 
 ## Acceptance criteria
 
-- [ ] Nick's choice and words are recorded in `death-and-difficulty.md`.
-- [ ] Unit: `apply_result` reports gold and per-unit EXP matching the rules
+- [x] Nick's choice and words are recorded in `death-and-difficulty.md`.
+- [x] Unit: `apply_result` reports gold and per-unit EXP matching the rules
       (0 unused charges → no EXP line; 3 unused → 21 % of a level each).
-- [ ] Harness: winning the test chapter shows the gold and the EXP bonus,
+- [x] Harness: winning the test chapter shows the gold and the EXP bonus,
       and a level-up caused by the bonus shows 0602's screen.
-- [ ] Snapshot of the new screen or boxes.
+- [x] Snapshot of the new screen or boxes.
 - [ ] Nick signed off.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -94,4 +94,54 @@ whether it can be skipped with Cancel like combat playback (0418).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket.)*
+**Nick's decision** (2026-10-01, on four rendered mockups: A message
+boxes, B results screen, C EXP bars on the map, D one summary box): "1B 2A
+3B". One results screen; right after `VICTORY`, before the victory scenes;
+a press only skips the bars' animation, each level-up screen waits for its
+own press. Recorded in `docs/design/death-and-difficulty.md` (*Results
+screen*).
+
+**What was done**
+
+- `core`: `BattleRewards` (which `apply_result` already returned, from
+  0801) now also holds `deployed`, the deployed units still in the roster
+  as they were before the bonus, in slot order, and `exp_gained(unit)`
+  reports what each got. The screen reads everything from it and computes
+  no EXP or gold.
+- `ui`: `screens/results.rs`, `ResultsScreen`: the gold, the rewinds left,
+  the bonus, and a row per unit whose EXP bar fills; then the level-up
+  pages of 0602 (`Progress::without_exp_bars`, since the screen shows the
+  bars itself), drawn in the middle of the screen. `ui::flow` hosts it as
+  `Stage::Results` between the battle and the victory scenes.
+- Tests: unit tests of the rewards in `core` (0 charges: no EXP; 3: 21
+  each; a unit at the level cap: none); unit tests and two snapshots of the
+  screen (`results`, `results_level_up`); Harness tests over the test
+  chapter (`a_won_battle_shows_its_gold_and_the_rewind_bonus` with a
+  snapshot, `used_rewind_charges_shrink_the_bonus_to_nothing`, and
+  `a_level_up_from_the_rewind_bonus_shows_the_level_up_screen`).
+
+**Deviations:** the ticket's suggested `BattleRewards { exp: Vec<(UnitId,
+before, gained)>, level_ups }` became `deployed` + the existing `events` +
+`exp_gained`, because 0801 had already made the struct and the level-up
+pages are built from those events.
+
+**Claude's starting rules** (presentation, where the docs were silent;
+Nick may veto any):
+
+- With no rewind charge left, the screen shows the gold and `0 of 3` and
+  nothing about EXP (no bonus line, no unit rows).
+- A battle that gives no clear gold (the debug Quick Battle) shows no gold
+  line.
+- A unit at the level cap is listed, with its bar unchanged.
+- The bars wait 0.5 s, then fill over 1 s; holding Confirm fills them 4
+  times as fast (as on the EXP bar after a combat).
+- The wording is the mockup's: `Gold for clearing the map`, `Rewinds
+  unused`, `Bonus EXP for each unit`, `LEVEL UP`.
+- Units get a blank row between them while they all fit (up to 7); a
+  bigger army is listed without blank rows. The panel has room for 14.
+
+**Not met:** *Nick signed off* waits for Nick to play it on Pages after the
+merge.
+
+**Follow-ups:** none. Recruits who joined and Classic deaths aren't on the
+screen (the ticket is about gold and the rewind bonus only).

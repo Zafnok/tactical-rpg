@@ -71,6 +71,19 @@ On 0801's starting rules (PR #127, 2026-09-30):
 (1: every unit is back at full HP for the next battle. 3: a unit that dies
 in Classic sends its whole loadout to the stock.)
 
+On how a won battle shows its rewards (ticket 0810, 2026-10-01; rendered
+mockups of A message boxes, B a results screen, C EXP bars on the map, D
+one summary box):
+
+> "1B
+> 2A
+> 3B"
+
+(1B: one results screen with the gold, the rewinds left and every unit's
+EXP bar. 2A: right after `VICTORY`, before the victory scenes. 3B: a press
+only skips the bars' animation; each level-up screen still waits for its
+own press.)
+
 ## Falling units
 
 A unit falls when its HP reaches 0.
@@ -150,6 +163,41 @@ Charges don't carry over to the next map. Instead, each unused charge gives a
 - The bonus is added after the battle's normal EXP as **one award with no
   100-EXP cap** (Nick, PR #127: "minor overflow to next lv is ok"); only the
   level cap limits it. At most 8 charges × 7 = 56 today.
+
+### Results screen (Nick, 0810)
+
+A won battle shows what it gave on **one results screen**, right after the
+`VICTORY` banner and **before the victory scenes**:
+
+- the gold for clearing the map, and the party's gold now;
+- the rewind charges left, out of the map's (e.g. `3 of 3`), and the bonus
+  EXP they give each unit;
+- one row per deployed unit that gets the bonus (name, class, level and
+  its EXP bar). All the bars fill at once, from the unit's EXP before the
+  bonus; a unit that levels shows its new level and `LEVEL UP`.
+
+Then, for each unit the bonus levelled, the usual level-up screen
+(`progression.md`), one at a time.
+
+**Skipping** (Nick): Confirm or Cancel fills the bars at once, and holding
+Confirm fills them faster, as on the EXP bar after a combat. A press on
+full bars goes on. **Each level-up screen still waits for its own press**;
+nothing skips them all.
+
+Example: Chapter 1 won with all 3 charges unused shows `+1000` gold,
+`3 of 3` rewinds, `+21` bonus EXP, and six bars each moving 21 EXP; a unit
+that was at 88 EXP ends at 9 with `LEVEL UP`, and its level-up screen comes
+next.
+
+*Claude's starting rules* (presentation; Nick may veto):
+
+- With **no charge left** there is no bonus line and no unit rows: just the
+  gold and `0 of 3`.
+- A battle with **no clear gold** shows no gold line.
+- A unit **at the level cap** is listed with its bar unchanged.
+- The bars wait half a second, then fill over one second (*tunable*).
+- The wording (`Gold for clearing the map`, `Rewinds unused`, `Bonus EXP
+  for each unit`) is the mockup's.
 
 ## Difficulty
 

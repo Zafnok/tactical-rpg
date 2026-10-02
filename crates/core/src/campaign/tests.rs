@@ -318,6 +318,16 @@ fn unused_charges_give_exp_to_every_deployed_unit() {
             GameMode::Casual => &[(1, 21), (2, 21)],
         };
         assert_eq!(gained, expected, "{mode:?}");
+        // The results screen's rows: each deployed unit before the bonus,
+        // and what it got.
+        let rows: Vec<_> = rewards
+            .deployed
+            .iter()
+            .map(|u| (u.id.0, rewards.exp_gained(u.id)))
+            .collect();
+        assert_eq!(rows, expected, "{mode:?}");
+        assert_eq!(rewards.deployed[0], *s.unit(UnitId(1)).unwrap());
+        assert_eq!(rewards.exp_gained(UnitId(3)), 0, "nobody's id");
         let lord = s.unit(UnitId(1)).unwrap();
         let total = |u: &Unit| u.level * EXP_PER_LEVEL + u.exp;
         assert_eq!(total(&game.roster[0]), total(lord) + 21);
@@ -328,6 +338,37 @@ fn unused_charges_give_exp_to_every_deployed_unit() {
             assert_eq!(total(&game.roster[1]), total(ann) + 21);
         }
     }
+}
+
+/// Every charge used: the gold, the deployed units, and no EXP for anyone.
+#[test]
+fn no_unused_charges_give_gold_and_no_exp() {
+    let mut game = campaign(GameMode::Casual);
+    let def = def();
+    let s = won(&game, &def);
+    let rewards = game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!((rewards.clear_gold, rewards.bonus_exp), (500, 0));
+    assert_eq!(rewards.events, []);
+    assert_eq!(rewards.deployed.len(), 2);
+    assert!(
+        rewards
+            .deployed
+            .iter()
+            .all(|u| rewards.exp_gained(u.id) == 0)
+    );
+    assert_eq!(game.gold, s.gold() + 500);
+}
+
+/// A unit at the level cap gets nothing from the bonus.
+#[test]
+fn a_unit_at_the_level_cap_gets_no_bonus() {
+    let mut game = campaign(GameMode::Classic);
+    let def = def();
+    game.roster[0].level = tables().classes.level_cap;
+    let s = won(&game, &def);
+    let rewards = game.apply_result(&def, &s, 3).unwrap();
+    assert_eq!(rewards.bonus_exp, 21);
+    assert_eq!(rewards.exp_gained(UnitId(1)), 0);
 }
 
 /// No cap on the bonus (Nick): past a level, the rest carries over.

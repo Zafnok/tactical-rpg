@@ -1382,8 +1382,14 @@ fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
 /// The help line of an EXP bar or level-up page: skip and fast while it
 /// plays, then continue.
 fn progress_help(p: &Progress, km: HelpKeys<'_>) -> String {
+    playing_help(p.page_played(), km)
+}
+
+/// The help line of something that plays by itself (an EXP bar, the
+/// results): skip and fast until it has `played`, then continue.
+pub(crate) fn playing_help(played: bool, km: HelpKeys<'_>) -> String {
     let confirm = key_name(km, Action::Confirm);
-    if p.page_played() {
+    if played {
         help_line(&[(Some(confirm), "continue")])
     } else {
         let hold = Some(format!("hold {confirm}"));

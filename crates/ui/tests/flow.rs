@@ -1,8 +1,8 @@
 //! Scripted tests of the game flow (ticket 0801) through the real game:
 //! New Game → mode → lead → the test chapter (`assets/chapters/test.ron`:
 //! an intro scene, a battle where the lead seizes the fort at (5, 5)
-//! within 3 turns, a victory scene) → "To be continued" → title. Battles
-//! are won and lost with scripted commands.
+//! within 3 turns, the results (0810), a victory scene) → "To be continued"
+//! → title. Battles are won and lost with scripted commands.
 
 use insta::assert_snapshot;
 use trpg_core::{
@@ -91,8 +91,17 @@ fn confirm_until(h: &mut Harness, name: &str) {
     panic!("never reached {name}: {:?}", h.screens());
 }
 
+/// From the won battle's `VICTORY` banner, through the results (a press
+/// fills the bars, a press goes on), to the victory scene.
+fn past_results(h: &mut Harness) {
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "results"]);
+    h.keys("f f");
+}
+
 /// Acceptance: New Game on the test chapter → skip the scenes → win with
-/// scripted commands → the victory scene → "To be continued" → title.
+/// scripted commands → the results → the victory scene → "To be
+/// continued" → title.
 #[test]
 fn new_game_plays_the_test_chapter_to_the_end() {
     let mut h = to_battle();
@@ -101,8 +110,8 @@ fn new_game_plays_the_test_chapter_to_the_end() {
     assert_eq!(charges(&h), 3, "a Normal map");
     seize(&mut h);
     assert_eq!(battle(&h).outcome(), Some(Outcome::Victory));
-    // The VICTORY banner, then the victory scene.
-    h.keys("f");
+    // The VICTORY banner, the results, then the victory scene.
+    past_results(&mut h);
     assert_eq!(h.screens(), ["title", "dialogue"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
@@ -148,6 +157,90 @@ fn the_intro_speaks_of_the_lead_the_player_made() {
         h.snapshot()
     );
     assert_snapshot!(h.snapshot());
+}
+
+/// Acceptance (0810): winning the test chapter shows the clear gold and the
+/// unused-rewind EXP bonus, each deployed unit's bar filling by it, before
+/// the victory scene.
+#[test]
+fn a_won_battle_shows_its_gold_and_the_rewind_bonus() {
+    let mut h = to_battle();
+    seize(&mut h);
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "results"]);
+    assert!(shows(&h, "Gold for clearing the map"), "{}", h.snapshot());
+    assert!(shows(&h, "+500 (now 500)"), "{}", h.snapshot());
+    assert!(shows(&h, "3 of 3"));
+    assert!(shows(&h, "Bonus EXP for each unit                     +21"));
+    // Both deployed units, before the bars move.
+    let bar = |name: &str, class: &str, bar: &str, exp: u32| {
+        format!("{name:<14}{class:<9}Lv 1  EXP {bar:░<20} {exp:>2}")
+    };
+    assert!(
+        shows(&h, &bar("Ellery", "Exile", "", 0)),
+        "{}",
+        h.snapshot()
+    );
+    assert!(shows(&h, &bar("Test Knight", "Guard", "", 0)));
+    // They fill by themselves, and then wait.
+    h.wait(3.0);
+    assert_eq!(h.screens(), ["title", "results"]);
+    assert!(
+        shows(&h, &bar("Ellery", "Exile", "████", 21)),
+        "{}",
+        h.snapshot()
+    );
+    assert!(shows(&h, &bar("Test Knight", "Guard", "████", 21)));
+    assert_snapshot!(h.snapshot());
+    // What the screen showed is what the campaign got.
+    let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
+    let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
+    assert_eq!(campaign.gold, 500);
+    let exp: Vec<u32> = campaign.roster.iter().map(|u| u.exp).collect();
+    assert_eq!(exp[..2], [21, 21]);
+    // Nobody levelled: one press goes on to the victory scene.
+    h.keys("d");
+    assert_eq!(h.screens(), ["title", "dialogue"]);
+}
+
+/// Acceptance (0810): with a rewind charge used the bonus is smaller, and
+/// with none left there is no EXP line at all.
+#[test]
+fn used_rewind_charges_shrink_the_bonus_to_nothing() {
+    let wait_at = |h: &mut Harness, x: i32| {
+        send(
+            h,
+            &Command::Act {
+                unit: LEAD,
+                dest: Pos::new(x, 5),
+                action: UnitAction::Wait,
+            },
+        );
+    };
+    let mut h = to_battle();
+    wait_at(&mut h, 4);
+    h.keys("r f f");
+    assert_eq!(charges(&h), 2);
+    seize(&mut h);
+    h.keys("f");
+    assert!(shows(&h, "2 of 3"), "{}", h.snapshot());
+    assert!(shows(&h, "Bonus EXP for each unit                     +14"));
+    // Every charge used.
+    let mut h = to_battle();
+    for _ in 0..3 {
+        wait_at(&mut h, 4);
+        h.keys("r f f");
+    }
+    assert_eq!(charges(&h), 0);
+    seize(&mut h);
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "results"]);
+    assert!(shows(&h, "+500 (now 500)"), "{}", h.snapshot());
+    assert!(shows(&h, "0 of 3"));
+    assert!(!shows(&h, "Bonus EXP"));
+    assert!(!shows(&h, "EXP"));
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "dialogue"]);
 }
 
 /// Whether some row of the screen contains `text`.
@@ -291,7 +384,7 @@ fn the_next_chapter_follows_a_victory() {
     h.keys("f f Up f");
     skip_scene(&mut h);
     seize(&mut h);
-    h.keys("f");
+    past_results(&mut h);
     skip_scene(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));

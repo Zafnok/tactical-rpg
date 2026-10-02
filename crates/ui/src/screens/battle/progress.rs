@@ -304,6 +304,14 @@ impl Progress {
         })
     }
 
+    /// The same sequence without its EXP bars, for the results screen
+    /// (0810), which shows every unit's bar itself; `None` if nothing is
+    /// left.
+    pub fn without_exp_bars(mut self) -> Option<Self> {
+        self.pages.retain(|p| !matches!(p, Page::Exp(_)));
+        (!self.pages.is_empty()).then_some(self)
+    }
+
     /// Every page, in order.
     pub fn pages(&self) -> &[Page] {
         &self.pages
@@ -700,6 +708,22 @@ mod tests {
         assert!(mastery.waits());
         assert!(mastery.len(&T).abs() < f32::EPSILON);
         assert_eq!(cl.learned.len(), 1);
+    }
+
+    #[test]
+    fn without_exp_bars_keeps_the_other_pages_in_order() {
+        let pb = progress().without_exp_bars().unwrap();
+        assert_eq!(pb.pages().len(), 2);
+        assert!(matches!(pb.pages()[0], Page::LevelUp(_)));
+        assert!(matches!(pb.pages()[1], Page::Class(_)));
+        // EXP alone: nothing left.
+        let s = state();
+        let exp = [Event::ExpGained {
+            unit: UnitId(1),
+            amount: 10,
+        }];
+        let pb = Progress::new(&exp, s.units(), &s, T).unwrap();
+        assert_eq!(pb.without_exp_bars(), None);
     }
 
     #[test]

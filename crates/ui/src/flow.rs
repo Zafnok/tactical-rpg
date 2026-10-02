@@ -3,8 +3,9 @@
 //!
 //! ```text
 //! New Game → mode → lead → [chapter: intro scenes → battle
-//!     ├─ victory → apply the result → victory scenes → (0802: save prompt)
-//!     │            → next chapter, or "To be continued" → title
+//!     ├─ victory → apply the result → the results (0810: gold, rewind
+//!     │            bonus, level ups) → victory scenes → (0802: save
+//!     │            prompt) → next chapter, or "To be continued" → title
 //!     └─ defeat  → Game Over → Retry (the battle again) | Title]
 //! ```
 //!
@@ -30,7 +31,7 @@ use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::game_over::{GameOverChoice, GameOverScreen, ToBeContinuedScreen};
 use crate::screens::lead_select::LeadSelectScreen;
 use crate::screens::mode_select::ModeSelectScreen;
-use crate::screens::{BattleScreen, DialogueScreen};
+use crate::screens::{BattleScreen, DialogueScreen, ResultsScreen};
 
 /// The chapter the debug Quick Battle plays (`assets/chapters/quick.ron`).
 pub const QUICK_CHAPTER: &str = "quick";
@@ -46,6 +47,8 @@ pub enum Stage {
     Scene(Box<DialogueScreen>),
     /// The chapter's battle.
     Battle(Box<BattleScreen>),
+    /// What a won battle gave (0810).
+    Results(Box<ResultsScreen>),
     /// After a defeat.
     GameOver(GameOverScreen),
     /// After the last chapter.
@@ -78,7 +81,7 @@ pub struct FlowScreen {
     /// Scenes still to play before [`then`](Self::then).
     scenes: VecDeque<String>,
     then: Then,
-    /// The last won battle's rewards (0810 shows them).
+    /// The last won battle's rewards.
     rewards: Option<BattleRewards>,
     /// [`Ctx::clock_s`] when the campaign began, for its playtime.
     started_at: f64,
@@ -154,6 +157,7 @@ impl FlowScreen {
             Stage::Lead(_, s) => s,
             Stage::Scene(s) => s.as_ref(),
             Stage::Battle(s) => s.as_ref(),
+            Stage::Results(s) => s.as_ref(),
             Stage::GameOver(s) => s,
             Stage::ToBeContinued(s) => s,
         }
@@ -165,6 +169,7 @@ impl FlowScreen {
             Stage::Lead(_, s) => s,
             Stage::Scene(s) => s.as_mut(),
             Stage::Battle(s) => s.as_mut(),
+            Stage::Results(s) => s.as_mut(),
             Stage::GameOver(s) => s,
             Stage::ToBeContinued(s) => s,
         }
@@ -262,13 +267,17 @@ impl FlowScreen {
         }
     }
 
-    /// Applies the won battle to the campaign, then the victory scenes.
+    /// Applies the won battle to the campaign, then its results and the
+    /// victory scenes (Nick, 0810: the results come first).
     fn won(&mut self, ctx: &Ctx, battle: &BattleScreen) {
+        let mut results = None;
         if let (Some(campaign), Some(fight)) = (&mut self.campaign, &self.fight) {
-            let charges = battle.history().charges_left();
-            self.rewards = campaign
-                .apply_result(&fight.def, battle.state(), charges)
-                .ok();
+            let state = battle.state();
+            let unused = battle.history().charges_left();
+            self.rewards = campaign.apply_result(&fight.def, state, unused).ok();
+            let charges = fight.setup.rewind_charges;
+            let screen = |r| ResultsScreen::new(r, state, charges, campaign.gold);
+            results = self.rewards.as_ref().map(screen);
         }
         self.scenes = self
             .chapter
@@ -276,7 +285,10 @@ impl FlowScreen {
             .flat_map(|c| c.victory_scenes.iter().cloned())
             .collect();
         self.then = Then::NextChapter;
-        self.next_scene(ctx);
+        match results {
+            Some(results) => self.stage = Stage::Results(Box::new(results)),
+            None => self.next_scene(ctx),
+        }
     }
 
     /// After a chapter's victory scenes: its next chapter, or "To be
@@ -310,7 +322,7 @@ impl FlowScreen {
                 }
                 None => self.stage = Stage::Mode(ModeSelectScreen::new()),
             },
-            Stage::Scene(_) => self.next_scene(ctx),
+            Stage::Scene(_) | Stage::Results(_) => self.next_scene(ctx),
             Stage::Battle(b) => self.battle_over(ctx, &b),
             Stage::GameOver(s) => match s.result() {
                 Some(GameOverChoice::Retry) => self.restart(),
