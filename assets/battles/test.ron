@@ -1,7 +1,8 @@
 // PLACEHOLDER: the test chapter's battle (chapters/test.ron), which New
 // Game plays until Chapter 1 exists (ticket 0803), and which the flow's
 // tests use. The lead seizes the fort next to them within 3 turns; one
-// brigand stands in the way.
+// brigand stands in the way. Its two battle notes (ticket 0411) are
+// placeholders too: one about the brigand, one about no unit.
 (
     id: "test",
     map: "test_small",
@@ -10,12 +11,16 @@
         (character: "test_knight", pos: (3, 6)),
     ],
     enemies: [
-        (template: "test_brigand", pos: (8, 3)),
+        (template: "test_brigand", pos: (8, 3), id: "road_brigand"),
     ],
     pack_cap: 3,
     default_pack: ["potion", "potion"],
     clear_gold: 500,
     objective: Seize(pos: (5, 5), by_lord: true, turn_limit: Some(3)),
+    battle_notes: [
+        (text: "Brigand: guards the road, but the fort is nearer than the fight.", units: ["road_brigand"]),
+        (text: "Seize the fort within 3 turns: send your lead straight there.", units: []),
+    ],
     difficulty: Normal,
     music: Pool("skirmish"),
     seed: 1,
