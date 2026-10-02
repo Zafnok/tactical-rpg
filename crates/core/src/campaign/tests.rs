@@ -109,6 +109,7 @@ fn def() -> BattleDef {
             units: vec![UnitId(5)],
         }],
         difficulty: Difficulty::Normal,
+        music: BattleMusic::Pool("skirmish".into()),
         seed: 3,
     }
 }

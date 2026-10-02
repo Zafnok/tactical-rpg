@@ -118,6 +118,19 @@ pub struct PlayerSlot {
     pub pos: Pos,
 }
 
+/// The music a battle plays from start to end (`docs/design/audio.md`):
+/// names from the audio manifest, checked by `content`. Core plays nothing
+/// and picks nothing; a pool's track is the UI's choice, never the
+/// simulation RNG's (ADR-0019).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub enum BattleMusic {
+    /// One music cue: a story battle's chosen theme.
+    Cue(String),
+    /// A pool of music cues, one picked at random each time the battle
+    /// starts: skirmishes.
+    Pool(String),
+}
+
 /// One battle, as a battle file describes it (validated by `content`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BattleDef {
@@ -149,6 +162,8 @@ pub struct BattleDef {
     pub battle_notes: Vec<BattleNote>,
     /// Sets the rewind charges.
     pub difficulty: Difficulty,
+    /// What plays during the battle.
+    pub music: BattleMusic,
     /// Seed of the battle's RNG.
     pub seed: u64,
 }

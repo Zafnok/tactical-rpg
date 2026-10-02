@@ -22,5 +22,6 @@
         (text: "Seize the fort within 3 turns: send your lead straight there.", units: []),
     ],
     difficulty: Normal,
+    music: Pool("skirmish"),
     seed: 1,
 )
