@@ -18,9 +18,9 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      ║                            ║
                     ..≈≈≈≈..··..............╦╦..                      ║                            ║
                     ....Ar····....Br..▓▓▓▓▓▓▓▓..                      ║                            ║
-                    ..♣♣··Lo..╦┌──────────────────────────┐           ║                            ║
-                    ♣♣♣♣··..Kn.│ Brace   3 dur  Wpn 20/20 │           ║                            ║
-                    ♣♣♠♠··.....└──────────────────────────┘           ║                            ║
+                    ..♣♣··Lo..╦┌───────────────┐                      ║                            ║
+                    ♣♣♣♣··..Kn.│ Brace     3/3 │                      ║                            ║
+                    ♣♣♠♠··.....└───────────────┘                      ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
@@ -51,9 +51,9 @@ aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooppookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooorrjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjjjttoooojjjjrrjjuuuuuuuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjkkoovvjjsbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkkkoojjvvjbwwwwwwwwwwwwwwwwwwwwwwwwwwbaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakklloojjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjkkoovvjjsbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkkkoojjvvjbwwwwwwwwwwwwwwwbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb

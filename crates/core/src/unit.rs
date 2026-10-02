@@ -10,7 +10,7 @@ use crate::ai::AiBehavior;
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::geom::Pos;
 use crate::item::{Loadout, LoadoutDef, LoadoutError};
-use crate::skill::{SkillId, TimedEffect};
+use crate::skill::{SkillId, SkillUses, TimedEffect};
 use crate::spell::{SpellId, SpellState};
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::weapon::{WeaponKind, WeaponRank};
@@ -176,6 +176,10 @@ pub struct Unit {
     pub learned_skills: BTreeSet<SkillId>,
     /// Timed effects on the unit; see [`crate::skill`].
     pub effects: Vec<TimedEffect>,
+    /// Uses left of its non-attack actives in the current battle; see
+    /// [`crate::skill`].
+    #[serde(default)]
+    pub skill_uses: SkillUses,
     /// The personal +20% growth stat of a named character (never Mov);
     /// generic units have none. See [`crate::progression`].
     #[serde(default)]
@@ -339,6 +343,7 @@ impl Unit {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            skill_uses: SkillUses::default(),
             talent: None,
         }
     }
@@ -516,6 +521,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            skill_uses: SkillUses::default(),
             talent: Some(StatKind::Spd),
         };
         assert_eq!(unit, Ok(expected));
@@ -640,6 +646,7 @@ mod tests {
             spells: SpellState::default(),
             learned_skills: BTreeSet::new(),
             effects: Vec::new(),
+            skill_uses: SkillUses::default(),
             talent: None,
         };
         assert_eq!(unit, Ok(expected));

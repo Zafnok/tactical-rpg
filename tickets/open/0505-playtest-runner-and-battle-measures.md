@@ -51,7 +51,10 @@ None.
 1. **Crate `crates/bots`** (`trpg-bots`), added to the workspace, depending
    on `trpg-core` (and `trpg-content` only if the driver needs content types).
    It must never become a dependency of `trpg-ui` or `trpg-app` (ADR from
-   0504). Pure like `core`: no I/O, no clock; the xtask does files and timing.
+   0504), and it must never depend on `trpg-ui` or `trpg-app` itself
+   (ADR-0038, rule 5: bots never touch the look, so a change of graphics
+   can't change a playtest). Pure like `core`: no I/O, no clock; the xtask
+   does files and timing.
 2. **`BattleMeasures`** (`bots/src/measures.rs`), filled by
    `observe(&mut self, state_after: &BattleState, events: &[Event])` after
    every applied command:
@@ -134,6 +137,9 @@ None.
 - [ ] `trpg-app` and `trpg-ui` don't depend on `trpg-bots`
       (`cargo tree -p trpg-app | grep trpg-bots` is empty; add this check to
       the test if cheap, else to `run-gates`).
+- [ ] `trpg-bots` doesn't depend on `trpg-ui` or `trpg-app`
+      (`cargo tree -p trpg-bots | grep -E "trpg-(ui|app)"` is empty; same
+      place as the check above).
 - [ ] All gates in the `run-gates` skill pass.
 
 ## Tests required

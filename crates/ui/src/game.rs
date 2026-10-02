@@ -7,7 +7,7 @@ use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
-use crate::input::{Action, Button, Chord, InputState, Key};
+use crate::input::{Action, Button, Chord, InputState, Key, PadId, PadKind, PadState, Pads};
 use crate::screen::{Ctx, FrameInput, KeyPrompt, Screen, ScreenStack};
 use crate::screens::{LayoutPickerScreen, TitleScreen};
 
@@ -22,22 +22,28 @@ pub enum RawInputEvent {
     /// layout and Shift applied), for text boxes such as the lead's name.
     /// Comes with the key's own `Down`.
     Text(char),
-    /// A controller button went down on some pad (its binding position,
-    /// from [`Pads::update`](crate::input::Pads::update)).
-    PadDown(Button),
+    /// A controller button went down on a pad of this kind (its binding
+    /// position, from [`Pads::update`]).
+    PadDown(Button, PadKind),
     /// A controller button went up on every pad.
     PadUp(Button),
 }
 
 impl RawInputEvent {
-    /// The event for a change [`Pads::update`](crate::input::Pads::update)
-    /// reports: `button` pressed or released.
-    pub fn pad(button: Button, pressed: bool) -> Self {
-        if pressed {
-            Self::PadDown(button)
-        } else {
-            Self::PadUp(button)
-        }
+    /// This frame's controller events: what [`Pads::update`] reports for
+    /// the pads `connected` now, releases first, each press with the kind
+    /// of the pad that pressed it.
+    pub fn from_pads(pads: &mut Pads, connected: &[(PadId, PadKind, PadState)]) -> Vec<Self> {
+        let changes = pads.update(connected);
+        let event = |(button, pressed)| {
+            if pressed {
+                let kind = pads.kind_holding(button, connected).unwrap_or_default();
+                Self::PadDown(button, kind)
+            } else {
+                Self::PadUp(button)
+            }
+        };
+        changes.into_iter().map(event).collect()
     }
 }
 
@@ -170,7 +176,7 @@ impl Game {
         for &event in events {
             // Any key or any controller button ends the title's wait
             // (`docs/design/title-screen.md`).
-            let press = matches!(event, RawInputEvent::Down(_) | RawInputEvent::PadDown(_));
+            let press = matches!(event, RawInputEvent::Down(_) | RawInputEvent::PadDown(..));
             if press && self.ctx.key_prompt == KeyPrompt::Waiting {
                 self.ctx.key_prompt = KeyPrompt::Pressed;
             }
@@ -184,8 +190,8 @@ impl Game {
                 // platforms) are keys, not text.
                 RawInputEvent::Text(c) if !c.is_control() => text.push(c),
                 RawInputEvent::Text(_) => {}
-                RawInputEvent::PadDown(button) => {
-                    self.input.pad_down(button);
+                RawInputEvent::PadDown(button, kind) => {
+                    self.input.pad_down(button, kind);
                     pad = true;
                 }
                 RawInputEvent::PadUp(button) => self.input.pad_up(button),
@@ -194,6 +200,7 @@ impl Game {
         if dt.is_finite() {
             self.ctx.clock_s += f64::from(dt.max(0.0));
         }
+        self.ctx.device = self.input.device();
         let actions = self.input.update(dt);
         let held = Action::ALL
             .into_iter()
@@ -398,21 +405,59 @@ mod tests {
     }
 
     fn pad_tap(game: &mut Game, button: Button) -> bool {
-        let quit = game.frame(&[RawInputEvent::PadDown(button)], 0.0).quit;
+        let quit = game
+            .frame(&[RawInputEvent::PadDown(button, PadKind::Xbox)], 0.0)
+            .quit;
         game.frame(&[RawInputEvent::PadUp(button)], 0.0);
         quit
     }
 
     #[test]
-    fn pad_changes_become_pad_events() {
+    fn pad_changes_become_pad_events_with_the_pressing_pads_kind() {
+        let mut pads = Pads::new(crate::input::StickDef {
+            press_percent: 50,
+            release_percent: 35,
+        });
+        let holding = |buttons: &[Button]| PadState {
+            buttons: buttons.iter().copied().collect(),
+            ..PadState::default()
+        };
+        let pad = |id, kind, buttons: &[Button]| (id, kind, holding(buttons));
+        let sony = PadKind::PlayStation;
+        let both = [
+            pad(3, PadKind::Xbox, &[Button::Start]),
+            pad(7, sony, &[Button::South]),
+        ];
         assert_eq!(
-            RawInputEvent::pad(Button::South, true),
-            RawInputEvent::PadDown(Button::South)
+            RawInputEvent::from_pads(&mut pads, &both),
+            [
+                RawInputEvent::PadDown(Button::South, sony),
+                RawInputEvent::PadDown(Button::Start, PadKind::Xbox),
+            ]
         );
+        // Releases come first and carry no kind; a button already held on
+        // one pad isn't pressed again by another.
+        let next = [
+            pad(3, PadKind::Xbox, &[Button::South]),
+            pad(7, sony, &[Button::South, Button::North]),
+        ];
         assert_eq!(
-            RawInputEvent::pad(Button::Start, false),
-            RawInputEvent::PadUp(Button::Start)
+            RawInputEvent::from_pads(&mut pads, &next),
+            [
+                RawInputEvent::PadUp(Button::Start),
+                RawInputEvent::PadDown(Button::North, sony),
+            ]
         );
+        // Pressed on two pads in the same frame: the first one listed.
+        let together = [
+            pad(3, PadKind::Xbox, &[Button::South, Button::West]),
+            pad(7, sony, &[Button::South, Button::North, Button::West]),
+        ];
+        assert_eq!(
+            RawInputEvent::from_pads(&mut pads, &together),
+            [RawInputEvent::PadDown(Button::West, PadKind::Xbox)]
+        );
+        assert_eq!(RawInputEvent::from_pads(&mut pads, &[]).len(), 3);
     }
 
     /// Ticket 0219: with the default buttons, the bottom face button
@@ -432,11 +477,44 @@ mod tests {
         assert!(pad_tap(&mut game, Button::South));
     }
 
+    /// Ticket 0220: screens find what was pressed last in `ctx.device`,
+    /// already in the frame of the press.
+    #[test]
+    fn the_context_knows_the_device_pressed_last() {
+        use crate::input::Device;
+        let sony = PadKind::PlayStation;
+        let mut game = Game::start(ctx());
+        assert_eq!(game.ctx().device, Device::Keyboard);
+        game.frame(&[RawInputEvent::PadDown(Button::DpadDown, sony)], 0.0);
+        assert_eq!(game.ctx().device, Device::Pad(sony));
+        game.frame(&[RawInputEvent::PadUp(Button::DpadDown)], 0.0);
+        assert_eq!(game.ctx().device, Device::Pad(sony));
+        // An unbound button on another pad changes nothing.
+        let unbound = RawInputEvent::PadDown(Button::RightTrigger, PadKind::Nintendo);
+        game.frame(&[unbound], 0.0);
+        assert_eq!(game.ctx().device, Device::Pad(sony));
+        game.frame(&[down(Key::Up)], 0.0);
+        assert_eq!(game.ctx().device, Device::Keyboard);
+        // The last press of a frame wins.
+        let nintendo = RawInputEvent::PadDown(Button::DpadUp, PadKind::Nintendo);
+        game.frame(
+            &[RawInputEvent::Up(Key::Up), down(Key::Down), nintendo],
+            0.0,
+        );
+        assert_eq!(game.ctx().device, Device::Pad(PadKind::Nintendo));
+        // Picking a layout (new bindings) doesn't forget it.
+        let mut game = Game::start(first_launch());
+        pad_tap(&mut game, Button::South);
+        assert_eq!(game.screens(), ["title"]);
+        game.frame(&[], 0.0);
+        assert_eq!(game.ctx().device, Device::Pad(PadKind::Xbox));
+    }
+
     #[test]
     fn screens_see_held_buttons() {
         let seen = std::rc::Rc::default();
         let mut game = Game::new(ctx(), Box::new(Spy(std::rc::Rc::clone(&seen))));
-        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        game.frame(&[RawInputEvent::PadDown(Button::South, PadKind::Xbox)], 0.0);
         game.frame(&[RawInputEvent::PadUp(Button::South)], 0.0);
         let seen = seen.borrow();
         assert_eq!(seen[0].actions, [Action::Confirm]);
@@ -470,11 +548,14 @@ mod tests {
         let mut game = Game::start(web);
         game.frame(&[RawInputEvent::PadUp(Button::RightTrigger)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Waiting);
-        game.frame(&[RawInputEvent::PadDown(Button::RightTrigger)], 0.0);
+        game.frame(
+            &[RawInputEvent::PadDown(Button::RightTrigger, PadKind::Xbox)],
+            0.0,
+        );
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Pressed);
         // Native builds never wait.
         let mut game = Game::start(ctx());
-        game.frame(&[RawInputEvent::PadDown(Button::South)], 0.0);
+        game.frame(&[RawInputEvent::PadDown(Button::South, PadKind::Xbox)], 0.0);
         assert_eq!(game.ctx().key_prompt, KeyPrompt::Off);
     }
 

@@ -78,7 +78,13 @@ and the `ascii-art` skill (the two pictures).
    and `ctx.layout().is_none()`, push `LayoutPickerScreen`.
 4. Layout still unchosen: when 0220's `InputState::device()` changes from a
    pad to the keyboard, push `LayoutPickerScreen` on top of the current
-   stack and swallow that key. While the picker is open, a pad press pops
+   stack and swallow that key. *Note from 0220 (done):* `Game` copies the
+   device into `ctx.device` every frame, but it only follows presses that
+   **do** something (bound keys and buttons, ADR-0036), and before a layout
+   is chosen only the layout picker's few keys are bound. For "a key was
+   pressed" look at the raw `RawInputEvent::Down` events in `Game::step`
+   (as the prompt already does), and use `ctx.device` only to know the pad
+   was in use before. While the picker is open, a pad press pops
    it without choosing. (So no key acts before a layout is chosen: the
    first one always opens the picker.)
 5. `crates/ui/src/screens/title.rs`: the prompt text `Press any key or

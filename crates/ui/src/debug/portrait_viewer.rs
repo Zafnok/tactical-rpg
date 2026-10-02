@@ -51,7 +51,7 @@ impl PortraitViewerScreen {
 
     /// The help line, e.g. `Left/Right expression · Down/Up character · d back`.
     fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
         help_line(&[
             (pair(Action::CursorLeft, Action::CursorRight), "expression"),

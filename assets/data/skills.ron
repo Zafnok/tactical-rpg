@@ -1,12 +1,16 @@
 // Every class skill. Source: docs/design/progression.md (0005), "Skill list:
 // tiers 1-2" and the Flier's row of "Flying line skills"; costs from
-// docs/design/combat-arts.md (0014), "Class actives now cost durability".
+// docs/design/combat-arts.md (0014), "What class actives cost".
 // Every number is TUNABLE (placeholder skills until the playtest; FE-sized
 // until ticket 0013). Loaded by trpg_content::skill; the rules are in
 // trpg_core::skill and trpg_core::battle.
 //
 // id: unique. family / rank: a higher rank of a family supersedes a lower
-//   one (both default to the id and 1). (family, rank) is unique.
+//   one (both default to the id and 1). (family, rank) is unique. A higher
+//   rank must be the same skill with bigger numbers, nothing else (Nick):
+//   the same kind of effect, condition, targets, reach and kind of cost,
+//   no number lower and at least one higher. Anything else is a skill of
+//   its own (Benediction, not "Sanctuary 2"). Checked when loading.
 // kind: Passive([effects]) or Active(cost: C, effect: E).
 //
 // Passive effects:
@@ -25,7 +29,10 @@
 //   the weapon's might: halved when broken, multiplied by effectiveness
 //   (Nick). "Damage +n" skills use it too.
 //
-// Cost (C): Durability(n >= 1), or ExtraSpellUse (spell actives only).
+// Cost (C): Durability(n >= 1) of the attacking weapon (combat actives);
+//   ExtraSpellUse (spell actives only); Uses(n >= 1), the skill's own uses
+//   per battle (non-attack actives only: Buff, Heal, Push; Nick). They need
+//   no weapon and refill every battle.
 // Active effects (E):
 //   Strike(with: Any | Kind(kind) | Spell, mods: M, range: n, stance: T,
 //          post_move: n, drain: bool)   a combat active; all but `with`
@@ -85,7 +92,7 @@
         // Guard
         (
             id: "brace", name: "Brace",
-            kind: Active(cost: Durability(3), effect: Buff(area: Own, mods: (stats: [(Def, 5), (Res, 5)]))),
+            kind: Active(cost: Uses(3), effect: Buff(area: Own, mods: (stats: [(Def, 5), (Res, 5)]))),
         ),
         (
             id: "steadfast_1", name: "Steadfast 1", family: "steadfast", rank: 1,
@@ -111,8 +118,8 @@
         ),
         // Cleric
         (
-            id: "sanctuary", name: "Sanctuary", family: "sanctuary", rank: 1,
-            kind: Active(cost: Durability(5), effect: Heal(radius: 1, power: 5)),
+            id: "sanctuary", name: "Sanctuary",
+            kind: Active(cost: Uses(3), effect: Heal(radius: 1, power: 5)),
         ),
         (
             id: "white_magic_1", name: "White Magic 1", family: "white_magic", rank: 1,
@@ -121,7 +128,7 @@
         // Exile (lord)
         (
             id: "inspire", name: "Inspire",
-            kind: Active(cost: Durability(3), effect: Buff(area: Allies(radius: 2), mods: (combat: (hit: 10, avoid: 10)))),
+            kind: Active(cost: Uses(2), effect: Buff(area: Allies(radius: 2), mods: (combat: (hit: 10, avoid: 10)))),
         ),
         (
             id: "leadership_1", name: "Leadership 1", family: "leadership", rank: 1,
@@ -158,7 +165,7 @@
         // Grappler
         (
             id: "shove", name: "Shove",
-            kind: Active(cost: Durability(3), effect: Push(collision: 5)),
+            kind: Active(cost: Uses(8), effect: Push(collision: 5)),
         ),
         (
             id: "iron_grip", name: "Iron Grip",
@@ -176,7 +183,7 @@
         // Vanguard
         (
             id: "war_cry", name: "War Cry",
-            kind: Active(cost: Durability(5), effect: Buff(area: Allies(radius: 1), mods: (stats: [(Str, 2)]))),
+            kind: Active(cost: Uses(2), effect: Buff(area: Allies(radius: 1), mods: (stats: [(Str, 2)]))),
         ),
         (
             id: "axe_focus_2", name: "Axe Focus 2", family: "axe_focus", rank: 2,
@@ -199,7 +206,7 @@
         // Bulwark
         (
             id: "fortify", name: "Fortify",
-            kind: Active(cost: Durability(5), effect: Buff(area: Own, mods: (stats: [(Def, 8), (Res, 8)]))),
+            kind: Active(cost: Uses(2), effect: Buff(area: Own, mods: (stats: [(Def, 8), (Res, 8)]))),
         ),
         (
             id: "steadfast_2", name: "Steadfast 2", family: "steadfast", rank: 2,
@@ -229,10 +236,11 @@
             id: "siphon", name: "Siphon",
             kind: Active(cost: ExtraSpellUse, effect: Strike(with: Spell, drain: true)),
         ),
-        // Priest
+        // Priest (Benediction is a working name; a skill of its own, so a
+        // promoted Cleric keeps Sanctuary too: Nick, combat-arts.md)
         (
-            id: "sanctuary_2", name: "Sanctuary 2", family: "sanctuary", rank: 2,
-            kind: Active(cost: Durability(5), effect: Heal(radius: 2, power: 5)),
+            id: "benediction", name: "Benediction",
+            kind: Active(cost: Uses(1), effect: Heal(radius: 2, power: 5)),
         ),
         (
             id: "white_magic_2", name: "White Magic 2", family: "white_magic", rank: 2,
@@ -253,7 +261,7 @@
         // Commander (lord)
         (
             id: "rally", name: "Rally",
-            kind: Active(cost: Durability(5), effect: Buff(area: Allies(radius: 2), mods: (stats: [(Str, 3), (Def, 3)]))),
+            kind: Active(cost: Uses(1), effect: Buff(area: Allies(radius: 2), mods: (stats: [(Str, 3), (Def, 3)]))),
         ),
         (
             id: "leadership_2", name: "Leadership 2", family: "leadership", rank: 2,

@@ -114,7 +114,7 @@ impl TitleScreen {
     /// The bottom help line: the cursor keys `move`, the Confirm key
     /// `select`, the Cancel key `back`, named from the active keymap.
     pub fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         help_line(&[
             (Some(cursor_keys_name(km)), "move"),
             (Some(key_name(km, Action::Confirm)), "select"),

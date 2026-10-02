@@ -488,7 +488,7 @@ impl PreparationsScreen {
 
     /// The bottom help line.
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let keys = Some(cursor_keys_name(km));
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         let cancel = |label| (Some(key_name(km, Action::Cancel)), label);

@@ -52,6 +52,7 @@ use crate::combat::{
 };
 use crate::magic::Element;
 use crate::movement::AttackRange;
+use crate::skill::{SkillTable, SkillUses};
 use crate::spell::{SpellDef, SpellId, SpellState, SpellTable};
 use crate::stats::{StatKind, StatValue, Stats};
 use crate::terrain::TerrainRules;
@@ -820,8 +821,9 @@ impl Unit {
             .or_else(|| self.first_attack_spell(spells).map(Equipped::Spell))
     }
 
-    /// Readies the unit for a new battle: every learned spell at full uses,
-    /// and the [default equip](Unit::default_equip) if nothing is equipped.
+    /// Readies the unit for a new battle: every learned spell and every
+    /// usable non-attack active ([`SkillUses`]) at full uses, and the
+    /// [default equip](Unit::default_equip) if nothing is equipped.
     /// Called for every unit (reinforcements too) by
     /// [`BattleState::new`](crate::battle::BattleState::new).
     pub fn prepare_for_battle(
@@ -829,8 +831,10 @@ impl Unit {
         classes: &ClassTable,
         items: &ItemTable,
         spells: &SpellTable,
+        skills: &SkillTable,
     ) {
         self.spells = SpellState::full(&self.learned, spells);
+        self.skill_uses = SkillUses::full(&self.usable_skills(classes, skills));
         if self.loadout.equipped.is_none()
             && let Some(class) = classes.get(&self.class)
         {

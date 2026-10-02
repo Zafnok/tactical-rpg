@@ -1,6 +1,6 @@
 # ADR-0003: Glyph-grid rendering on macroquad
 
-- **Status:** Accepted
+- **Status:** Accepted; images in the frame added by ADR-0038
 - **Date:** 2026-09-25
 
 ## Context

@@ -12,7 +12,7 @@ here.
 | Turn structure | [`turn-structure.md`](turn-structure.md) | 0002 | ✅ decided 2026-09-25 |
 | Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003, 0408 (Preparations) | ✅ decided 2026-09-25 (Preparations: bring only your own items, retry returns there, 2026-10-01) |
 | The Preparations shop: basic items and tiers | `weapons-and-items.md` | 0038 | ⏳ after playtest 0804 |
-| Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 (non-attack actives cost uses per battle, 2026-10-01; in the game with ticket 0316) |
+| Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 (non-attack actives cost uses per battle, 2026-10-01) |
 | Combat Arts for ranks C–S, special weapons | `combat-arts.md` | 0018 | ⏳ after playtest 0804 |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 (spells after a class change and terrain magic details revised 2026-09-27) |
 | Level ups, classes, class tree | [`progression.md`](progression.md) | 0005, 0017, 0019 | ✅ decided 2026-09-25 (fliers moved to tier 3+ by 0017; no per-class stat caps, 0019, 2026-09-28) |
