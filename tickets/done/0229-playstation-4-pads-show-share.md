@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: ["0220"]
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0229 — PlayStation 4 pads show `Share`, not `Create`
@@ -66,21 +66,21 @@ playtest.
 
 ## Acceptance criteria
 
-- [ ] Unit test: `from_ids` gives `PlayStation4` for `0x054c` + `0x05c4`,
+- [x] Unit test: `from_ids` gives `PlayStation4` for `0x054c` + `0x05c4`,
       `0x054c` + `0x09cc` and `0x054c` + `0x0ba0`, `PlayStation` for `0x054c` + `0x0ce6`
       (DualSense) and `0x054c` + `0`, and ignores the product for other
       vendors.
-- [ ] Unit test: on `PlayStation4` every button is named as on
+- [x] Unit test: on `PlayStation4` every button is named as on
       `PlayStation` except `Select`, which is `Share`; names are still
       distinct and all in the font (extend
       `button_names_are_distinct_on_each_pad` and
       `every_button_name_is_in_the_font` in
       `crates/ui/src/input/pad/tests.rs` by adding the kind to `KINDS`).
-- [ ] Harness test (`crates/ui/tests/controller.rs`): with
+- [x] Harness test (`crates/ui/tests/controller.rs`): with
       `h.use_pad(PadKind::PlayStation4)` the battle's toggle row shows
       `Share auto-end: OFF`.
-- [ ] The web plugin's two version numbers match (existing xtask test).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] The web plugin's two version numbers match (existing xtask test).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -93,5 +93,24 @@ playtest.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- `PadKind::PlayStation4` added; `PadKind::from_vendor` is now
+  `PadKind::from_ids(vendor, product)`. Sony products `0x05c4`, `0x09cc`
+  and `0x0ba0` are PS4 pads; any other Sony product (including 0, "not
+  reported") stays `PlayStation`. `button_name` keeps the one `names`
+  table and only overrides `Select` → `Share`; `position` is unchanged
+  (no swap).
+- Native reads `product_id()` from gilrs; web gets the new
+  `trpg_pad_product` from `web/gamepad.js` (plugin version 1 → 2 on both
+  sides).
+- Tests: `usb_ids_give_the_pad_kind` (replaces the vendor-only test),
+  `a_dualshock_4_says_share_and_otherwise_names_as_a_playstation_pad`,
+  `PlayStation4` added to `KINDS` and the other kind lists (no swap,
+  Confirm/Cancel, proptest), and the harness test
+  `a_playstation_4_pad_names_auto_end_share`.
+- **Web check done** in the browser pane with a simulated pad
+  (`navigator.getGamepads` replaced): the Chrome-style id `Vendor: 054c
+  Product: 09cc` showed `Share auto-end: OFF` in a Quick Battle; switching
+  the id to `0ce6` (DualSense) showed `Create`; the Firefox-style id
+  `054c-05c4-…` showed `Share` again.
+- Not tried with a real PS4 pad (none available).
+- No deviations, no follow-up tickets, no gameplay rules decided.

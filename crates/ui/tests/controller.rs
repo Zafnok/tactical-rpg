@@ -285,6 +285,20 @@ fn the_help_bar_names_the_buttons_of_the_pad_in_use() {
     assert_snapshot!("help_bar_nintendo", rows(PadKind::Nintendo));
 }
 
+/// Ticket 0229: a PS4 pad's left centre button is `Share`, where a PS5
+/// pad's is `Create`.
+#[test]
+fn a_playstation_4_pad_names_auto_end_share() {
+    let rows = |kind| {
+        let mut h = quick_battle();
+        h.use_pad(kind).pad("DpadRight DpadLeft");
+        help_rows(&h)
+    };
+    let ps4 = rows(PadKind::PlayStation4);
+    assert!(ps4.contains("Share auto-end: OFF"), "{ps4}");
+    assert_eq!(ps4.replace("Share", "Create"), rows(PadKind::PlayStation));
+}
+
 /// Two pads of different kinds: the bar names the one pressed last.
 #[test]
 fn the_help_bar_follows_the_pad_pressed_last() {
