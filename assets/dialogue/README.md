@@ -64,7 +64,8 @@ The validator reports every broken rule, with the file and line:
   and `_`: `ch01_opening`, `bors`, `surprised`.
 - **Scene ids** are unique across *all* `.dlg` files; battles and chapters
   refer to scenes by id. Several scenes may share a file.
-- **Characters** must exist in `assets/data/characters.ron`.
+- **Characters** must exist in `assets/data/characters.ron`, as a character
+  or in its `speakers` list (someone who talks but isn't a unit).
 - **Two portraits at most**: one left, one right. A character can't stand on
   both sides at once.
 - **Speakers must be on screen.** Narration needs nobody.
@@ -198,7 +199,10 @@ their own (`docs/story/names.md`, "Short forms"), used like any other:
 | `<character>.first` | The first name of a character with a two-word name | `{n:retainer.first}` → `Hollis` |
 | `family.<name>` | A family name several people share | `{n:family.marr}` → `Marr` |
 | `<god>.name`, `<god>.title` | A god's name and title on their own | `{n:god.mother.name}` → `Ama`, `{n:god.mother.title}` → `the Mother` |
+| `<character>.last` | A surname only that character has | `{n:sergeant.last}` → `Rook` |
 | `red_captain.nickname` | A nickname | `Red Harl` |
+| `vowmaster.title` | An office, for people who don't say the name | `the Master of Vows` |
+| `faction.brennmark.adj` | A people's name without its article: the adjective, or a nickname | `{n:faction.brennmark.adj}` → `Brennish` |
 
 ### Rules for names
 

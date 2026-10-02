@@ -3,9 +3,15 @@
 //! Positions are `i32` so callers can draw partly (or wholly) off-buffer:
 //! every primitive clips to the buffer and never panics.
 //!
-//! Besides cells, a buffer holds [`Overlay`]s: coloured rectangles in console
-//! pixels for what whole cells can't draw (HP bars, the path line;
-//! ADR-0018).
+//! Besides cells, a buffer holds [`Item`]s, placed in console pixels:
+//! [`Overlay`]s, coloured rectangles for what whole cells can't draw (HP
+//! bars, the path line; ADR-0018), and [`Sprite`]s, pictures from image
+//! files (ADR-0038). Within a layer, items are drawn in the order they were
+//! added. They belong to the cells they were drawn with: replacing cells
+//! ([`GlyphBuffer::fill_rect`], [`GlyphBuffer::blit`]) removes the parts of
+//! items over them.
+
+use trpg_content::ImageId;
 
 use crate::color::Rgb;
 use crate::console::{CELL_H_PX, CELL_W_PX};
@@ -79,7 +85,7 @@ impl Rect {
 /// is [`CELL_W_PX`] × [`CELL_H_PX`]). Same shape as a cell [`Rect`].
 pub type PxRect = Rect;
 
-/// When an [`Overlay`] is drawn relative to the cells' glyphs.
+/// When an [`Item`] is drawn relative to the cells' glyphs.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Layer {
     /// After cell backgrounds, before glyphs (e.g. the path line).
@@ -114,6 +120,129 @@ impl Overlay {
     pub const fn new(rect: PxRect, color: Rgb, layer: Layer) -> Self {
         Self { rect, color, layer }
     }
+}
+
+/// A picture on top of the cell grid (ADR-0038): part of an image file,
+/// scaled into a rectangle of console pixels. `app` draws it from a texture
+/// with nearest-pixel sampling, so whole-number scales stay sharp.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Sprite {
+    /// Which image (`ImageTable::id`).
+    pub image: ImageId,
+    /// The part of the image shown, in image pixels. It must lie inside
+    /// the image.
+    pub src: PxRect,
+    /// Where `src` is stretched to, in console pixels.
+    pub dest: PxRect,
+    /// The part of `dest` that is drawn. Clipping and cutting only ever
+    /// shrink this; `src` and `dest` stay as given, so the picture never
+    /// shifts or rescales.
+    pub clip: PxRect,
+    /// Under or over the glyphs.
+    pub layer: Layer,
+    /// Mirrored left to right within `dest`.
+    pub flip_x: bool,
+    /// 255 = solid; lower lets what is under it show through.
+    pub opacity: u8,
+}
+
+impl Sprite {
+    /// A solid, unflipped sprite showing all of `dest`.
+    pub const fn new(image: ImageId, src: PxRect, dest: PxRect, layer: Layer) -> Self {
+        Self {
+            image,
+            src,
+            dest,
+            clip: dest,
+            layer,
+            flip_x: false,
+            opacity: u8::MAX,
+        }
+    }
+
+    /// The part of `src` that maps to `clip`, as `[x, y, w, h]` in image
+    /// pixels (fractions of a pixel when `clip` cuts through a scaled
+    /// one). With `flip_x`, the left of `clip` shows the right of `src`.
+    #[allow(clippy::cast_precision_loss)] // pixel coordinates are small
+    pub fn clipped_src(&self) -> [f32; 4] {
+        let Self {
+            src, dest, clip, ..
+        } = *self;
+        let wide = |v: i32| i64::from(v);
+        // From `dest`'s edge to `clip`'s, on the side `src` starts from.
+        let inset_x = if self.flip_x {
+            wide(dest.x) + wide(dest.w) - wide(clip.x) - wide(clip.w)
+        } else {
+            wide(clip.x) - wide(dest.x)
+        };
+        let inset_y = wide(clip.y) - wide(dest.y);
+        let scale_x = src.w as f32 / dest.w as f32;
+        let scale_y = src.h as f32 / dest.h as f32;
+        [
+            src.x as f32 + inset_x as f32 * scale_x,
+            src.y as f32 + inset_y as f32 * scale_y,
+            clip.w as f32 * scale_x,
+            clip.h as f32 * scale_y,
+        ]
+    }
+}
+
+/// Something drawn on top of the cell grid, in console pixels.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub enum Item {
+    /// A solid rectangle.
+    Rect(Overlay),
+    /// A picture.
+    Sprite(Sprite),
+}
+
+impl Item {
+    /// Under or over the glyphs.
+    pub const fn layer(&self) -> Layer {
+        match self {
+            Item::Rect(o) => o.layer,
+            Item::Sprite(s) => s.layer,
+        }
+    }
+
+    /// The console pixels the item is drawn in: a rectangle's `rect`, a
+    /// sprite's `clip`.
+    pub const fn visible(&self) -> PxRect {
+        match self {
+            Item::Rect(o) => o.rect,
+            Item::Sprite(s) => s.clip,
+        }
+    }
+
+    /// The item drawn only in `visible`.
+    const fn with_visible(self, visible: PxRect) -> Self {
+        match self {
+            Item::Rect(o) => Item::Rect(Overlay { rect: visible, ..o }),
+            Item::Sprite(s) => Item::Sprite(Sprite { clip: visible, ..s }),
+        }
+    }
+}
+
+/// `r` moved by `(dx, dy)`, or `None` if it no longer fits in `i32`.
+fn offset(r: PxRect, dx: i64, dy: i64) -> Option<PxRect> {
+    let x = i32::try_from(i64::from(r.x) + dx).ok()?;
+    let y = i32::try_from(i64::from(r.y) + dy).ok()?;
+    Some(Rect::new(x, y, r.w, r.h))
+}
+
+/// The part of `r`, moved by `(dx, dy)`, that lies inside `bounds` (which
+/// starts at the origin), or `None` if nothing does.
+fn offset_clipped(r: PxRect, dx: i64, dy: i64, bounds: PxRect) -> Option<PxRect> {
+    // Clip in i64 first: the offset can push `x` past `i32`.
+    let (left, top) = (i64::from(r.x) + dx, i64::from(r.y) + dy);
+    let (x0, y0) = (left.max(0), top.max(0));
+    let x1 = (left + i64::from(r.w)).min(i64::from(bounds.w));
+    let y1 = (top + i64::from(r.h)).min(i64::from(bounds.h));
+    if x1 <= x0 || y1 <= y0 {
+        return None;
+    }
+    let fit = |v: i64| i32::try_from(v).unwrap_or(0);
+    Some(Rect::new(fit(x0), fit(y0), fit(x1 - x0), fit(y1 - y0)))
 }
 
 /// The pixel rectangle covered by cells `x..x + w`, `y..y + h`, or `None`
@@ -184,8 +313,9 @@ pub struct GlyphBuffer {
     width: u16,
     height: u16,
     cells: Vec<Cell>,
-    /// In drawing order; each lies inside [`pixel_bounds`](Self::pixel_bounds).
-    overlays: Vec<Overlay>,
+    /// In drawing order; each one's [`Item::visible`] lies inside
+    /// [`pixel_bounds`](Self::pixel_bounds).
+    items: Vec<Item>,
 }
 
 impl GlyphBuffer {
@@ -195,7 +325,7 @@ impl GlyphBuffer {
             width,
             height,
             cells: vec![fill; usize::from(width) * usize::from(height)],
-            overlays: Vec::new(),
+            items: Vec::new(),
         }
     }
 
@@ -209,36 +339,71 @@ impl GlyphBuffer {
         )
     }
 
-    /// The overlays, in drawing order (within a layer, later ones on top).
-    pub fn overlays(&self) -> &[Overlay] {
-        &self.overlays
+    /// The rectangles and sprites, in drawing order (within a layer, later
+    /// ones on top).
+    pub fn items(&self) -> &[Item] {
+        &self.items
+    }
+
+    /// Only the rectangles, in drawing order.
+    pub fn overlays(&self) -> Vec<Overlay> {
+        let rect = |item: &Item| match item {
+            Item::Rect(o) => Some(*o),
+            Item::Sprite(_) => None,
+        };
+        self.items.iter().filter_map(rect).collect()
+    }
+
+    /// Only the sprites, in drawing order.
+    pub fn sprites(&self) -> Vec<Sprite> {
+        let sprite = |item: &Item| match item {
+            Item::Sprite(s) => Some(*s),
+            Item::Rect(_) => None,
+        };
+        self.items.iter().filter_map(sprite).collect()
     }
 
     /// Adds `overlay`, clipped to the buffer; one wholly outside (or empty)
     /// is dropped.
     pub fn add_overlay(&mut self, overlay: Overlay) {
         if let Some(rect) = overlay.rect.intersect(&self.pixel_bounds()) {
-            self.overlays.push(Overlay { rect, ..overlay });
+            self.items.push(Item::Rect(Overlay { rect, ..overlay }));
         }
     }
 
-    /// Removes the overlay parts over the cells of `rect`: the cells there
-    /// were just replaced, and overlays belong to the cells they were drawn
-    /// with.
-    fn cut_overlays(&mut self, rect: Rect) {
+    /// Adds `sprite` with its `clip` clipped to its `dest` and to the
+    /// buffer; `src` and `dest` are kept as given. One with nothing to show
+    /// (wholly outside, or an empty `src`, `dest` or `clip`) is dropped.
+    pub fn add_sprite(&mut self, sprite: Sprite) {
+        if sprite.src.is_empty() {
+            return;
+        }
+        let clip = sprite
+            .clip
+            .intersect(&sprite.dest)
+            .and_then(|clip| clip.intersect(&self.pixel_bounds()));
+        if let Some(clip) = clip {
+            self.items.push(Item::Sprite(Sprite { clip, ..sprite }));
+        }
+    }
+
+    /// Removes the parts of items over the cells of `rect`: the cells there
+    /// were just replaced, and items belong to the cells they were drawn
+    /// with. A sprite is split into up to four with smaller `clip`s.
+    fn cut_items(&mut self, rect: Rect) {
         let Some(hole) = rect
             .intersect(&self.bounds())
             .and_then(|r| cells_to_px(r.x.into(), r.y.into(), r.w.into(), r.h.into()))
         else {
             return;
         };
-        self.overlays = self
-            .overlays
+        self.items = self
+            .items
             .iter()
-            .flat_map(|o| {
-                subtract(o.rect, hole)
+            .flat_map(|item| {
+                subtract(item.visible(), hole)
                     .into_iter()
-                    .map(move |rect| Overlay { rect, ..*o })
+                    .map(move |visible| item.with_visible(visible))
             })
             .collect();
     }
@@ -330,10 +495,11 @@ impl GlyphBuffer {
         written
     }
 
-    /// Sets every cell of `rect` to `cell`, removing overlays over it.
+    /// Sets every cell of `rect` to `cell`, removing the parts of items
+    /// (rectangles and sprites) over it.
     pub fn fill_rect(&mut self, rect: Rect, cell: Cell) {
         self.for_each_in(rect, |_, _, c| *c = cell);
-        self.cut_overlays(rect);
+        self.cut_items(rect);
     }
 
     /// Draws the border of `rect` in `style`; the interior is untouched.
@@ -369,7 +535,9 @@ impl GlyphBuffer {
     }
 
     /// Scales foreground and background of every cell in `rect` by `factor`
-    /// (e.g. to dim an inactive portrait).
+    /// (e.g. to dim an inactive portrait). Cells only: rectangles and
+    /// sprites over them are not touched (a sprite is dimmed by its
+    /// `opacity`).
     pub fn dim(&mut self, rect: Rect, factor: f32) {
         self.for_each_in(rect, |_, _, c| {
             c.fg = c.fg.scale(factor);
@@ -378,8 +546,9 @@ impl GlyphBuffer {
     }
 
     /// Copies all of `other` so its top-left lands at `(dest_x, dest_y)`,
-    /// clipped to this buffer. Overlays already under the copied area are
-    /// removed, and `other`'s overlays come along, offset and clipped.
+    /// clipped to this buffer. Items already over the copied area are
+    /// removed, and `other`'s items come along, offset and clipped (a
+    /// sprite's `dest` moves with it, its `clip` is clipped).
     pub fn blit(&mut self, other: &GlyphBuffer, dest_x: i32, dest_y: i32) {
         let target = Rect::new(
             dest_x,
@@ -393,28 +562,32 @@ impl GlyphBuffer {
                 *c = *src;
             }
         });
-        self.cut_overlays(target);
+        self.cut_items(target);
         let bounds = self.pixel_bounds();
-        let (ox, oy) = (
+        let (dx, dy) = (
             i64::from(dest_x) * i64::from(CELL_W_PX),
             i64::from(dest_y) * i64::from(CELL_H_PX),
         );
-        for o in &other.overlays {
-            // Clip in i64 first: the offset can push `x` past `i32`.
-            let (x, y) = (i64::from(o.rect.x) + ox, i64::from(o.rect.y) + oy);
-            let (w, h) = (i64::from(o.rect.w), i64::from(o.rect.h));
-            let (x0, y0) = (x.max(0), y.max(0));
-            let x1 = (x + w).min(i64::from(bounds.w));
-            let y1 = (y + h).min(i64::from(bounds.h));
-            if x1 <= x0 || y1 <= y0 {
+        for item in &other.items {
+            let Some(visible) = offset_clipped(item.visible(), dx, dy, bounds) else {
                 continue;
+            };
+            match *item {
+                Item::Rect(_) => self.items.push(item.with_visible(visible)),
+                Item::Sprite(s) => {
+                    // A `dest` whose visible part is on the buffer fits.
+                    if let Some(dest) = offset(s.dest, dx, dy) {
+                        let moved = Sprite { dest, ..s };
+                        self.items.push(Item::Sprite(moved).with_visible(visible));
+                    }
+                }
             }
-            let fit = |v: i64| i32::try_from(v).unwrap_or(0);
-            let rect = Rect::new(fit(x0), fit(y0), fit(x1 - x0), fit(y1 - y0));
-            self.overlays.push(Overlay { rect, ..*o });
         }
     }
 }
+
+#[cfg(test)]
+mod sprite_tests;
 
 #[cfg(test)]
 mod tests {

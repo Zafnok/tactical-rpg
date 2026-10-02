@@ -3,11 +3,14 @@
 //! 0011); the portrait viewer shows every portrait (ticket 0703); the test
 //! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
 //! menu was opened from (ticket 0704). "Key bindings" opens the Key bindings
-//! screen (ticket 0815) until the Options menu (0805) does.
+//! screen (ticket 0815) until the Options menu (0805) does. The sprite test
+//! draws the test card as sprite items (ticket 0231).
 
 mod portrait_viewer;
+mod sprite_test;
 
 pub use portrait_viewer::PortraitViewerScreen;
+pub use sprite_test::SpriteTestScreen;
 
 use crate::audio::MenuSound;
 use crate::color::{Palette, UiColor};
@@ -23,23 +26,27 @@ use trpg_content::palette::REQUIRED_COLORS;
 /// Names of every screen the debug key does nothing on: the debug screens,
 /// and the Key bindings screen (the Debug key is a key like any other while
 /// it captures one, and is refused as reserved).
-pub const SCREENS: [&str; 4] = [
+pub const SCREENS: [&str; 5] = [
     DebugMenuScreen::NAME,
     GlyphSamplerScreen::NAME,
     PortraitViewerScreen::NAME,
     KeyBindingsScreen::NAME,
+    SpriteTestScreen::NAME,
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 5] = [
+const TOOLS: [&str; 6] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
     "Play test scene (overlay)",
     "Key bindings",
+    "Sprite test",
 ];
 /// Index of "Key bindings" in [`TOOLS`].
 const KEY_BINDINGS_TOOL: usize = 4;
+/// Index of "Sprite test" in [`TOOLS`].
+const SPRITE_TEST_TOOL: usize = 5;
 /// The scene the "Play test scene" tools play.
 pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
@@ -86,6 +93,9 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(KEY_BINDINGS_TOOL)) => {
                     return Transition::Push(Box::new(KeyBindingsScreen::new(ctx)));
+                }
+                Some(MenuEvent::Chosen(SPRITE_TEST_TOOL)) => {
+                    return Transition::Push(Box::new(SpriteTestScreen));
                 }
                 Some(MenuEvent::Chosen(tool)) => {
                     let Some(scene) = ctx.content.dialogue.get(TEST_SCENE).cloned() else {
@@ -464,23 +474,32 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(key_bindings)"
         );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(sprite_test)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
         // Without the test scene, its tools do nothing.
         ctx.content.dialogue.scenes.clear();
-        let mut menu = DebugMenuScreen::new();
-        let a = [CursorUp, CursorUp, Confirm];
-        let frame = FrameInput::new(a.to_vec(), 0.0, vec![]);
-        assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
+        for downs in [2, 3] {
+            let mut menu = DebugMenuScreen::new();
+            let mut a = vec![CursorDown; downs];
+            a.push(Confirm);
+            let frame = FrameInput::new(a, 0.0, vec![]);
+            assert!(matches!(menu.update(&mut ctx, &frame), Transition::None));
+        }
         assert_eq!(
             SCREENS,
             [
                 "debug_menu",
                 "glyph_sampler",
                 "portrait_viewer",
-                "key_bindings"
+                "key_bindings",
+                "sprite_test"
             ]
         );
         assert_eq!(TOOLS[KEY_BINDINGS_TOOL], "Key bindings");
+        assert_eq!(TOOLS[SPRITE_TEST_TOOL], "Sprite test");
     }
 
     #[test]

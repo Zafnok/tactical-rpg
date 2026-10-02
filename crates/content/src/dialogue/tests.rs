@@ -308,6 +308,29 @@ fn unknown_characters() {
 }
 
 #[test]
+fn speakers_who_are_not_units_may_be_placed_and_speak() {
+    let src = "@scene s\n@left retainer neutral\n@right rival angry\n\
+               retainer: Hold.\nrival[happy]: No.\n@end\n";
+    assert_eq!(errors(src), [] as [&str; 0]);
+    let characters = characters();
+    assert!(!characters.speakers.is_empty());
+    let (parsed, parse_errors) = parse_dlg("t.dlg", src);
+    assert_eq!(parse_errors, []);
+    assert_eq!(parsed.len(), 1);
+    for p in &parsed {
+        assert_eq!(check_scene(p, Some(&characters), None, Some(&names())), []);
+    }
+    // Someone in neither list still fails, next to a speaker.
+    assert_eq!(
+        errors("@scene s\n@left retainer neutral\n@right mira neutral\nmira: Hey.\n@end\n"),
+        [
+            "t.dlg:3: unknown character \"mira\"",
+            "t.dlg:4: unknown character \"mira\"",
+        ]
+    );
+}
+
+#[test]
 fn speaker_not_on_screen() {
     assert_eq!(
         errors(&scene(

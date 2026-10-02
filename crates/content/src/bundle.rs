@@ -39,6 +39,25 @@ pub fn files_in(dir: &str) -> Vec<&'static str> {
     paths
 }
 
+/// Lists the paths (relative to `assets/`, `/`-separated, sorted) of every
+/// file inside directory `dir` or any directory below it. A missing
+/// directory yields an empty list. Use `""` for the whole bundle.
+pub fn files_under(dir: &str) -> Vec<&'static str> {
+    let root = if dir.is_empty() {
+        Some(&ASSETS)
+    } else {
+        ASSETS.get_dir(dir)
+    };
+    let mut pending: Vec<&'static Dir<'static>> = root.into_iter().collect();
+    let mut paths = Vec::new();
+    while let Some(dir) = pending.pop() {
+        paths.extend(dir.files().filter_map(|f| f.path().to_str()));
+        pending.extend(dir.dirs());
+    }
+    paths.sort_unstable();
+    paths
+}
+
 /// The human-facing name of an asset path, e.g. `assets/data/palette.ron`.
 pub fn display_path(path: &str) -> String {
     format!("{DISPLAY_ROOT}/{path}")
@@ -84,6 +103,24 @@ mod tests {
     fn root_and_missing_directories() {
         assert!(files_in("").iter().all(|p| !p.contains('/')));
         assert!(files_in("no_such_dir").is_empty());
+    }
+
+    #[test]
+    fn lists_files_under_a_directory_and_below() {
+        let all = files_under("");
+        for path in ["data/palette.ron", "fonts/atlas.png", "audio/sfx/heal.wav"] {
+            assert!(all.contains(&path), "{path}");
+        }
+        let mut sorted = all.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(all, sorted);
+        let audio = files_under("audio");
+        assert!(audio.contains(&"audio/audio.ron"));
+        assert!(audio.contains(&"audio/sfx/heal.wav"));
+        assert!(audio.iter().all(|p| p.starts_with("audio/")));
+        assert_eq!(files_under("data"), files_in("data"));
+        assert!(files_under("no_such_dir").is_empty());
     }
 
     #[test]
