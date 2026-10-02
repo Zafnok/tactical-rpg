@@ -15,6 +15,14 @@ license text must be committed next to the item. The music and sounds are
 also listed, with tags, in [`assets/audio/audio.ron`](assets/audio/audio.ron);
 the game's credits screen (0808) reads them from there.
 
+**Every row needs a credit with the same source link**: a music or sound
+credit in `assets/audio/audio.ron`, or an entry in
+[`assets/data/credits.ron`](assets/data/credits.ron) for anything else. The
+credits screen shows them all, except entries marked `hidden: true`
+(software the player never sees). A test in `trpg-content`
+(`every_third_party_asset_has_a_credit`) fails when a row has no credit or
+a credit has no row.
+
 | Item | Source URL | Version | License | License file | Used for | Added by ticket |
 | ---- | ---------- | ------- | ------- | ------------ | -------- | --------------- |
 | Terminus Font (`ter-u16n`, 8×16), converted to `assets/fonts/atlas.png` | https://terminus-font.sourceforge.net/ | 4.49.1 | OFL-1.1 | [`assets/fonts/Terminus-LICENSE.txt`](assets/fonts/Terminus-LICENSE.txt) | The game's only font (every glyph on screen); source BDF in `assets-src/fonts/`, unmodified. The atlas adds four glyphs of our own (`✕ ◯ □ △`, `assets-src/fonts/pad-shapes.bdf`, ticket 0220), which the OFL permits for a modified version not named after the font | 0203 |
