@@ -13,6 +13,8 @@
 //!
 //!   Armouries and vendors **buy** any item the party has, for half its
 //!   price rounded down ([`sell_price`]). Blacksmiths don't buy.
+//!   **Seals** (`progression.md`) are neither sold nor bought by any shop
+//!   yet: where they come from is chapter and shop data (0009 and later).
 //! - **Repair** ([`repair_cost`]) brings a weapon back to full durability
 //!   for `ceil(price / 2 × missing / durability)` gold, where `missing` is
 //!   the durability it lost. A weapon at full durability can't be repaired.
@@ -44,7 +46,10 @@ impl ShopKind {
     /// Whether this kind of shop may have `item` on its list.
     pub fn stocks(self, item: &ItemDef) -> bool {
         match self {
-            ShopKind::Armoury => !matches!(item, ItemDef::Consumable(_)),
+            ShopKind::Armoury => matches!(
+                item,
+                ItemDef::Weapon(_) | ItemDef::Armour(_) | ItemDef::Accessory(_)
+            ),
             ShopKind::Vendor => matches!(item, ItemDef::Consumable(_)),
             ShopKind::Blacksmith => false,
         }
@@ -98,6 +103,8 @@ pub enum ShopError {
     NotAWeapon(ItemId),
     /// The item id is not in the item table.
     UnknownItem(ItemId),
+    /// No shop buys this item (a seal).
+    NotBought(ItemId),
 }
 
 impl fmt::Display for ShopError {
@@ -113,6 +120,7 @@ impl fmt::Display for ShopError {
             ShopError::NoItem => f.write_str("no such item"),
             ShopError::NotAWeapon(i) => write!(f, "\"{}\" is not a weapon", i.0),
             ShopError::UnknownItem(i) => write!(f, "unknown item \"{}\"", i.0),
+            ShopError::NotBought(i) => write!(f, "no shop buys \"{}\"", i.0),
         }
     }
 }
@@ -179,6 +187,9 @@ pub fn sell(
     let def = items
         .get(item)
         .ok_or_else(|| ShopError::UnknownItem(item.clone()))?;
+    if matches!(def, ItemDef::Seal(_)) {
+        return Err(ShopError::NotBought(item.clone()));
+    }
     let price = sell_price(def);
     *gold = gold.saturating_add(price);
     Ok(price)

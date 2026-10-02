@@ -9,10 +9,10 @@ use trpg_ui::harness::Harness;
 use trpg_ui::input::{Layout, PadKind};
 
 /// The title with the sprite test opened from the debug menu (its last
-/// tool).
+/// tool but two: the class change tools come after it).
 fn opened() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("F2 Up f");
+    h.keys("F2 Up Up Up f");
     assert_eq!(h.screens(), ["title", "debug_menu", "sprite_test"]);
     h
 }

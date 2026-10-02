@@ -49,8 +49,8 @@ pub use geom::{Dir, Grid, GridSizeError, Pos};
 pub use history::{BattleHistory, Replayed, RewindError};
 pub use item::{
     AccessoryDef, ArmourDef, BattlePack, ConsumableDef, ConsumableEffect, Equipped, ItemDef,
-    ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, Stock, WEAPON_SLOTS, WeaponDef,
-    WeaponInstance, WeaponRules,
+    ItemId, ItemTable, Loadout, LoadoutDef, LoadoutError, SealDef, SealKind, Stock, WEAPON_SLOTS,
+    WeaponDef, WeaponInstance, WeaponRules,
 };
 pub use lead::{LEAD_ID, LeadGender, LeadProfile, Pronouns};
 pub use legal::legal_commands;
@@ -61,8 +61,9 @@ pub use movement::{
     reachable, threat_area,
 };
 pub use progression::{
-    CombatResult, StatGains, apply_gains, exp_for_combat, grant_class_points, grant_exp, growth,
-    level_up,
+    ChangeTables, ClassChangeError, CombatResult, StatGains, apply_gains, exp_for_combat,
+    grant_class_points, grant_exp, growth, has_mastered, level_up, promote, promotion_gains,
+    promotion_targets, reclass, reclass_targets,
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use save::{SAVE_VERSION, SaveFile, SaveHeader, SavePoint};

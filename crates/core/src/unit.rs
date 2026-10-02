@@ -364,7 +364,7 @@ fn lookup<'a>(
 }
 
 /// Raises each rank in a kind `class` can use to at least its start rank.
-fn raise_to_start_ranks(ranks: &mut BTreeMap<WeaponKind, WeaponRank>, class: &ClassDef) {
+pub(crate) fn raise_to_start_ranks(ranks: &mut BTreeMap<WeaponKind, WeaponRank>, class: &ClassDef) {
     for w in &class.weapons {
         let rank = ranks.entry(w.kind).or_insert(w.start);
         *rank = (*rank).max(w.start);

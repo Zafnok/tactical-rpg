@@ -735,12 +735,21 @@ fn parse_weapon(id: &ItemId) -> Option<WeaponDef> {
     })
 }
 
+/// A tier-2 seal (ticket 0603): an item no battle can use.
+fn seal() -> ItemDef {
+    ItemDef::Seal(crate::item::SealDef {
+        name: "Seal".into(),
+        kind: crate::item::SealKind::Tier(2),
+    })
+}
+
 /// Items every test table has: `flier_bow` (range 1–2, might 3, ×3 against
 /// fliers), `master_sword` (rank S), `axe`, `pike` (spear, might 3),
 /// `knuckles` (gauntlet, might 2), `vest` (Def +1), `mail`
 /// (Medium, Def +2), `potion` (heals 4), `elixir` (heals all). Priced for
 /// shops: `iron` (sword, 400 gold), `leather` (Light armour, 200), `plate`
-/// (Medium armour, 500), `charm` (accessory, 100), `tonic` (heals 2, 50).
+/// (Medium armour, 500), `charm` (accessory, 100), `tonic` (heals 2, 50);
+/// and `seal`.
 fn fixed_items() -> ItemTable {
     let flier_bow = WeaponDef {
         kind: WeaponKind::Bow,
@@ -833,6 +842,7 @@ fn fixed_items() -> ItemTable {
                 ..consumable("Tonic", ConsumableEffect::Heal(2))
             }),
         ),
+        ("seal", seal()),
     ];
     ItemTable {
         items: entries
@@ -2431,8 +2441,8 @@ fn use_item_errors() {
     units[3].pos = p(1, 1);
     let mut s = start(BattleSetup {
         pack: BattlePack {
-            items: vec![item("potion"), item("axe"), item("ghost")],
-            cap: 3,
+            items: vec![item("potion"), item("axe"), item("ghost"), item("seal")],
+            cap: 4,
         },
         ..setup(units)
     });
@@ -2440,11 +2450,18 @@ fn use_item_errors() {
     refuse(
         &mut s,
         p(0, 0),
-        use_item(3, 1),
+        use_item(4, 1),
         CommandError::NoItem {
             unit: UnitId(1),
-            index: 3,
+            index: 4,
         },
+    );
+    // No seal works in a battle (Nick, ticket 0603).
+    refuse(
+        &mut s,
+        p(0, 0),
+        use_item(3, 1),
+        CommandError::NotConsumable(item("seal")),
     );
     refuse(
         &mut s,

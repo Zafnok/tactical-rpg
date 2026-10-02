@@ -1040,7 +1040,7 @@ impl BattleScreen {
             return Some(help_line(&[confirm("close")]));
         }
         if let Some(p) = self.progress() {
-            return Some(progress_help(p, km));
+            return Some(progress::help(p, km));
         }
         let label = match self.banner()?.kind {
             BannerKind::Outcome(_) => "continue",
@@ -1639,18 +1639,6 @@ fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
         help_line(&[cancel("close")])
     } else {
         help_line(&[(keys, "choose"), cancel("close")])
-    }
-}
-
-/// The help line of an EXP bar or level-up page: skip and fast while it
-/// plays, then continue.
-fn progress_help(p: &Progress, km: HelpKeys<'_>) -> String {
-    let confirm = key_name(km, Action::Confirm);
-    if p.page_played() {
-        help_line(&[(Some(confirm), "continue")])
-    } else {
-        let hold = Some(format!("hold {confirm}"));
-        help_line(&[(Some(confirm), "skip"), (hold, "fast")])
     }
 }
 

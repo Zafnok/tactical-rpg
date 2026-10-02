@@ -1,6 +1,7 @@
 //! The game's screens. Debug-only screens live in [`crate::debug`].
 
 pub mod battle;
+pub mod class_change;
 pub mod dialogue;
 pub mod game_over;
 pub mod key_bindings;
@@ -11,6 +12,7 @@ pub mod save;
 pub mod title;
 
 pub use battle::BattleScreen;
+pub use class_change::{ChangeKind, ClassChangeScreen};
 pub use dialogue::DialogueScreen;
 pub use game_over::{GameOverScreen, ToBeContinuedScreen};
 pub use key_bindings::KeyBindingsScreen;
