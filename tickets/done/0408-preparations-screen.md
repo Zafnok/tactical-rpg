@@ -98,7 +98,7 @@ spare gear, six Potions and two Elixirs to try it with.
    Game Over should also offer **Rewind** while charges are left (new
    ticket 0822).
 3. Preparations should get a **basic shop** (new tickets 0041 to decide its
-   items and tiers, 0440 to build the tab). Green units carrying their own
+   items and tiers, 0442 to build the tab). Green units carrying their own
    consumables is noted as an open "maybe".
 
 **Deviations from the ticket**
@@ -154,7 +154,7 @@ they were left: `BattleSetup::prepared_as` takes the loadouts, stock and
 pack from the battle's first state, which the suspend save holds.
 
 **Follow-up tickets:** 0041 (decide the Preparations shop's basics and
-tiers, after the playtest), 0440 (the Shop tab, blocked by 0409 and 0041),
+tiers, after the playtest), 0442 (the Shop tab, blocked by 0409 and 0041),
 0822 (Game Over offers Rewind).
 
 **For Nick to try** (Pages build, title → Quick Battle): `Loadouts` → Test

@@ -32,7 +32,7 @@ inventories grow with the story; shop rules (gold, buying, selling) are in
 `weapons-and-items.md`, *Money and shops*, and built in core by 0308.
 
 What is not decided: which items are "basics", what the tiers are, and what
-unlocks a tier. Ticket 0440 (the shop tab) waits for this.
+unlocks a tier. Ticket 0442 (the shop tab) waits for this.
 
 Chapter 1 has no Preparations and no shop (`chapter-1.md`), so this waits
 for the Chapter 1 playtest (0804), like the other post-playtest decisions.
@@ -65,7 +65,7 @@ units carry their own consumables**, not drawn from the player's pack?
 - The decision, recorded in `docs/design/weapons-and-items.md` (his words,
   the rules, numbers marked Nick's or *tunable*) and the
   `docs/design/README.md` table.
-- Updating ticket 0440's steps to match.
+- Updating ticket 0442's steps to match.
 - `write-ticket` for anything else he chooses (new consumables in
   `items.ron`, green units' items).
 
@@ -77,13 +77,13 @@ units carry their own consumables**, not drawn from the player's pack?
 1. Read `weapons-and-items.md` (*Battle pack*, *Money and shops*),
    `world-structure.md` (towns) and `chapter-1.md`.
 2. Ask with `ask-nick`; check each option against `assets/data/items.ron`.
-3. Record the answer; update 0440.
+3. Record the answer; update 0442.
 
 ## Acceptance criteria
 
 - [ ] `weapons-and-items.md` says which items the Preparations shop sells at each tier and what unlocks a tier, with Nick's words.
 - [ ] `docs/design/README.md` row updated.
-- [ ] Ticket 0440 matches the decision.
+- [ ] Ticket 0442 matches the decision.
 
 ## Tests required
 

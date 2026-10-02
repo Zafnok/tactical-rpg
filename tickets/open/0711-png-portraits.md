@@ -1,6 +1,6 @@
 ---
 id: "0711"
-title: PNG portraits drawn as sprite items (48×48 bought faces)
+title: PNG portraits drawn as sprite items (bought busts at 4×)
 type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
@@ -14,6 +14,16 @@ completed:
 # 0711 — PNG portraits drawn as sprite items
 
 ## Context
+
+**Changed 2026-10-02 (ticket 0039):** Nick chose the **busts at 4×,
+filling the frame**, over the 48×48 faces at 5× (`look-and-feel.md`,
+*Dialogue portraits*; mockups H4 and H5 in the bought-art folder's
+`spike-renders/`). A bought bust is 80×80. The importer cuts it to its
+**middle 64 columns and bottom 64 rows** (x 8..72, y 16..80) and writes
+that 64×64 file; drawn at the largest whole scale that fits, 4×, it is
+exactly the frame's 256×256 console px, with no margin. Where the text
+below says a 48×48 face at 5×, read a 64×64 cut bust at 4×; the drawing
+rule itself (largest whole scale that fits, centred) is unchanged.
 
 Nick chose bought portraits (0021): the face set faces from Mega Tiles'
 Tiny Tales packs, **48×48 pixel art, 8 expressions per character**
@@ -53,16 +63,17 @@ importer needs no 3× reduction:
   `Sly`, `Unique`.
 - `Facesets/Original/<Hero>.png`: the same 8 as a **192×96** sheet, 4×2.
 - `Facesets/Original/Busts/Bust_<Hero>_<Expression>.png`: an **80×80**
-  bust in the same 8 expressions (320×160 as a sheet). At 3× a bust is
-  240×240, the same as a face at 5×, so this ticket's drawing handles both;
-  which one dialogue uses is Nick's (ticket 0039, question 7; faces until
-  he says otherwise).
+  bust in the same 8 expressions (320×160 as a sheet). **This is what
+  dialogue uses** (ticket 0039), cut to 64×64.
 - The Character Generator exports the same two layouts (a 192×96 face
   sheet with "Crop Face" on, a 320×160 bust sheet with it off), at 1×.
 
-So `portrait-import` takes either a folder of single 48×48 (or 80×80)
-files, or a 4×2 sheet at 1×, and keeps the 3×-sheet path only if it costs
-nothing. On Nick's machine the heroes' files are already sorted per
+So `portrait-import` takes either a folder of single 80×80 bust files or
+a 320×160 bust sheet (4×2) at 1×, and cuts each bust to 64×64. A bust
+that sits off-centre may be cut a few columns to one side instead: an
+optional `--shift-x <pixels>` (−8..=8) moves the cut. It still accepts
+48×48 faces (written as they are), and keeps the 3×-sheet path only if it
+costs nothing. On Nick's machine the heroes' files are already sorted per
 character in `D:\tactical-rpg\Tiny Tales Bundle Assets\characters\heroes\
 <Name>\face_<expression>.png` and `bust_<expression>.png`.
 
@@ -133,9 +144,11 @@ repo (0110); theme recolouring of portraits.
 
 ## Acceptance criteria
 
-- [ ] A 48×48 PNG portrait loads, validates and is drawn at 5 px per pixel,
-      centred in the 32×16-cell area of a dialogue frame (a test checks the
-      sprite's `dest`).
+- [ ] A 64×64 PNG portrait loads, validates and is drawn at 4 px per pixel,
+      filling the 32×16-cell area of a dialogue frame; a 48×48 one is drawn
+      at 5 px per pixel, centred (tests check the sprite's `dest`).
+- [ ] The importer cuts an 80×80 bust to its middle 64 columns and bottom
+      64 rows, and `--shift-x` moves the cut (tests on a made-up image).
 - [ ] Dimmed and mirrored drawing tested on the sprite's `opacity` and
       `flip_x`, and looked at in a rendered frame.
 - [ ] Every loader error has a test with its message.

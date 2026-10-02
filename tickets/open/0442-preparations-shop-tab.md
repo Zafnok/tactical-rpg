@@ -1,5 +1,5 @@
 ---
-id: "0440"
+id: "0442"
 title: "Preparations: a Shop tab with the basic shop"
 type: feature
 milestone: M3 Battle UI
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0440 — Preparations: a Shop tab with the basic shop
+# 0442 — Preparations: a Shop tab with the basic shop
 
 ## Context
 
