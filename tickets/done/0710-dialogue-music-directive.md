@@ -125,5 +125,5 @@ veto):
 4. *`@music` can't name a music pool* (like `skirmish`): a scene names one
    track.
 
-Follow-ups: none. Picking the moods for Chapter 1's scenes is story work
-for a later 07xx ticket.
+Follow-ups: none. Picking the moods for Chapter 1's scenes is already ticket
+0803 (it sets the chapter's music).
