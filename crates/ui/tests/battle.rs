@@ -7,14 +7,54 @@ use trpg_ui::audio::AudioRequest;
 use trpg_ui::harness::{FRAME_DT, Harness};
 use trpg_ui::input::Layout;
 
-/// At the title with the right-handed layout, then Quick Battle.
-fn quick_battle() -> Harness {
+/// At the title with the right-handed layout, then Quick Battle, still
+/// under turn 1's `PLAYER PHASE` banner.
+fn quick_battle_banner() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
     h.keys("Down f");
+    assert_eq!(h.screens(), ["title", "battle"]);
     h
 }
 
-/// The Quick Battle screen at the start of the battle: `test_small.map`
+/// [`quick_battle_banner`], and the banner closed.
+fn quick_battle() -> Harness {
+    let mut h = quick_battle_banner();
+    h.keys("f");
+    assert!(!shows(&h, "PHASE"));
+    h
+}
+
+/// A battle opens on turn 1's `PLAYER PHASE` banner (ticket 0435): only
+/// Confirm does anything while it is up, and it closes by itself after a
+/// second.
+#[test]
+fn quick_battle_opens_on_the_player_phase_banner() {
+    let mut h = quick_battle_banner();
+    assert!(shows(&h, "PLAYER PHASE"));
+    assert!(shows(&h, "Turn 1"));
+    assert_eq!(help(&h), "f skip");
+    // Other keys do nothing: no menu opens, and the cursor stays on the
+    // lord (cells 26..28, row 16).
+    h.keys("Right d Space");
+    assert!(shows(&h, "PLAYER PHASE"));
+    let browsing = "f select · e info · s next unit · r rewind · d menu · Space end turn";
+    // Confirm closes it, and does nothing else: the lord isn't selected.
+    h.keys("f");
+    assert!(!shows(&h, "PHASE"));
+    assert_eq!(help(&h), browsing);
+    assert_eq!(cursor_x(&h, 16), Some(26));
+    // Left alone, it is gone after a second.
+    let mut h = quick_battle_banner();
+    h.wait(0.5);
+    assert!(shows(&h, "PLAYER PHASE"));
+    h.wait(0.6);
+    assert!(!shows(&h, "PHASE"));
+    assert_eq!(help(&h), browsing);
+    assert_eq!(cursor_x(&h, 16), Some(26));
+}
+
+/// The Quick Battle screen at the start of the battle, its `PLAYER PHASE`
+/// banner just closed (the cursor a little into its pulse): `test_small.map`
 /// centred in the viewport, four ready player units and four enemies, all
 /// at full HP, the cursor on the lord, the side panel showing the lord and
 /// its tile, and the help line.
@@ -338,6 +378,9 @@ fn select_move_and_wait_dims_the_unit_and_keeps_its_label_case() {
 #[test]
 fn cancelling_the_menu_then_the_selection_restores_the_unit() {
     let mut h = quick_battle();
+    // (Select and back: the cursor's pulse restarts, which the banner's
+    // time had moved on.)
+    h.keys("f d");
     let before = h.snapshot();
     h.keys("f Right Right f").wait(0.5);
     assert_eq!(tile(&h, 30, 16), "Lo");
@@ -414,6 +457,10 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
 fn tips_show_when_switched_on() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     h.with_tips().keys("Down f");
+    // The start tip waits for the `PLAYER PHASE` banner.
+    assert!(shows(&h, "PLAYER PHASE"));
+    assert!(!shows(&h, "Your move"));
+    h.keys("f");
     assert!(shows(&h, "Your move"));
     assert_eq!(help(&h), "f close");
     h.keys("f");
@@ -504,7 +551,7 @@ fn a_battle_keeps_the_cue_its_file_names() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     let quick = h.ctx_mut().content.battles.get_mut("quick").unwrap();
     quick.music = trpg_core::BattleMusic::Cue("battle_bright".into());
-    h.keys("Down f");
+    h.keys("Down f f");
     assert_eq!(music(&h), ["title", "battle_bright"]);
     nothing_changes_the_music(&mut h);
     assert_eq!(music(&h), ["title", "battle_bright"]);

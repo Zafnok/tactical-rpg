@@ -5,10 +5,10 @@ type: bug
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0435 — PLAYER PHASE banner at the start of a battle
@@ -77,11 +77,11 @@ Repro: New Game (or the debug Quick Battle) → the battle starts → no
 
 ## Acceptance criteria
 
-- [ ] Harness: New Game → the test chapter's battle shows its notes box, then on Confirm the `PLAYER PHASE` / `Turn 1/3` banner, then the map.
-- [ ] Harness: the Quick Battle (no notes) opens on the `PLAYER PHASE` / `Turn 1` banner; it closes by itself after 1 second or on Confirm.
-- [ ] Retry and `Restart Battle` show the banner again.
-- [ ] `BattleScreen::new` shows no banner (test).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Harness: New Game → the test chapter's battle shows its notes box, then on Confirm the `PLAYER PHASE` / `Turn 1/3` banner, then the map.
+- [x] Harness: the Quick Battle (no notes) opens on the `PLAYER PHASE` / `Turn 1` banner; it closes by itself after 1 second or on Confirm.
+- [x] Retry and `Restart Battle` show the banner again.
+- [x] `BattleScreen::new` shows no banner (test).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -91,5 +91,39 @@ Repro: New Game (or the debug Quick Battle) → the battle starts → no
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done.** `BattleScreen::start` now queues the start events the way
+`BattleScreen::apply` does: scenes as before, and everything else through
+`Banner::for_event`. So a battle started by the game flow (New Game, Quick
+Battle, Retry, Restart Battle) opens on `PLAYER PHASE` / `Turn 1`, after its
+battle notes if it has any. `BattleScreen::new` is unchanged (no banner).
+
+What the player sees at a battle's start, in order: the battle notes
+(Confirm closes them) → the `PLAYER PHASE` banner (1 second, or Confirm) →
+a turn-1 scene, if the battle has one → the first-battle tip, if tips are
+on → the map. A battle already decided when it starts shows its `VICTORY` /
+`DEFEAT` banner after the phase banner, instead of sitting on the map.
+
+**No gameplay rules decided.** The order above is the order of the battle's
+own start events, as the ticket asked.
+
+**Tests.**
+- Unit: `turn_tests.rs` (the banner on `start`, closing on Confirm or after
+  `PHASE_BANNER_S`, none on `new`), `notes_tests.rs` (notes → banner → scene
+  / tip; a decided battle's banners), `tip_tests.rs` (the start tip waits
+  for the banner), `trigger_tests.rs` (a turn-1 scene plays after the
+  banner).
+- Harness: `battle.rs` has `quick_battle_opens_on_the_player_phase_banner`;
+  `flow.rs` checks notes → banner → map on New Game, and the banner again
+  after Retry and Restart Battle. The helpers that start a battle
+  (`quick_battle()`, `to_battle()`, …) now close the banner with Confirm.
+- Snapshots re-read: `battle__quick_battle_renders` and the four
+  `controller__tip_*` changed only in the cursor's eight overlay lines (its
+  colour a little further into its pulse, because the banner's frames pass
+  before the picture is taken). Nothing else moved.
+
+**Deviations.** `cancelling_the_menu_then_the_selection_restores_the_unit`
+(`battle.rs`) compared the screen with the one "as the battle opened"; it
+now takes its "before" picture after a select-and-cancel, which restarts
+the cursor's pulse the same way.
+
+**Follow-ups.** None.
