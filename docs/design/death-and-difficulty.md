@@ -107,7 +107,7 @@ per `turn-structure.md`), in **both** modes:
 Game over offers `Retry Battle` (restart the battle, not the chapter) or
 `Title` (Nick, PR #127). It will also offer **`Rewind`** while rewind
 charges are left (Nick, 0408), so a defeat can be undone without starting
-over: ticket 0821.
+over: ticket 0822.
 
 **Between battles** (Nick, PR #127): every unit, standing or retreated, is
 back at **full HP** for the next battle. A unit that dies in Classic sends

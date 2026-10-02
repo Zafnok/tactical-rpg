@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 use trpg_core::{
-    AiBehavior, BattleDef, BattleMap, BattleMusic, CharacterId, ClassTable, Difficulty, Faction,
-    ItemDef, ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role,
+    AiBehavior, BattleDef, BattleMap, BattleMusic, BattleNote, CharacterId, ClassTable, Difficulty,
+    Faction, ItemDef, ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role,
     TerrainTable, Trigger, Turn, Unit, UnitId, default_map_label,
 };
 
@@ -30,6 +30,13 @@ const EXTENSION: &str = ".ron";
 /// pack: there the player brings only what they own (Nick, 0408).
 pub const PACK_WITH_PREPARATIONS: &str =
     "default_pack: a battle with Preparations has none; the player packs their own items";
+
+/// The most battle notes a battle may have: with [`MAX_NOTE_CHARS`], they
+/// always fit the notes panel and the `Objective` page.
+pub const MAX_NOTES: usize = 5;
+
+/// The longest a battle note's text may be, in characters.
+pub const MAX_NOTE_CHARS: usize = 120;
 
 /// The content a battle file refers to.
 #[derive(Debug, Clone, Copy)]
@@ -76,9 +83,20 @@ struct RawBattle {
     objective: RawObjective,
     #[serde(default)]
     triggers: Vec<Trigger>,
+    #[serde(default)]
+    battle_notes: Vec<RawNote>,
     difficulty: Difficulty,
     music: BattleMusic,
     seed: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawNote {
+    text: String,
+    /// Each a unit's `id`, or a character.
+    #[serde(default)]
+    units: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -94,6 +112,9 @@ struct RawSlot {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawEnemy {
+    /// A name for battle notes to refer to, written bare: `id: "gate_guard"`.
+    #[serde(default, deserialize_with = "bare")]
+    id: Option<String>,
     /// Written bare: `template: "brigand"`.
     #[serde(default, deserialize_with = "bare")]
     template: Option<String>,
@@ -191,13 +212,7 @@ pub fn from_source(
     refs: &BattleRefs<'_>,
 ) -> Result<BattleDef, Vec<ContentError>> {
     let raw: RawBattle = parse_ron(file, source).map_err(|e| vec![e])?;
-    let mut v = Checker {
-        file,
-        refs,
-        errors: Vec::new(),
-        taken: BTreeMap::new(),
-        cast: BTreeSet::new(),
-    };
+    let mut v = Checker::new(file, refs);
     if raw.id != stem {
         v.err(format!(
             "id \"{}\" must match the file name \"{stem}\"",
@@ -261,6 +276,7 @@ pub fn from_source(
         &map,
         refs.dialogue,
     ));
+    let battle_notes = v.notes(&raw.battle_notes, &everyone);
     if !v.errors.is_empty() {
         return Err(v.errors);
     }
@@ -287,6 +303,7 @@ pub fn from_source(
         clear_gold: raw.clear_gold,
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
+        battle_notes,
         difficulty: raw.difficulty,
         music: raw.music,
         seed: raw.seed,
@@ -326,9 +343,23 @@ struct Checker<'a, 'r> {
     taken: BTreeMap<Pos, String>,
     /// Characters already placed.
     cast: BTreeSet<String>,
+    /// The units given an `id`, for the battle notes.
+    named: BTreeMap<String, UnitId>,
 }
 
-impl Checker<'_, '_> {
+impl<'a, 'r> Checker<'a, 'r> {
+    /// A checker of battle file `file`, with no errors yet.
+    fn new(file: &'a str, refs: &'a BattleRefs<'r>) -> Self {
+        Self {
+            file,
+            refs,
+            errors: Vec::new(),
+            taken: BTreeMap::new(),
+            cast: BTreeSet::new(),
+            named: BTreeMap::new(),
+        }
+    }
+
     fn err(&mut self, message: String) {
         self.errors.push(ContentError::new(self.file, message));
     }
@@ -369,6 +400,11 @@ impl Checker<'_, '_> {
     ) -> Option<Unit> {
         let refs = self.refs;
         let at = pos(e.pos);
+        if let Some(name) = &e.id
+            && self.named.insert(name.clone(), id).is_some()
+        {
+            self.err(format!("{what}: id \"{name}\" is already used"));
+        }
         let built = match (&e.template, &e.character) {
             (Some(t), None) => {
                 let Some(template) = refs.characters.generics.get(t) else {
@@ -531,6 +567,69 @@ impl Checker<'_, '_> {
                 self.err("objective: turn limit 0".to_owned());
             }
         })
+    }
+
+    /// The battle notes, their units resolved: each is a unit's `id`, or a
+    /// character of the battle (one of `everyone`).
+    fn notes(&mut self, notes: &[RawNote], everyone: &[Unit]) -> Vec<BattleNote> {
+        let is = |u: &Unit, name: &str| u.character.as_ref().is_some_and(|c| c.0 == name);
+        let clashes: Vec<String> = self
+            .named
+            .keys()
+            .filter(|name| everyone.iter().any(|u| is(u, name)))
+            .cloned()
+            .collect();
+        for name in clashes {
+            self.err(format!("id \"{name}\" is also a character in the battle"));
+        }
+        if notes.len() > MAX_NOTES {
+            self.err(format!(
+                "battle_notes: {} notes, more than {MAX_NOTES}",
+                notes.len()
+            ));
+        }
+        let mut out = Vec::new();
+        for (i, note) in notes.iter().enumerate() {
+            let what = format!("battle note {}", i + 1);
+            let text = note.text.trim();
+            let chars = text.chars().count();
+            if text.is_empty() {
+                self.err(format!("{what}: no text"));
+            } else if chars > MAX_NOTE_CHARS {
+                self.err(format!(
+                    "{what}: {chars} characters, more than {MAX_NOTE_CHARS}"
+                ));
+            }
+            if text.chars().any(char::is_control) {
+                self.err(format!("{what}: the text must be one line"));
+            }
+            let mut units = Vec::new();
+            for name in &note.units {
+                let found: Vec<UnitId> = match self.named.get(name) {
+                    Some(&id) => vec![id],
+                    None => everyone
+                        .iter()
+                        .filter(|u| is(u, name))
+                        .map(|u| u.id)
+                        .collect(),
+                };
+                if found.is_empty() {
+                    self.err(format!("{what}: no unit \"{name}\" in the battle"));
+                }
+                for id in found {
+                    if units.contains(&id) {
+                        self.err(format!("{what}: \"{name}\" is listed twice"));
+                    } else {
+                        units.push(id);
+                    }
+                }
+            }
+            out.push(BattleNote {
+                text: text.to_owned(),
+                units,
+            });
+        }
+        out
     }
 
     /// The music names a music cue, or a pool, of the audio manifest.

@@ -1,5 +1,5 @@
 ---
-id: "0821"
+id: "0822"
 title: "Game Over offers Rewind while charges are left"
 type: feature
 milestone: M7 Chapter 1 & game flow
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0821 — Game Over offers Rewind while charges are left
+# 0822 — Game Over offers Rewind while charges are left
 
 ## Context
 

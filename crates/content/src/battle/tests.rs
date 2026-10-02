@@ -147,6 +147,7 @@ fn defaults_fill_what_a_battle_leaves_out() {
     assert!(def.default_pack.is_empty());
     assert_eq!(def.clear_gold, 0);
     assert!(def.triggers.is_empty());
+    assert!(def.battle_notes.is_empty());
     assert_eq!(
         def.objective,
         Objective::Seize {
@@ -512,6 +513,136 @@ fn label_and_trigger_errors() {
     assert_eq!(
         errors(&c, "scene: \"test\"", "scene: \"nope\""),
         ["trigger 0: no dialogue scene \"nope\""]
+    );
+}
+
+/// `OK` with `notes` as its battle notes and the boss given the id
+/// `"garth"`.
+fn with_notes(notes: &str) -> String {
+    OK.replacen("boss: true,", "boss: true, id: \"garth\",", 1)
+        .replacen(
+            "triggers:",
+            &format!(
+                "battle_notes: {notes},
+    triggers:"
+            ),
+            1,
+        )
+}
+
+fn note_errors(c: &Content, notes: &str) -> Vec<String> {
+    let errors = load(c, &with_notes(notes)).err().unwrap_or_default();
+    errors.into_iter().map(|e| e.message).collect()
+}
+
+#[test]
+fn battle_notes_name_units_by_id_or_character() {
+    let c = content();
+    let def = load(
+        &c,
+        &with_notes(
+            r#"[
+                (text: "  Garth: his axe hits hard. ", units: ["garth"]),
+                (text: "Hold the fort.", units: ["test_rogue", "lead", "garth"]),
+                (text: "No units."),
+            ]"#,
+        ),
+    )
+    .unwrap_or_else(|e| panic!("{e:?}"));
+    let note = |text: &str, units: &[u32]| BattleNote {
+        text: text.into(),
+        units: units.iter().map(|&u| UnitId(u)).collect(),
+    };
+    // Slots 1 and 2, the boss 3, the reinforcement 4; in the order written.
+    assert_eq!(
+        def.battle_notes,
+        [
+            note("Garth: his axe hits hard.", &[3]),
+            note("Hold the fort.", &[4, 1, 3]),
+            note("No units.", &[]),
+        ]
+    );
+    // A reinforcement's id works too.
+    let source = with_notes(r#"[(text: "Late.", units: ["late"])]"#).replacen(
+        "ai: Guard",
+        "ai: Guard, id: \"late\"",
+        1,
+    );
+    let def = load(&c, &source).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(def.battle_notes, [note("Late.", &[4])]);
+}
+
+#[test]
+fn battle_note_errors() {
+    let c = content();
+    assert_eq!(
+        note_errors(
+            &c,
+            r#"[(text: "Elemental: weak to Fire.", units: ["frost_1"])]"#
+        ),
+        ["battle note 1: no unit \"frost_1\" in the battle"]
+    );
+    // A template isn't a unit, and a character must be in this battle.
+    assert_eq!(
+        note_errors(
+            &c,
+            r#"[(text: "A."), (text: "B.", units: ["test_brigand", "test_archer"])]"#
+        ),
+        [
+            "battle note 2: no unit \"test_brigand\" in the battle",
+            "battle note 2: no unit \"test_archer\" in the battle",
+        ]
+    );
+    assert_eq!(
+        note_errors(&c, r#"[(text: "A.", units: ["garth", "lead", "garth"])]"#),
+        ["battle note 1: \"garth\" is listed twice"]
+    );
+    assert_eq!(
+        note_errors(
+            &c,
+            r#"[(text: " "), (text: "two
+lines")]"#
+        ),
+        [
+            "battle note 1: no text",
+            "battle note 2: the text must be one line",
+        ]
+    );
+    let fits = "x".repeat(MAX_NOTE_CHARS);
+    assert_eq!(
+        note_errors(&c, &format!("[(text: \"{fits}\")]")),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        note_errors(&c, &format!("[(text: \"{fits}x\")]")),
+        ["battle note 1: 121 characters, more than 120"]
+    );
+    let notes = |n: usize| format!("[{}]", "(text: \"A.\"),".repeat(n));
+    assert_eq!(note_errors(&c, &notes(MAX_NOTES)), Vec::<String>::new());
+    assert_eq!(
+        note_errors(&c, &notes(MAX_NOTES + 1)),
+        ["battle_notes: 6 notes, more than 5"]
+    );
+}
+
+#[test]
+fn unit_id_errors() {
+    let c = content();
+    // The reinforcement takes the boss's id.
+    let twice = with_notes("[]").replacen("ai: Guard", "ai: Guard, id: \"garth\"", 1);
+    let errors = |source: &str| -> Vec<String> {
+        let errors = load(&c, source).err().unwrap_or_default();
+        errors.into_iter().map(|e| e.message).collect()
+    };
+    assert_eq!(
+        errors(&twice),
+        ["reinforcement 1: id \"garth\" is already used"]
+    );
+    // An id that is also a character here would be ambiguous in a note.
+    let clash = with_notes("[]").replacen("id: \"garth\"", "id: \"test_rogue\"", 1);
+    assert_eq!(
+        errors(&clash),
+        ["id \"test_rogue\" is also a character in the battle"]
     );
 }
 

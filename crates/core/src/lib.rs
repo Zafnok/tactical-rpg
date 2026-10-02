@@ -28,9 +28,9 @@ pub mod weapon;
 pub use ai::{AiBehavior, AiWeights, next_command};
 pub use art::{ArtDef, ArtEffect, ArtId, ArtNote, ArtTable, Debuff};
 pub use battle::{
-    AttackPreview, BattleSetup, BattleState, Burning, CastTarget, Command, CommandError,
-    Destination, Event, GameMode, Objective, Outcome, PendingMove, Phase, Reinforcement, SellFrom,
-    ShopTxn, TileRect, Trigger, TriggerWhen, Turn, UnitAction, Who,
+    AttackPreview, BattleNote, BattleSetup, BattleState, Burning, CastTarget, Command,
+    CommandError, Destination, Event, GameMode, Objective, Outcome, PendingMove, Phase,
+    Reinforcement, SellFrom, ShopTxn, TileRect, Trigger, TriggerWhen, Turn, UnitAction, Who,
 };
 pub use campaign::{
     ApplyError, BattleDef, BattleMusic, BattleRewards, Campaign, Difficulty, GameTables,

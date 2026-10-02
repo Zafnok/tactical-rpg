@@ -94,9 +94,9 @@ spare gear, six Potions and two Elixirs to try it with.
    without Preparations still gets its default pack for free.)
 2. `Retry Battle` and `Restart Battle` land **back on Preparations**, and
    Game Over should also offer **Rewind** while charges are left (new
-   ticket 0821).
+   ticket 0822).
 3. Preparations should get a **basic shop** (new tickets 0038 to decide its
-   items and tiers, 0435 to build the tab). Green units carrying their own
+   items and tiers, 0436 to build the tab). Green units carrying their own
    consumables is noted as an open "maybe".
 
 **Deviations from the ticket**
@@ -146,8 +146,8 @@ spare gear, six Potions and two Elixirs to try it with.
    Ring, Power Ring, Focus Charm, 6 Potions, 2 Elixirs.
 
 **Follow-up tickets:** 0038 (decide the Preparations shop's basics and
-tiers, after the playtest), 0435 (the Shop tab, blocked by 0409 and 0038),
-0821 (Game Over offers Rewind).
+tiers, after the playtest), 0436 (the Shop tab, blocked by 0409 and 0038),
+0822 (Game Over offers Rewind).
 
 **For Nick to try** (Pages build, title → Quick Battle): `Loadouts` → Test
 Lord → his empty third weapon slot → the Iron Sword (the spear, bow and axe
