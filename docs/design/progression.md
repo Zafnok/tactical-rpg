@@ -531,14 +531,14 @@ behind when you leave an unmastered class.
       replacements"): Bow Focus 1 (hit +5 with a bow) → Bow Focus 2
       (hit +10 and crit +5 with a bow), and Leadership 1 (allies within 2
       tiles: hit +10) → Leadership 2 (hit +10 and avoid +10, same reach).
-    - The game's data is checked for this when it loads (ticket 0316).
+    - The game's data is checked for this when it loads: a rank that
+      differs from the rank below it in anything but bigger numbers is
+      refused.
 - An **active skill** is used on purpose:
   - **Combat actives** cost the attacking weapon's **durability** (Nick,
     ticket 0014), spell actives cost 1 extra use of the spell, and
     **non-attack actives** have their own **uses per battle** (Nick,
-    2026-10-01; until ticket 0316 the game still charges them the
-    durability shown in the table below). Exact costs and rules:
-    [`combat-arts.md`](combat-arts.md).
+    2026-10-01). Exact costs and rules: [`combat-arts.md`](combat-arts.md).
   - **Combat actives** are chosen from the attack menu as an option for that
     attack. **Non-combat actives** are an action of their own and end the
     action.
@@ -571,7 +571,7 @@ behind when you leave an unmastered class.
   gets no step.
 - **White Magic and Sanctuary** (Nick, same review: "I think sanctuary can
   count as white magic"): White Magic's +2 / +4 also adds to Sanctuary's
-  heal (`Mag + 5 + bonus`).
+  heal (`Mag + 5 + bonus`), and to Benediction's.
 - **Confirmed in the same review:** Charge counts squares walked this
   action (not move cost) and never counts on counters; Deadly Blow doubles
   crit **after** the other crit bonuses (then caps at 100); skill stat
@@ -620,7 +620,9 @@ behind when you leave an unmastered class.
 
 "Sw/Sp/Ax/Bw/Gt equipped" means the equipped weapon is of that kind. Bonuses
 add to the numbers in the combat formulas (`stats-and-combat.md`,
-`weapons-and-items.md`) and show in the forecast.
+`weapons-and-items.md`) and show in the forecast. "3 dur" is durability of
+the attacking weapon; "3 uses" is the skill's own uses per battle
+(`combat-arts.md`).
 
 | Class | Active (unlock) | Passive (mastery) |
 | ----- | --------------- | ----------------- |
@@ -628,27 +630,27 @@ add to the numbers in the combat formulas (`stats-and-combat.md`,
 | Brawler | **Flurry** (5 dur, combat, Gt): this combat the attacker gets +1 strike (max 4) | **Light Feet 1**: Gt equipped → attack speed +2 |
 | Raider | **Heavy Blow** (3 dur, combat, Ax): might +5; the attacker gets 1 strike only | **Axe Focus 1**: Ax equipped → hit +10 |
 | Archer | **Vault** (1 dur, combat, Bw): after this attack, may move 1 tile (the post-action move from `turn-structure.md`) | **Bow Focus 1**: Bw equipped → hit +5 |
-| Guard | **Brace** (3 dur, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
+| Guard | **Brace** (3 uses, action): Def and Res +5 until its next phase | **Steadfast 1**: Def +2 while not in its own phase |
 | Rider | **Lance Rush** (3 dur, combat, Sp): might +5 | **Charge 1**: damage +2 when it moved ≥ 4 tiles this turn before attacking |
 | Mage | **Overcast** (+1 spell use, combat, spell only): spell might +5 | **Black Magic 1**: attack spells might +1 |
-| Cleric | **Sanctuary** (5 dur, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
+| Cleric | **Sanctuary** (3 uses, action): heals every adjacent ally by `Mag + 5`; ends the action | **White Magic 1**: heal spells +2 HP (Nick's example) |
 | Duelist | **Blade Flurry** (5 dur, combat, Sw): +1 strike (max 4) | **Sword Focus 2**: Sw equipped → crit +20 |
 | Shadowblade | **Deadly Blow** (5 dur, combat, Sw): crit ×2 for this combat (clamped to 100) | **Evasion 1**: avoid +10 |
 | Striker | **Hundred Fists** (5 dur, combat, Gt): +1 strike (max 4) and hit +10 | **Light Feet 2**: Gt equipped → attack speed +4 |
-| Grappler | **Shove** (3 dur, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); if the tile is blocked the enemy stays and takes 5 collision damage (Nick, 0311's PR) | **Iron Grip**: Gt equipped → Def +3 |
+| Grappler | **Shove** (8 uses, action): push an adjacent enemy 1 tile straight away (no damage). The push rules come from `magic.md` (5 damage into `burning`); if the tile is blocked the enemy stays and takes 5 collision damage (Nick, 0311's PR) | **Iron Grip**: Gt equipped → Def +3 |
 | Berserker | **Rampage** (5 dur, combat, Ax): might +8, and its avoid −20 for this combat | **Fury**: crit +15 while HP ≤ 50% |
-| Vanguard | **War Cry** (5 dur, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
+| Vanguard | **War Cry** (2 uses, action): adjacent allies Str +2 until the start of this unit's next phase | **Axe Focus 2**: Ax equipped → hit +20 |
 | Marksman | **Long Shot** (3 dur, combat, Bw): Bw max range +2 for this attack | **Bow Focus 2**: Bw equipped → hit +10, crit +5 (supersedes 1) |
 | Outrider | **Volley** (5 dur, combat, Bw): +1 strike (max 4) | **Bow Focus 1** (no effect if Bow Focus 2 is known) + **Charge 1** |
-| Bulwark | **Fortify** (5 dur, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
+| Bulwark | **Fortify** (2 uses, action): Def and Res +8 until its next phase | **Steadfast 2**: Def +4 while not in its own phase |
 | Iron Rider | **Trample** (3 dur, combat, Ax): might +4, and the target's terrain Def/avoid is ignored | **Charge 1** + **Steadfast 1** |
 | Lancer | **Piercing Lance** (3 dur, combat, Sp): ignore 5 of the target's Def | **Charge 2**: damage +4 after moving ≥ 4 tiles |
 | Sorcerer | **Overcast** | **Black Magic 2**: attack spells might +3 |
 | Mystic | **Siphon** (+1 spell use, combat, spell): the caster heals by half the damage dealt (rounded down) | **Black Magic 1** + **White Magic 1** |
-| Priest | **Sanctuary 2** (5 dur, action): heals every ally within 2 tiles by `Mag + 5`. Ticket 0316 replaces it with a skill of its own, **Benediction** (working name; 1 use per battle), so a promoted Cleric keeps Sanctuary too (Nick, `combat-arts.md`) | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
-| Exile *(lord)* | **Inspire** (3 dur, action): allies within 2 tiles get hit +10 and avoid +10 until the start of this unit's next phase | **Leadership 1**: allies within 2 tiles of the lord get hit +10 |
+| Priest | **Benediction** (working name; 1 use, action): heals every ally within 2 tiles by `Mag + 5`. A skill of its own, not a rank of Sanctuary, so a promoted Cleric keeps Sanctuary too (Nick, `combat-arts.md`) | **White Magic 2**: heal spells +4 HP (supersedes 1, Nick's example) |
+| Exile *(lord)* | **Inspire** (2 uses, action): allies within 2 tiles get hit +10 and avoid +10 until the start of this unit's next phase | **Leadership 1**: allies within 2 tiles of the lord get hit +10 |
 | Blade Heir *(lord)* | **Crest Strike** (3 dur, combat, Sw): might +4 and hit +15 | **Resolve**: while HP ≤ 50%, Str and Spd +3 |
-| Commander *(lord)* | **Rally** (5 dur, action): allies within 2 tiles get Str +3 and Def +3 until the start of this unit's next phase | **Leadership 2**: allies within 2 tiles of the lord get hit +10 and avoid +10 (supersedes 1) |
+| Commander *(lord)* | **Rally** (1 use, action): allies within 2 tiles get Str +3 and Def +3 until the start of this unit's next phase | **Leadership 2**: allies within 2 tiles of the lord get hit +10 and avoid +10 (supersedes 1) |
 
 The lord's classes carry the lord's **signature abilities** (Nick: "nothing
 else on top"), so their skills lean towards leading the army. Like every
@@ -668,8 +670,8 @@ the Flier's are in the game for now; tiers 4+ come later.
 
 - **Skills learned twice:** a unit that learns an active it already knows
   (e.g. Swoop from Flier and Sky Lancer, Overcast from Mage and Sorcerer) gets
-  nothing more. Ranks of the same active supersede like passives (none
-  exists once Sanctuary 2 becomes a skill of its own, ticket 0316).
+  nothing more. Ranks of the same active supersede like passives (no
+  active has a second rank now that Benediction is a skill of its own).
 - **"+1 strike" skills:** these add to the strikes worked out from attack
   speed, never above the 4-strike maximum. They're meant to make 3x/4x
   happen more often, but rarely (`stats-and-combat.md`).

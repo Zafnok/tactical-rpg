@@ -3,7 +3,9 @@
 //! bottom. The player browses with the cursor (ticket 0402), selects a unit,
 //! steers its path, moves it and picks an action (0403, [`mode`]), and
 //! attacks: picks a weapon and a target, reads the [`forecast`] and watches
-//! the combat's [`playback`] (0404). Around that (0405): the unit
+//! the combat's [`playback`] (0404), or casts a spell on an enemy, an ally
+//! or a tile ([`magic`], 0410); a tile whose terrain changes flashes.
+//! Around that (0405): the unit
 //! [`info`] screen, the danger zone, the [`map_menu`], ending the turn (and
 //! auto-end), and the phase and outcome [`banner`]s. Every command sent is
 //! kept in a [`BattleHistory`], and Rewind opens the [`rewind`] screen
@@ -26,6 +28,7 @@ pub mod forecast;
 pub mod info;
 pub mod items;
 pub mod layout;
+pub mod magic;
 pub mod map_menu;
 pub mod mode;
 pub mod panel;
@@ -43,8 +46,9 @@ use trpg_content::{Content, TipTrigger, battle_campaign};
 
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{
-    BattleHistory, BattleState, Command, Event, Faction, GameMode, LeadGender, LeadProfile, Phase,
-    Pos, StatValue, TileSet, Unit, UnitId, danger_zone, next_command,
+    BattleHistory, BattleState, CastTarget, Command, Equipped, Event, Faction, GameMode,
+    LeadGender, LeadProfile, Phase, Pos, StatValue, TileSet, Unit, UnitId, danger_zone,
+    next_command,
 };
 
 use self::ai_phase::{AiAction, PACING};
@@ -79,8 +83,9 @@ pub const QUICK_BATTLE: &str = "quick";
 /// The debug Quick Battle (`assets/battles/quick.ron`, which the title
 /// screen plays through the game flow) at its start, with its own
 /// characters in Classic: `test_small.map` with the placeholder characters
-/// against generic enemies (rout), one brigand close enough to fight on
-/// turn 1, and a trigger of each kind about a rogue who arrives on turn 2.
+/// (a caster among them, unit 8) against generic enemies (rout), one
+/// brigand close enough to fight on turn 1, a Frost Elemental holding its
+/// tile, and a trigger of each kind about a rogue who arrives on turn 2.
 /// Fails with a message if the content lacks it.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     let def = content
@@ -98,6 +103,27 @@ pub const OVERLAY_BLEND: f32 = 0.75;
 
 /// How long the `Auto-end: ON/OFF` message stays, in seconds. *Tunable.*
 pub const TOAST_S: f32 = 1.5;
+
+/// How long a tile flashes when its terrain changes, in seconds. *Tunable.*
+pub const TERRAIN_FLASH_S: f32 = 0.4;
+
+/// A tile whose terrain just changed (a tile cast, a fire burning out): it
+/// flashes for [`TERRAIN_FLASH_S`] seconds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TerrainFlash {
+    /// The tile.
+    pub pos: Pos,
+    /// Seconds it has flashed.
+    pub t: f32,
+}
+
+impl TerrainFlash {
+    /// How far the tile's background is tinted towards its glyph colour
+    /// now: [`OVERLAY_BLEND`] at the change, fading to none.
+    pub fn strength(&self) -> f32 {
+        OVERLAY_BLEND * (1.0 - self.t / TERRAIN_FLASH_S).clamp(0.0, 1.0)
+    }
+}
 
 /// A `+10` shown over a unit that was healed, for
 /// [`Timings::heal_popup`](playback::Timings::heal_popup) seconds.
@@ -171,6 +197,8 @@ pub struct BattleScreen {
     tips: TipState,
     /// Heal numbers floating over units.
     popups: Vec<HealPopup>,
+    /// Tiles flashing after their terrain changed.
+    flashes: Vec<TerrainFlash>,
     /// The EXP bar and level-up pages of the last command (0602), shown
     /// once its combat has played.
     progress: Option<Progress>,
@@ -221,6 +249,7 @@ impl BattleScreen {
             queue: VecDeque::new(),
             tips: TipState::default(),
             popups: vec![],
+            flashes: vec![],
             progress: None,
             cues: CueQueue::default(),
             walked: None,
@@ -255,6 +284,11 @@ impl BattleScreen {
     /// The heal numbers on screen.
     pub fn popups(&self) -> &[HealPopup] {
         &self.popups
+    }
+
+    /// The tiles flashing after their terrain changed.
+    pub fn flashes(&self) -> &[TerrainFlash] {
+        &self.flashes
     }
 
     /// Whether auto-end is on.
@@ -649,6 +683,10 @@ impl BattleScreen {
                 }
                 _ => None,
             }));
+            self.flashes.extend(events.iter().filter_map(|e| match *e {
+                Event::TerrainChanged { pos, .. } => Some(TerrainFlash { pos, t: 0.0 }),
+                _ => None,
+            }));
             if self.danger.is_some() {
                 self.danger = Some(danger_tiles(&self.state));
             }
@@ -965,6 +1003,13 @@ impl BattleScreen {
             | Mode::UnitList { .. } => {
                 help_line(&[(keys, "choose"), confirm("confirm"), cancel("back")])
             }
+            Mode::SpellMenu { .. } => {
+                help_line(&[(keys, "choose"), confirm("cast"), cancel("back")])
+            }
+            Mode::CastTarget(t) => match t.forecast() {
+                Some(forecast) => Self::help_targeting(ctx, forecast),
+                None => help_line(&[(keys, "next target"), select("cast"), cancel("back")]),
+            },
             Mode::EquipMenu { .. } => {
                 help_line(&[(keys, "choose"), confirm("equip"), cancel("back")])
             }
@@ -998,9 +1043,14 @@ impl BattleScreen {
 
     /// The help line while picking an attack's target: left/right pick the
     /// target and up/down the line of the arts list, if it is shown (0414).
+    /// Confirm reads `cast` for a spell.
     fn help_targeting(ctx: &Ctx, t: &Targeting) -> String {
         let km = ctx.help_keys();
-        let confirm = (Some(key_name(km, Action::Confirm)), "attack");
+        let verb = match t.with {
+            Equipped::Weapon(_) => "attack",
+            Equipped::Spell(_) => "cast",
+        };
+        let confirm = (Some(key_name(km, Action::Confirm)), verb);
         let cancel = (Some(key_name(km, Action::Cancel)), "back");
         if !t.has_list() {
             return help_line(&[(Some(cursor_keys_name(km)), "next target"), confirm, cancel]);
@@ -1055,24 +1105,45 @@ impl BattleScreen {
         ])
     }
 
+    /// Draws terrain `id` on the tile at cell `(x, y)`: its two glyphs in
+    /// its colours.
+    fn draw_tile(ctx: &Ctx, buf: &mut GlyphBuffer, id: trpg_core::TerrainId, (x, y): (i32, i32)) {
+        let Some(t) = ctx.content.terrain.display.get(id) else {
+            return;
+        };
+        let fg = named(&ctx.palette, &t.fg, UiColor::Text);
+        let bg = named(&ctx.palette, &t.bg, UiColor::Black);
+        for (i, glyph) in (0..).zip(t.glyphs) {
+            buf.set(x + i, y, Cell::new(glyph, fg, bg));
+        }
+    }
+
+    /// Tints the tiles whose terrain just changed towards their glyph
+    /// colour, fading out ([`TerrainFlash::strength`]).
+    fn draw_flashes(&self, buf: &mut GlyphBuffer) {
+        for flash in &self.flashes {
+            let Some((x, y)) = tile_to_cell(flash.pos, &self.camera) else {
+                continue;
+            };
+            let Some(fg) = buf.get(x, y).map(|c| c.fg) else {
+                continue;
+            };
+            buf.blend_bg(Rect::new(x, y, TILE_W_CELLS, 1), fg, flash.strength());
+        }
+    }
+
     /// Draws the terrain of every viewport tile; tiles off the map are left
     /// as they are (blank).
     fn draw_terrain(&self, ctx: &Ctx, buf: &mut GlyphBuffer, state: &BattleState) {
-        let display = &ctx.content.terrain.display;
         let o = self.camera.origin;
         for dy in 0..VIEW_TILES_H {
             for dx in 0..VIEW_TILES_W {
                 let pos = Pos::new(o.x + dx, o.y + dy);
-                let Some(t) = state.map().tiles.get(pos).and_then(|&id| display.get(id)) else {
+                let Some(&id) = state.map().tiles.get(pos) else {
                     continue;
                 };
-                let Some((x, y)) = tile_to_cell(pos, &self.camera) else {
-                    continue;
-                };
-                let fg = named(&ctx.palette, &t.fg, UiColor::Text);
-                let bg = named(&ctx.palette, &t.bg, UiColor::Black);
-                for (i, glyph) in (0..).zip(t.glyphs) {
-                    buf.set(x + i, y, Cell::new(glyph, fg, bg));
+                if let Some(cell) = tile_to_cell(pos, &self.camera) {
+                    Self::draw_tile(ctx, buf, id, cell);
                 }
             }
         }
@@ -1081,7 +1152,10 @@ impl BattleScreen {
     /// Tints the danger zone, if shown (`danger_zone`), then the tiles of
     /// the mode's ranges over it: a selected unit's move (`move_range`) and
     /// attack (`attack_range`) ranges, a shown threat area, or where a unit
-    /// may move after its attack.
+    /// may move after its attack. While a spell's target is picked (0410):
+    /// the enemies it can hit in `attack_range` or the allies it can heal
+    /// in `heal_range`, and each tile it can change drawn as the terrain it
+    /// would become (Nick: units and terrain must look different).
     fn draw_ranges(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let tint = |buf: &mut GlyphBuffer, tiles: Vec<Pos>, color| {
             let color = ctx.palette.get(color);
@@ -1107,6 +1181,28 @@ impl BattleScreen {
             Mode::Targeting(t) => {
                 let at = t.targets.iter().filter_map(|&id| self.state.unit(id));
                 tint(buf, at.map(|u| u.pos).collect(), UiColor::AttackRange);
+            }
+            Mode::CastTarget(t) => {
+                let units = t.targets().iter().filter_map(|target| match target {
+                    CastTarget::Unit(id) => self.state.unit(*id).map(|u| u.pos),
+                    CastTarget::Tile(_) => None,
+                });
+                let attack = self
+                    .state
+                    .spells()
+                    .get(t.spell())
+                    .is_some_and(trpg_core::SpellDef::is_attack);
+                let color = if attack {
+                    UiColor::AttackRange
+                } else {
+                    UiColor::HealRange
+                };
+                tint(buf, units.collect(), color);
+                for (pos, becomes) in t.tile_changes(&self.state) {
+                    if let Some(cell) = tile_to_cell(pos, &self.camera) {
+                        Self::draw_tile(ctx, buf, becomes, cell);
+                    }
+                }
             }
             Mode::SkillTarget(t) => {
                 let at = t.targets().iter().filter_map(|&id| self.state.unit(id));
@@ -1151,6 +1247,7 @@ impl BattleScreen {
             Mode::Moving { .. }
             | Mode::ActionMenu { .. }
             | Mode::WeaponMenu { .. }
+            | Mode::SpellMenu { .. }
             | Mode::SkillMenu { .. }
             | Mode::ItemMenu { .. }
             | Mode::EquipMenu { .. }
@@ -1173,6 +1270,7 @@ impl BattleScreen {
             Mode::Idle { .. }
             | Mode::MoveAfter { .. }
             | Mode::Targeting(_)
+            | Mode::CastTarget(_)
             | Mode::SkillTarget(_)
             | Mode::ItemTarget(_)
             | Mode::TalkTarget { .. }
@@ -1187,11 +1285,11 @@ impl BattleScreen {
     /// Draws the action menu or the weapon list beside its unit, or the
     /// map menu beside the cursor, if open.
     fn draw_menu(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
-        if let Mode::Targeting(t) = &self.mode {
+        if let Some(t) = self.forecast() {
             // The arts list, beside the forecast panel (0414).
             if t.has_list() {
                 let unit_y = tile_to_cell(t.sel.dest(), &self.camera).map_or(0, |(_, y)| y);
-                let weapon = (t.sel.unit, t.slot);
+                let weapon = (t.sel.unit, &t.with);
                 art_list::draw_list(buf, &ctx.palette, &self.state, weapon, &t.list, unit_y);
             }
             return;
@@ -1199,6 +1297,7 @@ impl BattleScreen {
         let (tile, menu) = match &self.mode {
             Mode::ActionMenu { sel, menu, .. }
             | Mode::WeaponMenu { sel, menu, .. }
+            | Mode::SpellMenu { sel, menu, .. }
             | Mode::SkillMenu { sel, menu, .. }
             | Mode::ItemMenu { sel, menu, .. }
             | Mode::EquipMenu { sel, menu, .. } => (sel.dest(), menu),
@@ -1220,13 +1319,17 @@ impl BattleScreen {
         }
     }
 
-    /// Ages the heal numbers and the message by `dt` seconds, dropping
-    /// those whose time is up.
+    /// Ages the heal numbers, the terrain flashes and the message by `dt`
+    /// seconds, dropping those whose time is up.
     fn tick_popups(&mut self, dt: f32) {
         for p in &mut self.popups {
             p.t += dt;
         }
         self.popups.retain(|p| p.t < TIMINGS.heal_popup);
+        for f in &mut self.flashes {
+            f.t += dt;
+        }
+        self.flashes.retain(|f| f.t < TERRAIN_FLASH_S);
         if let Some((_, left)) = &mut self.toast {
             *left -= dt;
             if *left <= 0.0 {
@@ -1319,11 +1422,35 @@ impl BattleScreen {
         draw_debug_hint(ctx, buf, HELP_ROW);
     }
 
+    /// The attack forecast on screen: while an attack's target is picked,
+    /// or a spell's with the cursor on an enemy.
+    fn forecast(&self) -> Option<&Targeting> {
+        match &self.mode {
+            Mode::Targeting(t) => Some(t),
+            Mode::CastTarget(t) => t.forecast(),
+            _ => None,
+        }
+    }
+
+    /// The line over the help bar: a combat's message, the preview of the
+    /// skill, item or spell being aimed, or the toast.
+    fn message(&self) -> Option<(String, UiColor)> {
+        let preview = match &self.mode {
+            Mode::Combat(pb) => pb.message(),
+            Mode::SkillTarget(t) => Some(t.preview(&self.state)),
+            Mode::ItemTarget(t) => Some(t.preview(&self.state)),
+            Mode::CastTarget(t) => t.preview(&self.state),
+            _ => None,
+        };
+        let toast = || Some((self.toast()?.to_owned(), UiColor::TextHighlight));
+        preview.map(|text| (text, UiColor::Text)).or_else(toast)
+    }
+
     /// Draws the side panel: the forecast while targeting, else the
     /// terrain and unit under the cursor (as drawn, during a playback).
     fn draw_panel(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let c = |u| ctx.palette.get(u);
-        if let Mode::Targeting(t) = &self.mode {
+        if let Some(t) = self.forecast() {
             forecast::draw_forecast(buf, &ctx.palette, &self.state, t);
             return;
         }
@@ -1516,6 +1643,7 @@ impl Screen for BattleScreen {
             return;
         }
         self.draw_terrain(ctx, buf, &self.state);
+        self.draw_flashes(buf);
         self.draw_ranges(ctx, buf);
         self.draw_units(ctx, buf);
         self.draw_cursor_and_path(ctx, buf);
@@ -1547,28 +1675,8 @@ impl Screen for BattleScreen {
             c(UiColor::TextDim),
             black,
         );
-        if let Mode::Combat(pb) = &self.mode
-            && let Some(message) = pb.message()
-        {
-            buf.print(1, HELP_BAR.y, &message, c(UiColor::Text), black);
-        } else if let Mode::SkillTarget(t) = &self.mode {
-            buf.print(
-                1,
-                HELP_BAR.y,
-                &t.preview(&self.state),
-                c(UiColor::Text),
-                black,
-            );
-        } else if let Mode::ItemTarget(t) = &self.mode {
-            buf.print(
-                1,
-                HELP_BAR.y,
-                &t.preview(&self.state),
-                c(UiColor::Text),
-                black,
-            );
-        } else if let Some(toast) = self.toast() {
-            buf.print(1, HELP_BAR.y, toast, c(UiColor::TextHighlight), black);
+        if let Some((message, color)) = self.message() {
+            buf.print(1, HELP_BAR.y, &message, c(color), black);
         }
         buf.print(1, HELP_ROW, &self.help(ctx), c(UiColor::TextDim), black);
         draw_debug_hint(ctx, buf, HELP_ROW);
@@ -1754,6 +1862,9 @@ mod attack_tests;
 mod item_tests;
 
 #[cfg(test)]
+mod magic_tests;
+
+#[cfg(test)]
 mod progress_tests;
 
 #[cfg(test)]
@@ -1822,15 +1933,37 @@ mod tests {
                 ("Br", Faction::Enemy),
                 ("Br", Faction::Enemy),
                 ("Ra", Faction::Enemy),
+                ("Fr", Faction::Enemy),
+                ("Ma", Faction::Player),
             ]
         );
         let ids: Vec<u32> = units.iter().map(|u| u.id.0).collect();
-        assert_eq!(ids, [1, 2, 3, 4, 5, 6]);
+        assert_eq!(ids, [1, 2, 3, 4, 5, 6, 7, 8]);
         for u in units {
             assert!(!u.acted, "{}", u.name);
             assert_eq!(u.hp, u.stats.hp, "{}", u.name);
             assert!(state.map().tiles.in_bounds(u.pos));
         }
+        // The caster (0410), numbered after the enemies: Fire from its
+        // class, Frost and Heal of its own, all at full uses, Fire equipped.
+        let mage = state.unit(UnitId(8)).unwrap();
+        assert_eq!(
+            (mage.name.as_str(), mage.pos),
+            ("Test Mage", Pos::new(3, 6))
+        );
+        let spells: Vec<(&str, u8)> = mage
+            .learned
+            .iter()
+            .map(|s| (s.0.as_str(), mage.spells.uses_left(s)))
+            .collect();
+        assert_eq!(spells, [("fire", 10), ("frost", 10), ("heal", 8)]);
+        let fire = trpg_core::SpellId::new("fire");
+        assert_eq!(mage.loadout.equipped, Some(Equipped::Spell(fire)));
+        // The elemental holds its tile.
+        let elemental = state.unit(UnitId(7)).unwrap();
+        assert_eq!(elemental.class.0, "frost_elemental");
+        assert_eq!(elemental.ai, trpg_core::AiBehavior::Stationary);
+        assert_eq!(elemental.pos, Pos::new(8, 7));
     }
 
     #[test]
@@ -1849,7 +1982,7 @@ mod tests {
         let s = quick();
         // test_small is smaller than the viewport: centred.
         assert_eq!(s.camera().origin, Pos::new(-10, -11));
-        assert_eq!(s.state().units().len(), 6);
+        assert_eq!(s.state().units().len(), 8);
         let big = BattleMap::new("Big", Grid::filled(64, 40, TerrainId(0)));
         let units = s.state().units().to_vec();
         let camera = |units: Vec<Unit>| {
@@ -2032,24 +2165,32 @@ mod tests {
     fn next_and_prev_unit_cycle_ready_units_in_reading_order() {
         let mut c = ctx();
         let mut s = quick();
-        // Ready, in reading order: the archer (2, 4), the lord (3, 5) and
-        // the knight (4, 6).
+        // Ready, in reading order: the archer (2, 4), the lord (3, 5), the
+        // mage (3, 6) and the knight (4, 6).
         assert_eq!(
             s.ready_units(),
-            [Pos::new(2, 4), Pos::new(3, 5), Pos::new(4, 6)]
+            [
+                Pos::new(2, 4),
+                Pos::new(3, 5),
+                Pos::new(3, 6),
+                Pos::new(4, 6)
+            ]
         );
         let mut visit = |a: Action| {
             step(&mut s, &mut c, &[a]);
             s.cursor().pos
         };
+        assert_eq!(visit(Action::NextUnit), Pos::new(3, 6));
         assert_eq!(visit(Action::NextUnit), Pos::new(4, 6));
         assert_eq!(visit(Action::NextUnit), Pos::new(2, 4));
         assert_eq!(visit(Action::NextUnit), Pos::new(3, 5));
         assert_eq!(visit(Action::PrevUnit), Pos::new(2, 4));
         assert_eq!(visit(Action::PrevUnit), Pos::new(4, 6));
+        assert_eq!(visit(Action::PrevUnit), Pos::new(3, 6));
         assert_eq!(visit(Action::PrevUnit), Pos::new(3, 5));
         // From a tile between them, in reading order.
         assert_eq!(visit(Action::CursorRight), Pos::new(4, 5));
+        assert_eq!(visit(Action::NextUnit), Pos::new(3, 6));
         assert_eq!(visit(Action::NextUnit), Pos::new(4, 6));
         assert_eq!(visit(Action::CursorUp), Pos::new(4, 5));
         assert_eq!(visit(Action::PrevUnit), Pos::new(3, 5));
@@ -2076,7 +2217,8 @@ mod tests {
         units[1].acted = false;
         units[1].pos = Pos::new(60, 35);
         let mut s = BattleScreen::new(battle(&c, map, units));
-        step(&mut s, &mut ctx_, &[Action::NextUnit]);
+        // (Past the mage, the one unit between the lord and it.)
+        step(&mut s, &mut ctx_, &[Action::NextUnit, Action::NextUnit]);
         assert_eq!(s.cursor().pos, Pos::new(60, 35));
         // Scrolled just enough to keep it 3 tiles from the edges.
         assert_eq!(s.camera().origin, Pos::new(29, 9));
@@ -2368,7 +2510,10 @@ mod tests {
         // No longer ready: not selectable, and cycling skips it.
         step(&mut s, &mut c, &[Action::Confirm]);
         assert_eq!(s.mode(), &Mode::default());
-        assert_eq!(s.ready_units(), [Pos::new(2, 4), Pos::new(4, 6)]);
+        assert_eq!(
+            s.ready_units(),
+            [Pos::new(2, 4), Pos::new(3, 6), Pos::new(4, 6)]
+        );
     }
 
     #[test]

@@ -214,6 +214,7 @@ fn auto_end_waits_for_the_playback_and_the_exp_bar() {
     let mut state = skirmish(&c, 0, None);
     wait(&mut state, 1);
     wait(&mut state, 2);
+    wait(&mut state, 7);
     let mut s = BattleScreen::new(state);
     press(&mut s, &mut c, &[ToggleAutoEnd], 0.0);
     press(&mut s, &mut c, &[Confirm, CursorRight, Confirm], 0.5);
@@ -250,6 +251,7 @@ fn auto_end_waits_for_a_playback_with_no_exp_bar_after_it() {
     state = battle(&c, map, units);
     wait(&mut state, 1);
     wait(&mut state, 2);
+    wait(&mut state, 7);
     let (_, events) = expected(&state);
     assert!(!events.iter().any(|e| matches!(e, Event::ExpGained { .. })));
     let mut s = BattleScreen::new(state);
@@ -272,6 +274,7 @@ fn switching_auto_end_on_later_doesnt_end_the_phase() {
     let mut state = skirmish(&c, 0, None);
     wait(&mut state, 1);
     wait(&mut state, 2);
+    wait(&mut state, 7);
     let mut s = BattleScreen::new(state);
     // The last unit waits with auto-end off; turning it on afterwards
     // leaves the phase to the player.

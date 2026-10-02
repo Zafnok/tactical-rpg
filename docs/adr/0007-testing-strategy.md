@@ -1,6 +1,6 @@
 # ADR-0007: Testing strategy
 
-- **Status:** Accepted
+- **Status:** Accepted; behaviour tests read the map scene, per ADR-0038
 - **Date:** 2026-09-25
 
 ## Context

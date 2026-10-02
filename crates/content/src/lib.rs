@@ -154,6 +154,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         portraits.as_ref().ok(),
         names.as_ref().ok(),
     );
+    let audio = audio::load();
     let (battles, chapters, new_game) = load_story(
         maps.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -161,6 +162,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         items.as_ref().ok(),
         characters.as_ref().ok(),
         dialogue.as_ref().ok(),
+        audio.as_ref().ok(),
     );
     assemble(
         palette,
@@ -180,7 +182,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             dialogue,
             ai: ai::load(),
             tips: tip::load(),
-            audio: audio::load(),
+            audio,
             battles,
             chapters,
             new_game,
@@ -226,9 +228,17 @@ fn load_story(
     items: Option<&ItemTable>,
     characters: Option<&CharacterTable>,
     dialogue: Option<&DialogueTable>,
+    audio: Option<&AudioManifest>,
 ) -> Story {
-    let (Some(maps), Some(terrain), Some(classes), Some(items), Some(characters), Some(dialogue)) =
-        (maps, terrain, classes, items, characters, dialogue)
+    let (
+        Some(maps),
+        Some(terrain),
+        Some(classes),
+        Some(items),
+        Some(characters),
+        Some(dialogue),
+        Some(audio),
+    ) = (maps, terrain, classes, items, characters, dialogue, audio)
     else {
         return (
             Ok(BTreeMap::new()),
@@ -243,6 +253,7 @@ fn load_story(
         items,
         characters,
         dialogue,
+        audio,
     };
     let battles = battle::load_all(&refs);
     let Ok(loaded) = &battles else {
@@ -459,6 +470,7 @@ mod tests {
             item::load().ok().as_ref(),
             ok_characters().ok().as_ref(),
             ok_dialogue().ok().as_ref(),
+            audio::load().ok().as_ref(),
         )
     }
 
@@ -645,7 +657,21 @@ mod tests {
 
     #[test]
     fn story_files_are_skipped_when_what_they_need_failed() {
-        let (battles, chapters, new_game) = load_story(None, None, None, None, None, None);
+        let (battles, chapters, new_game) = load_story(None, None, None, None, None, None, None);
+        assert_eq!(battles, Ok(BTreeMap::new()));
+        assert_eq!(chapters, Ok(BTreeMap::new()));
+        assert_eq!(new_game, Ok(NewGameDef::default()));
+        // Battles name their music: no audio manifest, no battles.
+        let terrain = ok_terrain().ok();
+        let (battles, chapters, new_game) = load_story(
+            ok_maps().ok().as_ref(),
+            terrain.as_ref(),
+            ok_classes().ok().as_ref(),
+            item::load().ok().as_ref(),
+            ok_characters().ok().as_ref(),
+            ok_dialogue().ok().as_ref(),
+            None,
+        );
         assert_eq!(battles, Ok(BTreeMap::new()));
         assert_eq!(chapters, Ok(BTreeMap::new()));
         assert_eq!(new_game, Ok(NewGameDef::default()));

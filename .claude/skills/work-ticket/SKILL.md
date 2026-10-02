@@ -48,6 +48,16 @@ git switch main && git pull --ff-only
 git switch -c t<NNNN>-<slug>
 ```
 
+Then free disk space:
+
+```bash
+cargo xtask clean-merged-targets
+```
+
+It deletes the `target/` build folder of every other worktree whose PR has
+merged (never a worktree or a branch). If this command fails, carry on: it
+never blocks the ticket.
+
 Set `status: in-progress` in the ticket frontmatter.
 
 ## 3. Implement
@@ -58,6 +68,11 @@ Set `status: in-progress` in the ticket frontmatter.
   rules only in `core`; state changes only via `Command`s.
 - Touching input, controls, help bars, tips or any text that names a key:
   follow the `keyboard-input` skill (never hard-code a key).
+- Drawing a picture, or anything on the battle map: follow ADR-0038
+  (graphics are a skin). Pictures are sprite items from asset files; map
+  things go in the map scene and are painted by each map skin; nothing
+  about the look goes in `core`, the bots or play records; a test of what
+  happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
 - **Scope creep rule:** if you notice something else worth doing (a bug,

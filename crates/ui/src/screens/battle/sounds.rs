@@ -58,11 +58,12 @@ fn depth(mode: &Mode) -> u8 {
         }
 
         Mode::WeaponMenu { .. }
+        | Mode::SpellMenu { .. }
         | Mode::SkillMenu { .. }
         | Mode::ItemMenu { .. }
         | Mode::EquipMenu { .. }
         | Mode::TalkTarget { .. } => 3,
-        Mode::Targeting(_) | Mode::SkillTarget(_) | Mode::ItemTarget(_) => 4,
+        Mode::Targeting(_) | Mode::CastTarget(_) | Mode::SkillTarget(_) | Mode::ItemTarget(_) => 4,
     }
 }
 

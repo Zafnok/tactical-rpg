@@ -401,6 +401,22 @@ impl BattleState {
         let SkillKind::Active { cost, effect } = &def.kind else {
             return Err(CommandError::WrongSkillKind(id.clone()));
         };
+        // The cost is checked first, so a skill that can't be paid for says
+        // so whoever is in reach. Its own uses need no weapon; any other
+        // cost is the equipped weapon's.
+        let source = match cost {
+            SkillCost::Uses(_) => Ok(CostSource::Own(id.clone())),
+            SkillCost::Durability(_) | SkillCost::ExtraSpellUse => unit
+                .loadout
+                .equipped_slot()
+                .map(CostSource::Weapon)
+                .ok_or(CostError::NoWeapon),
+        }
+        .and_then(|s| check_cost(unit, *cost, &s).map(|()| s))
+        .map_err(|error| CommandError::CannotPay {
+            skill: id.clone(),
+            error,
+        })?;
         let bad_target = || CommandError::BadSkillTarget(id.clone());
         let nobody = || CommandError::NoSkillTargets(id.clone());
         let step = match effect {
@@ -454,16 +470,6 @@ impl BattleState {
                 self.plan_push(unit, dest, target, id, *collision)?
             }
         };
-        let source = unit
-            .loadout
-            .equipped_slot()
-            .map(CostSource::Weapon)
-            .ok_or(CostError::NoWeapon)
-            .and_then(|s| check_cost(unit, *cost, &s).map(|()| s))
-            .map_err(|error| CommandError::CannotPay {
-                skill: id.clone(),
-                error,
-            })?;
         Ok(Step::Skill {
             active: Box::new(ActiveUse {
                 skill: id.clone(),
@@ -594,7 +600,8 @@ impl BattleState {
     }
 
     /// Carries out unit `id`'s validated non-combat active. Units a Shove
-    /// felled leave the map after the payment's `ItemBroke`.
+    /// felled leave the map after the payment's `ItemBroke` (a cost in
+    /// durability only).
     pub(super) fn use_skill(
         &mut self,
         id: UnitId,

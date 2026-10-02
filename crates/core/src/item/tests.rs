@@ -790,20 +790,20 @@ fn prepare_for_battle_refills_uses_and_equips_when_nothing_is() {
     let mut u = knowing(equipped(&["axe"], None, None), &["fire", "heal"]);
     u.spells.uses_left.insert(SpellId::new("fire"), 2);
     u.spells.uses_left.remove(&SpellId::new("heal"));
-    u.prepare_for_battle(&cs, &t, &sp);
+    u.prepare_for_battle(&cs, &t, &sp, &SkillTable::default());
     assert_eq!(u.spells, SpellState::full(&u.learned, &sp));
     assert_eq!(u.spells.uses_left(&SpellId::new("heal")), 10);
     assert_eq!(u.loadout.equipped, Some(spell("fire")));
     // Something equipped already stays equipped.
     let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
     u.loadout.equipped = Some(spell("fire"));
-    u.prepare_for_battle(&cs, &t, &sp);
+    u.prepare_for_battle(&cs, &t, &sp, &SkillTable::default());
     assert_eq!(u.loadout.equipped, Some(spell("fire")));
     // An unknown class: uses refill, nothing is equipped.
     let mut u = knowing(equipped(&["sword"], None, None), &["fire"]);
     u.loadout.equipped = None;
     u.class = ClassId("nope".into());
-    u.prepare_for_battle(&cs, &t, &sp);
+    u.prepare_for_battle(&cs, &t, &sp, &SkillTable::default());
     assert_eq!(
         (
             u.loadout.equipped,

@@ -36,6 +36,13 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 7. **Never hard-code a key.** Game code reacts to `Action`s and text names
    keys through the player's keymap; players rebind everything. Follow the
    `keyboard-input` skill whenever input or key names are involved.
+8. **Graphics are a skin** (ADR-0038): glyphs today, sprites from image
+   files later, and swapping them must stay a small job. `core`, the bots
+   and play records know nothing about the look. A picture is a sprite
+   item from an asset file, never per-pixel rectangles or cells. Anything
+   shown on the battle map goes in the map scene and is painted by the map
+   skins, not drawn straight into the buffer. Tests of what happened read
+   the scene or the state; only tests of a look read cells and colours.
 
 ## Map of the repo
 
@@ -62,4 +69,6 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
   macroquad). `.cargo/config.toml` points the `x86_64-pc-windows-gnu` linker
   at the MSYS2 install.
 - Use `cargo install --locked <tool>` (cargo-binstall fails to build here).
+- `cargo xtask clean-merged-targets [--dry-run]` deletes the `target/` build
+  folder of every worktree whose PR has merged (10+ GB each).
 - Git remote: `https://github.com/Zafnok/visions-of-shuyi` (public).

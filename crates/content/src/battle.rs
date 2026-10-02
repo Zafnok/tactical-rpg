@@ -6,11 +6,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 use trpg_core::{
-    AiBehavior, BattleDef, BattleMap, CharacterId, ClassTable, Difficulty, Faction, ItemDef,
-    ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role, TerrainTable,
-    Trigger, Turn, Unit, UnitId, default_map_label,
+    AiBehavior, BattleDef, BattleMap, BattleMusic, CharacterId, ClassTable, Difficulty, Faction,
+    ItemDef, ItemId, ItemTable, Level, Objective, PlayerSlot, Pos, Reinforcement, Role,
+    TerrainTable, Trigger, Turn, Unit, UnitId, default_map_label,
 };
 
+use crate::audio::AudioManifest;
 use crate::bundle;
 use crate::character::{CharacterTable, RawLoadout, character_unit, check_map_labels};
 use crate::dialogue::DialogueTable;
@@ -44,6 +45,8 @@ pub struct BattleRefs<'a> {
     pub characters: &'a CharacterTable,
     /// Scenes, for the triggers.
     pub dialogue: &'a DialogueTable,
+    /// Music cues and pools, for the battle's music.
+    pub audio: &'a AudioManifest,
 }
 
 #[derive(Deserialize)]
@@ -69,6 +72,7 @@ struct RawBattle {
     #[serde(default)]
     triggers: Vec<Trigger>,
     difficulty: Difficulty,
+    music: BattleMusic,
     seed: u64,
 }
 
@@ -77,6 +81,9 @@ struct RawBattle {
 struct RawSlot {
     character: String,
     pos: (i32, i32),
+    /// Numbered after the enemies instead of in slot order.
+    #[serde(default)]
+    after_enemies: bool,
 }
 
 #[derive(Deserialize)]
@@ -199,9 +206,10 @@ pub fn from_source(
     if raw.preparations {
         v.err(NO_PREPARATIONS.to_owned());
     }
-    let slots = raw.player_slots.len();
-    let mut next_id = BattleDef::first_enemy_id(slots);
-    let players = v.players(&raw.player_slots, &map);
+    let slot_ids = slot_ids(&raw.player_slots, raw.enemies.len());
+    let early = raw.player_slots.iter().filter(|s| !s.after_enemies).count();
+    let mut next_id = BattleDef::first_enemy_id(early);
+    let players = v.players(&raw.player_slots, &slot_ids, &map);
     let enemies: Vec<Unit> = raw
         .enemies
         .iter()
@@ -212,6 +220,9 @@ pub fn from_source(
             unit
         })
         .collect();
+    // The slots numbered after the enemies come before the reinforcements.
+    let late = raw.player_slots.iter().filter(|s| s.after_enemies).count();
+    next_id = next_id.saturating_add(u32::try_from(late).unwrap_or(u32::MAX));
     let reinforcements: Vec<Reinforcement> = raw
         .reinforcements
         .iter()
@@ -238,6 +249,7 @@ pub fn from_source(
     let objective = v.objective(&raw.objective, &map, &everyone);
     let pack_cap = raw.pack_cap.unwrap_or(refs.items.rules.default_pack_cap);
     let default_pack = v.pack(&raw.default_pack, pack_cap);
+    v.music(&raw.music);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
         file,
@@ -255,9 +267,11 @@ pub fn from_source(
         player_slots: raw
             .player_slots
             .iter()
-            .map(|s| PlayerSlot {
+            .zip(&slot_ids)
+            .map(|(s, &id)| PlayerSlot {
                 character: CharacterId(s.character.clone()),
                 pos: pos(s.pos),
+                id,
             })
             .collect(),
         enemies,
@@ -269,12 +283,33 @@ pub fn from_source(
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
         difficulty: raw.difficulty,
+        music: raw.music,
         seed: raw.seed,
     })
 }
 
 fn pos((x, y): (i32, i32)) -> Pos {
     Pos::new(x, y)
+}
+
+/// The unit id of each slot: the slots numbered in order from 1, skipping
+/// those marked `after_enemies`, which follow the `enemies` enemies in
+/// order.
+fn slot_ids(slots: &[RawSlot], enemies: usize) -> Vec<UnitId> {
+    let early = slots.iter().filter(|s| !s.after_enemies).count();
+    let (mut next_early, mut next_late) = (0, early + enemies);
+    slots
+        .iter()
+        .map(|s| {
+            let next = if s.after_enemies {
+                &mut next_late
+            } else {
+                &mut next_early
+            };
+            *next += 1;
+            BattleDef::slot_id(*next - 1)
+        })
+        .collect()
 }
 
 /// Collects the errors of one battle file.
@@ -295,10 +330,10 @@ impl Checker<'_, '_> {
 
     /// The player units the slots would hold, with the characters' own
     /// data (the campaign's roster replaces them in play).
-    fn players(&mut self, slots: &[RawSlot], map: &BattleMap) -> Vec<Unit> {
+    fn players(&mut self, slots: &[RawSlot], ids: &[UnitId], map: &BattleMap) -> Vec<Unit> {
         let refs = self.refs;
         let mut units = Vec::new();
-        for (i, slot) in slots.iter().enumerate() {
+        for (i, (slot, &unit_id)) in slots.iter().zip(ids).enumerate() {
             let what = format!("player slot {} (\"{}\")", i + 1, slot.character);
             let id = CharacterId(slot.character.clone());
             let Some(def) = refs.characters.characters.get(&id) else {
@@ -306,14 +341,7 @@ impl Checker<'_, '_> {
                 continue;
             };
             let at = pos(slot.pos);
-            match character_unit(
-                def,
-                BattleDef::slot_id(i),
-                refs.classes,
-                refs.items,
-                Faction::Player,
-                at,
-            ) {
+            match character_unit(def, unit_id, refs.classes, refs.items, Faction::Player, at) {
                 Ok(unit) => {
                     self.place(&what, &unit, map, true);
                     units.push(unit);
@@ -498,6 +526,20 @@ impl Checker<'_, '_> {
                 self.err("objective: turn limit 0".to_owned());
             }
         })
+    }
+
+    /// The music names a music cue, or a pool, of the audio manifest.
+    fn music(&mut self, music: &BattleMusic) {
+        let audio = self.refs.audio;
+        match music {
+            BattleMusic::Cue(cue) if !audio.music.contains_key(cue) => {
+                self.err(format!("music: no music cue \"{cue}\""));
+            }
+            BattleMusic::Pool(pool) if !audio.pools.contains_key(pool) => {
+                self.err(format!("music: no music pool \"{pool}\""));
+            }
+            _ => {}
+        }
     }
 
     /// The default pack's items: known consumables, at most `cap`.

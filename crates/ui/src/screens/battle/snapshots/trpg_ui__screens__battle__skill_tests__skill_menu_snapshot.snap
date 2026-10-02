@@ -18,9 +18,9 @@ expression: "render(&s, &c).to_snapshot(&c.palette)"
                     ≈≈≈≈≈≈====······Br..♣♣♣♣....                      ║                            ║
                     ..≈≈≈≈..··..............╦╦..                      ║                            ║
                     ....Ar····....Br..▓▓▓▓▓▓▓▓..                      ║                            ║
-                    ..♣♣··Lo..╦┌──────────────────────────┐           ║                            ║
-                    ♣♣♣♣··..Kn.│ Brace   3 dur  Wpn 20/20 │           ║                            ║
-                    ♣♣♠♠··.....└──────────────────────────┘           ║                            ║
+                    ..♣♣··Lo..╦┌───────────────┐                      ║                            ║
+                    ♣♣♣♣··MaKn.│ Brace     3/3 │                      ║                            ║
+                    ♣♣♠♠··.....└───────────────┘                      ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
                                                                       ║                            ║
@@ -51,9 +51,9 @@ aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooppookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaahhiiiiqqqqoooooorrjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjssjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaajjjjttoooojjjjrrjjuuuuuuuujjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaajjkkoovvjjsbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakkkkoojjvvjbwwwwwwwwwwwwwwwwwwwwwwwwwwbaaaaaaaaaaabccccccccccccccccccccccccccccb
-aaaaaaaaaaaaaaaaaaaakklloojjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjkkoovvjjsbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkkkoovvvvjbwwwwwwwwwwwwwwwbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -99,3 +99,4 @@ over  192,254 16x2  hp_high
 over  288,222 16x2  hp_high
 over  272,254 16x2  hp_high
 over  272,206 16x2  hp_high
+over  208,286 16x2  hp_high

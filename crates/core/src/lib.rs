@@ -32,8 +32,8 @@ pub use battle::{
     ShopTxn, TileRect, Trigger, TriggerWhen, Turn, UnitAction, Who,
 };
 pub use campaign::{
-    ApplyError, BattleDef, BattleRewards, Campaign, Difficulty, GameTables, PlayerSlot,
-    UNUSED_CHARGE_PERCENT,
+    ApplyError, BattleDef, BattleMusic, BattleRewards, Campaign, Difficulty, GameTables,
+    PlayerSlot, UNUSED_CHARGE_PERCENT,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,
@@ -68,8 +68,8 @@ pub use rng::{RandomSource, ScriptedRng, SimRng};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use skill::{
     ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, EffectSource, Paid,
-    PassiveEffect, SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance,
-    TimedEffect, TimedMods, WeaponReq, check_cost, pay_cost,
+    PassiveEffect, SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, SkillUses,
+    Stance, TimedEffect, TimedMods, WeaponReq, check_cost, pay_cost,
 };
 pub use spell::{
     EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,

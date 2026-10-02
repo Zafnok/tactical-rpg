@@ -145,7 +145,10 @@ fn a_battle_campaign_has_the_battles_characters() {
     let lead = LeadProfile::new("Ellery", LeadGender::Male);
     let game = battle_campaign(&c, quick, GameMode::Classic, lead);
     let names: Vec<_> = game.roster.iter().map(|u| u.name.as_str()).collect();
-    assert_eq!(names, ["Test Lord", "Test Knight", "Test Archer"]);
+    assert_eq!(
+        names,
+        ["Test Lord", "Test Knight", "Test Archer", "Test Mage"]
+    );
     assert_eq!(game.gold, 0);
     assert_eq!(game.stock, Stock::default());
 }
