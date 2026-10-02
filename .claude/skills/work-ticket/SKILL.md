@@ -75,6 +75,9 @@ Set `status: in-progress` in the ticket frontmatter.
   happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
+- New integration tests go in the crate's `tests/it/` as a module listed in
+  `main.rs`; never add a file directly under `tests/` (each one is a
+  separate ~100 MB test program; an `xtask` test fails on a second one).
 - **Scope creep rule:** if you notice something else worth doing (a bug,
   refactor, missing feature), do NOT do it. Create a new ticket with the
   `write-ticket` skill and mention it in the PR description.
