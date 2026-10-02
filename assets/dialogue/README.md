@@ -13,6 +13,7 @@ The dialogue screen (ticket 0704) plays them one text box at a time.
 
 @scene ch01_opening
 @caption Village of Heth, dusk
+@music talk_calm
 > The rain had not stopped for three days.
 @left  ana neutral
 @right bors angry
@@ -21,6 +22,7 @@ ana[happy]: Better late than... well.
 bors: Than never. Say it. I've heard it from you
   often enough to know how it ends.
 @right clear
+@music stop
 @right mira surprised
 mira: Was that Bors? He looked furious.
 ana[sad]: He always does.
@@ -46,6 +48,8 @@ Every line is one of these. Directives start at the very first column.
 | `@left <character> <expression>` | Puts a character on the left side with that expression. Whoever stood there leaves. |
 | `@right <character> <expression>` | The same, on the right side. |
 | `@left clear`, `@right clear` | That side's portrait leaves. |
+| `@music <cue>` | Switches the music to that music cue (the old track fades out first). See "Music". |
+| `@music stop` | Fades the music out to silence. |
 | `<character>: <text>` | The character speaks. They must be on screen (`@left`/`@right` first). |
 | `<character>[<expression>]: <text>` | The character changes expression, then speaks. The new expression stays. |
 | `> <text>` | Narration: a text box with no speaker. |
@@ -53,8 +57,8 @@ Every line is one of these. Directives start at the very first column.
 | `@choice` … `@endchoice` | The lead's reply choice: see below. |
 
 Each speech or narration line is **one text box** on screen (the screen
-splits a long one into pages). Directives (`@caption`, `@left`, `@right`)
-take effect before the next text box.
+splits a long one into pages). Directives (`@caption`, `@left`, `@right`,
+`@music`) take effect before the next text box.
 
 ## Rules
 
@@ -77,6 +81,38 @@ The validator reports every broken rule, with the file and line:
 - **Plain ASCII text.** Use `'` and `"`, not curly quotes; `...` not `…`;
   `--` not `—`; `-` not `–`. The error message names the ASCII form.
 - Every scene has at least one speech or narration line.
+- **Music**: `@music` names exactly one music cue from
+  `assets/audio/audio.ron` (not a sound, not a music pool), or `stop`.
+
+## Music
+
+Conversations use mood tracks (`docs/design/audio.md`, rule 7): a scene
+switches to a mood cue such as `talk_calm`, `talk_antagonist`, `scene_sad`,
+`scene_tragic` or `dungeon_tense`. The cue ids are the `music` entries of
+`assets/audio/audio.ron`; what each one is for is in `audio.md`.
+
+```
+@scene ch01_bad_news
+@music talk_calm
+@left  ana neutral
+@right bors neutral
+ana: Quiet night.
+@music scene_sad
+bors[sad]: Not for long. The bridge is gone.
+@end
+```
+
+- `@music` may stand anywhere in a scene, a reply's reaction included. The
+  music changes when the scene **reaches** that line: above, `scene_sad`
+  starts as Bors's line appears, not before.
+- The music **keeps playing after the scene ends**, until something else
+  asks for different music: a later scene, a battle or the title screen.
+  End a scene with `@music stop` if silence should follow it.
+- A scene with no `@music` leaves the music as it was.
+- Asking for the track already playing does nothing (it doesn't restart).
+- **Skipping** a scene applies the last `@music` it passes, so the music
+  after a skipped scene is the same as after a watched one. (Skipping
+  stops at each reply choice, like reading does.)
 
 ## The lead: reply choices and tokens
 
@@ -114,7 +150,7 @@ lead: Let's move.
 | ---- | ------- |
 | `@choice` | Starts a reply choice. |
 | `* <tone>: <text>` | One reply, at the very first column. The text is what the lead says; it is shown in the menu (the reply isn't shown again as a text box). The tone (`earnest`, `wry`, `blunt`…) is an id for writers; the player doesn't see it. |
-| `  <line>` (two spaces) | A line of that reply's **reaction**: any speech, narration or directive (`@left`, `@caption`…), indented by exactly two spaces. |
+| `  <line>` (two spaces) | A line of that reply's **reaction**: any speech, narration or directive (`@left`, `@caption`, `@music`…), indented by exactly two spaces. |
 | `    <text>` (more spaces) | Continues the reaction's speech or narration line above. |
 | `@endchoice` | Ends the choice. Every reply **rejoins** the scene here. |
 
@@ -199,7 +235,10 @@ their own (`docs/story/names.md`, "Short forms"), used like any other:
 | `<character>.first` | The first name of a character with a two-word name | `{n:retainer.first}` → `Hollis` |
 | `family.<name>` | A family name several people share | `{n:family.marr}` → `Marr` |
 | `<god>.name`, `<god>.title` | A god's name and title on their own | `{n:god.mother.name}` → `Ama`, `{n:god.mother.title}` → `the Mother` |
+| `<character>.last` | A surname only that character has | `{n:sergeant.last}` → `Rook` |
 | `red_captain.nickname` | A nickname | `Red Harl` |
+| `vowmaster.title` | An office, for people who don't say the name | `the Master of Vows` |
+| `faction.brennmark.adj` | A people's name without its article: the adjective, or a nickname | `{n:faction.brennmark.adj}` → `Brennish` |
 
 ### Rules for names
 

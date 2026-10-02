@@ -96,9 +96,10 @@
     ],
     // speakers: ids that may speak in dialogue (.dlg) but aren't units
     // (yet). Each needs a name in names.ron. 0803 moves the Chapter 1
-    // party and the boss up into `characters` with real stats.
+    // party and the boss up into `characters` with real stats. The
+    // messenger (ticket 0707) only ever speaks.
     speakers: [
         "retainer", "sergeant", "poacher", "keeper", "heretic",
-        "red_captain", "rival", "vowmaster",
+        "red_captain", "rival", "vowmaster", "messenger",
     ],
 )

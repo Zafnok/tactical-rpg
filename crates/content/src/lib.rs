@@ -42,7 +42,7 @@ pub use battle::BattleRefs;
 pub use chapter::{ChapterDef, NewGameDef, battle_campaign, new_campaign};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use credits::{CreditEntry, CreditGroup, Credits};
-pub use dialogue::{ChoiceOption, DialogueTable, Scene, Side, Step};
+pub use dialogue::{ChoiceOption, DialogueTable, MusicLine, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use image::{ImageId, ImageInfo, ImageTable};
@@ -157,12 +157,13 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         Ok(p) => portrait::load_all(p),
         Err(_) => Ok(BTreeMap::new()),
     };
+    let audio = audio::load();
     let dialogue = dialogue::load(
         characters.as_ref().ok(),
         portraits.as_ref().ok(),
         names.as_ref().ok(),
+        audio.as_ref().ok(),
     );
-    let audio = audio::load();
     let (battles, chapters, new_game) = load_story(
         maps.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -453,6 +454,7 @@ mod tests {
             ok_characters().ok().as_ref(),
             ok_portraits().ok().as_ref(),
             names::load().ok().as_ref(),
+            audio::load().ok().as_ref(),
         )
     }
 

@@ -1,10 +1,11 @@
 //! Playing a dialogue [`Scene`] one text box at a time. [`DialoguePlayer`]
 //! is the state machine only (who stands where, what is said, which reply
-//! choice is open); the dialogue screen (ticket 0704) draws its [`View`].
+//! choice is open, which music the script asked for); the dialogue screen
+//! (ticket 0704) draws its [`View`] and asks for the music.
 
 use std::borrow::Cow;
 
-use trpg_content::{ChoiceOption, Names, Scene, Side, Step};
+use trpg_content::{ChoiceOption, MusicLine, Names, Scene, Side, Step};
 use trpg_core::{CharacterId, LeadProfile};
 
 /// A character standing on one side of the screen.
@@ -90,8 +91,9 @@ struct Reaction {
 /// Plays a scene: each [`advance`](Self::advance) moves to the next text
 /// box (speech or narration), applying the portrait and caption steps in
 /// between. At a reply choice it waits for [`choose`](Self::choose), plays
-/// that reply's reaction, then rejoins the scene after the choice. Pure: no
-/// drawing, no clock.
+/// that reply's reaction, then rejoins the scene after the choice. The
+/// `@music` lines passed on the way are kept for [`take_music`](Self::take_music).
+/// Pure: no drawing, no clock, no sound.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DialoguePlayer {
     scene: Scene,
@@ -110,6 +112,8 @@ pub struct DialoguePlayer {
     left: Option<Placed>,
     right: Option<Placed>,
     caption: Option<String>,
+    /// The last `@music` line reached and not yet taken.
+    music: Option<MusicLine>,
 }
 
 impl DialoguePlayer {
@@ -127,6 +131,7 @@ impl DialoguePlayer {
             left: None,
             right: None,
             caption: None,
+            music: None,
         };
         player.step_on();
         player
@@ -201,7 +206,7 @@ impl DialoguePlayer {
     /// finished scene does nothing. While a choice is open this does
     /// nothing either: [`choose`](Self::choose) a reply.
     pub fn advance(&mut self) {
-        if !matches!(self.showing, Showing::Choice(..)) {
+        if matches!(self.showing, Showing::Text(_)) {
             self.step_on();
         }
     }
@@ -235,6 +240,13 @@ impl DialoguePlayer {
                 break;
             }
         }
+    }
+
+    /// The music the scene has asked for since the last call: the last
+    /// `@music` line reached, whether the lines before it were read or
+    /// skipped. `None` if no `@music` line was reached since.
+    pub fn take_music(&mut self) -> Option<MusicLine> {
+        self.music.take()
     }
 
     /// Whether a reply choice is waiting for [`choose`](Self::choose).
@@ -333,6 +345,7 @@ impl DialoguePlayer {
                     }
                 }
             }
+            Step::Music(music) => self.music = Some(music.clone()),
             Step::Narrate { .. } | Step::Choice { .. } => {}
         }
         if step.text().is_some() {

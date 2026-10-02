@@ -82,7 +82,13 @@ don't make it obvious.
    a name and portrait. No elementals, reinforcements, villages, chests,
    shops, talk-recruits or battle notes in Chapter 1 (`chapter-1.md`).
 4. **Triggers:** wire `ch01_*` scene ids from 0707 (intro, prebattle, boss
-   engage, death quotes, victory, tbc; no talk-recruit in Chapter 1).
+   engage, death quotes, victory, tbc; no talk-recruit in Chapter 1). The
+   comment at the top of `assets/dialogue/ch01.dlg` lists every id with the
+   trigger it is written for: also Hollis's first-turn line, Harl's
+   half-HP line, his lines against the lead and against Tamsin, and a
+   Casual retreat line next to each companion's Classic death quote. Aske
+   counts "twelve men, no, fourteen" in `ch01_prebattle` and the lead may
+   answer "Only fourteen?": pick an enemy count that fits.
 5. New Game → `ch01`.
 6. **Winning replay test** `crates/ui/tests/ch01_winnable.rs` (or core): a
    hand-authored command list from the chapter seed that wins the map. Keep it

@@ -4,7 +4,7 @@
 
 use trpg_core::CharacterId;
 
-use super::{ChoiceOption, Scene, Side, Step};
+use super::{ChoiceOption, MusicLine, Scene, Side, Step};
 use crate::error::ContentError;
 
 /// A scene as written in a file, with the source lines the checks point at.
@@ -325,6 +325,7 @@ impl Parser<'_> {
             }
             "left" => self.place(n, Side::Left, args),
             "right" => self.place(n, Side::Right, args),
+            "music" => self.music(n, args),
             "choice" => self.open_choice(n, args),
             "endchoice" => self.end_choice(n, args),
             _ => self.err(n, format!("unknown directive \"@{name}\"")),
@@ -396,6 +397,24 @@ impl Parser<'_> {
             }
         };
         self.push(n, step);
+    }
+
+    /// `@music` with `args`: one music cue id, or `stop`.
+    fn music(&mut self, n: u32, args: &str) {
+        let args: Vec<&str> = args.split_whitespace().collect();
+        let [arg] = args[..] else {
+            self.err(n, "@music needs one music cue id, or \"stop\"");
+            return;
+        };
+        let music = if arg == MusicLine::STOP {
+            MusicLine::Stop
+        } else {
+            if !is_id(arg) {
+                self.bad_id(n, arg);
+            }
+            MusicLine::Cue(arg.into())
+        };
+        self.push(n, Step::Music(music));
     }
 
     /// `id: text` or `id[expression]: text` on line `n`.

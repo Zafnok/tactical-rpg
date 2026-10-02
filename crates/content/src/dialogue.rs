@@ -15,6 +15,7 @@ pub use check::{check_duplicates, check_scene};
 pub use parse::{ChoiceLines, OptionLines, ParsedScene, parse_dlg};
 pub(crate) use parse::{char_problem, is_id};
 
+use crate::audio::AudioManifest;
 use crate::bundle;
 use crate::character::CharacterTable;
 use crate::error::ContentError;
@@ -114,6 +115,31 @@ pub enum Step {
         /// The options, in menu order.
         options: Vec<ChoiceOption>,
     },
+    /// `@music <cue>` or `@music stop`: the music changes when playback
+    /// reaches this line, and stays so after the scene.
+    Music(MusicLine),
+}
+
+/// What a `@music` line asks for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MusicLine {
+    /// `@music <cue>`: switch to this music cue of the audio manifest.
+    Cue(String),
+    /// `@music stop`: fade the music out.
+    Stop,
+}
+
+impl MusicLine {
+    /// What follows `@music` for [`MusicLine::Stop`].
+    pub const STOP: &'static str = "stop";
+
+    /// What follows `@music` in a script: the cue id, or `stop`.
+    pub fn arg(&self) -> &str {
+        match self {
+            MusicLine::Cue(cue) => cue,
+            MusicLine::Stop => Self::STOP,
+        }
+    }
 }
 
 /// One reply the lead can pick: `* <tone>: <text>`, then its reaction.
@@ -135,7 +161,8 @@ impl Step {
             Step::Caption { .. }
             | Step::Place { .. }
             | Step::Clear { .. }
-            | Step::Choice { .. } => None,
+            | Step::Choice { .. }
+            | Step::Music(_) => None,
         }
     }
 }
@@ -165,20 +192,21 @@ impl DialogueTable {
 
 /// Loads and validates every `*.dlg` file in the bundle. Character ids are
 /// checked against `characters`, expressions against the characters'
-/// `portraits`, and name tokens and names written out against `names`,
-/// when given (each is skipped if its files failed to load). Reports every
-/// error of every file.
+/// `portraits`, name tokens and names written out against `names`, and
+/// `@music` cues against `audio`, when given (each is skipped if its files
+/// failed to load). Reports every error of every file.
 pub fn load(
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
     names: Option<&Names>,
+    audio: Option<&AudioManifest>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let files: Vec<(String, Option<&str>)> = bundle::files_in(DIALOGUE_DIR)
         .into_iter()
         .filter(|path| path.ends_with(DIALOGUE_EXTENSION))
         .map(|path| (bundle::display_path(path), bundle::file(path)))
         .collect();
-    load_files(&files, characters, portraits, names)
+    load_files(&files, characters, portraits, names, audio)
 }
 
 /// Like [`from_sources`], for files given as `(file name, source)` where a
@@ -188,6 +216,7 @@ fn load_files(
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
     names: Option<&Names>,
+    audio: Option<&AudioManifest>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut sources = Vec::new();
     let mut errors = Vec::new();
@@ -197,7 +226,7 @@ fn load_files(
             None => errors.push(ContentError::new(file, "file is not valid UTF-8")),
         }
     }
-    match from_sources(&sources, characters, portraits, names) {
+    match from_sources(&sources, characters, portraits, names, audio) {
         Ok(table) if errors.is_empty() => Ok(table),
         Ok(_) => Err(errors),
         Err(e) => {
@@ -214,6 +243,7 @@ pub fn from_sources<F: AsRef<str>>(
     characters: Option<&CharacterTable>,
     portraits: Option<&PortraitTable>,
     names: Option<&Names>,
+    audio: Option<&AudioManifest>,
 ) -> Result<DialogueTable, Vec<ContentError>> {
     let mut scenes = Vec::new();
     let mut errors = Vec::new();
@@ -223,7 +253,7 @@ pub fn from_sources<F: AsRef<str>>(
         scenes.extend(parsed);
     }
     for s in &scenes {
-        errors.extend(check_scene(s, characters, portraits, names));
+        errors.extend(check_scene(s, characters, portraits, names, audio));
     }
     errors.extend(check_duplicates(&scenes));
     if errors.is_empty() {
@@ -271,6 +301,7 @@ fn print_step(out: &mut String, step: &Step, indent: &str) {
             text,
         } => format!("{}: {text}", speaker.0),
         Step::Narrate { text } => format!("> {text}"),
+        Step::Music(music) => format!("@music {}", music.arg()),
         Step::Choice { options } => {
             out.push_str("@choice\n");
             for o in options {
