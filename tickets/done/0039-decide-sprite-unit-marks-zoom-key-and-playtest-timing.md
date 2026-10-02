@@ -143,8 +143,8 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
   stacked pair and a swirl).
 - **Asked by Nick along the way:** a sprite never covers the unit above
   it; its head is shaved where it would ("A is best": only under another
-  unit). A sprite unit's HP bar is 14 pixels wide, one pixel in from each
-  side, always.
+  unit). The HP bar is 14 pixels wide, one pixel in from each side,
+  always and in both looks ("glyph look should also have 14px hp bar").
 - **Question 7, face or bust:** busts, at 4×, filling the frame ("2C").
   Nick asked for it after seeing the bust at 3× with empty space. The
   bust is cut to its middle 64 columns and bottom 64 rows. This replaces
@@ -157,8 +157,6 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 - Marks on an acted unit keep moving, dimmed.
 - A unit walking through a tile an ally stands on is drawn in front of
   the ally and isn't shaved there.
-- The glyph look's HP bar stays the full 16 pixels wide; only sprite
-  units get the 14-pixel bar.
 - The marks' speeds are the mockup's (a bounce every 375 ms, a turn every
   750 ms).
 - The arrows' colours (light blue up, purple down) are the mockup's
@@ -172,7 +170,8 @@ and unit sprites* and § *Dialogue portraits*, with Nick's words:**
 
 **Follow-up tickets created:** 0440 (sprite units step on the spot and
 walk; on the critical path, in 0804's `blocked_by`), 0824 (the Options
-entry for the map look; after 0436 and 0805, not on the critical path).
+entry for the map look; after 0436 and 0805, not on the critical path),
+0441 (the glyph look's HP bar 14 pixels wide; small, waits for nothing).
 
 **Tickets changed:** 0436 (the sprite's height, bars over sprites, the
 14-pixel bar, shaved heads, the moving effect arrows and the scene

@@ -162,8 +162,10 @@ waits for this ticket.
    (all *tunable*, in one place). A mark whose unit has another unit in
    the tile directly above is drawn 4 pixels lower. **HP bar:** under a
    sprite unit it covers tile columns 1 to 14 (14 pixels) and fills by
-   HP over those 14; the glyph skin's bar and its snapshots don't
-   change. **Shaving:** when another unit's tile is directly above, the
+   HP over those 14. The glyph look gets the same width in ticket
+   0441: **either order works.** If 0441 is done, share its bar
+   rectangle and fill maths; if not, leave the glyph skin's bar and its
+   snapshots alone here. **Shaving:** when another unit's tile is directly above, the
    unit's sprite and outline are clipped at its own tile's top edge (the
    sprite item's `clip`, 0231); otherwise they aren't clipped. The
    walking case is 0440's.

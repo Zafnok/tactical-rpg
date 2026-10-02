@@ -162,7 +162,9 @@ Names, stats, weapons and the sample face in the screenshots are placeholders.
 > mask to shave their head so it doesn't clip like that?" … [shown M and
 > M2: A shaved only under another unit, B always kept inside its own
 > tile:] "A is best" … "can we also adjust hp bar to be 1 less pixel left
-> and right? this would be always active"
+> and right? this would be always active" … [asked whether that goes for
+> the glyph look too:] "I think glyph look should also have 14px hp bar
+> otherwise rest is good"
 
 ## Rules
 
@@ -249,12 +251,11 @@ so they aren't in this repository (ADR-0032).
   reaches 6 pixels into the tile above). Nick saw it raised 1 and 2
   pixels more and chose this ("sprite 0 … looks best to me"). HP bars are
   drawn over every sprite, so HP is never hidden.
-- **A sprite unit's HP bar is 14 pixels wide**, one pixel in from each
-  side of its tile, always (Nick: "1 less pixel left and right"), so the
-  bars of units standing side by side don't run together. Its height,
-  colours and thresholds are the glyph look's. *(Claude's starting rule:
-  the glyph look's own bar stays the full 16 pixels; Nick was looking at
-  sprites.)*
+- **The HP bar is 14 pixels wide**, one pixel in from each side of its
+  tile, always and **in both looks** (Nick: "1 less pixel left and right
+  … always active", "glyph look should also have 14px hp bar"), so the
+  bars of units standing side by side don't run together. Sprite units
+  get it in 0436, the glyph look in 0441.
 - **A sprite never covers the unit above it** (decided 2026-10-02, ticket
   0039, "A is best"): a sprite and its coloured outline are **not drawn
   inside a tile another unit stands on**, so a head or hat is shaved off
@@ -290,8 +291,7 @@ so they aren't in this repository (ADR-0032).
     between two colours** (Nick: "changing between colors for poison";
     he was shown a green drop as an example).
   The glyph look keeps its tinted background.
-- Cursor, path line and range tints keep their rules below; so does the
-  HP bar, except for its width.
+- Cursor, path line, HP bar and range tints keep their rules below.
 
 ### Units on the map (the glyph look)
 
@@ -310,7 +310,9 @@ so they aren't in this repository (ADR-0032).
   but be shaded different (it already has this aspect so keep it like that)".
   ADR-0029.)*
 - **HP bar:** a thin bar (2 px of the 16 px tile height) along the bottom of the
-  unit's tile, filling left to right by current HP %. It's `hp_high` above 2/3,
+  unit's tile, **14 px wide, 1 px in from each side** (changed 2026-10-02,
+  ticket 0039, from the full 16; built in 0441), filling left to right by
+  current HP %. It's `hp_high` above 2/3,
   `hp_mid` above 1/3 and `hp_low` at or below 1/3 *(thresholds tunable)*. The
   unfilled part is dark. The bar's length carries the information, not only its
   colour.
