@@ -111,8 +111,34 @@ this):
   │     CC-BY-4.0 · https://opengameart.org/content/battle-0│
   │                                                       ▼ │
   └─────────────────────────────────────────────────────────┘
-                     arrows scroll · d back
+                arrows scroll · f pause · d back
 ```
+
+**Nick's changes on the PR (2026-10-02).**
+
+> credits should auto scroll, or transition between pages. manual
+> paging/scrolling can be toggled but otherwise transition every 1 or 2s.
+>
+> credits screen should play title screen music
+
+- **The list rolls by itself.** Of the two (rolling or flipping pages) the
+  screen rolls: a page holds eight works, too many to read in the 1 to 2
+  seconds a page flip would give them, while rolling gives each work about
+  a second and a half.
+- **Rolling can be switched off and on:** Confirm stops it (the help line
+  then offers `auto-scroll`) and Confirm starts it again.
+- **The title music plays.** The screen asks for it itself, so it would
+  play even if the credits were one day opened from somewhere else. Coming
+  from the title it simply carries on without restarting.
+
+*Claude's starting rules* for the parts Nick's note left open:
+
+- The list waits 2 seconds at the top, then moves up one line every half
+  second. The whole list takes about a minute.
+- At the bottom it waits 2 seconds and starts again from the top.
+- Pressing up or down also stops the rolling, so the player isn't fighting
+  it; Confirm starts it again from where they are.
+- Rolling makes no sound.
 
 **Claude's starting choices (Nick can veto at sign-off).** The ticket
 called its layout "a starting point", so these are how the screen looks
@@ -124,12 +150,11 @@ and behaves today, not decisions:
 - **Wording of an entry:** `"Title" by Author` on one line, then the
   license and the link, dimmer, on the next. Licenses are shown by their
   short standard names (`CC0-1.0`, `CC-BY-4.0`, `OFL-1.1`).
-- **Scrolling:** up and down move one line at a time and repeat when held.
-  A small ▲ or ▼ at the right shows there is more above or below. Each
-  line scrolled plays the menu tick; nothing happens (and no sound) at the
-  top and bottom.
+- **Scrolling by hand:** up or down stops the rolling and moves one line
+  at a time (repeating when held), with the menu tick. A small ▲ or ▼ at
+  the right shows there is more above or below.
 - **Leaving:** Cancel goes back to the title with Credits still
-  highlighted. The title music keeps playing throughout.
+  highlighted.
 - **Not shown:** the four pieces of behind-the-scenes software in
   `THIRD_PARTY_ASSETS.md` (the three web-loader scripts and the controller
   button table). The ticket allowed hiding the web loaders; the controller

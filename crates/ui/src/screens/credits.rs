@@ -3,10 +3,16 @@
 //! Each entry shows its title, author, license and source link, which is
 //! what CC BY asks for. The list is [`trpg_content::Credits`]: the audio
 //! manifest's credits and `assets/data/credits.ron`, merged.
+//!
+//! The list rolls by itself (Nick, PR 148: "credits should auto scroll …
+//! manual paging/scrolling can be toggled"), and the title music plays.
+//! Confirm stops and restarts the rolling; the cursor keys stop it and
+//! scroll by hand.
 
 use trpg_content::{CreditGroup, Credits};
 
 use super::print_centred;
+use super::title::TITLE_MUSIC;
 use crate::audio::MenuSound;
 use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -38,6 +44,13 @@ const TEXT_END_X: i32 = PANEL.x + PANEL.w - 4;
 const MORE_ABOVE: char = '▲';
 /// Shown at the list's bottom right when there is more below.
 const MORE_BELOW: char = '▼';
+
+/// Seconds between rows while the list rolls by itself (*tunable*): an
+/// entry is three rows, so one goes by every second and a half.
+pub const ROW_SECS: f32 = 0.5;
+/// Seconds the list rests at its top before it starts to roll, and at its
+/// bottom before it starts again from the top (*tunable*).
+pub const REST_SECS: f32 = 2.0;
 
 /// The heading a group's credits go under.
 pub fn heading(group: CreditGroup) -> &'static str {
@@ -110,26 +123,42 @@ fn rows(credits: &Credits) -> Vec<(Row, String)> {
     rows
 }
 
-/// The credits screen. Cursor up and down scroll it a row at a time;
-/// Cancel closes it.
+/// The credits screen. The list rolls up a row at a time by itself, rests
+/// at the bottom and starts again from the top. Confirm stops or restarts
+/// the rolling; cursor up and down stop it and scroll a row at a time;
+/// Cancel closes the screen.
 #[derive(Debug, Clone)]
 pub struct CreditsScreen {
     /// The list, wrapped ([`rows`]).
     rows: Vec<(Row, String)>,
     /// Index in `rows` of the first row on screen.
     top: usize,
+    /// Whether the list is rolling by itself.
+    rolling: bool,
+    /// Seconds until the list rolls its next row.
+    wait: f32,
+    /// Whether the title music has been asked for.
+    music_on: bool,
 }
 
 impl CreditsScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "credits";
 
-    /// The screen showing the top of `ctx`'s credits.
+    /// The screen showing the top of `ctx`'s credits, about to roll.
     pub fn new(ctx: &Ctx) -> Self {
         Self {
             rows: rows(&ctx.content.credits),
             top: 0,
+            rolling: true,
+            wait: REST_SECS,
+            music_on: false,
         }
+    }
+
+    /// Whether the list is rolling by itself.
+    pub fn is_rolling(&self) -> bool {
+        self.rolling
     }
 
     /// The highest `top`: the last row at the bottom of the list.
@@ -161,12 +190,47 @@ impl CreditsScreen {
         }
     }
 
-    /// The bottom help line: the cursor keys `scroll`, the Cancel key
-    /// `back`, named from the active keymap.
-    pub fn help(ctx: &Ctx) -> String {
+    /// Lets `dt` seconds pass while the list rolls: a row every
+    /// [`ROW_SECS`], a rest of [`REST_SECS`] at the bottom, then the top
+    /// again and the same rest there. Silent. A list that fits on screen
+    /// stays put.
+    fn roll(&mut self, dt: f32) {
+        if !self.rolling || self.max_top() == 0 || !dt.is_finite() {
+            return;
+        }
+        self.wait -= dt;
+        while self.wait <= 0.0 {
+            if self.more_below() {
+                self.top += 1;
+                self.wait += if self.more_below() {
+                    ROW_SECS
+                } else {
+                    REST_SECS
+                };
+            } else {
+                self.top = 0;
+                self.wait += REST_SECS;
+            }
+        }
+    }
+
+    /// Confirm: stops the rolling, or starts it again from the rows on
+    /// screen after one [`ROW_SECS`].
+    fn toggle_rolling(&mut self, ctx: &mut Ctx) {
+        self.rolling = !self.rolling;
+        self.wait = ROW_SECS;
+        ctx.audio.menu(MenuSound::Select);
+    }
+
+    /// The bottom help line: the cursor keys `scroll`, the Confirm key
+    /// `pause` while the list rolls and `auto-scroll` while it doesn't,
+    /// the Cancel key `back`, named from the active keymap.
+    pub fn help(&self, ctx: &Ctx) -> String {
         let km = ctx.help_keys();
+        let confirm = if self.rolling { "pause" } else { "auto-scroll" };
         help_line(&[
             (Some(cursor_keys_name(km)), "scroll"),
+            (Some(key_name(km, Action::Confirm)), confirm),
             (Some(key_name(km, Action::Cancel)), "back"),
         ])
     }
@@ -178,10 +242,21 @@ impl Screen for CreditsScreen {
     }
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
+        if !self.music_on {
+            // The music state ignores a request for the track already on
+            // (the title's, when the screen is opened from there).
+            ctx.audio.play_music(TITLE_MUSIC);
+            self.music_on = true;
+        }
+        self.roll(input.dt);
         for &action in &input.actions {
             match action {
-                Action::CursorUp => self.scroll(ctx, false),
-                Action::CursorDown => self.scroll(ctx, true),
+                Action::CursorUp | Action::CursorDown => {
+                    // Scrolling by hand takes over from the rolling.
+                    self.rolling = false;
+                    self.scroll(ctx, action == Action::CursorDown);
+                }
+                Action::Confirm => self.toggle_rolling(ctx),
                 Action::Cancel => {
                     ctx.audio.menu(MenuSound::Cancel);
                     return Transition::Pop;
@@ -220,7 +295,7 @@ impl Screen for CreditsScreen {
             buf.print(mark_x, last_y, &MORE_BELOW.to_string(), dim, bg);
         }
         let bottom = i32::from(buf.height()) - 1;
-        print_centred(buf, bottom, &Self::help(ctx), dim, black);
+        print_centred(buf, bottom, &self.help(ctx), dim, black);
     }
 }
 
@@ -427,9 +502,9 @@ mod tests {
         let mut s = CreditsScreen::new(&c);
         assert_eq!(s.name(), "credits");
         assert!(!s.is_overlay());
-        let others = [Action::Confirm, Action::CursorLeft, Action::CursorRight];
-        assert_eq!(format!("{:?}", s.update(&mut c, &input(&others))), "None");
-        assert!(c.audio.take().is_empty());
+        let others = [Action::CursorLeft, Action::CursorRight, Action::Info];
+        assert!(sounds_of(&mut s, &mut c, &others).is_empty());
+        assert!(s.is_rolling());
         assert_eq!(s.top, 0);
         // Actions after Cancel are dropped.
         let actions = [Action::CursorDown, Action::Cancel, Action::CursorDown];
@@ -461,7 +536,7 @@ mod tests {
         // The row above the bottom border stays blank.
         assert_eq!(row(&buf, 28).replace(' ', ""), "││");
         assert!(row(&buf, 29).starts_with("  └─"));
-        assert_eq!(row(&buf, 31).trim(), CreditsScreen::help(&c));
+        assert_eq!(row(&buf, 31).trim(), s.help(&c));
 
         s.update(&mut c, &input(&[Action::CursorDown; 3]));
         let buf = draw(&s, &c);
@@ -491,11 +566,155 @@ mod tests {
     }
 
     #[test]
-    fn help_names_the_layout_keys() {
+    fn help_names_the_layout_keys_and_what_confirm_does() {
         let mut c = ctx();
-        assert_eq!(CreditsScreen::help(&c), "arrows scroll · d back");
+        let mut s = CreditsScreen::new(&c);
+        assert_eq!(s.help(&c), "arrows scroll · f pause · d back");
+        s.update(&mut c, &input(&[Action::Confirm]));
+        assert_eq!(s.help(&c), "arrows scroll · f auto-scroll · d back");
         c.use_layout(crate::input::Layout::LeftHanded);
-        assert_eq!(CreditsScreen::help(&c), "wasd scroll · k back");
+        assert_eq!(s.help(&c), "wasd scroll · j auto-scroll · k back");
+    }
+
+    /// An update with no actions after `dt` seconds.
+    fn pass(s: &mut CreditsScreen, c: &mut Ctx, dt: f32) {
+        s.update(c, &FrameInput::new(vec![], dt, vec![]));
+    }
+
+    #[test]
+    fn the_list_rolls_a_row_every_half_second_after_a_rest() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        assert!(s.is_rolling());
+        pass(&mut s, &mut c, 1.5);
+        assert_eq!(s.top, 0, "resting at the top");
+        pass(&mut s, &mut c, 0.5);
+        assert_eq!(s.top, 1, "the rest is over at exactly 2 s");
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 1);
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 2);
+        // A long frame rolls every row it covers.
+        pass(&mut s, &mut c, 2.0);
+        assert_eq!(s.top, 6);
+        // Rolling is silent (only the music was asked for).
+        let sounds = c.audio.take();
+        assert!(
+            sounds
+                .iter()
+                .all(|r| !matches!(r, AudioRequest::PlaySound { .. })),
+            "{sounds:?}"
+        );
+        // A frame time that isn't a number changes nothing.
+        pass(&mut s, &mut c, f32::NAN);
+        pass(&mut s, &mut c, f32::INFINITY);
+        assert_eq!(s.top, 6);
+        pass(&mut s, &mut c, 0.5);
+        assert_eq!(s.top, 7);
+    }
+
+    #[test]
+    fn at_the_bottom_the_list_rests_then_starts_again_from_the_top() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        // 2 s rest, then 36 rows: the last lands at 2 + 35 × 0.5 = 19.5 s.
+        pass(&mut s, &mut c, 19.25);
+        assert_eq!(s.top, 35);
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 36);
+        assert!(!s.more_below());
+        pass(&mut s, &mut c, 1.75);
+        assert_eq!(s.top, 36, "resting at the bottom");
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 0, "back to the top after 2 s");
+        pass(&mut s, &mut c, 1.75);
+        assert_eq!(s.top, 0, "resting at the top again");
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 1);
+    }
+
+    #[test]
+    fn a_list_that_fits_does_not_roll() {
+        let mut c = ctx_with(vec![entry(CreditGroup::Fonts, "Font")]);
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 60.0);
+        assert_eq!(s.top, 0);
+        assert!((s.wait - REST_SECS).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn confirm_stops_the_rolling_and_starts_it_again() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 3.0);
+        assert_eq!(s.top, 3);
+        assert_eq!(
+            sounds_of(&mut s, &mut c, &[Action::Confirm]),
+            ["menu_select"]
+        );
+        assert!(!s.is_rolling());
+        pass(&mut s, &mut c, 10.0);
+        assert_eq!(s.top, 3, "stopped");
+        assert_eq!(
+            sounds_of(&mut s, &mut c, &[Action::Confirm]),
+            ["menu_select"]
+        );
+        assert!(s.is_rolling());
+        // It goes on from where it is, half a second later.
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 3);
+        pass(&mut s, &mut c, 0.25);
+        assert_eq!(s.top, 4);
+    }
+
+    #[test]
+    fn scrolling_by_hand_stops_the_rolling() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        pass(&mut s, &mut c, 3.0);
+        assert_eq!(
+            sounds_of(&mut s, &mut c, &[Action::CursorUp]),
+            ["menu_move"]
+        );
+        assert_eq!(s.top, 2);
+        assert!(!s.is_rolling());
+        pass(&mut s, &mut c, 10.0);
+        assert_eq!(s.top, 2);
+        // Down stops it too, and so does Up with nowhere to go.
+        let mut s = CreditsScreen::new(&c);
+        s.update(&mut c, &input(&[Action::CursorDown]));
+        assert_eq!((s.top, s.is_rolling()), (1, false));
+        c.audio.take();
+        let mut s = CreditsScreen::new(&c);
+        assert!(sounds_of(&mut s, &mut c, &[Action::CursorUp]).is_empty());
+        assert_eq!((s.top, s.is_rolling()), (0, false));
+        // The frame's time passes before its keys: the row that was due
+        // rolls, then Down scrolls one more.
+        let mut s = CreditsScreen::new(&c);
+        s.update(
+            &mut c,
+            &FrameInput::new(vec![Action::CursorDown], 2.0, vec![]),
+        );
+        assert_eq!(s.top, 2);
+    }
+
+    #[test]
+    fn the_screen_asks_for_the_title_music_once() {
+        let mut c = long_list();
+        let mut s = CreditsScreen::new(&c);
+        let music = |c: &mut Ctx| -> Vec<String> {
+            c.audio
+                .take()
+                .iter()
+                .filter(|r| !matches!(r, AudioRequest::PlaySound { .. }))
+                .map(|r| r.cue().unwrap_or("-").to_owned())
+                .collect()
+        };
+        pass(&mut s, &mut c, 0.0);
+        assert_eq!(music(&mut c), [TITLE_MUSIC]);
+        pass(&mut s, &mut c, 1.0);
+        s.update(&mut c, &input(&[Action::Confirm, Action::CursorDown]));
+        assert!(music(&mut c).is_empty());
     }
 
     /// The real list: every entry's four parts are on a row.
