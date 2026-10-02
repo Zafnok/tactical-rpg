@@ -84,8 +84,9 @@ work with some additional in-battle overlays or pop up messages".
   pictures 48–128 by 48–96; the *Gods and Gallants* and *Epic Monsters*
   pictures are much bigger (up to 221×184), so a boss from those towers
   over a hero at the same scale.
-- The still battle pictures are sorted on Nick's machine in
-  `D:\tactical-rpg\Tiny Tales Bundle Assets\characters\` (`heroes/<Name>/
+- The still battle pictures are sorted in the private assets repository
+  (ADR-0040; `cargo xtask private-assets --library`), in
+  `assets-private/library/tiny-tales/characters/` (`heroes/<Name>/
   battler.png`, `battler-classes/<pack>/<Name>/battler.png`).
 
 ## Nick input
@@ -125,7 +126,8 @@ combat rules; buying anything.
 ## Implementation steps
 
 1. Mock up 2–3 options for Nick with the real bought sprites (from
-   `assets-private/`, 0110), rendered as in 0011, and record his choice.
+   `assets-private/library/`, ADR-0040), rendered as in 0011, and record
+   his choice.
 2. A battler format next to 0711's PNG portraits: a sidecar per class (and
    per hero that has its own image), `assets/battlers/<id>.ron`, naming the
    one PNG and which way it faces (so the game knows when to mirror it).
@@ -133,10 +135,10 @@ combat rules; buying anything.
    Validate like 0711 (all errors at once, with file names). Write an ADR
    (`write-adr`).
 3. `cargo xtask battler-import`, or extend 0711's `portrait-import`, to copy
-   a pack's 1× still image into `assets-private/battlers/` and write the
+   a pack's 1× still image into `assets-private/game/battlers/` and write the
    sidecar stub.
 4. Public placeholders: a small, plain PNG per class that ships in `assets/`
-   so a clone without `assets-private/` builds, tests and runs (0110's rule).
+   so a clone without `assets-private/` builds, tests and runs (ADR-0040).
    Not meant to look good; Nick only sees the bought art.
 5. Draw the scene in 0404's playback overlay with sprite items, as 0711
    does (mirror one fighter with `flip_x` so they face each other). If a

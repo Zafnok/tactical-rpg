@@ -58,6 +58,7 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `crates/` | `core` (`trpg-core`), `content` (`trpg-content`), `ui` (`trpg-ui`), `app` (`trpg-app`, binary `visions-of-shuyi`), `bots` (`trpg-bots`, playtest bots: dev tooling, never in the game), `xtask` (repo tooling) |
 | `assets/` | Everything embedded in the game: `data/`, `fonts/` (later: maps, dialogue, portraits) |
 | `assets-src/` | Inputs to asset tools (e.g. the font BDF for `cargo xtask font-atlas`); not embedded |
+| `assets-private/` | **Git-ignored**: the checkout of the private repository with the bought art (ADR-0040). `game/` is embedded over `assets/` by the `private-assets` feature; `library/tiny-tales/` is the bought bundle, sorted. `assets-private.rev` (tracked) names the commit to build with |
 
 ## Environment
 
@@ -71,4 +72,14 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 - Use `cargo install --locked <tool>` (cargo-binstall fails to build here).
 - `cargo xtask clean-merged-targets [--dry-run]` deletes the `target/` build
   folder of every worktree whose PR has merged (10+ GB each).
+- **Bought art** (ADR-0040) is never in this repository, and nothing made
+  from it (a mockup, a screenshot) is ever committed here.
+  `cargo xtask private-assets` checks the private repository out into
+  `assets-private/` (only `game/`; add `--library` for the bought packs in
+  `assets-private/library/`). Gates never read it. To see it in a build:
+  `cargo run -p trpg-app --features private-assets`. After pushing a change
+  to it, run `cargo xtask private-assets --pin` and commit
+  `assets-private.rev` in the same PR. On Nick's machine the full copy
+  (with the character generators and the original zips) is
+  `D:\tactical-rpg\assets-private\`.
 - Git remote: `https://github.com/Zafnok/visions-of-shuyi` (public).

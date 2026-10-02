@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0433", "0110"]
+blocked_by: ["0433", "0110", "0116"]
 nick_input: sign-off
 completed:
 ---
@@ -33,14 +33,18 @@ and uses a generated test tileset. The bought sprites are different:
 - Hundreds of them: the 16 heroes, about 210 battler classes, and map
   sprite packs with no battle picture (townsfolk, knights, nobles, 1100
   generated people). Only the ones a chapter uses are imported.
-- They are bought, so they live in `assets-private/` (0110), and a clone
+- They are bought, so they live in `assets-private/` (ADR-0040), and a clone
   without them must still build, run and pass every gate.
 
-The bought files are sorted on Nick's machine in
-`D:\tactical-rpg\Tiny Tales Bundle Assets\characters\` (`heroes/<Name>/
+The bought files are sorted in the private assets repository, in
+`assets-private/library/tiny-tales/characters/` (`heroes/<Name>/
 map_sprite.png`, `battler-classes/<pack>/<Name>/map_sprite.png`,
-`map-sprites-only/<pack>/<Name>.png`); `INDEX.md` there lists them. 0110
-decides how they reach `assets-private/`.
+`map-sprites-only/<pack>/<Name>.png`); `INDEX.md` one folder up lists
+them. ADR-0040 says how they reach the game: fetch them with `cargo xtask
+private-assets --library`, write what the game reads into
+`assets-private/game/`, commit and push there, then `cargo xtask
+private-assets --pin`. That needs the private repository uploaded (0116,
+in `blocked_by`).
 
 ## Nick input
 
@@ -96,7 +100,7 @@ waits for this ticket.
   input*), the HP bar and the fading-out of a falling unit, on sprites.
 - A private tileset file naming the bought map sprite of every class and
   named character in the Quick Battle and Chapter 1, and an importer that
-  copies those files into `assets-private/`.
+  copies those files into `assets-private/game/`.
 - A public placeholder so the public build still runs: without
   `assets-private/` the game keeps the glyph skin.
 - The game uses the sprite-unit skin by default **when the private tileset
@@ -196,7 +200,7 @@ waits for this ticket.
    A unit's map sprite and its combat picture (0413) should be the same
    character where both exist.
 7. **Importer** (`cargo xtask`, next to 0711's `portrait-import`): copy the
-   named map sprite sheets into `assets-private/units/` under stable
+   named map sprite sheets into `assets-private/game/units/` under stable
    names. Clear error when the source folder is missing.
 8. **Default skin**: at start-up `Ctx.map_skin` is the private tileset's
    skin when `Content::tilesets` has it, else `GlyphSkin`. The debug-menu

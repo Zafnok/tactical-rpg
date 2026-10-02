@@ -30,6 +30,16 @@ cargo machete                             # after ticket 0103
 typos                                     # after ticket 0103
 ```
 
+**The gates never read the bought art** (ADR-0040): run them exactly as
+above, without `--features private-assets`, whether or not `assets-private/`
+is on the machine. A ticket that changes files in `assets-private/game/`
+also runs the one test that opts in, and looks at the result in a build:
+
+```bash
+cargo test -p trpg-content --features private-assets --test private_assets
+cargo run -p trpg-app --features private-assets
+```
+
 **Mutation testing is not a local gate.** CI's `mutants (diff)` job
 (`.github/workflows/mutants.yml`) runs `cargo mutants` on every PR's diff.
 Running it locally too means waiting for it twice. So: run the gates above,

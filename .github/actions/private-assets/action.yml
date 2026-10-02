@@ -1,0 +1,69 @@
+name: Private assets
+description: >-
+  Checks out the bought art (ADR-0040) into assets-private/, at the commit
+  named in assets-private.rev, when the run has the key. Run it after the
+  repository's own checkout.
+
+inputs:
+  key:
+    description: >-
+      secrets.PRIVATE_ASSETS_KEY: the read-only deploy key of the private
+      repository. Empty on forks and on Dependabot's runs.
+    required: false
+    default: ""
+  required:
+    description: >-
+      'true' fails the job when the key is missing, instead of building with
+      the public placeholders.
+    required: false
+    default: "false"
+
+outputs:
+  features:
+    description: >-
+      'private-assets' when the art was checked out, otherwise empty. Pass it
+      to cargo's --features.
+    value: ${{ steps.plan.outputs.features }}
+  web-flag:
+    description: >-
+      '--private-assets' when the art was checked out, otherwise empty. Pass
+      it to cargo xtask web.
+    value: ${{ steps.plan.outputs.web-flag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Decide whether this run has the bought art
+      id: plan
+      shell: bash
+      env:
+        HAS_KEY: ${{ inputs.key != '' }}
+        REQUIRED: ${{ inputs.required }}
+      run: |
+        set -euo pipefail
+        if [ "$HAS_KEY" != "true" ]; then
+          if [ "$REQUIRED" = "true" ]; then
+            echo "::error::PRIVATE_ASSETS_KEY is missing: this build must ship the bought art (ADR-0040)."
+            exit 1
+          fi
+          echo "::warning::PRIVATE_ASSETS_KEY is not available to this run: building with the public placeholders (ADR-0040)."
+          exit 0
+        fi
+        rev=$(tr -d '[:space:]' < assets-private.rev)
+        echo "Private assets: checking out $rev"
+        {
+          echo "rev=$rev"
+          echo "features=private-assets"
+          echo "web-flag=--private-assets"
+        } >> "$GITHUB_OUTPUT"
+    - name: Check out the bought art
+      if: steps.plan.outputs.rev != ''
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: Zafnok/visions-of-shuyi-assets
+        ref: ${{ steps.plan.outputs.rev }}
+        ssh-key: ${{ inputs.key }}
+        path: assets-private
+        # Only what the game embeds; the bought packs themselves stay behind.
+        sparse-checkout: game
+        persist-credentials: false

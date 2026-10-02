@@ -1,11 +1,14 @@
-//! `cargo xtask web [--release] [--debug-tools]`: builds `trpg-app` for
+//! `cargo xtask web [--release] [--debug-tools] [--private-assets]`: builds
+//! `trpg-app` for
 //! `wasm32-unknown-unknown` and packages the resulting binary with the web
 //! shell (`web/index.html`), the vendored JS loaders (`web/mq_js_bundle.js`,
 //! and `web/sapp_jsutils.js` + `web/quad-storage.js` for `localStorage`,
 //! ticket 0207) and our own controller plugin (`web/gamepad.js`, ticket
 //! 0219) into `dist/web/` (ticket 0206). `--debug-tools` turns on the
 //! app's `debug-tools` feature (Quick Battle, glyph sampler) for the Pages
-//! build (ADR-0023); shipped builds never pass it. The game's music tracks
+//! build (ADR-0023); shipped builds never pass it. `--private-assets` turns
+//! on its `private-assets` feature, which embeds the bought art in
+//! `assets-private/game/` (ADR-0040). The game's music tracks
 //! (`music/*.ogg`, not embedded: ADR-0026) are copied to `dist/web/music/`,
 //! which exists even when there are none.
 
@@ -35,19 +38,23 @@ pub struct Options {
     pub release: bool,
     /// Whether to turn on the `debug-tools` feature (ADR-0023).
     pub debug_tools: bool,
+    /// Whether to turn on the `private-assets` feature (ADR-0040).
+    pub private_assets: bool,
 }
 
-/// Parses the arguments after `web`: `--release` and `--debug-tools`, each
-/// at most once, in any order.
+/// Parses the arguments after `web`: `--release`, `--debug-tools` and
+/// `--private-assets`, each at most once, in any order.
 pub fn parse_args(args: &[String]) -> Result<Options, String> {
     let mut options = Options {
         release: false,
         debug_tools: false,
+        private_assets: false,
     };
     for arg in args {
         let flag = match arg.as_str() {
             "--release" => &mut options.release,
             "--debug-tools" => &mut options.debug_tools,
+            "--private-assets" => &mut options.private_assets,
             _ => return Err(USAGE.to_string()),
         };
         if *flag {
@@ -59,7 +66,7 @@ pub fn parse_args(args: &[String]) -> Result<Options, String> {
 }
 
 /// Usage line for bad arguments.
-const USAGE: &str = "usage: cargo xtask web [--release] [--debug-tools]";
+const USAGE: &str = "usage: cargo xtask web [--release] [--debug-tools] [--private-assets]";
 
 /// The `cargo` arguments that build the wasm binary for `options`.
 fn cargo_args(options: Options) -> Vec<&'static str> {
@@ -75,6 +82,9 @@ fn cargo_args(options: Options) -> Vec<&'static str> {
     }
     if options.debug_tools {
         args.extend(["--features", "debug-tools"]);
+    }
+    if options.private_assets {
+        args.extend(["--features", "private-assets"]);
     }
     args
 }
@@ -272,7 +282,8 @@ mod tests {
             parse_args(&[]),
             Ok(Options {
                 release: false,
-                debug_tools: false
+                debug_tools: false,
+                private_assets: false,
             })
         );
     }
@@ -284,7 +295,8 @@ mod tests {
             parse_args(&args),
             Ok(Options {
                 release: true,
-                debug_tools: false
+                debug_tools: false,
+                private_assets: false,
             })
         );
     }
@@ -301,6 +313,7 @@ mod tests {
         let both = Options {
             release: true,
             debug_tools: true,
+            private_assets: false,
         };
         assert_eq!(args(&["--release", "--debug-tools"]), Ok(both));
         assert_eq!(args(&["--debug-tools", "--release"]), Ok(both));
@@ -308,7 +321,8 @@ mod tests {
             args(&["--debug-tools"]),
             Ok(Options {
                 release: false,
-                debug_tools: true
+                debug_tools: true,
+                private_assets: false,
             })
         );
         assert_eq!(args(&["--release", "--release"]), Err(USAGE.to_string()));
@@ -319,7 +333,33 @@ mod tests {
     }
 
     #[test]
-    fn cargo_args_add_release_and_the_debug_tools_feature() {
+    fn parse_args_takes_private_assets_with_the_other_flags() {
+        let args = |a: &[&str]| parse_args(&a.iter().map(ToString::to_string).collect::<Vec<_>>());
+        let all = Options {
+            release: true,
+            debug_tools: true,
+            private_assets: true,
+        };
+        assert_eq!(
+            args(&["--private-assets", "--release", "--debug-tools"]),
+            Ok(all)
+        );
+        assert_eq!(
+            args(&["--private-assets"]),
+            Ok(Options {
+                release: false,
+                debug_tools: false,
+                private_assets: true,
+            })
+        );
+        assert_eq!(
+            args(&["--private-assets", "--private-assets"]),
+            Err(USAGE.to_string())
+        );
+    }
+
+    #[test]
+    fn cargo_args_add_release_and_the_features() {
         let base = [
             "build",
             "-p",
@@ -327,19 +367,30 @@ mod tests {
             "--target",
             "wasm32-unknown-unknown",
         ];
-        let opts = |release, debug_tools| Options {
+        let opts = |release, debug_tools, private_assets| Options {
             release,
             debug_tools,
+            private_assets,
         };
-        assert_eq!(cargo_args(opts(false, false)), base);
-        assert_eq!(cargo_args(opts(true, false))[5..], ["--release"]);
+        assert_eq!(cargo_args(opts(false, false, false)), base);
+        assert_eq!(cargo_args(opts(true, false, false))[5..], ["--release"]);
         assert_eq!(
-            cargo_args(opts(false, true))[5..],
+            cargo_args(opts(false, true, false))[5..],
             ["--features", "debug-tools"]
         );
         assert_eq!(
-            cargo_args(opts(true, true))[5..],
-            ["--release", "--features", "debug-tools"]
+            cargo_args(opts(false, false, true))[5..],
+            ["--features", "private-assets"]
+        );
+        assert_eq!(
+            cargo_args(opts(true, true, true))[5..],
+            [
+                "--release",
+                "--features",
+                "debug-tools",
+                "--features",
+                "private-assets"
+            ]
         );
     }
 
@@ -357,6 +408,7 @@ mod tests {
             Options {
                 release: false,
                 debug_tools: false,
+                private_assets: false,
             },
         );
         assert_eq!(
@@ -373,6 +425,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
         );
         assert_eq!(
@@ -395,6 +448,7 @@ mod tests {
             Options {
                 release: false,
                 debug_tools: false,
+                private_assets: false,
             },
             b"wasm-bytes",
         );
@@ -407,6 +461,7 @@ mod tests {
             Options {
                 release: false,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap();
@@ -444,6 +499,7 @@ mod tests {
         let debug = Options {
             release: false,
             debug_tools: false,
+            private_assets: false,
         };
         write_wasm(&root, debug, b"w");
         let opt = FakeWasmOpt(|_: &Path, _: &Path| Ok(false));
@@ -476,6 +532,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
             b"unoptimized-bytes",
         );
@@ -489,6 +546,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap();
@@ -508,6 +566,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
             b"unoptimized",
         );
@@ -518,6 +577,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap();
@@ -537,6 +597,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
             b"unoptimized",
         );
@@ -547,6 +608,7 @@ mod tests {
             Options {
                 release: true,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap();
@@ -568,6 +630,7 @@ mod tests {
             Options {
                 release: false,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap_err();
@@ -586,6 +649,7 @@ mod tests {
             Options {
                 release: false,
                 debug_tools: false,
+                private_assets: false,
             },
         )
         .unwrap_err();

@@ -24,11 +24,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The bought art (ADR-0040). Without the key (a fork) the build uses the
+      # public placeholders and says so in a warning.
+      - id: private
+        uses: ./.github/actions/private-assets
+        with:
+          key: ${{ secrets.PRIVATE_ASSETS_KEY }}
       - run: rustup show
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # No gate reads the bought art, so this is where it is checked: the
+      # content must still load with it laid over assets/.
+      - name: Check the content loads with the bought art
+        if: steps.private.outputs.features != ''
+        run: cargo test -p trpg-content --locked --features private-assets --test private_assets
       # --debug-tools: Quick Battle on the title screen, for Nick's sign-offs
       # (ADR-0023). Only this workflow passes it.
-      - run: cargo xtask web --release --debug-tools
+      - env:
+          PRIVATE_ASSETS_FLAG: ${{ steps.private.outputs.web-flag }}
+        run: cargo xtask web --release --debug-tools $PRIVATE_ASSETS_FLAG
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist/web

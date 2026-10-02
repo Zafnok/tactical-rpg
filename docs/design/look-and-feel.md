@@ -405,9 +405,9 @@ sprites.
   sprite packs, five 16-pixel tilesets (World Map, Overworld, Dungeons 1
   and 2, Tower), *Battlebacks Vol.1* (24 battle backgrounds), and some
   packs we don't use (a sci-fi set, a sci-fi UI kit, three 48-pixel
-  terrain and tree packs in another style). The files are on Nick's
-  machine, outside this repository (ADR-0032; the private repository is
-  ticket 0110). The purchase record is in `THIRD_PARTY_ASSETS.md`.
+  terrain and tree packs in another style). The files are in the
+  private assets repository, never in this one (ADR-0032, ADR-0040).
+  The purchase record is in `THIRD_PARTY_ASSETS.md`.
 - **What the real files are** (checked 2026-10-02; earlier notes came
   from store previews): a face is 48×48 pixels and a **bust is 80×80**,
   and **both come in the same 8 expressions** (neutral, smile, stern,

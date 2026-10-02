@@ -70,11 +70,9 @@ None.
    output path. The key names are the Harness's (`Chord::parse`), which
    are test-script input, not game code, so rule 7 (never hard-code a key)
    isn't broken; say so in `--help`.
-4. With `assets-private/` present (0110, if done) the picture shows the
-   bought art, so **never commit an output PNG made with it**. Print a
-   warning when private assets are in the build. If 0110 isn't done,
-   leave a `TODO(0110)` at the place the warning goes and add a line to
-   0110's steps.
+4. Built with the `private-assets` feature (ADR-0040) the picture shows
+   the bought art, so **never commit an output PNG made with it**. Print a
+   warning when the feature is on.
 5. Update the `ascii-art` skill (*Mockups for Nick*: use this command
    instead of a throwaway tool), the `run` notes in `crates/ui/README.md`,
    and `docs/adr/0038-graphics-are-a-skin.md` only if the command's name
