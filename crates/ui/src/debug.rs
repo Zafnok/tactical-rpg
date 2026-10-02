@@ -4,7 +4,9 @@
 //! scene plays `assets/dialogue/test.dlg` full-screen or over the screen the
 //! menu was opened from (ticket 0704). "Key bindings" opens the Key bindings
 //! screen (ticket 0815) until the Options menu (0805) does. The sprite test
-//! draws the test card as sprite items (ticket 0231).
+//! draws the test card as sprite items (ticket 0231). The class-choice
+//! screen opens on a test unit, to promote or reclass it (ticket 0603),
+//! until the between-battle menus exist.
 
 mod portrait_viewer;
 mod sprite_test;
@@ -18,7 +20,9 @@ use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::screens::{DialogueScreen, KeyBindingsScreen, centre_x, print_centred};
+use crate::screens::{
+    ChangeKind, ClassChangeScreen, DialogueScreen, KeyBindingsScreen, centre_x, print_centred,
+};
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
 use trpg_content::palette::REQUIRED_COLORS;
@@ -35,18 +39,24 @@ pub const SCREENS: [&str; 5] = [
 ];
 
 /// The debug tools, in menu order.
-const TOOLS: [&str; 6] = [
+const TOOLS: [&str; 8] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
     "Play test scene (overlay)",
     "Key bindings",
     "Sprite test",
+    "Class change: promote",
+    "Class change: reclass",
 ];
 /// Index of "Key bindings" in [`TOOLS`].
 const KEY_BINDINGS_TOOL: usize = 4;
 /// Index of "Sprite test" in [`TOOLS`].
 const SPRITE_TEST_TOOL: usize = 5;
+/// Index of "Class change: promote" in [`TOOLS`].
+const PROMOTE_TOOL: usize = 6;
+/// Index of "Class change: reclass" in [`TOOLS`].
+const RECLASS_TOOL: usize = 7;
 /// The scene the "Play test scene" tools play.
 pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
@@ -96,6 +106,17 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(SPRITE_TEST_TOOL)) => {
                     return Transition::Push(Box::new(SpriteTestScreen));
+                }
+                Some(MenuEvent::Chosen(tool @ (PROMOTE_TOOL | RECLASS_TOOL))) => {
+                    let kind = if tool == PROMOTE_TOOL {
+                        ChangeKind::Promote
+                    } else {
+                        ChangeKind::Reclass
+                    };
+                    let Some(screen) = ClassChangeScreen::demo(ctx, kind) else {
+                        continue;
+                    };
+                    return Transition::Push(Box::new(screen));
                 }
                 Some(MenuEvent::Chosen(tool)) => {
                     let Some(scene) = ctx.content.dialogue.get(TEST_SCENE).cloned() else {
@@ -478,10 +499,20 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(sprite_test)"
         );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(class_change)"
+        );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(class_change)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
-        // Without the test scene, its tools do nothing.
+        // Without the test scene, its tools do nothing; nor do the class
+        // change tools without their test character.
         ctx.content.dialogue.scenes.clear();
-        for downs in [2, 3] {
+        ctx.content.characters.characters.clear();
+        for downs in [2, 3, PROMOTE_TOOL, RECLASS_TOOL] {
             let mut menu = DebugMenuScreen::new();
             let mut a = vec![CursorDown; downs];
             a.push(Confirm);
@@ -500,6 +531,8 @@ mod tests {
         );
         assert_eq!(TOOLS[KEY_BINDINGS_TOOL], "Key bindings");
         assert_eq!(TOOLS[SPRITE_TEST_TOOL], "Sprite test");
+        assert_eq!(TOOLS[PROMOTE_TOOL], "Class change: promote");
+        assert_eq!(TOOLS[RECLASS_TOOL], "Class change: reclass");
     }
 
     #[test]

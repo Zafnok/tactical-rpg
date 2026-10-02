@@ -358,6 +358,9 @@ Any unit can wear any accessory.
   straight into the pack, even past the cap (the cap only limits what you
   bring in) (*Claude's starting rule*).
 - After the battle, unused pack items return to the stock.
+- **Seals are not consumables** (Nick, ticket 0603): promotion and reclass
+  seals stay in the stock and are only used between battles
+  (`progression.md`). They can't be put in the pack.
 - **Enemies carry no consumables** (Nick, 0501): they never use potions.
   Enemy healing comes only from dedicated healer units (heal spells,
   `magic.md`).

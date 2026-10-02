@@ -34,7 +34,7 @@
 
 use std::fmt;
 
-use crate::battle::BattleSetup;
+use crate::battle::{BattleSetup, BattleState};
 use crate::class::{ArmourWeight, ClassDef, ClassTable};
 use crate::item::{Equipped, ItemDef, ItemId, ItemTable, Stock, WEAPON_SLOTS};
 use crate::spell::SpellTable;
@@ -316,6 +316,22 @@ impl BattleSetup {
             spells: &self.spells,
         };
         to_stock(&mut self.units[index], &mut self.stock, slot, t)
+    }
+
+    /// Makes this setup the one battle `start` began with, as Preparations
+    /// left it: every player unit takes the loadout of `start`'s unit with
+    /// its id, and the stock and the pack are `start`'s. For continuing a
+    /// suspended battle, whose first state is all that is saved of its
+    /// Preparations.
+    pub fn prepared_as(&mut self, start: &BattleState) {
+        for unit in &mut self.units {
+            let began = start.units().iter().find(|u| u.id == unit.id);
+            if let (Faction::Player, Some(began)) = (unit.faction, began) {
+                unit.loadout = began.loadout.clone();
+            }
+        }
+        self.stock = start.stock().clone();
+        self.pack = start.pack().clone();
     }
 
     /// Moves one consumable `item` from the stock into the pack.

@@ -18,7 +18,13 @@
 //   raises, e.g. (def: 3).
 // accessories: bonus as for armour.
 // consumables: effect Heal(n) | HealFull.
-// Ids are unique across all four lists.
+// seals (progression.md, ticket 0603): kind Tier(n) promotes a unit into a
+//   class of tier n (n >= 2); Reclass is a full class change. One seal per
+//   kind, and one for every tier the class tree promotes into. Names are
+//   placeholders. Seals live in the party's stock and are only used between
+//   battles (never from the battle pack). They have no price: no shop sells
+//   or buys them yet (where they come from is chapter and shop data).
+// Ids are unique across all five lists.
 (
     rules: (
         rank_speed: (0, 0, 1, 2, 3, 4),
@@ -64,5 +70,10 @@
     consumables: [
         (id: "potion", name: "Potion", effect: Heal(10), price: 300),
         (id: "elixir", name: "Elixir", effect: HealFull, price: 3000),
+    ],
+    seals: [
+        (id: "tier_2_seal", name: "Tier 2 Seal", kind: Tier(2)),
+        (id: "tier_3_seal", name: "Tier 3 Seal", kind: Tier(3)),
+        (id: "reclass_seal", name: "Reclass Seal", kind: Reclass),
     ],
 )

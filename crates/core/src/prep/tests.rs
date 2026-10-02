@@ -479,3 +479,40 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
     );
     assert_eq!(a, before);
 }
+
+/// A suspended battle's first state gives back what Preparations set up.
+#[test]
+fn a_setup_takes_the_preparations_of_the_battles_first_state() {
+    let fresh = prep(&["sword", "javelin"], &["vest", "potion", "potion"]);
+    let mut prepared = fresh.clone();
+    for (slot, item) in [
+        (GearSlot::Weapon(1), StockItem::Weapon(1)),
+        (GearSlot::Armour, StockItem::Item(id("vest"))),
+    ] {
+        assert_eq!(prepared.gear_from_stock(U, slot, &item), Ok(()));
+    }
+    assert_eq!(prepared.pack_from_stock(&id("potion")), Ok(()));
+    // An enemy with the same class, whose loadout isn't the player's to set.
+    let mut enemy = unit();
+    enemy.id = UnitId(2);
+    enemy.faction = Faction::Enemy;
+    let mut prepared_enemy = enemy.clone();
+    prepared_enemy.loadout.accessory = Some(id("ring"));
+    prepared.units.push(prepared_enemy);
+    let (start, _) = BattleState::new(prepared.clone());
+    let mut again = fresh.clone();
+    again.units.push(enemy.clone());
+    again.prepared_as(&start);
+    assert_eq!(again.units[0].loadout, start.units()[0].loadout);
+    assert_eq!(slot_weapon(&again, 1), Some("javelin"));
+    assert_eq!(again.units[0].loadout.armour, Some(id("vest")));
+    assert_eq!(again.units[1].loadout, enemy.loadout);
+    assert_eq!(again.stock, prepared.stock);
+    assert_eq!(again.pack, prepared.pack);
+    // A unit the first state doesn't have keeps its own loadout.
+    let mut other = fresh.clone();
+    other.units[0].id = UnitId(7);
+    other.prepared_as(&start);
+    assert_eq!(other.units[0].loadout, fresh.units[0].loadout);
+    assert_eq!(other.pack, prepared.pack);
+}

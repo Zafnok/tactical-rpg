@@ -89,6 +89,9 @@
 //!   from the shared [`BattlePack`]. The target is the unit itself or a non-hostile
 //!   unit adjacent to `dest`. The item is used up ([`Event::ItemUsed`]),
 //!   heals ([`Event::Healed`], never above max HP) and ends the action.
+//!   **Seals can't be used in battle** (Nick, ticket 0603): promotion and
+//!   reclass happen between battles ([`crate::progression`]); a seal found
+//!   in a chest goes to the stock.
 //! - **Shops** ([`UnitAction::Shop`]): a player unit on a shop tile applies
 //!   one or more [`ShopTxn`]s in order, with the party's
 //!   [`gold`](BattleState::gold) (rules in [`crate::shop`]). An empty list is
@@ -1019,6 +1022,38 @@ pub enum Event {
         /// The unit.
         unit: UnitId,
     },
+    /// A unit promoted into a class one tier up (between battles, never
+    /// from a command: [`crate::progression::promote`]). Followed by an
+    /// [`Event::SpellLearned`] per spell the new class teaches at once and
+    /// an [`Event::ItemStowed`] per item it can't carry.
+    Promoted {
+        /// The unit.
+        unit: UnitId,
+        /// The class it left (mastered).
+        from: ClassId,
+        /// Its new class.
+        to: ClassId,
+        /// The promotion bonus per stat (current HP rose with max HP).
+        gains: StatGains,
+    },
+    /// A unit changed class with a Reclass Seal (between battles:
+    /// [`crate::progression::reclass`]). Followed as [`Event::Promoted`] is.
+    Reclassed {
+        /// The unit.
+        unit: UnitId,
+        /// The class it left.
+        from: ClassId,
+        /// Its new class.
+        to: ClassId,
+    },
+    /// A class change sent an item the new class can't carry (a weapon
+    /// beyond its weapon slots, armour it can't wear) to the party's stock.
+    ItemStowed {
+        /// The unit.
+        unit: UnitId,
+        /// The item.
+        item: ItemId,
+    },
     /// A unit finished its action and is done until its next phase.
     UnitActed {
         /// The unit.
@@ -1583,7 +1618,8 @@ impl Till {
                 self.pack.gain(item.clone());
                 return Destination::Pack;
             }
-            None => {}
+            // No shop sells seals; one would go to the stock.
+            Some(ItemDef::Seal(_)) | None => {}
         }
         // Known items only reach here (`shop::buy` checked), so this can't
         // fail.

@@ -453,6 +453,18 @@ fn chests_give_gold_consumables_and_equipment_once() {
     });
     act(&mut s, 1, p(0, 1), UnitAction::Open);
     assert_eq!(s.stock().count(&item("charm")), 1);
+    // So does a seal: it is no consumable, and never enters the pack.
+    let mut m = shop_map();
+    m.features
+        .insert(p(0, 1), TileFeature::Chest(Loot::Item(item("seal"))));
+    let mut s = start(BattleSetup {
+        map: m,
+        ..setup(cast())
+    });
+    let pack = s.pack().clone();
+    act(&mut s, 1, p(0, 1), UnitAction::Open);
+    assert_eq!(s.stock().count(&item("seal")), 1);
+    assert_eq!(s.pack(), &pack);
 }
 
 #[test]

@@ -172,7 +172,16 @@ fn gear_and_consumables_match_the_design() {
         t.consumable(&id("elixir")).map(|c| (c.effect, c.price)),
         Some((ConsumableEffect::HealFull, 3000))
     );
-    assert_eq!(t.items.len(), 10 + 4 + 3 + 2);
+    let seals = [
+        ("tier_2_seal", "Tier 2 Seal", SealKind::Tier(2)),
+        ("tier_3_seal", "Tier 3 Seal", SealKind::Tier(3)),
+        ("reclass_seal", "Reclass Seal", SealKind::Reclass),
+    ];
+    for (key, name, kind) in seals {
+        let s = t.seal(&id(key));
+        assert_eq!(s.map(|s| (s.name.as_str(), s.kind)), Some((name, kind)));
+    }
+    assert_eq!(t.items.len(), 10 + 4 + 3 + 2 + 3);
     assert_eq!(
         t.get(&id("warded_robe")).map(ItemDef::name),
         Some("Warded Robe")
@@ -294,6 +303,69 @@ fn ids_are_unique_across_lists_and_not_empty() {
             "it.ron:9: consumable \"p\": Heal must be at least 1",
         ]
     );
+}
+
+#[test]
+fn seals_load_and_are_checked() {
+    let seals = |list: &str| {
+        let rest = format!("{REST}\n    seals: [{list}\n    ],");
+        file(RULES, KINDS, &weapon("w", ""), &rest)
+    };
+    let seal =
+        |id: &str, kind: &str| format!("\n        (id: \"{id}\", name: \"S\", kind: {kind}),");
+    let ok = [
+        seal("a", "Tier(2)"),
+        seal("b", "Tier(3)"),
+        seal("c", "Reclass"),
+    ]
+    .concat();
+    let t = from_source("it.ron", &seals(&ok)).unwrap_or_default();
+    assert_eq!(t.seal(&id("a")).map(|s| s.kind), Some(SealKind::Tier(2)));
+    assert_eq!(t.seal(&id("c")).map(|s| s.kind), Some(SealKind::Reclass));
+    assert_eq!(t.items.len(), 4);
+    // A file without the list has no seals.
+    let none = from_source("it.ron", &file(RULES, KINDS, &weapon("w", ""), REST));
+    assert_eq!(none.map(|t| t.items.len()), Ok(1));
+    let bad = [
+        seal("a", "Tier(1)"),
+        seal("b", "Tier(2)"),
+        seal("c", "Tier(2)"),
+        seal("d", "Reclass"),
+        seal("e", "Reclass"),
+        seal("w", "Tier(4)"),
+    ]
+    .concat();
+    assert_eq!(
+        errors(&seals(&bad)),
+        [
+            "it.ron:9: seal \"a\": a tier seal's tier must be at least 2",
+            "it.ron:11: seal \"c\": another seal is already Tier(2)",
+            "it.ron:13: seal \"e\": another seal is already Reclass",
+            "it.ron:5: duplicate item id \"w\"",
+        ]
+    );
+}
+
+#[test]
+fn seal_checks_against_the_class_tree() {
+    let classes = crate::class::load(None).unwrap_or_default();
+    assert_eq!(check_seals(&items(), &classes), []);
+    // Only the tiers classes promote into need a seal.
+    let mut t = items();
+    t.items.remove(&id("tier_3_seal"));
+    t.items.remove(&id("reclass_seal"));
+    let errors: Vec<String> = check_seals(&t, &classes)
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    assert_eq!(
+        errors,
+        [
+            "assets/data/items.ron: no seal of kind Tier(3), but classes promote into tier 3",
+            "assets/data/items.ron: no seal of kind Reclass",
+        ]
+    );
+    assert_eq!(check_seals(&t, &ClassTable::default()).len(), 1);
 }
 
 #[test]

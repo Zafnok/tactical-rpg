@@ -107,8 +107,8 @@ fn restart_battle_goes_back_to_preparations_as_they_were_left() {
     h.keys("Right f");
     let start = battle(&h);
     // The `PLAYER PHASE` banner closes; the lord waits where he stands, then the map menu's Restart Battle
-    // (after Units and Objective) and its confirm.
-    h.keys("f f f f d Down Down f");
+    // (after Units, Objective and Suspend) and its confirm.
+    h.keys("f f f f d Down Down Down f");
     assert!(
         shows(&h, "Restart the battle from turn 1?"),
         "{}",
@@ -206,10 +206,44 @@ fn the_benched_scouts_bow_goes_to_the_archer() {
     assert_eq!(scout(&h).loadout.weapon_count(), 0);
     // Past the banner, Restart Battle: Preparations again, the trade as it
     // was left.
-    h.keys("f f f f d Down Down f f");
+    h.keys("f f f f d Down Down Down f f");
     assert_eq!(h.screens(), ["title", "preparations"]);
     let prep = h.flow().and_then(|f| f.preparations());
     let prep = prep.unwrap_or_else(|| panic!("no preparations")).prep();
     assert_eq!(prep.bench[0].loadout.weapon_count(), 0);
     assert_eq!(prep.setup.units[2].loadout.weapon_count(), 2);
+}
+
+/// A suspended battle continues with what Preparations set up, and a
+/// restart after it goes back to Preparations as they were left (the
+/// suspend save holds the battle's first state, ticket 0802).
+#[test]
+fn a_continued_battle_keeps_its_preparations() {
+    let mut h = preparations();
+    h.keys(SET_UP);
+    // Fight!, the banner, then the map menu's Suspend and its confirm.
+    h.keys("Right f f");
+    let start = battle(&h);
+    h.keys("d Down Down f f");
+    assert_eq!(h.screens(), ["title"]);
+    // The next launch: Continue is on top of the title menu.
+    let mut h = Harness::with_storage(h.into_storage());
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(battle(&h), start);
+    assert_eq!(battle(&h).pack().items, [potion(), potion()]);
+    // Restart Battle: Preparations, with the sword and the Potions.
+    h.keys("d Down Down Down f f");
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    let prep = h.flow().and_then(|f| f.preparations());
+    let prep = prep.unwrap_or_else(|| panic!("no preparations")).prep();
+    assert_eq!(prep.setup.pack.items, [potion(), potion()]);
+    assert_eq!(prep.setup.stock, *start.stock());
+    assert_eq!(prep.setup.units[0].loadout.weapon_count(), 3);
+    assert_eq!(prep.bench.len(), 1);
+    // And the battle starts as it did.
+    h.keys("Left f");
+    let again = battle(&h);
+    assert_eq!(lord_weapons(&again), lord_weapons(&start));
+    assert_eq!(again.pack(), start.pack());
 }

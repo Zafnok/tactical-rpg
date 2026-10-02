@@ -134,7 +134,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             .ok()
             .map(|t| t.rules.movement_types.as_slice()),
     );
-    let items = item::load();
+    let items = check_seals(item::load(), classes.as_ref().ok());
     let maps = check_map_features(maps, items.as_ref().ok(), terrain.as_ref().ok());
     let names = names::load();
     let characters = character::load(
@@ -194,6 +194,26 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             new_game,
         },
     )
+}
+
+/// Adds the seal checks ([`item::check_seals`]: a seal for every tier a
+/// class promotes into, and a Reclass Seal) to the items' result. Skipped
+/// when the items or classes failed to load.
+fn check_seals(
+    items: Result<ItemTable, Vec<ContentError>>,
+    classes: Option<&ClassTable>,
+) -> Result<ItemTable, Vec<ContentError>> {
+    match (items, classes) {
+        (Ok(items), Some(classes)) => {
+            let errors = item::check_seals(&items, classes);
+            if errors.is_empty() {
+                Ok(items)
+            } else {
+                Err(errors)
+            }
+        }
+        (items, _) => items,
+    }
 }
 
 /// Loader results for the battles, chapters and New Game file.
@@ -760,6 +780,35 @@ mod tests {
             check_skill_references(failed.clone(), classes.as_ref()),
             failed
         );
+    }
+
+    #[test]
+    fn seal_checks_join_the_item_errors() {
+        let classes = ok_classes().ok();
+        let items = item::load();
+        assert_eq!(check_seals(items.clone(), classes.as_ref()), items);
+        // Without its seals, the class tree's promotions can't happen.
+        let mut bare = items.clone().unwrap_or_default();
+        bare.items
+            .retain(|_, d| !matches!(d, trpg_core::ItemDef::Seal(_)));
+        let errors: Vec<String> = check_seals(Ok(bare.clone()), classes.as_ref())
+            .err()
+            .unwrap_or_default()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        assert_eq!(
+            errors,
+            [
+                "assets/data/items.ron: no seal of kind Tier(2), but classes promote into tier 2",
+                "assets/data/items.ron: no seal of kind Tier(3), but classes promote into tier 3",
+                "assets/data/items.ron: no seal of kind Reclass",
+            ]
+        );
+        // Skipped when another file failed.
+        assert_eq!(check_seals(Ok(bare.clone()), None), Ok(bare));
+        let failed = Err(vec![ContentError::new("i", "bad")]);
+        assert_eq!(check_seals(failed.clone(), classes.as_ref()), failed);
     }
 
     #[test]

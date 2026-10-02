@@ -47,7 +47,9 @@ that rejects `preparations: true` until this screen exists.
    can use (unusable items dimmed with the reason, e.g. `needs rank D`).
    Confirm moves an item between a slot and the stock. Show the unit's attack
    speed change live (`AS 12 → 10`) using `core`'s formula.
-3. **Pack:** stock consumables on the left, pack on the right, header
+3. **Pack:** stock consumables on the left (never seals: `ItemDef::Seal`
+   items aren't consumables and can't be brought into a battle, ticket
+   0603), pack on the right, header
    `Pack 3/6`; adding past the cap shows a message instead. The chapter's
    default pack is preselected.
 4. `Fight!` returns the setup. `Cancel` at the top level does nothing unless
@@ -144,6 +146,12 @@ spare gear, six Potions and two Elixirs to try it with.
 7. **Quick Battle's test stock** (placeholder data): Steel Spear, Iron
    Axe, Iron Sword, Iron Plate, Warded Robe, Chain Mail, Speed
    Ring, Power Ring, Focus Charm, 6 Potions, 2 Elixirs.
+
+**After merging `main` (2026-10-02):** seals (0603) are offered nowhere on
+the screen (tested). A suspended battle (0802) continues with what
+Preparations set up, and a restart after it goes back to Preparations as
+they were left: `BattleSetup::prepared_as` takes the loadouts, stock and
+pack from the battle's first state, which the suspend save holds.
 
 **Follow-up tickets:** 0038 (decide the Preparations shop's basics and
 tiers, after the playtest), 0436 (the Shop tab, blocked by 0409 and 0038),

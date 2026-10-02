@@ -555,3 +555,28 @@ fn a_long_list_scrolls_inside_its_box() {
     assert!(drawn_row(&s, &c, 4).starts_with("│ Test Lord"));
     assert!(drawn_row(&s, &c, 26).starts_with("│ Extra 17"));
 }
+
+/// Seals (ticket 0603) are neither consumables nor gear: they stay in the
+/// stock and are offered nowhere here.
+#[test]
+fn seals_are_not_offered() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    let before = (s.spare(), stock_texts(&s));
+    s.prep.setup.stock.add(ItemId::new("tier_2_seal"));
+    assert_eq!(s.spare(), before.0);
+    // The lord's weapon, armour and accessory lists.
+    for down in 0..5 {
+        let mut t = s.clone();
+        update(&mut t, &mut c, &[Confirm, Confirm]);
+        for _ in 0..down {
+            update(&mut t, &mut c, &[CursorDown]);
+        }
+        let rows = stock_texts(&t).join("\n");
+        assert!(!rows.contains("Seal"), "{rows}");
+    }
+    assert_eq!(
+        s.prep.setup.pack_from_stock(&ItemId::new("tier_2_seal")),
+        Err(PrepError::NotConsumable)
+    );
+}

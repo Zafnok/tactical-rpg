@@ -1,5 +1,6 @@
-//! Items: weapons, armour, accessories and consumables; a unit's loadout, the
-//! shared battle pack, the party stock, weapon ranks and weapon EXP.
+//! Items: weapons, armour, accessories, consumables and seals; a unit's
+//! loadout, the shared battle pack, the party stock, weapon ranks and weapon
+//! EXP.
 //!
 //! Source: `docs/design/weapons-and-items.md` (0003). The numbers live in
 //! `assets/data/items.ron`, loaded by `trpg-content` into an [`ItemTable`].
@@ -38,6 +39,12 @@
 //! - **Battle pack** ([`BattlePack`]): the player side's shared consumables.
 //!   The cap limits only what is brought in; items gained in battle go in
 //!   anyway.
+//! - **Seals** ([`SealDef`], `progression.md`): a tier seal promotes a unit
+//!   into a class of its tier, a Reclass Seal changes its class
+//!   ([`crate::progression`]). They live in the party [`Stock`] and are only
+//!   used **between battles** (Nick, ticket 0603): never from the battle
+//!   pack, where a seal is just an item that can't be used. No shop sells or
+//!   buys them yet (their prices and sources are chapter and shop data).
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -46,7 +53,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::art::ArtId;
 use crate::battle::Event;
-use crate::class::{ArmourWeight, ClassDef, ClassTable, UnitTag};
+use crate::class::{ArmourWeight, ClassDef, ClassTable, Tier, UnitTag};
 use crate::combat::{
     CombatMods, CombatRules, CombatantInput, DamageType, WeaponStats, WeaponTrait,
 };
@@ -153,6 +160,24 @@ pub struct ConsumableDef {
     pub price: u32,
 }
 
+/// What a seal does (`progression.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum SealKind {
+    /// Promotes a unit into a class of this tier.
+    Tier(Tier),
+    /// A full class change (reclass).
+    Reclass,
+}
+
+/// A seal's data. It has no price: nothing sells or buys seals yet.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SealDef {
+    /// Display name (a placeholder, like the class names).
+    pub name: String,
+    /// What it does.
+    pub kind: SealKind,
+}
+
 /// Any item.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ItemDef {
@@ -164,6 +189,8 @@ pub enum ItemDef {
     Accessory(AccessoryDef),
     /// A consumable (the battle pack).
     Consumable(ConsumableDef),
+    /// A promotion or reclass seal (the stock; used between battles).
+    Seal(SealDef),
 }
 
 impl ItemDef {
@@ -174,16 +201,18 @@ impl ItemDef {
             ItemDef::Armour(d) => &d.name,
             ItemDef::Accessory(d) => &d.name,
             ItemDef::Consumable(d) => &d.name,
+            ItemDef::Seal(d) => &d.name,
         }
     }
 
-    /// Buy price in gold.
+    /// Buy price in gold (0 for a seal, which has none).
     pub fn price(&self) -> u32 {
         match self {
             ItemDef::Weapon(d) => d.price,
             ItemDef::Armour(d) => d.price,
             ItemDef::Accessory(d) => d.price,
             ItemDef::Consumable(d) => d.price,
+            ItemDef::Seal(_) => 0,
         }
     }
 }
@@ -321,6 +350,14 @@ impl ItemTable {
     pub fn consumable(&self, id: &ItemId) -> Option<&ConsumableDef> {
         match self.items.get(id)? {
             ItemDef::Consumable(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    /// The seal `id`, if it is one.
+    pub fn seal(&self, id: &ItemId) -> Option<&SealDef> {
+        match self.items.get(id)? {
+            ItemDef::Seal(s) => Some(s),
             _ => None,
         }
     }
@@ -562,6 +599,13 @@ impl Stock {
     /// How many of `item` are in stock.
     pub fn count(&self, item: &ItemId) -> u32 {
         self.items.get(item).copied().unwrap_or(0)
+    }
+
+    /// The first seal of `kind` in stock (id order), if there is one.
+    pub fn seal(&self, kind: SealKind, items: &ItemTable) -> Option<&ItemId> {
+        self.items
+            .keys()
+            .find(|id| items.seal(id).is_some_and(|s| s.kind == kind))
     }
 
     /// Moves `items` from the stock into a pack with `cap`. Nothing changes
@@ -840,6 +884,28 @@ impl Unit {
         {
             self.loadout.equipped = self.default_equip(class, items, spells);
         }
+    }
+
+    /// Moves worn armour of a weight `class` (the unit's new class) can't
+    /// wear to `stock` and returns its id (*Claude's starting rule*, as for
+    /// the weapons of [`Unit::fit_weapon_slots`]). Promotion and reclass call
+    /// this after changing the class (0603).
+    pub fn fit_armour(
+        &mut self,
+        class: &ClassDef,
+        items: &ItemTable,
+        stock: &mut Stock,
+    ) -> Option<ItemId> {
+        let worn = self.loadout.armour.as_ref()?;
+        let wearable = items
+            .armour(worn)
+            .is_none_or(|a| class.armour.contains(&a.weight_class));
+        if wearable {
+            return None;
+        }
+        let id = self.loadout.armour.take()?;
+        stock.add(id.clone());
+        Some(id)
     }
 
     /// Moves the weapons in slots `class` (the unit's new class) doesn't
