@@ -81,7 +81,7 @@ data.
      the same maths in 0232's PNG renderer), one snapshot token per shaded
      sprite; or
    - the importer (0437) writes one pre-shaded copy of the tileset image
-     per light into `assets-private/`, and the skin picks the image.
+     per light into `assets-private/game/`, and the skin picks the image.
      Simpler to draw, but every new light means re-importing.
    Check the web build draws the same as native (in the browser pane,
    reading canvas pixels back as 0231 did).

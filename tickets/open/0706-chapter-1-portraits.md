@@ -75,10 +75,10 @@ only some of the faces, small, so recheck everything on the real files.
 
 ## Checked on the bought files (2026-10-02, ticket 0038)
 
-Nick bought the whole Mega Tiles bundle. The files are sorted on his
-machine in `D:\tactical-rpg\Tiny Tales Bundle Assets\`; open `index.html`
-there to see each character's faces, battle picture and map sprite
-together. This replaces the preview-based notes above where they differ.
+Nick bought the whole Mega Tiles bundle. The files are sorted in the
+private assets repository (ADR-0040), in
+`assets-private/library/tiny-tales/`; open `index.html` there to see each
+character's faces, battle picture and map sprite together. This replaces the preview-based notes above where they differ.
 
 - **Expressions**, the same 8 for every hero and for every face the
   generator makes: `neutral`, `smile`, `stern`, `sad`, `surprise`,
@@ -169,7 +169,7 @@ only the edits it allows).
 3. Render the candidates in the dialogue screen (a rendered PNG, as in 0704)
    and send them to Nick. Record his picks.
 4. Import each pick with `cargo xtask portrait-import` (0711) into
-   `assets-private/portraits/`. Map `neutral`, `happy`, `angry`, `sad` and
+   `assets-private/game/portraits/`. Map `neutral`, `happy`, `angry`, `sad` and
    `surprised` to the closest pack expressions, and note the mapping in the
    character sheet.
 5. Update `docs/story/characters/*.md` with which pack and face each

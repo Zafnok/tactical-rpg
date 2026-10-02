@@ -40,6 +40,10 @@ path = "src/main.rs"
 # by the Pages build, `cargo xtask web --release --debug-tools` (ADR-0023).
 # Never by release.yml, itch.io or Steam builds.
 debug-tools = ["trpg-ui/debug-tools"]
+# The bought art, embedded over `assets/` (ADR-0040): needs
+# `assets-private/game/` (`cargo xtask private-assets`). Turned on by the
+# Pages build and release.yml when they have the key, never by a gate.
+private-assets = ["trpg-content/private-assets"]
 
 [dependencies]
 trpg-core = { path = "../core" }

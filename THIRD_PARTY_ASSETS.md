@@ -10,8 +10,8 @@ Only licenses allowed by ADR-0013 (amended by ADR-0027 and ADR-0032) are
 permitted. **Bought art** (ADR-0032) is listed here too, with the seller, the
 licence text as quoted on the store page, the date bought, whether it's
 AI-assisted, and *private*: its files and licence text live in the private
-assets repo (0110), never in this public repo. The
-license text must be committed next to the item. The music and sounds are
+assets repository (ADR-0040), never in this public repo. For every other
+item the license text must be committed next to the item. The music and sounds are
 also listed, with tags, in [`assets/audio/audio.ron`](assets/audio/audio.ron);
 the game's credits screen (0808) reads them from there.
 
@@ -27,12 +27,29 @@ a credit has no row.
 
 Bought art that isn't in a build yet is recorded here as a list. A pack
 gets a row in the table below, and a credit, in the ticket that first puts
-it in the game (0706, 0413, 0436, 0437), in the form ticket 0110 sets.
+it in the game (0706, 0413, 0436, 0437).
+
+**A bought pack's row** in *Shipped items* is filled in like this (ADR-0032
+§5, ADR-0040):
+
+- *Item*: the pack's name and what of it is in the game, then **(private)**.
+- *Source URL*: the pack's store page.
+- *Version*: the version in the download's name, and the date bought.
+- *License*: `Custom (<seller>)`, the licence text quoted in full from the
+  store page or the pack's licence file, and whether the art is AI-assisted.
+- *License file*: the path of the licence text **inside the private
+  repository**, written as plain text, not a link (it isn't in this one):
+  `private: library/tiny-tales/licences/<pack>__License.txt`.
+- *Used for*: where the game shows it, and the folder of
+  `assets-private/game/` its files are in.
 
 - **Mega Tiles, "2025 Bundle Sale"** (all 37 Mega Tiles products),
   <https://megatiles.itch.io/>. Bought by Nick on **2026-10-02** for
-  **$99.99**. *Private*: the files are on Nick's machine and never in this
-  repository; the private repository is ticket 0110.
+  **$99.99**. *Private*: the files are never in this repository. They are in
+  the private repository `Zafnok/visions-of-shuyi-assets` (ADR-0040):
+  sorted in `library/tiny-tales/`, the 37 downloads untouched in
+  `originals/tiny-tales/`, every pack's licence text and the generator's
+  EULA in `library/tiny-tales/licences/`.
   - **Licence**, the same text in every pack's `License.txt`: "You cannot
     claim ownership of the assets (copyright/IP). Assets can be used both
     in free and commercial games. Assets can be modified freely to fit the

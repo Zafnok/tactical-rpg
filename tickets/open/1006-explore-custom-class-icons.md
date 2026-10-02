@@ -73,7 +73,7 @@ both ways for Nick; if chosen, making it a setting or the default.
 1. Draw 16×16 one-colour icons as a PNG in a tileset file (0433's format),
    tinted by faction if the skin needs a tint (add it to `Sprite` as 0413
    describes). For the bought map sprites, a tileset file in
-   `assets-private/` pointing at the bought sheet. If units should be
+   `assets-private/game/` pointing at the bought sheet. If units should be
    pictures while terrain stays glyphs, add that as a skin that paints
    terrain with the glyph skin and units with the sprite skin.
 2. Render the Quick Battle screen each way (with HP bars) with

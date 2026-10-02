@@ -13,7 +13,10 @@ updates:
           - patch
 
   - package-ecosystem: github-actions
-    directory: "/"
+    # "/" is .github/workflows; our own actions are listed apart.
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: weekly
     cooldown:

@@ -7,6 +7,7 @@ mod check_keys;
 mod clean_targets;
 mod font_atlas;
 mod playtest;
+mod private_assets;
 mod sfx;
 mod test_card;
 mod tickets;
@@ -26,7 +27,8 @@ font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
-web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
+private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
+web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
     ExitCode::from(dispatch(env::args().skip(1)))
@@ -44,6 +46,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
+        Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -219,6 +222,26 @@ fn playtest(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("playtest: {e}");
+            1
+        }
+    }
+}
+
+fn private_assets(args: &[String]) -> u8 {
+    let mode = match private_assets::parse_args(args) {
+        Ok(mode) => mode,
+        Err(e) => {
+            eprintln!("{e}");
+            return 2;
+        }
+    };
+    match private_assets::run(&repo_root(), private_assets::REPO_URL, mode) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("private-assets: {e}");
             1
         }
     }
@@ -423,6 +446,17 @@ mod tests {
         // manually, not here.
         assert_eq!(web(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["web", "--bogus"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn private_assets_fails_fast_on_bad_args() {
+        // Only the argument check: a real run needs the private repository
+        // and would move this checkout's `assets-private/`.
+        assert_eq!(private_assets(&args(&["--bogus"])), 2);
+        assert_eq!(
+            dispatch(args(&["private-assets", "--pin", "--library"]).into_iter()),
+            2
+        );
     }
 
     #[test]

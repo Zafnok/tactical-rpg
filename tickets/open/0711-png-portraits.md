@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0021", "0110", "0231"]
+blocked_by: ["0021", "0110", "0116", "0231"]
 nick_input: sign-off
 completed:
 ---
@@ -73,18 +73,20 @@ a 320×160 bust sheet (4×2) at 1×, and cuts each bust to 64×64. A bust
 that sits off-centre may be cut a few columns to one side instead: an
 optional `--shift-x <pixels>` (−8..=8) moves the cut. It still accepts
 48×48 faces (written as they are), and keeps the 3×-sheet path only if it
-costs nothing. On Nick's machine the heroes' files are already sorted per
-character in `D:\tactical-rpg\Tiny Tales Bundle Assets\characters\heroes\
-<Name>\face_<expression>.png` and `bust_<expression>.png`.
+costs nothing. The heroes' files are already sorted per character in the
+private assets repository (ADR-0040; `cargo xtask private-assets
+--library`): `assets-private/library/tiny-tales/characters/heroes/
+<Name>/face_<expression>.png` and `bust_<expression>.png`.
 
 Keep the drawing general (any PNG size, any whole scale): 0413 reuses it
 for the big still battle images.
 
 **Needs 0110 first** (added to `blocked_by` 2026-10-01): the importer reads
-the bought zips and writes into `assets-private/`, the face-set layout must
+the bought files and writes into `assets-private/game/`, the face-set layout must
 be checked on the bought files, and the sign-off shows two bought
 portraits. All of that needs Nick's purchase and the private assets folder
-from 0110.
+from 0110, uploaded by Nick (**0116**, added to `blocked_by` 2026-10-02:
+until then `cargo xtask private-assets` can't fetch it in a worktree).
 
 ## Nick input
 
@@ -115,7 +117,7 @@ bought portraits, speaker and dimmed listener, next to one with the old art.
 - `cargo xtask portrait-import <zip-or-dir> <faceset-file> <character-id>`:
   slices the chosen 4×2 face set into its 8 faces, reduces each 3×-drawn
   144×144 cell to its 48×48 pixels (error if a cell isn't made of exact 3×3
-  blocks), writes them into `assets-private/portraits/<id>/`, and writes a
+  blocks), writes them into `assets-private/game/portraits/<id>/`, and writes a
   sidecar stub to fill in.
 - Validation in the loader (all errors at once, with file names): size must
   fit 256×256 console px at a scale of at least 1; missing required expression; unreadable PNG; sidecar

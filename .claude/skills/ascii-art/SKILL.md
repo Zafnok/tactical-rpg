@@ -34,8 +34,9 @@ ADR-0032). Claude **never draws** a portrait, a face or a battle image.
 - **Characters no bought face fits:** Mega Tiles' Character Generator (if
   bought and its licence allows it), then small edits (0706). Anything else
   goes to Nick.
-- **Bought files never go in this repo** (0110). Mockups made from store
-  previews stay in the scratchpad.
+- **Bought files never go in this repo** (ADR-0040): they are in the
+  git-ignored `assets-private/` (`cargo xtask private-assets --library`).
+  Mockups made from them or from store previews stay in the scratchpad.
 - Required expressions stay `neutral`, `happy`, `angry`, `sad`,
   `surprised`, mapped from the pack's 8 per character.
 - **No mini-portraits.** Portraits appear only in conversations (Nick dropped
