@@ -49,5 +49,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0038](0038-graphics-are-a-skin.md) | Graphics are a skin: screens say what to show, a skin says how it looks | Accepted |
 | [0039](0039-save-file-format.md) | Saves are versioned RON `SaveFile`s; a battle is saved as its history | Accepted |
 | [0040](0040-private-assets.md) | Bought art lives in a private repository, pinned by commit and embedded by the `private-assets` feature | Accepted |
+| [0041](0041-prs-up-to-date-before-merging.md) | PRs must be up to date with `main` and green before they merge (no merge queue) | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).
