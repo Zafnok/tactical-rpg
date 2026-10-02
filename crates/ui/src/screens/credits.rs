@@ -20,8 +20,9 @@ pub const TITLE: &str = "Credits";
 
 /// The panel, in cells.
 const PANEL: Rect = Rect::new(2, 1, 96, 29);
-/// Column of the group headings.
-const HEADING_X: i32 = PANEL.x + 2;
+/// Column of the group headings: one blank cell in from the panel's left
+/// border (a test pins it to the panel).
+const HEADING_X: i32 = 4;
 /// Column of an entry's first line, two cells right of the headings.
 const ENTRY_X: i32 = HEADING_X + 2;
 /// Column of an entry's license and link, two cells right of its title.
@@ -339,6 +340,7 @@ mod tests {
         for (kind, text) in &s.rows {
             assert!(text.chars().count() <= kind.width(), "{text:?}");
         }
+        assert_eq!(HEADING_X, PANEL.x + 2);
         assert_eq!(Row::Heading.width(), 91);
         assert_eq!(Row::Entry.width(), 89);
         assert_eq!(Row::Detail.width(), 87);
