@@ -69,8 +69,8 @@ pub use save::{SAVE_VERSION, SaveFile, SaveHeader, SavePoint};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use skill::{
     ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, EffectSource, Paid,
-    PassiveEffect, SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, Stance,
-    TimedEffect, TimedMods, WeaponReq, check_cost, pay_cost,
+    PassiveEffect, SkillContext, SkillCost, SkillDef, SkillId, SkillKind, SkillTable, SkillUses,
+    Stance, TimedEffect, TimedMods, WeaponReq, check_cost, pay_cost,
 };
 pub use spell::{
     EffectDuration, SpellChanges, SpellDef, SpellId, SpellKind, SpellState, SpellTable,

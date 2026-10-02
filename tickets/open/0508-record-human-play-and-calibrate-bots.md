@@ -63,7 +63,9 @@ the comparison table. Sign-off never blocks the PR.
    result, and play time in seconds (from the frame driver's clock, which
    only `app` owns; pass it in through the existing context, don't read a
    clock in `ui`). RON, with a `version` field. Document the format in
-   `docs/playtesting.md`.
+   `docs/playtesting.md`. A record holds **nothing about the look**
+   (ADR-0038, rule 5): no cell or pixel coordinates, no map skin, no
+   theme. It must replay the same whatever graphics the game has by then.
 2. **Export** (F2 debug menu): "Export play records". Native: writes every
    `playrec-*` to a `playrecs/` folder next to the save folder and shows the
    path. Web: downloads one `.ron` bundle through the web shell (0206). File
@@ -94,6 +96,8 @@ the comparison table. Sign-off never blocks the PR.
       result and measures.
 - [ ] Export works on native (folder) and web (download); manual check noted
       in Completion notes.
+- [ ] If the sprite map skin (0433) is done: the replay test also passes
+      with the battle recorded under that skin.
 - [ ] Nick's recordings and the comparison table are in Completion notes,
       with his answer to the one question and the calibration before/after.
 - [ ] All gates in the `run-gates` skill pass.

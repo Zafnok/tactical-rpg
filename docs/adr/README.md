@@ -11,11 +11,11 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | --- | ----- | ------ |
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-language-rust.md) | Rust as the implementation language | Accepted |
-| [0003](0003-rendering-glyph-grid-macroquad.md) | Glyph-grid rendering on macroquad | Accepted |
+| [0003](0003-rendering-glyph-grid-macroquad.md) | Glyph-grid rendering on macroquad | Accepted; images in the frame added by ADR-0038 |
 | [0004](0004-crate-architecture.md) | Crate layering and deterministic core | Accepted; `app`'s one `unsafe` set out in ADR-0034 |
 | [0005](0005-data-driven-content.md) | Data-driven content formats | Accepted |
 | [0006](0006-input-actions-and-virtual-cursor.md) | Input actions, vim-style keymap, virtual cursor | Superseded by ADR-0015 |
-| [0007](0007-testing-strategy.md) | Testing strategy | Accepted |
+| [0007](0007-testing-strategy.md) | Testing strategy | Accepted; behaviour tests read the map scene, per ADR-0038 |
 | [0008](0008-ci-quality-gates.md) | CI and quality gates (free tier only) | Superseded by ADR-0014 |
 | [0009](0009-distribution.md) | Distribution: Windows first, web, itch, Steam | Accepted |
 | [0010](0010-ticket-workflow-and-model-routing.md) | Ticket workflow and model routing | Accepted |
@@ -46,5 +46,6 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0035](0035-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
 | [0036](0036-help-text-follows-the-device-and-own-font-glyphs.md) | Help text follows the device pressed last; our own glyphs join the font from a second BDF | Accepted |
 | [0037](0037-save-file-format.md) | Saves are versioned RON `SaveFile`s; a battle is saved as its history | Accepted |
+| [0038](0038-graphics-are-a-skin.md) | Graphics are a skin: screens say what to show, a skin says how it looks | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

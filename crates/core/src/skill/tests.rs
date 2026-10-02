@@ -38,6 +38,20 @@ fn active(id: &str, family: &str, rank: u8, effect: ActiveEffect) -> SkillDef {
     }
 }
 
+/// `def` costing `uses` uses per battle.
+fn with_uses(def: SkillDef, uses: u8) -> SkillDef {
+    let SkillKind::Active { effect, .. } = def.kind else {
+        return def;
+    };
+    SkillDef {
+        kind: SkillKind::Active {
+            cost: SkillCost::Uses(uses),
+            effect,
+        },
+        ..def
+    }
+}
+
 fn strike(mods: CombatMods) -> ActiveEffect {
     ActiveEffect::Strike {
         with: WeaponReq::Any,
@@ -56,8 +70,13 @@ fn hit(n: StatValue) -> CombatMods {
     }
 }
 
-/// White Magic 1/2, Long Shot 1/2, Keen Edge, Brace and Swoop.
+/// White Magic 1/2, Long Shot 1/2, Keen Edge, Brace (3 uses per battle),
+/// Rally 1/2 (1 / 2 uses) and Swoop.
 fn table() -> SkillTable {
+    let own = || ActiveEffect::Buff {
+        area: Area::Own,
+        mods: TimedMods::default(),
+    };
     let all = [
         passive(
             "white_magic_1",
@@ -75,15 +94,9 @@ fn table() -> SkillTable {
         active("long_shot", "long_shot", 1, strike(hit(1))),
         active("long_shot_2", "long_shot", 2, strike(hit(2))),
         active("keen_edge", "keen_edge", 1, strike(hit(30))),
-        active(
-            "brace",
-            "brace",
-            1,
-            ActiveEffect::Buff {
-                area: Area::Own,
-                mods: TimedMods::default(),
-            },
-        ),
+        with_uses(active("brace", "brace", 1, own()), 3),
+        with_uses(active("rally", "rally", 1, own()), 1),
+        with_uses(active("rally_2", "rally", 2, own()), 2),
         active("swoop", "swoop", 1, strike(CombatMods::default())),
     ];
     SkillTable {
@@ -115,8 +128,9 @@ fn class(id: &str, active: Option<&str>) -> ClassDef {
 }
 
 /// `archer` and `ranger` (Long Shot), `marksman` (Long Shot 2), `swordsman` (Keen
-/// Edge), `guard` (Brace), `plain` (no active), `ghost` (an active missing
-/// from the skill table). Mastery at class level 10.
+/// Edge), `guard` (Brace), `exile` (Rally), `commander` (Rally 2), `plain`
+/// (no active), `ghost` (an active missing from the skill table). Mastery
+/// at class level 10.
 fn classes() -> ClassTable {
     let all = [
         class("archer", Some("long_shot")),
@@ -124,6 +138,8 @@ fn classes() -> ClassTable {
         class("marksman", Some("long_shot_2")),
         class("swordsman", Some("keen_edge")),
         class("guard", Some("brace")),
+        class("exile", Some("rally")),
+        class("commander", Some("rally_2")),
         class("plain", None),
         class("ghost", Some("missing")),
     ];
@@ -454,6 +470,131 @@ fn check_cost_rules() {
     );
 }
 
+fn own(skill: &str) -> CostSource {
+    CostSource::Own(sid(skill))
+}
+
+#[test]
+fn a_cost_in_uses_needs_a_use_left_and_nothing_else() {
+    let uses = SkillCost::Uses(3);
+    // No weapon at all, and one broken: only the uses count.
+    let mut bare = unit_in("plain");
+    bare.skill_uses.uses_left.insert(sid("brace"), 1);
+    bare.skill_uses.uses_left.insert(sid("shove"), 0);
+    let mut broken = armed(0);
+    broken.skill_uses = bare.skill_uses.clone();
+    for u in [&bare, &broken] {
+        assert_eq!(check_cost(u, uses, &own("brace")), Ok(()));
+        assert_eq!(
+            check_cost(u, uses, &own("shove")),
+            Err(CostError::NoUsesLeft)
+        );
+        // A skill missing from the unit's uses has none.
+        assert_eq!(
+            check_cost(u, uses, &own("rally")),
+            Err(CostError::NoUsesLeft)
+        );
+    }
+    // Uses are never paid from a weapon or a spell, nor anything else from
+    // a skill's uses.
+    let u = armed(5);
+    let wrong = Err(CostError::WrongSource);
+    assert_eq!(check_cost(&u, uses, &CostSource::Weapon(0)), wrong);
+    let fire = CostSource::Spell(SpellId::new("fire"));
+    assert_eq!(check_cost(&u, uses, &fire), wrong);
+    assert_eq!(
+        check_cost(&bare, SkillCost::Durability(1), &own("brace")),
+        wrong
+    );
+    assert_eq!(
+        check_cost(&bare, SkillCost::ExtraSpellUse, &own("brace")),
+        wrong
+    );
+}
+
+#[test]
+fn pay_cost_spends_one_use_and_no_durability() {
+    let mut u = armed(5);
+    u.skill_uses.uses_left.insert(sid("brace"), 2);
+    let paid = |u: &mut Unit| pay_cost(u, SkillCost::Uses(3), &own("brace"));
+    let changed = |left| {
+        Ok(Paid {
+            events: vec![Event::SkillUsesChanged {
+                unit: UnitId(1),
+                skill: sid("brace"),
+                uses_left: left,
+            }],
+            broke: None,
+        })
+    };
+    assert_eq!(paid(&mut u), changed(1));
+    assert_eq!(paid(&mut u), changed(0));
+    assert_eq!(u.skill_uses.uses_left(&sid("brace")), 0);
+    assert_eq!(u.loadout.weapon(0).map(|w| w.durability_left), Some(5));
+    // Refused: nothing changes.
+    let before = u.clone();
+    assert_eq!(paid(&mut u), Err(CostError::NoUsesLeft));
+    assert_eq!(u, before);
+}
+
+#[test]
+fn skill_uses_fill_spend_and_never_go_below_zero() {
+    let t = table();
+    let get = |id: &str| t.get(&sid(id)).unwrap_or_else(|| panic!("{id}"));
+    assert_eq!(get("brace").uses_per_battle(), Some(3));
+    assert_eq!(get("keen_edge").uses_per_battle(), None);
+    assert_eq!(get("white_magic_1").uses_per_battle(), None);
+    // Only the skills that cost uses are counted.
+    let mut uses = SkillUses::full(&[get("brace"), get("keen_edge"), get("white_magic_1")]);
+    assert_eq!(uses.uses_left, [(sid("brace"), 3)].into());
+    assert_eq!(uses.uses_left(&sid("keen_edge")), 0);
+    assert_eq!(uses.spend(&sid("keen_edge")), None);
+    assert_eq!(
+        [(); 4].map(|()| uses.spend(&sid("brace"))),
+        [Some(2), Some(1), Some(0), None]
+    );
+    assert_eq!(uses.uses_left(&sid("brace")), 0);
+    assert_eq!(SkillUses::full(&[]), SkillUses::default());
+}
+
+#[test]
+fn preparing_for_battle_refills_the_uses_of_the_usable_actives() {
+    let (classes, skills) = (classes(), table());
+    let prepare = |u: &mut Unit| {
+        u.prepare_for_battle(
+            &classes,
+            &crate::item::ItemTable::default(),
+            &crate::spell::SpellTable::default(),
+            &skills,
+        );
+    };
+    let left = |u: &Unit| -> Vec<(String, u8)> {
+        let uses = u.skill_uses.uses_left.iter();
+        uses.map(|(id, n)| (id.0.clone(), *n)).collect()
+    };
+    // A Guard: 3 Braces, whatever it had left.
+    let mut u = unit_in("guard");
+    assert_eq!(left(&u), []);
+    u.skill_uses.uses_left.insert(sid("brace"), 0);
+    u.skill_uses.uses_left.insert(sid("gone"), 5);
+    prepare(&mut u);
+    assert_eq!(left(&u), [("brace".to_owned(), 3)]);
+    // A mastered class's active counts too; a combat active has no uses.
+    record(&mut u, "guard", 10);
+    u.class = ClassId("exile".into());
+    prepare(&mut u);
+    assert_eq!(left(&u), [("brace".to_owned(), 3), ("rally".to_owned(), 1)]);
+    u.class = ClassId("swordsman".into());
+    prepare(&mut u);
+    assert_eq!(left(&u), [("brace".to_owned(), 3)]);
+    // Only the highest rank of a family is usable, with its own uses.
+    let mut v = unit_in("exile");
+    record(&mut v, "exile", 10);
+    v.class = ClassId("commander".into());
+    prepare(&mut v);
+    assert_eq!(left(&v), [("rally_2".to_owned(), 2)]);
+}
+
 #[test]
 fn pay_cost_spends_durability_and_breaks_at_zero() {
     // More than is left: the rest is spent and the weapon breaks.
@@ -543,6 +684,7 @@ fn cost_error_messages() {
             CostError::NotEnoughUses { left: 1 },
             "it needs 2 spell uses and the spell has 1",
         ),
+        (CostError::NoUsesLeft, "it has no uses left this battle"),
     ];
     for (e, text) in cases {
         assert_eq!(e.to_string(), text);

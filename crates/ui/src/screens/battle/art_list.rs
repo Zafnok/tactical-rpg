@@ -81,6 +81,7 @@ pub fn reason_text(error: &CostError) -> String {
     match error {
         CostError::WeaponBroken => "broken".to_owned(),
         CostError::NotEnoughUses { left } => format!("{left} uses left"),
+        CostError::NoUsesLeft => "no uses left".to_owned(),
         CostError::NoWeapon | CostError::WrongSource => "can't pay".to_owned(),
     }
 }
@@ -143,7 +144,8 @@ pub fn art_choices(
     out
 }
 
-/// What a line costs: `−4 dur` or `+1 use` (empty for `Attack`).
+/// What a line costs: `−4 dur` or `+1 use` (empty for `Attack`). A cost in
+/// the skill's own uses reads `−1 use`, though no combat active has one.
 pub fn cost_label(state: &BattleState, technique: &Technique) -> String {
     let cost = match technique {
         Technique::Attack => None,
@@ -153,6 +155,7 @@ pub fn cost_label(state: &BattleState, technique: &Technique) -> String {
     match cost {
         Some(SkillCost::Durability(n)) => format!("−{n} dur"),
         Some(SkillCost::ExtraSpellUse) => "+1 use".to_owned(),
+        Some(SkillCost::Uses(_)) => "−1 use".to_owned(),
         None => String::new(),
     }
 }
@@ -298,6 +301,7 @@ mod tests {
             reason_text(&CostError::NotEnoughUses { left: 1 }),
             "1 uses left"
         );
+        assert_eq!(reason_text(&CostError::NoUsesLeft), "no uses left");
         assert_eq!(reason_text(&CostError::NoWeapon), "can't pay");
         assert_eq!(reason_text(&CostError::WrongSource), "can't pay");
     }
@@ -329,6 +333,25 @@ mod tests {
             },
         };
         assert_eq!(note_text(&ArtNote::Stance(stance)), "stance: +20 avo");
+    }
+
+    #[test]
+    fn costs_read_as_what_a_line_spends() {
+        let c = crate::screen::tests::ctx();
+        let (map, units) = crate::screens::battle::testing::quick_units(&c);
+        let rout = trpg_core::Objective::Rout { turn_limit: None };
+        let state = crate::screens::battle::testing::battle_with(&c, map, units, rout);
+        let active = |id: &str| cost_label(&state, &Technique::Active(SkillId::new(id)));
+        assert_eq!(cost_label(&state, &Technique::Attack), "");
+        assert_eq!(
+            cost_label(&state, &Technique::Art(ArtId::new("guard_break"))),
+            "−4 dur"
+        );
+        assert_eq!(active("keen_edge"), "−3 dur");
+        assert_eq!(active("overcast"), "+1 use");
+        // No combat active costs its own uses; a skill that does reads so.
+        assert_eq!(active("brace"), "−1 use");
+        assert_eq!(active("nope"), "");
     }
 
     #[test]

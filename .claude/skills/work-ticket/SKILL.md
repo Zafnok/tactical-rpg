@@ -58,6 +58,11 @@ Set `status: in-progress` in the ticket frontmatter.
   rules only in `core`; state changes only via `Command`s.
 - Touching input, controls, help bars, tips or any text that names a key:
   follow the `keyboard-input` skill (never hard-code a key).
+- Drawing a picture, or anything on the battle map: follow ADR-0038
+  (graphics are a skin). Pictures are sprite items from asset files; map
+  things go in the map scene and are painted by each map skin; nothing
+  about the look goes in `core`, the bots or play records; a test of what
+  happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
 - **Scope creep rule:** if you notice something else worth doing (a bug,
