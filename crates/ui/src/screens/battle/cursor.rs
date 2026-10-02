@@ -9,25 +9,13 @@ use std::f32::consts::TAU;
 use trpg_core::Pos;
 
 use crate::input::Action;
+pub use crate::map_view::CursorStyle;
 
 /// One full bright → dim → bright pulse, in seconds. *Tunable.*
 pub const BLINK_PERIOD: f32 = 1.0;
 
 /// The dimmest the cursor gets, as a fraction of full brightness. *Tunable.*
 pub const BLINK_MIN: f32 = 0.5;
-
-/// How the cursor is drawn (`docs/design/look-and-feel.md`): corner marks by
-/// default; bigger corners and the tile glow are accessibility options.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
-pub enum CursorStyle {
-    /// 3 px corner marks.
-    #[default]
-    Corners,
-    /// 4 px corner marks.
-    LargeCorners,
-    /// The tile's background tinted towards the cursor colour.
-    TileGlow,
-}
 
 /// The cursor: a map tile and the time into its pulse.
 #[derive(Debug, Clone, Copy, PartialEq)]

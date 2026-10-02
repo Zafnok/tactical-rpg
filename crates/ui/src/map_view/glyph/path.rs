@@ -5,15 +5,12 @@
 
 use trpg_core::Pos;
 
-use super::cursor::px_rect;
+use super::{Layout, px_rect};
 use crate::color::Rgb;
-use crate::console::{CELL_H_PX, CELL_W_PX};
 use crate::glyph_buffer::{Layer, Overlay, PxRect, Rect};
-use crate::screens::battle::camera::Camera;
-use crate::screens::battle::layout::{MAP_VIEW, TILE_W_CELLS};
 
 /// A tile's size in pixels (square).
-pub const TILE_PX: i32 = 16;
+const TILE_PX: i32 = 16;
 
 /// The path line's thickness, in pixels.
 pub const LINE_W: i32 = 3;
@@ -32,18 +29,10 @@ const ARROW_LEN: i32 = 6;
 /// Offset of the arrowhead's base from the tile's edge behind it.
 const ARROW_BASE: i32 = 5;
 
-/// The top-left pixel of `tile` on the console with `camera` (it may lie
-/// outside the viewport).
-fn tile_px(tile: Pos, camera: Camera) -> (i32, i32) {
-    let cx = MAP_VIEW.x + TILE_W_CELLS * (tile.x - camera.origin.x);
-    let cy = MAP_VIEW.y + (tile.y - camera.origin.y);
-    (cx * i32::from(CELL_W_PX), cy * i32::from(CELL_H_PX))
-}
-
 /// The line between the centres of adjacent tiles `a` and `b`; with
 /// `from_edge`, only the part outside `a`'s tile.
-fn segment(a: Pos, b: Pos, camera: Camera, from_edge: bool) -> PxRect {
-    let ((ax, ay), (bx, by)) = (tile_px(a, camera), tile_px(b, camera));
+fn segment(a: Pos, b: Pos, layout: &Layout, from_edge: bool) -> PxRect {
+    let ((ax, ay), (bx, by)) = (layout.tile_px(a), layout.tile_px(b));
     let (mut x0, mut y0) = (ax.min(bx) + LINE_OFFSET, ay.min(by) + LINE_OFFSET);
     let (mut x1, mut y1) = (
         ax.max(bx) + LINE_OFFSET + LINE_W,
@@ -63,8 +52,8 @@ fn segment(a: Pos, b: Pos, camera: Camera, from_edge: bool) -> PxRect {
 /// The arrowhead on tile `to`, pointing away from the adjacent tile `from`:
 /// [`ARROW_LEN`] stacked 1-px rects, 11 px across at the base down to 1 at
 /// the tip, centred on the line.
-fn arrowhead(from: Pos, to: Pos, camera: Camera) -> Vec<PxRect> {
-    let (px, py) = tile_px(to, camera);
+fn arrowhead(from: Pos, to: Pos, layout: &Layout) -> Vec<PxRect> {
+    let (px, py) = layout.tile_px(to);
     let mid = LINE_MID;
     (0..ARROW_LEN)
         .map(|i| {
@@ -83,9 +72,9 @@ fn arrowhead(from: Pos, to: Pos, camera: Camera) -> Vec<PxRect> {
 }
 
 /// The overlays drawing `path` (the unit's tile first) in `color`: nothing
-/// for a path of one tile. Clipped to the map viewport.
-pub fn path_overlays(path: &[Pos], camera: Camera, color: Rgb) -> Vec<Overlay> {
-    let view = px_rect(MAP_VIEW);
+/// for a path of one tile. Clipped to the tiles of `layout`.
+pub fn path_overlays(path: &[Pos], layout: &Layout, color: Rgb) -> Vec<Overlay> {
+    let view = px_rect(layout.cells());
     let mut out = Vec::new();
     let mut add = |rect: PxRect, layer| {
         if let Some(rect) = rect.intersect(&view) {
@@ -93,10 +82,10 @@ pub fn path_overlays(path: &[Pos], camera: Camera, color: Rgb) -> Vec<Overlay> {
         }
     };
     for (i, pair) in path.windows(2).enumerate() {
-        add(segment(pair[0], pair[1], camera, i == 0), Layer::Under);
+        add(segment(pair[0], pair[1], layout, i == 0), Layer::Under);
     }
     if let [.., from, to] = path {
-        for rect in arrowhead(*from, *to, camera) {
+        for rect in arrowhead(*from, *to, layout) {
             add(rect, Layer::Over);
         }
     }
@@ -106,6 +95,9 @@ pub fn path_overlays(path: &[Pos], camera: Camera, color: Rgb) -> Vec<Overlay> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::console::CELL_W_PX;
+    use crate::map_view::glyph::tests::layout_at;
+    use crate::screens::battle::layout::MAP_VIEW;
 
     const RED: Rgb = Rgb::new(255, 0, 0);
 
@@ -116,7 +108,7 @@ mod tests {
     /// The overlays of `path` with the camera at the origin, as
     /// `(layer, x, y, w, h)`.
     fn rects(path: &[Pos]) -> Vec<(Layer, i32, i32, i32, i32)> {
-        path_overlays(path, Camera::default(), RED)
+        path_overlays(path, &layout_at(p(0, 0)), RED)
             .iter()
             .map(|o| (o.layer, o.rect.x, o.rect.y, o.rect.w, o.rect.h))
             .collect()

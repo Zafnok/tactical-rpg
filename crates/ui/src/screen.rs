@@ -9,6 +9,7 @@
 
 use std::any::Any;
 use std::fmt;
+use std::rc::Rc;
 
 use trpg_content::{Content, ContentErrors};
 use trpg_core::lead::DEFAULT_NAME;
@@ -18,7 +19,7 @@ use crate::audio::{AudioQueue, MusicClock};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
-use crate::screens::battle::cursor::CursorStyle;
+use crate::map_view::{CursorStyle, MapSkin};
 use crate::storage::{MemoryStorage, Storage, StorageError};
 use crate::widgets::help::HelpKeys;
 
@@ -208,6 +209,9 @@ pub struct Ctx {
     /// an accessibility style). Lives here until the Options menu (0805)
     /// moves it into the saved settings.
     pub cursor_style: CursorStyle,
+    /// How battle maps look (ADR-0038): the glyph skin, unless a debug tool
+    /// swaps in another. Screens build a `MapScene` and this paints it.
+    pub map_skin: Rc<dyn MapSkin>,
     /// Whether battles show their one-time tips (0406). Off here, so
     /// screen tests aren't interrupted by them; `app` turns it on, and the
     /// Options menu (0805) will let the player switch it.
@@ -280,6 +284,7 @@ impl Ctx {
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
+            map_skin: crate::map_view::default_skin(),
             tips_enabled: false,
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),

@@ -2,18 +2,18 @@
 //! around the tile, or a glow on it.
 
 use super::units::HP_BAR_H;
+use super::{Layout, TILE_W_CELLS, px_rect};
 use crate::color::{Palette, UiColor};
 use crate::console::{CELL_H_PX, CELL_W_PX};
 use crate::glyph_buffer::{GlyphBuffer, Layer, Overlay, Rect};
-use crate::screens::battle::cursor::{Cursor, CursorStyle};
-use crate::screens::battle::layout::{MAP_VIEW, TILE_W_CELLS};
+use crate::map_view::scene::{CursorStyle, CursorView};
 
 /// How strongly the tile glow tints the tile at full brightness (`0` = not
 /// at all, `1` = solid `cursor` colour). *Tunable.*
 pub const GLOW_MAX: f32 = 0.3;
 
-/// Draws `cursor` in `style` on the tile whose left cell is `(x, y)`,
-/// clipped to the map viewport.
+/// Draws `cursor` in its style on the tile whose left cell is `(x, y)`,
+/// clipped to the tiles of `layout`.
 ///
 /// Corner marks are 1 px `Over` overlays that stay clear of every letter
 /// (ADR-0024): their vertical arms sit in the pixel column just left of the
@@ -23,25 +23,26 @@ pub const GLOW_MAX: f32 = 0.3;
 pub fn draw_cursor(
     buf: &mut GlyphBuffer,
     palette: &Palette,
-    cursor: &Cursor,
-    style: CursorStyle,
+    cursor: &CursorView,
+    layout: &Layout,
     x: i32,
     y: i32,
 ) {
     let color = palette.get(UiColor::Cursor);
-    let arm = match style {
+    let view = layout.cells();
+    let arm = match cursor.style {
         CursorStyle::Corners => 3,
         CursorStyle::LargeCorners => 4,
         CursorStyle::TileGlow => {
             let tile = Rect::new(x, y, TILE_W_CELLS, 1);
-            if let Some(tile) = tile.intersect(&MAP_VIEW) {
-                buf.blend_bg(tile, color, GLOW_MAX * cursor.brightness());
+            if let Some(tile) = tile.intersect(&view) {
+                buf.blend_bg(tile, color, GLOW_MAX * cursor.brightness);
             }
             return;
         }
     };
-    let fg = color.scale(cursor.brightness());
-    let view = px_rect(MAP_VIEW);
+    let fg = color.scale(cursor.brightness);
+    let view = px_rect(view);
     for r in corner_arms(x, y, arm) {
         if let Some(r) = r.intersect(&view) {
             buf.add_overlay(Overlay::new(r, fg, Layer::Over));
@@ -74,12 +75,6 @@ fn corner_arms(x: i32, y: i32, arm: i32) -> [Rect; 8] {
     ]
 }
 
-/// `cells` in console pixels.
-pub(super) fn px_rect(cells: Rect) -> Rect {
-    let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
-    Rect::new(cells.x * cw, cells.y * ch, cells.w * cw, cells.h * ch)
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
@@ -89,6 +84,27 @@ mod tests {
     use crate::color::Rgb;
     use crate::color::tests::game_palette;
     use crate::glyph_buffer::Cell;
+    use crate::map_view::glyph::tests::layout_at;
+    use crate::screens::battle::cursor::Cursor;
+    use crate::screens::battle::layout::MAP_VIEW;
+
+    /// Draws `cursor` in `style` on the tile whose left cell is `(x, y)` of
+    /// the battle screen's map area.
+    fn draw(
+        buf: &mut GlyphBuffer,
+        palette: &Palette,
+        cursor: &Cursor,
+        style: CursorStyle,
+        x: i32,
+        y: i32,
+    ) {
+        let view = CursorView {
+            pos: cursor.pos,
+            brightness: cursor.brightness(),
+            style,
+        };
+        draw_cursor(buf, palette, &view, &layout_at(Pos::new(0, 0)), x, y);
+    }
 
     /// A 100 × 32 buffer of `.` on a dark background.
     fn dots() -> GlyphBuffer {
@@ -110,7 +126,7 @@ mod tests {
         let mut buf = dots();
         let before = buf.clone();
         // Tile at cells (10, 4)-(11, 4): pixels x 80..96, y 64..80.
-        draw_cursor(&mut buf, &p, &c, CursorStyle::Corners, 10, 4);
+        draw(&mut buf, &p, &c, CursorStyle::Corners, 10, 4);
         let r = Rect::new;
         assert_eq!(
             rects(&buf),
@@ -138,7 +154,7 @@ mod tests {
     fn large_corners_have_longer_arms() {
         let p = game_palette();
         let mut buf = dots();
-        draw_cursor(
+        draw(
             &mut buf,
             &p,
             &Cursor::new(Pos::new(0, 0)),
@@ -168,7 +184,7 @@ mod tests {
         let mut c = Cursor::new(Pos::new(0, 0));
         c.tick(0.5);
         let mut buf = dots();
-        draw_cursor(&mut buf, &p, &c, CursorStyle::Corners, 10, 4);
+        draw(&mut buf, &p, &c, CursorStyle::Corners, 10, 4);
         let dim = p.get(UiColor::Cursor).scale(0.5);
         assert!(buf.overlays().iter().all(|o| o.color == dim));
     }
@@ -180,7 +196,7 @@ mod tests {
         let mut c = Cursor::new(Pos::new(0, 0));
         let mut buf = dots();
         let bg = Rgb::new(9, 9, 9);
-        draw_cursor(&mut buf, &p, &c, CursorStyle::TileGlow, 10, 4);
+        draw(&mut buf, &p, &c, CursorStyle::TileGlow, 10, 4);
         let bright = bg.lerp(cursor, GLOW_MAX);
         let cell = |b: &GlyphBuffer, x| *b.get(x, 4).unwrap();
         assert_eq!(cell(&buf, 10), Cell::new('.', Rgb::new(1, 1, 1), bright));
@@ -190,14 +206,8 @@ mod tests {
         assert!(buf.overlays().is_empty());
         c.tick(0.5);
         let mut dim = dots();
-        draw_cursor(&mut dim, &p, &c, CursorStyle::TileGlow, 10, 4);
+        draw(&mut dim, &p, &c, CursorStyle::TileGlow, 10, 4);
         assert_eq!(cell(&dim, 10).bg, bg.lerp(cursor, GLOW_MAX * 0.5));
-    }
-
-    #[test]
-    fn px_rect_scales_cells_to_pixels() {
-        assert_eq!(px_rect(Rect::new(3, 2, 5, 4)), Rect::new(24, 32, 40, 64));
-        assert_eq!(px_rect(MAP_VIEW), Rect::new(0, 0, 560, 480));
     }
 
     #[test]
@@ -208,7 +218,7 @@ mod tests {
         for style in [CursorStyle::Corners, CursorStyle::LargeCorners] {
             for (x, y) in [(0, 0), (68, 29), (0, 29), (68, 0)] {
                 let mut buf = dots();
-                draw_cursor(&mut buf, &p, &c, style, x, y);
+                draw(&mut buf, &p, &c, style, x, y);
                 assert!(!buf.overlays().is_empty());
                 for r in rects(&buf) {
                     assert_eq!(
@@ -222,7 +232,7 @@ mod tests {
         // At the left edge the left arms' column is off the viewport: the
         // vertical ones go, the horizontal ones lose a pixel.
         let mut buf = dots();
-        draw_cursor(&mut buf, &p, &c, CursorStyle::Corners, 0, 0);
+        draw(&mut buf, &p, &c, CursorStyle::Corners, 0, 0);
         assert_eq!(
             rects(&buf)[..2],
             [Rect::new(0, 0, 2, 1), Rect::new(13, 0, 3, 1)]
@@ -231,7 +241,7 @@ mod tests {
         for style in [CursorStyle::Corners, CursorStyle::TileGlow] {
             let mut buf = dots();
             let before = buf.clone();
-            draw_cursor(&mut buf, &p, &c, style, 10, 30);
+            draw(&mut buf, &p, &c, style, 10, 30);
             assert_eq!(buf, before);
         }
     }
@@ -258,7 +268,7 @@ mod tests {
             let mut buf = dots();
             let before = buf.clone();
             let (x, y) = (tx * TILE_W_CELLS, ty);
-            draw_cursor(&mut buf, &p, &c, style, x, y);
+            draw(&mut buf, &p, &c, style, x, y);
             for cy in 0..32 {
                 for cx in 0..100 {
                     let (a, b) = (before.get(cx, cy).unwrap(), buf.get(cx, cy).unwrap());

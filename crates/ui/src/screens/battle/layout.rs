@@ -3,17 +3,9 @@
 
 use crate::glyph_buffer::Rect;
 
-/// Cells per map tile, across (a tile is two glyphs wide, ADR-0018).
-pub const TILE_W_CELLS: i32 = 2;
-
-/// The map viewport, in cells: the left 70 columns, rows `0..30`.
+/// The map viewport, in cells: the left 70 columns, rows `0..30`. How many
+/// tiles it shows is the map skin's to say (ADR-0038).
 pub const MAP_VIEW: Rect = Rect::new(0, 0, 70, 30);
-
-/// Viewport width in tiles (35).
-pub const VIEW_TILES_W: i32 = MAP_VIEW.w / TILE_W_CELLS;
-
-/// Viewport height in tiles (30).
-pub const VIEW_TILES_H: i32 = MAP_VIEW.h;
 
 /// The side panel (single-line box), right of the map.
 pub const SIDE_PANEL: Rect = Rect::new(70, 0, 30, 30);
@@ -32,7 +24,6 @@ mod tests {
 
     #[test]
     fn regions_tile_the_console() {
-        assert_eq!((VIEW_TILES_W, VIEW_TILES_H), (35, 30));
         assert_eq!(MAP_VIEW.x + MAP_VIEW.w, SIDE_PANEL.x);
         assert_eq!(SIDE_PANEL.x + SIDE_PANEL.w, i32::from(CONSOLE_W));
         assert_eq!(MAP_VIEW.h, SIDE_PANEL.h);

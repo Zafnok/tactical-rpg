@@ -3,16 +3,17 @@
 //! dimmed once it has acted (the label keeps its case), and a 2-px HP bar
 //! along the bottom of its tile.
 
-use trpg_core::{StatValue, Unit};
+use trpg_core::StatValue;
 
+use super::TILE_W_CELLS;
 use crate::color::{Palette, UiColor};
 use crate::console::{CELL_H_PX, CELL_W_PX};
 use crate::glyph_buffer::{Cell, GlyphBuffer, Layer, Overlay, Rect};
-use crate::screens::battle::layout::TILE_W_CELLS;
+use crate::map_view::scene::UnitView;
 use crate::screens::battle::units::{faction_color, hp_fill};
 
 /// Full HP bar length, in pixels: the tile's width (two 8-px cells).
-pub const HP_BAR_W: i32 = 16;
+const HP_BAR_W: i32 = 16;
 
 /// HP bar thickness, in pixels, at the bottom of the tile.
 pub const HP_BAR_H: i32 = 2;
@@ -33,24 +34,14 @@ pub fn hp_bar(hp: StatValue, max: StatValue) -> (i32, UiColor) {
 
 /// Draws `unit` on the tile whose left cell is `(x, y)`: the label over the
 /// cells' existing (terrain) background, then the HP bar overlays.
-pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &Unit, x: i32, y: i32) {
-    draw_fading_unit(buf, palette, unit, x, y, 0.0);
-}
-
-/// Draws `unit` as [`draw_unit`] does, `fade` of the way through falling
-/// (ticket 0404): over the first half its label and HP bar fade into the
-/// tile's background, over the second half the terrain's glyphs fade back
-/// in; at `1` (or more) only the terrain is left.
-pub fn draw_fading_unit(
-    buf: &mut GlyphBuffer,
-    palette: &Palette,
-    unit: &Unit,
-    x: i32,
-    y: i32,
-    fade: f32,
-) {
-    let fade = if fade.is_finite() {
-        fade.clamp(0.0, 1.0)
+///
+/// A unit part of the way through falling ([`UnitView::fade`], ticket 0404)
+/// fades: over the first half its label and HP bar fade into the tile's
+/// background, over the second half the terrain's glyphs fade back in; at
+/// `1` (or more) only the terrain is left.
+pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i32, y: i32) {
+    let fade = if unit.fade.is_finite() {
+        unit.fade.clamp(0.0, 1.0)
     } else {
         0.0
     };
@@ -68,7 +59,7 @@ pub fn draw_fading_unit(
     let faction = palette.get(faction_color(unit.faction));
     let effect = palette.get(UiColor::Effect);
     let tile_bg = buf.get(x, y).map_or(faction, |c| c.bg);
-    for (i, glyph) in (0..).zip(unit.map_label.chars()) {
+    for (i, glyph) in (0..TILE_W_CELLS).zip(unit.label.chars()) {
         let Some(&cell) = buf.get(x + i, y) else {
             continue;
         };
@@ -80,14 +71,14 @@ pub fn draw_fading_unit(
         let fg = fg.lerp(cell.bg, k);
         // Under a timed effect (a buff or a debuff) the glyphs sit on the
         // effect colour, so it shows on the map (0412).
-        let bg = if unit.effects.is_empty() {
-            cell.bg
-        } else {
+        let bg = if unit.has_effect {
             cell.bg.lerp(effect, EFFECT_BLEND)
+        } else {
+            cell.bg
         };
         buf.set(x + i, y, Cell { glyph, fg, bg });
     }
-    let (width, color) = hp_bar(unit.hp, unit.stats.hp);
+    let (width, color) = hp_bar(unit.hp.0, unit.hp.1);
     let px = x * i32::from(CELL_W_PX);
     let py = (y + 1) * i32::from(CELL_H_PX) - HP_BAR_H;
     let bar = |bx: i32, w: i32, c: UiColor| {
@@ -102,13 +93,13 @@ pub fn draw_fading_unit(
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use trpg_core::{ClassId, Faction, Pos, Stats, UnitId};
+    use trpg_core::{ClassId, Faction, Pos, Stats, Unit, UnitId};
 
     use super::*;
     use crate::color::Rgb;
     use crate::color::tests::game_palette;
 
-    fn unit(label: &str, hp: StatValue, max: StatValue, acted: bool) -> Unit {
+    fn unit(label: &str, hp: StatValue, max: StatValue, acted: bool) -> UnitView {
         let content = trpg_content::load_embedded().unwrap();
         let mut u = Unit::generic(
             UnitId(1),
@@ -123,7 +114,7 @@ mod tests {
         u.stats = Stats { hp: max, ..u.stats };
         u.hp = hp;
         u.acted = acted;
-        u
+        UnitView::of(&u)
     }
 
     #[test]
@@ -157,7 +148,7 @@ mod tests {
         }
     }
 
-    fn drawn(u: &Unit) -> GlyphBuffer {
+    fn drawn(u: &UnitView) -> GlyphBuffer {
         let p = game_palette();
         let bg = Rgb::new(0, 0, 100);
         let mut b = GlyphBuffer::new(4, 2, Cell::new('.', Rgb::new(1, 1, 1), bg));
@@ -193,7 +184,7 @@ mod tests {
         let fading = |fade| {
             let mut b = GlyphBuffer::new(4, 2, Cell::new('.', terrain, bg));
             tile(&mut b);
-            draw_fading_unit(&mut b, &p, &unit("Br", 15, 30, false), 1, 1, fade);
+            draw_unit(&mut b, &p, &unit("Br", 15, 30, false).fading(fade), 1, 1);
             b
         };
         let enemy = p.get(UiColor::Enemy);

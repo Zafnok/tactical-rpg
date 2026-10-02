@@ -15,6 +15,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys, or controller buttons when a pad was pressed last) |
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
+| `map_view` | The battle map (ADR-0038): `MapScene` (what is on the visible map, plain data), `MapSkin` (how it looks) and the `GlyphSkin`. See *Map view* below |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
 | `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
@@ -53,6 +54,51 @@ Until a layout is picked, `Keymap::layout_picker` is active (`Up`/`w`,
 
 In debug builds `Game` handles the `Debug` action (F2) itself and pushes the
 debug menu (unless a debug screen is already on top).
+
+## Map view
+
+The battle map is not drawn by the battle screen (ADR-0038). Each frame:
+
+1. `BattleScreen::scene(ctx)` builds a `MapScene`: the visible tiles (their
+   terrain and the ranges on them: danger, move, attack, heal), the units
+   on them (where each is drawn, HP, acted, under an effect, how far it has
+   faded), the cursor (if shown) and the selected unit's path. Plain data:
+   no colours, glyphs, cells or pixels.
+2. `ctx.map_skin.paint(ctx, &scene, MAP_VIEW, buf)` paints it. The only
+   skin so far is the `GlyphSkin` (`map_view/glyph`): today's look.
+3. Menus and heal numbers go beside a tile by asking the skin where it is
+   (`tile_px` / `tile_cells`).
+
+Rules:
+
+- **The tile size is the skin's.** Nothing outside `map_view/glyph` knows a
+  tile is two cells or 16 pixels. The camera gets the view's size in tiles
+  from `skin.view_tiles(area)`.
+- **A new thing on the map** (a village, a spell's flash on a tile) is a new
+  field of `MapScene`, set in `BattleScreen::scene` and painted by every
+  skin. Never draw it into the buffer from the battle screen.
+- **A skin never changes the game**: only the frame and how many tiles are
+  on screen. It must paint nothing outside the area it is given.
+- **Tests of what happened read the scene** (or the `BattleState`), not
+  cells and colours: `screen.scene(&ctx)` in unit tests, `h.map_scene()` /
+  `h.map_text()` in Harness tests. Only tests of a skin's look read the
+  buffer.
+
+`MapScene::to_text(&content)` is the scene as text, for snapshots and bug
+reports:
+
+```text
+origin (-10,-11) size 35x30
+   0: -*10 sea*3 water*2 plain+m*2 forest+da -*17
+units 1
+  #4 Br enemy brigand (7,3) hp 20/30 acted effect fade=0.25
+cursor (3,5) corners 1.00
+path (3,5) (4,5)
+```
+
+One line per row of tiles (`-` = off the map, `+` then a letter per range:
+`d` danger, `m` move, `a` attack, `h` heal; `*n` = `n` such tiles in a
+row), then the units, the cursor and the path.
 
 ## Adding a screen
 
@@ -145,6 +191,9 @@ fn select_opens_new_game() {
   repeats), then releases it. `wait(0.2)`: time passes with no input. One
   call runs at most `MAX_FRAMES` (2 000, ~33 s); longer ones panic.
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
+- `map_scene()`: what the battle on the stack shows on its map, as a
+  `MapScene` (`None` with no battle); `map_text()`: the same as text. Use
+  these to check what happened on the map (*Map view* above).
 - `flow()` / `flow_mut()`: the game flow on the stack; `flow_mut()` →
   `battle_mut()` → `send(&Command)` plays its battle with scripted
   commands (`crates/ui/tests/flow.rs`).

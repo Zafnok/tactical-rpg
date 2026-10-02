@@ -15,6 +15,7 @@ use crate::color::{Rgb, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
+use crate::map_view::RangeKind;
 use crate::map_view::glyph::units::EFFECT_BLEND;
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, Screen};
@@ -558,4 +559,41 @@ fn the_info_screen_lists_at_most_two_effects_and_six_skills() {
         .filter(|r| r.starts_with("P ") || r.starts_with("A "))
         .count();
     assert_eq!(listed, 6, "{rows:?}");
+}
+
+/// The map scene (ADR-0038) while choosing who to shove: the skill's
+/// targets are an attack range, the user stands where it will act from and
+/// the cursor is on the target.
+#[test]
+fn the_scene_marks_who_a_skill_can_target() {
+    let mut c = ctx();
+    let state = battle(&c, |units| {
+        units[0].pos = p(6, 2);
+        learn(&c, &mut units[0], "shove");
+    });
+    let mut s = lord_menu(&mut c, state);
+    focus_entry(&mut s, &mut c, MenuEntry::Skill);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    let Mode::SkillMenu { choices, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    let i = choices.iter().position(|c| c.skill.0 == "shove").unwrap();
+    // The skill list: no cursor, no range.
+    let scene = s.scene(&c);
+    assert_eq!(scene.cursor, None);
+    assert!(scene.tinted(RangeKind::Attack).is_empty());
+    for _ in 0..i {
+        step(&mut s, &mut c, &[Action::CursorDown]);
+    }
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::SkillTarget(_)), "{:?}", s.mode());
+    let scene = s.scene(&c);
+    // The raider above and the brigand to the right of (7, 2).
+    assert_eq!(scene.tinted(RangeKind::Attack), [p(7, 1), p(8, 2)]);
+    for kind in [RangeKind::Danger, RangeKind::Move, RangeKind::Heal] {
+        assert!(scene.tinted(kind).is_empty(), "{kind:?}");
+    }
+    assert_eq!(scene.unit(UnitId(1)).map(|u| u.pos), Some(p(7, 2)));
+    assert_eq!(scene.cursor.map(|c| c.pos), Some(p(7, 1)));
+    assert!(scene.path.is_empty());
 }

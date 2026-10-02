@@ -7,9 +7,10 @@ use trpg_content::FontAtlasDef;
 use trpg_core::{ItemId, Objective, Outcome, UnitAction};
 
 use super::banner::{BannerKind, PHASE_BANNER_S};
-use super::testing::{battle_with, skirmish, through_ai_phases, wait};
+use super::testing::{battle_with, skirmish, through_ai_phases, tile_cell, wait};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
+use crate::map_view::glyph::OVERLAY_BLEND;
 use crate::screen::tests::ctx;
 
 fn quick() -> BattleScreen {
@@ -107,7 +108,7 @@ fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
     for y in 0..i32::from(tiles.height()) {
         for x in 0..i32::from(tiles.width()) {
             let pos = Pos::new(x, y);
-            let (cx, cy) = tile_to_cell(pos, &s.camera()).unwrap();
+            let (cx, cy) = tile_cell(&s, &c, pos).unwrap();
             let was = plain.get(cx, cy).unwrap().bg;
             let want = if expected.contains(pos) {
                 was.lerp(danger, OVERLAY_BLEND)
@@ -129,7 +130,7 @@ fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
         panic!("{:?}", s.mode());
     };
     let both = sel.moves.iter().find(|&p| expected.contains(p)).unwrap();
-    let (cx, cy) = tile_to_cell(both, &s.camera()).unwrap();
+    let (cx, cy) = tile_cell(&s, &c, both).unwrap();
     let under = plain.get(cx, cy).unwrap().bg.lerp(danger, OVERLAY_BLEND);
     let blue = c.palette.get(UiColor::MoveRange);
     assert_eq!(buf.get(cx, cy).unwrap().bg, under.lerp(blue, OVERLAY_BLEND));

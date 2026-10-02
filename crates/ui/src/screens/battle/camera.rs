@@ -1,8 +1,7 @@
-//! The battle camera: which map tiles the viewport shows.
+//! The battle camera: which map tiles the viewport shows. How many tiles
+//! that is (the view's size) comes from the map skin (ADR-0038).
 
 use trpg_core::Pos;
-
-use super::layout::{VIEW_TILES_H, VIEW_TILES_W};
 
 /// The map tile shown in the viewport's top-left corner. It can be negative
 /// (or run past the map) when the map is smaller than the viewport: the map
@@ -17,24 +16,25 @@ impl Camera {
     /// Default [`follow`](Self::follow) margin, in tiles.
     pub const MARGIN: i32 = 3;
 
-    /// A camera with `target` as near the viewport's centre as the map
-    /// allows, on a `map_w × map_h` map.
-    pub fn centred_on(target: Pos, map_w: u16, map_h: u16) -> Self {
+    /// A camera with `target` as near the centre of a viewport of `view`
+    /// tiles (across, down) as the map allows, on a `map_w × map_h` map.
+    pub fn centred_on(target: Pos, map_w: u16, map_h: u16, view: (i32, i32)) -> Self {
         let origin = Pos::new(
-            clamp_axis(target.x - VIEW_TILES_W / 2, map_w, VIEW_TILES_W),
-            clamp_axis(target.y - VIEW_TILES_H / 2, map_h, VIEW_TILES_H),
+            clamp_axis(target.x - view.0 / 2, map_w, view.0),
+            clamp_axis(target.y - view.1 / 2, map_h, view.1),
         );
         Self { origin }
     }
 
     /// Scrolls as little as possible so `target` is at least `margin` tiles
-    /// from each viewport edge, without showing past the map's edges. On an
-    /// axis where the map is smaller than the viewport, the map is centred.
-    /// A margin over half the viewport is treated as half.
-    pub fn follow(&mut self, target: Pos, map_w: u16, map_h: u16, margin: i32) {
+    /// from each edge of a viewport of `view` tiles (across, down), without
+    /// showing past the map's edges. On an axis where the map is smaller
+    /// than the viewport, the map is centred. A margin over half the
+    /// viewport is treated as half.
+    pub fn follow(&mut self, target: Pos, map_w: u16, map_h: u16, view: (i32, i32), margin: i32) {
         self.origin = Pos::new(
-            follow_axis(self.origin.x, target.x, map_w, VIEW_TILES_W, margin),
-            follow_axis(self.origin.y, target.y, map_h, VIEW_TILES_H, margin),
+            follow_axis(self.origin.x, target.x, map_w, view.0, margin),
+            follow_axis(self.origin.y, target.y, map_h, view.1, margin),
         );
     }
 }
@@ -63,7 +63,15 @@ mod tests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::map_view::glyph::tile_to_cell;
+
+    /// The battle screen's view with the glyph skin: 35 × 30 tiles.
+    const VIEW: (i32, i32) = (35, 30);
+
+    /// Whether `tile` is in a `view`-tile viewport of camera `c`.
+    fn visible(tile: Pos, c: Camera, view: (i32, i32)) -> bool {
+        (c.origin.x..c.origin.x + view.0).contains(&tile.x)
+            && (c.origin.y..c.origin.y + view.1).contains(&tile.y)
+    }
 
     fn cam(x: i32, y: i32) -> Camera {
         Camera {
@@ -73,7 +81,7 @@ mod tests {
 
     fn followed(from: Camera, target: Pos, w: u16, h: u16) -> Pos {
         let mut c = from;
-        c.follow(target, w, h, Camera::MARGIN);
+        c.follow(target, w, h, VIEW, Camera::MARGIN);
         c.origin
     }
 
@@ -84,7 +92,10 @@ mod tests {
             assert_eq!(followed(cam(0, 0), target, 14, 8), Pos::new(-10, -11));
             assert_eq!(followed(cam(5, 9), target, 14, 8), Pos::new(-10, -11));
         }
-        assert_eq!(Camera::centred_on(Pos::new(0, 0), 14, 8), cam(-10, -11));
+        assert_eq!(
+            Camera::centred_on(Pos::new(0, 0), 14, 8, VIEW),
+            cam(-10, -11)
+        );
         // Exactly viewport-sized: origin 0.
         assert_eq!(
             followed(cam(3, 3), Pos::new(34, 29), 35, 30),
@@ -115,9 +126,10 @@ mod tests {
             followed(cam(-5, 99), Pos::new(10, 20), w, h),
             Pos::new(0, 10)
         );
-        assert_eq!(Camera::centred_on(Pos::new(63, 39), w, h), cam(29, 10));
-        assert_eq!(Camera::centred_on(Pos::new(0, 0), w, h), cam(0, 0));
-        assert_eq!(Camera::centred_on(Pos::new(32, 20), w, h), cam(15, 5));
+        let centred = |x, y| Camera::centred_on(Pos::new(x, y), w, h, VIEW);
+        assert_eq!(centred(63, 39), cam(29, 10));
+        assert_eq!(centred(0, 0), cam(0, 0));
+        assert_eq!(centred(32, 20), cam(15, 5));
     }
 
     #[test]
@@ -134,13 +146,41 @@ mod tests {
         assert_eq!(followed(start, Pos::new(60, 3), w, h), Pos::new(29, 0));
         // Custom and oversized margins.
         let mut c = start;
-        c.follow(Pos::new(10, 10), w, h, 0);
+        c.follow(Pos::new(10, 10), w, h, VIEW, 0);
         assert_eq!(c.origin, Pos::new(10, 10));
-        c.follow(Pos::new(30, 30), w, h, 99);
+        c.follow(Pos::new(30, 30), w, h, VIEW, 99);
         // Clamped to half the view (17, 14): the least scroll that centres it.
         assert_eq!(c.origin, Pos::new(13, 15));
-        c.follow(Pos::new(30, 30), w, h, -4);
+        c.follow(Pos::new(30, 30), w, h, VIEW, -4);
         assert_eq!(c.origin, Pos::new(13, 15));
+    }
+
+    #[test]
+    fn the_view_size_is_the_callers() {
+        // A 17 × 15 view (a skin with bigger tiles) on a 64 × 40 map.
+        let view = (17, 15);
+        let centred = |x, y, w, h| Camera::centred_on(Pos::new(x, y), w, h, view);
+        assert_eq!(centred(32, 20, 64, 40), cam(24, 13));
+        assert_eq!(centred(63, 39, 64, 40), cam(47, 25));
+        assert_eq!(centred(0, 0, 64, 40), cam(0, 0));
+        // A 14 × 8 map is smaller than it: centred, 1 blank tile left and 3
+        // above.
+        assert_eq!(centred(3, 5, 14, 8), cam(-1, -3));
+        // Across and down are separate.
+        assert_eq!(
+            Camera::centred_on(Pos::new(32, 20), 64, 40, (10, 4)),
+            cam(27, 18)
+        );
+        let mut c = cam(0, 0);
+        c.follow(Pos::new(20, 20), 64, 40, view, 3);
+        assert_eq!(c.origin, Pos::new(7, 9));
+        c.follow(Pos::new(8, 10), 64, 40, view, 3);
+        assert_eq!(c.origin, Pos::new(5, 7));
+        assert!(visible(Pos::new(8, 10), c, view));
+        assert!(!visible(Pos::new(22, 10), c, view));
+        assert!(!visible(Pos::new(8, 22), c, view));
+        assert!(!visible(Pos::new(4, 10), c, view));
+        assert!(!visible(Pos::new(8, 6), c, view));
     }
 
     proptest! {
@@ -149,12 +189,13 @@ mod tests {
             ox in -100..100i32, oy in -100..100i32,
             tx in 0..64i32, ty in 0..64i32,
             w in 1u16..65, h in 1u16..65, margin in 0..10i32,
+            view in (1..40i32, 1..40i32),
         ) {
             let target = Pos::new(tx.min(i32::from(w) - 1), ty.min(i32::from(h) - 1));
             let mut c = cam(ox, oy);
-            c.follow(target, w, h, margin);
-            prop_assert!(tile_to_cell(target, &c).is_some());
-            for (o, len, view) in [(c.origin.x, w, VIEW_TILES_W), (c.origin.y, h, VIEW_TILES_H)] {
+            c.follow(target, w, h, view, margin);
+            prop_assert!(visible(target, c, view));
+            for (o, len, view) in [(c.origin.x, w, view.0), (c.origin.y, h, view.1)] {
                 let len = i32::from(len);
                 if len > view {
                     prop_assert!(o >= 0 && o + view <= len);
