@@ -9,6 +9,7 @@
 //! b = fg:player bg:#1c3a79
 //! --- overlays ---
 //! over  18,46 11x2  hp_mid
+//! over  sprite 8,8 80x80  images/test_card.png 0,0 16x16
 //! ```
 //!
 //! Each distinct (fg, bg) pair gets a key in first-seen order (row-major):
@@ -16,15 +17,20 @@
 //! use more than 62 pairs. Colours print as their palette name when one
 //! matches exactly, else as `#rrggbb`. Lines end in `\n` on every OS.
 //!
-//! The overlays section (ADR-0018) lists each overlay in drawing order as
-//! `layer  x,y wxh  colour`, in console pixels; it is left out when there are
-//! none.
+//! The overlays section lists the buffer's items in drawing order, in
+//! console pixels; it is left out when there are none. A rectangle
+//! (ADR-0018) is `layer  x,y wxh  colour`. A sprite (ADR-0038) is
+//! `layer  sprite x,y wxh  image x,y wxh`: where it is drawn (`dest`), the
+//! image's path in the asset bundle, and the part of the image shown
+//! (`src`). After that come, only when they aren't the default, ` flip`,
+//! ` opacity=N` (below 255) and ` clip=x,y wxh` (not all of `dest` is
+//! drawn).
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use crate::color::{Palette, Rgb};
-use crate::glyph_buffer::GlyphBuffer;
+use crate::glyph_buffer::{GlyphBuffer, Item, PxRect, Sprite};
 
 /// Shown instead of control characters, which would break the row layout.
 const CONTROL_GLYPH: char = '\u{fffd}';
@@ -71,24 +77,42 @@ impl GlyphBuffer {
         for (k, fg, bg) in legend {
             let _ = writeln!(out, "{k} = fg:{} bg:{}", name(fg), name(bg));
         }
-        if !self.overlays().is_empty() {
+        if !self.items().is_empty() {
             out.push_str("--- overlays ---\n");
         }
-        for o in self.overlays() {
-            let r = o.rect;
-            let _ = writeln!(
-                out,
-                "{:<5} {},{} {}x{}  {}",
-                o.layer.name(),
-                r.x,
-                r.y,
-                r.w,
-                r.h,
-                name(o.color)
-            );
+        for item in self.items() {
+            let layer = item.layer().name();
+            match item {
+                Item::Rect(o) => {
+                    let _ = writeln!(out, "{layer:<5} {}  {}", px(o.rect), name(o.color));
+                }
+                Item::Sprite(s) => {
+                    let _ = writeln!(out, "{layer:<5} {}", sprite_line(s));
+                }
+            }
         }
         out
     }
+}
+
+/// `x,y wxh`.
+fn px(r: PxRect) -> String {
+    format!("{},{} {}x{}", r.x, r.y, r.w, r.h)
+}
+
+/// A sprite's snapshot line, after the layer.
+fn sprite_line(s: &Sprite) -> String {
+    let mut line = format!("sprite {}  {} {}", px(s.dest), s.image.path(), px(s.src));
+    if s.flip_x {
+        line.push_str(" flip");
+    }
+    if s.opacity != u8::MAX {
+        let _ = write!(line, " opacity={}", s.opacity);
+    }
+    if s.clip != s.dest {
+        let _ = write!(line, " clip={}", px(s.clip));
+    }
+    line
 }
 
 /// The `n`th legend key.
@@ -180,6 +204,55 @@ mod tests {
              --- overlays ---\n\
              over  18,14 5x2  hp_mid\n\
              under 0,7 24x3  #010203\n"
+        );
+    }
+
+    #[test]
+    fn sprites_are_listed_with_the_rectangles_in_drawing_order() {
+        use crate::glyph_buffer::{Layer, Overlay};
+        let p = game_palette();
+        let text = p.get(UiColor::Text);
+        let images = trpg_content::ImageTable::load().unwrap();
+        let card = images.id(trpg_content::image::TEST_CARD_PATH).unwrap();
+        let src = Rect::new(0, 0, 16, 16);
+        let mut b = GlyphBuffer::new(20, 6, Cell::new(' ', text, text));
+        let plain = Sprite::new(card, src, Rect::new(8, 8, 80, 80), Layer::Over);
+        b.add_sprite(plain);
+        b.add_overlay(Overlay::new(Rect::new(0, 7, 24, 3), text, Layer::Under));
+        b.add_sprite(Sprite {
+            flip_x: true,
+            ..Sprite::new(
+                card,
+                Rect::new(8, 0, 8, 4),
+                Rect::new(0, 0, 16, 8),
+                Layer::Under,
+            )
+        });
+        b.add_sprite(Sprite {
+            opacity: 128,
+            ..plain
+        });
+        b.add_sprite(Sprite {
+            clip: Rect::new(8, 8, 40, 80),
+            ..plain
+        });
+        b.add_sprite(Sprite {
+            flip_x: true,
+            opacity: 0,
+            clip: Rect::new(48, 40, 80, 80),
+            ..plain
+        });
+        assert_eq!(
+            b.to_snapshot(&p)
+                .split_once("--- overlays ---\n")
+                .unwrap()
+                .1,
+            "over  sprite 8,8 80x80  images/test_card.png 0,0 16x16\n\
+             under 0,7 24x3  text\n\
+             under sprite 0,0 16x8  images/test_card.png 8,0 8x4 flip\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 opacity=128\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 clip=8,8 40x80\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 flip opacity=0 clip=48,40 40x48\n"
         );
     }
 

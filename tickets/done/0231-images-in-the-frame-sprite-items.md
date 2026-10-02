@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-01
 ---
 
 # 0231 — Images in the frame: sprite items
@@ -128,23 +128,23 @@ None.
 
 ## Acceptance criteria
 
-- [ ] Unit: `add_sprite` clips and drops; `fill_rect` over half a sprite
+- [x] Unit: `add_sprite` clips and drops; `fill_rect` over half a sprite
       leaves sprites whose `clip`s cover exactly the rest; `blit` offsets
       `dest` and `clip`.
-- [ ] Property: after any mix of `add_sprite`, `add_overlay`, `fill_rect`
+- [x] Property: after any mix of `add_sprite`, `add_overlay`, `fill_rect`
       and `blit`, every item's visible rectangle lies inside
       `pixel_bounds()`, and no sprite `clip` overlaps a cell filled after
       it was added.
-- [ ] Every existing snapshot is unchanged.
-- [ ] Snapshot of the "Sprite test" tool, with one sprite line per sprite.
-- [ ] Content test: a non-PNG file named `.png` and an oversize image each
+- [x] Every existing snapshot is unchanged.
+- [x] Snapshot of the "Sprite test" tool, with one sprite line per sprite.
+- [x] Content test: a non-PNG file named `.png` and an oversize image each
       give their error; the embedded table lists `images/test_card.png`
       16×16.
-- [ ] The tool was looked at on native and web; Completion notes say what
+- [x] The tool was looked at on native and web; Completion notes say what
       was seen.
-- [ ] `trpg-ui` and `trpg-content` still decode no image
+- [x] `trpg-ui` and `trpg-content` still decode no image
       (`cargo tree -p trpg-ui -e normal` has no `png` or `image` crate).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -155,5 +155,87 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Done. A frame can now hold pictures: `GlyphBuffer::add_sprite(Sprite)`
+puts part of an image file on the frame, `app` draws it from a texture,
+and a snapshot shows it as one line. Nothing in the game uses it yet
+except the new "Sprite test" debug tool (F2, last entry); 0711, 0413, 0433
+and 0232 build on it.
+
+**For Nick:** nothing to decide and no gameplay rule was added. After the
+merge you can look at it on Pages: F2, then "Sprite test".
+`docs/screenshots/0231-sprite-test.png` is what it should look like.
+
+**What was built**
+
+- `trpg_content::image`: `ImageTable` (`Content::images`), every PNG under
+  `assets/` except the font atlas, by path, with its size. Errors name
+  each bad file: not a PNG, an empty image, a side over 4096.
+  `bundle::files_under` lists a directory and everything below it.
+- `Sprite` and `Item` in `glyph_buffer.rs`. Rectangles and sprites share
+  one list in drawing order (`items()`); `overlays()` and `sprites()` give
+  one kind. `fill_rect` and `blit` cut sprites as they cut rectangles.
+- Snapshot lines for sprites; no existing snapshot's format changed.
+- `app` uploads a texture per image and draws items in order per layer; a
+  sprite without a texture is a magenta rectangle, logged once.
+- `cargo xtask test-card` writes `assets/images/test_card.png` (16×16).
+- "Sprite test" debug tool; `crates/ui/README.md` (*What a frame holds*)
+  and `assets/images/README.md`.
+
+**What was seen** (acceptance: looked at on native and web)
+
+- Native (Windows, debug build), window sized for scale 1 and for scale 2:
+  the card at 1×, 3× and 5× is sharp with its one-pixel border; flipped
+  swaps left and right; the top-right quarter shows green with the border
+  on the top and right; the glyphs sit on the picture drawn under them;
+  the half-opacity card shows the panel through it; the card under the
+  text box keeps only its top rows and left half.
+- Web build in the browser pane at scales 1, 2 and 3: the same, and pixels
+  read back from the canvas matched exactly at each scale (every screen
+  pixel of a card pixel one colour; half opacity over the panel reads
+  116,37,35 for red, the 50% blend).
+- First look found the text over the "under the glyphs" picture was white
+  on the card's white border; it is black now.
+
+**Deviations from the steps**
+
+- **Steps 2, 3 and 6 (`ImageId`):** an `ImageId` is the interned bundle
+  path itself (`ImageId::path()`), not an index into the table. Step 6
+  offered "store the path beside the id"; with the path stored, the index
+  added nothing, and a path can't silently point at the wrong picture if
+  two tables differ. So `ImageTable::images` is keyed by `&'static str`
+  (bundle paths are static), there is `ImageId::path()` instead of
+  `ImageTable::path(id)`, and `ImageTable::info(id)` and `ids()` were
+  added. `to_snapshot(&Palette)` and `Harness::snapshot()` keep their
+  signatures. ADR-0038 section 2 already says a sprite is "named by its
+  path in the asset bundle", so it needed no amendment.
+- **Step 5:** `add_sprite` also clips `clip` to `dest`, and drops a sprite
+  whose `src` is empty: both show nothing.
+- **Step 7:** the arithmetic for "the part of `src` that maps to `clip`"
+  is `Sprite::clipped_src()` in `ui`, where it is unit-tested (`app` has
+  no tests and is outside mutation testing); `app` calls it. 0232's
+  renderer can use it too.
+- **Step 8:** no `--check` flag; a test compares the committed file's
+  pixels with the tool's. Not added to `THIRD_PARTY_ASSETS.md`: that file
+  lists third-party items only (our own sounds aren't in it either).
+- **Step 9:** the tool also shows a crop (the top-right quarter) and a
+  picture on the `Under` layer with glyphs over it, so every `Sprite`
+  field is on screen. "Sprite test" is the last debug tool, so no test's
+  key script for the other tools changed except one in
+  `tests/key_bindings_screen.rs` that relied on "Key bindings" being last.
+- **Existing tests touched:** the debug menu snapshot gained the "Sprite
+  test" line; two battle tests changed `.iter()` to `.into_iter()` because
+  `overlays()` now returns a `Vec`.
+
+**Notes for later tickets**
+
+- A sprite's `src` must lie inside its image; the frame doesn't know image
+  sizes. Tickets that read rectangles from files (0711, 0433) check them
+  against `Content::images` when loading.
+- A see-through sprite leaves the web canvas itself slightly see-through
+  there. It looks right because the page behind it is black
+  (`web/index.html`); keep it black.
+- 0813 / 0817 / 0228 (whole-frame effects) must handle items as well as
+  cells, as ADR-0038 says; `dim` and `blend_bg` are documented as cells
+  only.
+
+No follow-up tickets.

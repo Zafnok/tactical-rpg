@@ -1,17 +1,20 @@
 //! Blits a [`GlyphBuffer`] to the window with the font atlas (ADR-0003):
-//! integer-scaled, centred, black letterbox. Sub-cell overlays (ADR-0018)
-//! are drawn as scaled rectangles: `Under` ones after the cell backgrounds,
-//! `Over` ones after the glyphs.
+//! integer-scaled, centred, black letterbox. The buffer's items are drawn
+//! scaled, in the order they were added: `Under` ones after the cell
+//! backgrounds, `Over` ones after the glyphs. A rectangle (ADR-0018) is a
+//! solid fill; a sprite (ADR-0038) is part of an image's texture.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use macroquad::prelude::*;
-use trpg_content::FontAtlasDef;
 use trpg_content::font::{AtlasRect, FALLBACK_GLYPH};
+use trpg_content::{FontAtlasDef, ImageId, ImageTable, bundle};
 use trpg_ui::console::{CELL_H_PX, CELL_W_PX, layout};
-use trpg_ui::{GlyphBuffer, Layer, Rgb};
+use trpg_ui::{GlyphBuffer, Item, Layer, Rgb, Sprite};
 
-/// Drawn for glyphs the atlas lacks, in [`MISSING_COLOR`].
+/// The colour of what is missing: the fallback glyph drawn for a glyph the
+/// atlas lacks, and the rectangle drawn for a sprite whose image has no
+/// texture.
 const MISSING_COLOR: Color = MAGENTA;
 
 /// Draws glyph buffers with a font atlas texture.
@@ -22,21 +25,40 @@ pub struct Renderer {
     clear: Rgb,
     /// Missing glyphs already logged, so each is reported once.
     warned: HashSet<char>,
+    /// A texture per image of the image table.
+    images: HashMap<ImageId, Texture2D>,
+    /// Images without a texture already logged, so each is reported once.
+    warned_images: HashSet<ImageId>,
 }
 
 impl Renderer {
-    /// Uploads the atlas image (`png`). `clear` is the console background
-    /// (the palette's `black`).
-    pub fn new(atlas: FontAtlasDef, png: &[u8], clear: Rgb) -> Result<Self, String> {
-        let image = Image::from_file_with_format(png, Some(ImageFormat::Png))
-            .map_err(|e| format!("font atlas image: {e}"))?;
-        let texture = Texture2D::from_image(&image);
-        texture.set_filter(FilterMode::Nearest);
+    /// Uploads the atlas image (`png`) and every image in `images` (read
+    /// from the asset bundle). `clear` is the console background (the
+    /// palette's `black`). An image that can't be decoded is logged and
+    /// left without a texture.
+    pub fn new(
+        atlas: FontAtlasDef,
+        png: &[u8],
+        clear: Rgb,
+        images: &ImageTable,
+    ) -> Result<Self, String> {
+        let texture = upload(png).map_err(|e| format!("font atlas image: {e}"))?;
+        let mut textures = HashMap::new();
+        for id in images.ids() {
+            match upload(bundle::bytes(id.path()).unwrap_or_default()) {
+                Ok(texture) => {
+                    textures.insert(id, texture);
+                }
+                Err(e) => warn!("image {}: {}", id.path(), e),
+            }
+        }
         Ok(Self {
             texture,
             atlas,
             clear,
             warned: HashSet::new(),
+            images: textures,
+            warned_images: HashSet::new(),
         })
     }
 
@@ -81,20 +103,7 @@ impl Renderer {
                 draw_rectangle(px, py, cell_w, cell_h, color(cell.bg));
             }
         }
-        let overlays = |layer: Layer| {
-            for o in buf.overlays().iter().filter(|o| o.layer == layer) {
-                let r = o.rect;
-                #[allow(clippy::cast_precision_loss)] // console pixels < 2^21
-                draw_rectangle(
-                    offset_x + r.x as f32 * scale,
-                    offset_y + r.y as f32 * scale,
-                    r.w as f32 * scale,
-                    r.h as f32 * scale,
-                    color(o.color),
-                );
-            }
-        };
-        overlays(Layer::Under);
+        self.draw_items(buf, Layer::Under, (offset_x, offset_y), scale);
         for ((px, py), cell) in cells() {
             if cell.glyph == ' ' {
                 continue;
@@ -114,7 +123,52 @@ impl Renderer {
                 },
             );
         }
-        overlays(Layer::Over);
+        self.draw_items(buf, Layer::Over, (offset_x, offset_y), scale);
+    }
+
+    /// Draws `buf`'s items of `layer`, in order. `origin` is the console's
+    /// top-left corner in the window and `scale` the size of a console
+    /// pixel.
+    fn draw_items(&mut self, buf: &GlyphBuffer, layer: Layer, origin: (f32, f32), scale: f32) {
+        for item in buf.items().iter().filter(|item| item.layer() == layer) {
+            let visible = item.visible();
+            #[allow(clippy::cast_precision_loss)] // console pixels < 2^21
+            let (x, y, size) = (
+                origin.0 + visible.x as f32 * scale,
+                origin.1 + visible.y as f32 * scale,
+                vec2(visible.w as f32, visible.h as f32) * scale,
+            );
+            match item {
+                Item::Rect(rect) => draw_rectangle(x, y, size.x, size.y, color(rect.color)),
+                Item::Sprite(sprite) => self.draw_sprite(sprite, x, y, size),
+            }
+        }
+    }
+
+    /// Draws the visible part of `sprite` (its `clip`) at `(x, y)`, `size`
+    /// big: the matching part of its image, or a [`MISSING_COLOR`]
+    /// rectangle if the image has no texture (logged once per image).
+    fn draw_sprite(&mut self, sprite: &Sprite, x: f32, y: f32, size: Vec2) {
+        let Some(texture) = self.images.get(&sprite.image) else {
+            if self.warned_images.insert(sprite.image) {
+                warn!("image {} has no texture", sprite.image.path());
+            }
+            draw_rectangle(x, y, size.x, size.y, MISSING_COLOR);
+            return;
+        };
+        let [sx, sy, sw, sh] = sprite.clipped_src();
+        draw_texture_ex(
+            texture,
+            x,
+            y,
+            Color::from_rgba(255, 255, 255, sprite.opacity),
+            DrawTextureParams {
+                dest_size: Some(size),
+                source: Some(Rect::new(sx, sy, sw, sh)),
+                flip_x: sprite.flip_x,
+                ..Default::default()
+            },
+        );
     }
 
     /// Where to find `glyph` in the atlas and what colour to tint it: `fg`,
@@ -132,6 +186,15 @@ impl Renderer {
         }
         Some((self.atlas.glyph_rect(FALLBACK_GLYPH)?, MISSING_COLOR))
     }
+}
+
+/// Decodes PNG file `png` into a texture drawn with nearest-pixel sampling.
+fn upload(png: &[u8]) -> Result<Texture2D, String> {
+    let image =
+        Image::from_file_with_format(png, Some(ImageFormat::Png)).map_err(|e| e.to_string())?;
+    let texture = Texture2D::from_image(&image);
+    texture.set_filter(FilterMode::Nearest);
+    Ok(texture)
 }
 
 fn color(c: Rgb) -> Color {

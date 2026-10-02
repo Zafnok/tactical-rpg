@@ -8,6 +8,7 @@ mod clean_targets;
 mod font_atlas;
 mod playtest;
 mod sfx;
+mod test_card;
 mod tickets;
 mod web;
 
@@ -23,6 +24,7 @@ check-keys                         fail on keys hard-coded in game code or text\
 clean-merged-targets [--dry-run]   delete target/ in worktrees whose PR has merged\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
+test-card                          write the sprite test image, assets/images/test_card.png\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
 
@@ -40,6 +42,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
+        Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
@@ -157,6 +160,23 @@ fn parse_sfx_check(args: &[String]) -> Option<bool> {
         [] => Some(false),
         [flag] if flag == "--check" => Some(true),
         _ => None,
+    }
+}
+
+fn test_card(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask test-card");
+        return 2;
+    }
+    match test_card::run(&repo_root()) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("test-card: {e}");
+            1
+        }
     }
 }
 
@@ -421,6 +441,12 @@ mod tests {
     #[test]
     fn sfx_check_passes_on_the_committed_files() {
         assert_eq!(sfx(&args(&["--check"])), 0);
+    }
+
+    #[test]
+    fn test_card_rejects_args() {
+        assert_eq!(test_card(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["test-card", "x"]).into_iter()), 2);
     }
 
     #[test]
