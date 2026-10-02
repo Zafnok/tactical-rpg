@@ -55,8 +55,9 @@
 //! actives (below) first uses a non-combat active (Brace, War Cry…) if a
 //! hostile unit could attack its tile this turn (the danger zone): the
 //! first the battle accepts, lowest skill id first, with no target and then
-//! on each unit (lowest id first). It never uses one that would spend its
-//! equipped weapon's last durability.
+//! on each unit (lowest id first). The battle refuses one with no use left
+//! this battle (`combat-arts.md`, *Non-attack actives: uses per battle*), so
+//! the unit then waits.
 //!
 //! It never uses consumables: enemies carry none, and only healers heal
 //! (Nick, `weapons-and-items.md`).
@@ -496,8 +497,6 @@ impl<'a> Planner<'a> {
         if !unit.may_use_arts() || !self.danger(unit.faction).contains(unit.pos) {
             return None;
         }
-        let slot = unit.loadout.equipped_slot()?;
-        let left = unit.loadout.weapon(slot)?.durability_left;
         let mut ids: Vec<UnitId> = state.units().iter().map(|u| u.id).collect();
         ids.sort();
         let targets: Vec<Option<UnitId>> = std::iter::once(None)
@@ -506,13 +505,8 @@ impl<'a> Planner<'a> {
         let action = unit
             .usable_skills(state.classes(), state.skills())
             .into_iter()
-            .filter(|def| {
-                let spares_weapon = matches!(
-                    def.kind,
-                    SkillKind::Active { cost: SkillCost::Durability(cost), .. } if cost < left
-                );
-                spares_weapon && !def.is_combat()
-            })
+            // The battle refuses a passive, and an active with no use left.
+            .filter(|def| !def.is_combat())
             .flat_map(|def| {
                 targets.iter().map(|&target| UnitAction::UseSkill {
                     skill: def.id.clone(),
@@ -708,6 +702,9 @@ fn extras(state: &BattleState, unit: &Unit, with: &Equipped, weights: &AiWeights
                         f64::from(weights.durability) * f64::from(*points)
                     }
                     SkillCost::ExtraSpellUse => f64::from(weights.spell_use),
+                    // Never a combat active's cost (the content check
+                    // refuses it, and so does the battle).
+                    SkillCost::Uses(_) => 0.0,
                 },
             }),
             _ => None,

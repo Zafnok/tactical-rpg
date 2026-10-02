@@ -4,7 +4,7 @@ expression: buf.to_snapshot(&c.palette)
 ---
 ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║ ┌──────────────────────┐   Test Knight                Weapons                                    ║
-║ │                      │   Guard  Lv 1                E Iron Spear                         17/20 ║
+║ │                      │   Guard  Lv 1                E Iron Spear                         20/20 ║
 ║ │                      │   EXP 20                       Mt 7  Hit 80  Crit 0  Rng 1  Wt 4        ║
 ║ │                      │   HP 20/20   ██████████        --                                       ║
 ║ │                      │                                                                         ║
@@ -18,7 +18,7 @@ expression: buf.to_snapshot(&c.palette)
 ║                                                       Accessory                                  ║
 ║  Mov 4  armored                                         --                                       ║
 ║  Armored                   Skills                                                                ║
-║                            A Brace             3 dur                                             ║
+║                            A Brace               2/3                                             ║
 ║  Weapon ranks                self: Def +5 Res +5      Spells                                     ║
 ║  Spear     D                                            --                                       ║
 ║                                                                                                  ║
@@ -51,7 +51,7 @@ abccccccccccccccccccccccccbbbbbbbgggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbcccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbcccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbeeeeeeeeeeeebbbbbbbbbbbbbbbbcccccccccccccccccccbbbbbbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba

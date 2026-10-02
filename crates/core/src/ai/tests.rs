@@ -270,8 +270,9 @@ fn strike(id: &str, cost: SkillCost, with: WeaponReq, mods: CombatMods, range: u
 /// `skirmish`: after attacking with a bow, move 1 tile. `charge`: might +2
 /// after moving 4 tiles or more. The actives, with their durability cost:
 /// `keen` (3: might +1), `zeal` (1: hit +20), `long_shot` (3: a bow's max
-/// range +1), `overcast` (an extra spell use: a spell's might +2) and
-/// `brace` (3, no attack: Def +3 until the user's next phase).
+/// range +1) and `overcast` (an extra spell use: a spell's might +2); and
+/// `brace` (no attack, 2 uses per battle: Def +3 until the user's next
+/// phase).
 fn skills() -> SkillTable {
     let might = |might| CombatMods {
         might,
@@ -285,7 +286,7 @@ fn skills() -> SkillTable {
     let bow = WeaponReq::Kind(WeaponKind::Bow);
     let brace = SkillDef {
         kind: SkillKind::Active {
-            cost: dur(3),
+            cost: SkillCost::Uses(2),
             effect: ActiveEffect::Buff {
                 area: Area::Own,
                 mods: TimedMods {
@@ -368,6 +369,7 @@ fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        skill_uses: crate::skill::SkillUses::default(),
     };
     carrying(u, &["sword"])
 }
@@ -1181,7 +1183,34 @@ fn a_boss_holding_its_tile_braces_when_it_is_threatened() {
     };
     let still = AiBehavior::Stationary;
     // The player can walk up and attack it this turn; it can't attack.
-    let state = holding(&["P..E"], still, &["brace"], 20);
+    let mut state = holding(&["P..E"], still, &["brace"], 20);
+    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
+    // It braces while it has a use left (2 a battle), and then waits.
+    for turn in 1..=3 {
+        assert_eq!(state.turn(), turn);
+        let command = next(&state);
+        let expected = if turn <= 2 {
+            use_skill(2, p(3, 0), "brace")
+        } else {
+            wait(2, p(3, 0))
+        };
+        assert_eq!(command, expected, "turn {turn}");
+        state.apply(&command).unwrap();
+        // The Other phase is skipped: on to the player's, then back.
+        state.apply(&Command::EndPhase).unwrap();
+        state.apply(&Command::EndPhase).unwrap();
+        assert_eq!(state.phase(), Phase::Enemy);
+    }
+    // Bracing costs no durability and needs no weapon: a broken one, or
+    // none, changes nothing.
+    let state = holding(&["P..E"], still, &["brace"], 0);
+    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
+    let state = enemy_phase(&["P..E"], |u| {
+        u[1] = carrying(u[1].clone(), &[]);
+        boss(&mut u[1]);
+        knowing(&mut u[1], &["brace"]);
+        u[1].ai = still;
+    });
     assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
     // A Guard that can't reach anyone does the same.
     let state = enemy_phase(&["P..E"], |u| {
@@ -1194,11 +1223,6 @@ fn a_boss_holding_its_tile_braces_when_it_is_threatened() {
     // Out of every hostile unit's reach it just waits.
     let state = holding(&["P.......E"], still, &["brace"], 20);
     assert_eq!(next(&state), wait(2, p(8, 0)));
-    // It keeps its weapon's last durability: Brace costs 3.
-    let state = holding(&["P..E"], still, &["brace"], 4);
-    assert_eq!(next(&state), use_skill(2, p(3, 0), "brace"));
-    let state = holding(&["P..E"], still, &["brace"], 3);
-    assert_eq!(next(&state), wait(2, p(3, 0)));
     // A combat active is no action of its own.
     let state = holding(&["P..E"], still, &["keen"], 20);
     assert_eq!(next(&state), wait(2, p(3, 0)));

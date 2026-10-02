@@ -43,7 +43,8 @@
 //!   tile. Normal attacks cost no durability.
 //! - **Spells** ([`UnitAction::Cast`], rules in [`crate::spell`]): the unit
 //!   must have learned the spell and have a use left. At battle start every
-//!   unit gets full uses and, if it has nothing equipped, its
+//!   unit gets full uses (of its spells and its non-attack actives) and, if
+//!   it has nothing equipped, its
 //!   [default equip](Unit::default_equip) ([`Unit::prepare_for_battle`]).
 //!   - An **attack spell** targets a hostile unit in the spell's range from
 //!     `dest`, equips the spell ([`Event::Equipped`] if it changed) and fights
@@ -129,9 +130,15 @@
 //!     heals the user after the combat ([`Event::Healed`]). A weapon the
 //!     payment brought to 0 breaks after the combat ([`Event::ItemBroke`],
 //!     before anyone falls).
-//!   - **Other actives** ([`UnitAction::UseSkill`]) are paid from the
-//!     **equipped** weapon (so a unit with a spell or nothing equipped can't
-//!     use them) and end the action: a buff on the user or on the other
+//!   - **Other actives** ([`UnitAction::UseSkill`]) spend one of their own
+//!     **uses per battle** ([`SkillCost::Uses`](crate::skill::SkillCost::Uses),
+//!     [`Event::SkillUsesChanged`]): no weapon is needed and no durability
+//!     is spent, and with no use left they are refused
+//!     ([`CostError::NoUsesLeft`]). Every unit's uses are filled at battle
+//!     start ([`Unit::prepare_for_battle`]). One whose data still costs
+//!     durability is paid from the **equipped** weapon (so a unit with a
+//!     spell or nothing equipped can't use it). They end the action: a buff
+//!     on the user or on the other
 //!     allied units in reach of `dest` ([`Event::EffectApplied`] each; none
 //!     in reach: refused), a heal of the wounded other allied units in reach
 //!     by `Mag + power` + [`heal_bonus`] (none wounded: refused), or
@@ -837,6 +844,15 @@ pub enum Event {
         unit: UnitId,
         /// The skill.
         skill: SkillId,
+    },
+    /// A unit spent one of a non-attack active's uses per battle.
+    SkillUsesChanged {
+        /// The unit.
+        unit: UnitId,
+        /// The skill.
+        skill: SkillId,
+        /// Uses left.
+        uses_left: u8,
     },
     /// A unit paid durability for a skill.
     DurabilitySpent {
@@ -1621,8 +1637,8 @@ impl Till {
 
 impl BattleState {
     /// Starts the battle at turn 1, Player phase. Every unit, reinforcements
-    /// included, is [prepared](Unit::prepare_for_battle): full spell uses and
-    /// a default equip. The events are the first phase start (with any
+    /// included, is [prepared](Unit::prepare_for_battle): full spell and
+    /// skill uses and a default equip. The events are the first phase start (with any
     /// turn-1 player reinforcements), or [`Event::BattleEnded`] if it is
     /// already decided (no player units, or a rout with no enemies).
     pub fn new(setup: BattleSetup) -> (BattleState, Vec<Event>) {
@@ -1632,7 +1648,7 @@ impl BattleState {
             .iter_mut()
             .chain(pending.iter_mut().map(|r| &mut r.unit))
         {
-            u.prepare_for_battle(&setup.classes, &setup.items, &setup.spells);
+            u.prepare_for_battle(&setup.classes, &setup.items, &setup.spells, &setup.skills);
         }
         let mut state = BattleState {
             tables: Tables {

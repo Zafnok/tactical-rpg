@@ -123,11 +123,12 @@ fn class(id: &str, tags: UnitTags) -> ClassDef {
 /// `long_shot` / `long_shot_2` (3 dur, bows: range +1 / +2), `guarding`
 /// (2 dur: a stance rider, Def +3, from this combat on), `watchful` (2 dur:
 /// the same, from after this combat), `swoop` (3 dur: move 1 after),
-/// `overcast` (spell: might +5), `siphon` (spell: drain), `brace` (3 dur:
-/// own Def and Res +5), `war_cry` (5 dur: adjacent allies Str +2),
-/// `inspire` (3 dur: allies within 2 hit and avoid +10), `sanctuary` /
-/// `sanctuary_2` (5 dur: heal allies within 1 / 2 by Mag + 5), `shove`
-/// (3 dur). Passives: `focus` (swords: crit +10), `steadfast` (not own
+/// `overcast` (spell: might +5), `siphon` (spell: drain). Non-attack
+/// actives, with their uses per battle (`combat-arts.md`): `brace` (3: own
+/// Def and Res +5), `war_cry` (2: adjacent allies Str +2), `inspire` (2:
+/// allies within 2 hit and avoid +10), `sanctuary` (3) / `benediction` (1)
+/// (heal allies within 1 / 2 by Mag + 5), `shove` (8); and `ward` (Brace
+/// for 3 dur of the equipped weapon, as data may still say). Passives: `focus` (swords: crit +10), `steadfast` (not own
 /// phase: Def +2), `fury` (HP ≤ half: crit +15), `charge` (moved ≥ 4:
 /// might +2), `sky_dodge` (against bows: avoid +10), `white_magic_1` /
 /// `white_magic_2` (heals +2 / +4), `black_magic` (spells: might +1),
@@ -440,25 +441,26 @@ fn test_combat_actives() -> Vec<SkillDef> {
 
 /// The non-combat actives of [`skills`].
 fn test_other_actives() -> Vec<SkillDef> {
-    let dur = SkillCost::Durability;
+    let uses = SkillCost::Uses;
     let m = CombatMods::default;
     let active = |cost, effect| SkillKind::Active { cost, effect };
     let timed = |stats: Vec<(StatKind, StatValue)>, combat| TimedMods { stats, combat };
     let buff = |cost, area, mods| active(cost, ActiveEffect::Buff { area, mods });
-    let heal = |radius| active(dur(5), ActiveEffect::Heal { radius, power: 5 });
+    let heal = |n, radius| active(uses(n), ActiveEffect::Heal { radius, power: 5 });
+    let brace = |cost| {
+        buff(
+            cost,
+            Area::Own,
+            timed(vec![(StatKind::Def, 5), (StatKind::Res, 5)], m()),
+        )
+    };
     vec![
-        test_skill(
-            "brace",
-            buff(
-                dur(3),
-                Area::Own,
-                timed(vec![(StatKind::Def, 5), (StatKind::Res, 5)], m()),
-            ),
-        ),
+        test_skill("brace", brace(uses(3))),
+        test_skill("ward", brace(SkillCost::Durability(3))),
         test_skill(
             "war_cry",
             buff(
-                dur(5),
+                uses(2),
                 Area::Allies { radius: 1 },
                 timed(vec![(StatKind::Str, 2)], m()),
             ),
@@ -466,7 +468,7 @@ fn test_other_actives() -> Vec<SkillDef> {
         test_skill(
             "inspire",
             buff(
-                dur(3),
+                uses(2),
                 Area::Allies { radius: 2 },
                 timed(
                     vec![],
@@ -478,13 +480,12 @@ fn test_other_actives() -> Vec<SkillDef> {
                 ),
             ),
         ),
-        test_skill("sanctuary", heal(1)),
-        SkillDef {
-            family: "sanctuary".into(),
-            rank: 2,
-            ..test_skill("sanctuary_2", heal(2))
-        },
-        test_skill("shove", active(dur(3), ActiveEffect::Push { collision: 5 })),
+        test_skill("sanctuary", heal(3, 1)),
+        test_skill("benediction", heal(1, 2)),
+        test_skill(
+            "shove",
+            active(uses(8), ActiveEffect::Push { collision: 5 }),
+        ),
     ]
 }
 
@@ -900,6 +901,7 @@ pub(crate) fn unit(id: u32, faction: Faction, pos: Pos) -> Unit {
         spells: SpellState::default(),
         learned_skills: BTreeSet::new(),
         effects: Vec::new(),
+        skill_uses: crate::skill::SkillUses::default(),
         talent: None,
     };
     carrying(u, &[weapon(1, 1, 3)])
@@ -2650,6 +2652,21 @@ fn spell_uses(s: &BattleState) -> BTreeMap<(UnitId, SpellId), u8> {
         .collect()
 }
 
+/// Every unit's (on the map or fallen) uses left per non-attack active.
+fn skill_uses(s: &BattleState) -> BTreeMap<(UnitId, SkillId), u8> {
+    s.units()
+        .iter()
+        .chain(s.fallen())
+        .chain(s.recruited())
+        .flat_map(|u| {
+            u.skill_uses
+                .uses_left
+                .iter()
+                .map(|(sk, &n)| ((u.id, sk.clone()), n))
+        })
+        .collect()
+}
+
 /// Durability left of unit `id`'s weapon in `slot` (on the map, fallen or
 /// recruited).
 fn durability(s: &BattleState, id: UnitId, slot: usize) -> Option<u32> {
@@ -2723,7 +2740,7 @@ prop_compose! {
         spell_equipped in prop::bool::weighted(0.3),
         class in prop::sample::select(vec![
             "fighter", "keen", "flurry", "long_shot", "guarding", "swoop", "overcast", "siphon",
-            "brace", "war_cry", "inspire", "sanctuary", "sanctuary_2", "shove",
+            "brace", "ward", "war_cry", "inspire", "sanctuary", "benediction", "shove",
         ]),
         passives in prop::sample::subsequence(
             vec!["focus", "steadfast", "fury", "charge", "sky_dodge", "white_magic_1",
@@ -2913,6 +2930,7 @@ proptest! {
             let gold = s.gold();
             let opened = [p(4, 2), p(7, 0), p(1, 3)].map(|c| s.is_opened(c));
             let uses_before = spell_uses(&s);
+            let skill_uses_before = skill_uses(&s);
             let durability_before: BTreeMap<(UnitId, usize), Option<u32>> = s
                 .units()
                 .iter()
@@ -2954,6 +2972,28 @@ proptest! {
                 prop_assert_eq!(u32::from(before) - u32::from(after), u32::try_from(spent).unwrap());
                 // A cast, plus a spell active's extra use.
                 prop_assert!(spent <= 2);
+            }
+            // A non-attack active's uses never exceed its uses per battle,
+            // and one is spent only with its event, by using that skill.
+            let skill_uses_after = skill_uses(&s);
+            for ((_, skill), &n) in &skill_uses_after {
+                prop_assert!(Some(n) <= s.skills().get(skill).unwrap().uses_per_battle());
+            }
+            for (key, &before) in &skill_uses_before {
+                let after = skill_uses_after.get(key).copied().unwrap_or(0);
+                let spent = events.iter().filter(|e| matches!(
+                    e,
+                    Event::SkillUsesChanged { unit, skill, uses_left }
+                        if (unit, skill, uses_left) == (&key.0, &key.1, &after)
+                )).count();
+                prop_assert_eq!(u32::from(before) - u32::from(after), u32::try_from(spent).unwrap());
+                prop_assert!(spent <= 1);
+                let used = matches!(
+                    cmd,
+                    Command::Act { unit, action: UnitAction::UseSkill { skill, .. }, .. }
+                        if (unit, skill) == (&key.0, &key.1)
+                );
+                prop_assert_eq!(spent == 1, used);
             }
             // Durability never rises above the weapon's, and drops only by
             // what the events say (or a sale, purchase or repair).

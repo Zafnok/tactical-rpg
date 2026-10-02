@@ -6,7 +6,7 @@ milestone: Post–Chapter 1
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0401", "0021", "0110", "0711"]
+blocked_by: ["0401", "0021", "0110", "0711", "0433"]
 nick_input: decision
 completed:
 ---
@@ -30,8 +30,17 @@ still-battler class: offer those as well as Claude-drawn one-colour icons,
 and say honestly that Claude-drawn icons may clash in the same way the
 portraits did. A 16×20 sprite is taller than a 16×16 tile; show how that
 looks. Showing the bought map sprites on the real battle screen needs the
-bought files (0110) and the PNG overlay drawing (0711): both were added to
+bought files (0110) and the PNG drawing (0711): both were added to
 `blocked_by` on 2026-10-01.
+
+**Changed 2026-10-01 (ADR-0038):** units on the map are painted by a map
+skin (0432), and pictures on the map come from a tileset file through the
+sprite skin (0433, added to `blocked_by`). So the versions shown to Nick
+are skins or tileset files, not new drawing code in the battle screen:
+initials (the glyph skin), bought map sprites over glyph terrain, and
+Claude-drawn one-colour icons. How a sprite unit shows its side, that it
+has acted, its HP and an active effect is part of this decision: 0433's
+versions of those are placeholders.
 
 ## Nick input
 
@@ -47,12 +56,14 @@ both ways for Nick; if chosen, making it a setting or the default.
 
 ## Implementation steps
 
-1. Draw 16×16 one-colour icons (e.g. as 2-cell-wide custom glyphs appended
-   to the font atlas in a private-use range, via `cargo xtask font-atlas`, or
-   as pixel grids drawn with overlays). Pick the technique and record it in an
-   ADR if it changes the atlas format.
-2. Render the Quick Battle screen with initials vs icons (with HP bars) and
-   ask Nick with `ask-nick`.
+1. Draw 16×16 one-colour icons as a PNG in a tileset file (0433's format),
+   tinted by faction if the skin needs a tint (add it to `Sprite` as 0413
+   describes). For the bought map sprites, a tileset file in
+   `assets-private/` pointing at the bought sheet. If units should be
+   pictures while terrain stays glyphs, add that as a skin that paints
+   terrain with the glyph skin and units with the sprite skin.
+2. Render the Quick Battle screen each way (with HP bars) with
+   `cargo xtask frame-png` (0232, if done) and ask Nick with `ask-nick`.
 3. Record the answer in `look-and-feel.md`; implement if chosen.
 
 ## Acceptance criteria

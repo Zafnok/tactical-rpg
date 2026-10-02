@@ -280,7 +280,8 @@ fn effect_name(state: &BattleState, effect: &TimedEffect) -> String {
 }
 
 /// The skills block: `P` (passive, always on) or `A` (active) markers, the
-/// rank, the cost of an active, and each effect in a line under it.
+/// rank, the cost of an active (for a non-attack active its uses left this
+/// battle, `2/3`), and each effect in a line under it.
 fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
     let x = MID_X;
     pen.text(x, 15, "Skills", UiColor::TextHighlight);
@@ -299,7 +300,7 @@ fn draw_skills(pen: &mut Pen<'_>, state: &BattleState, unit: &Unit) {
         let name_w = if cost.is_some() { 16 } else { 23 };
         pen.cut(x + 2, y, &skill.name, name_w, UiColor::Text);
         if let Some(cost) = cost {
-            let text = cost_text(cost);
+            let text = cost_text(cost, unit.skill_uses.uses_left(&skill.id));
             let w = i32::try_from(text.len()).unwrap_or(0);
             pen.text(x + 25 - w, y, &text, UiColor::TextDim);
         }
