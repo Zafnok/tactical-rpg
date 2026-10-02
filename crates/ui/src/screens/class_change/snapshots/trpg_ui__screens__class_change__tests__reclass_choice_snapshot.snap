@@ -1,0 +1,79 @@
+---
+source: crates/ui/src/screens/class_change/tests.rs
+expression: "render(&s, &c).to_snapshot(&c.palette)"
+---
+                                                                                                    
+  Class change                                                                                      
+  Test Knight  Guard  Lv 12                                                        Reclass Seal ×1  
+  ← more                                                                                    more →  
+  ┌──────────────────────┐┌──────────────────────┐┌──────────────────────┐╔══════════════════════╗  
+  │ Cleric               ││ Mage                 ││ Raider               │║ Rider                ║  
+  │ Tier 1   new         ││ Tier 1   new         ││ Tier 1   new         │║ Tier 1   CL 6        ║  
+  │                      ││                      ││                      │║                      ║  
+  │ Mov   4 → 5 foot     ││ Mov   4 → 5 foot     ││ Mov   4 → 5 foot     │║ Mov   4 → 7 mounted  ║  
+  │                      ││                      ││                      │║ Mounted              ║  
+  │                      ││                      ││                      │║                      ║  
+  │ Weapons              ││ Weapons              ││ Weapons              │║ Weapons              ║  
+  │ Gauntlet E           ││ Sword    E           ││ Axe      E → D       │║ Sword    E           ║  
+  │                      ││                      ││                      │║ Spear    D           ║  
+  │                      ││                      ││                      │║                      ║  
+  │                      ││                      ││                      │║                      ║  
+  │ Active               ││ Active               ││ Active               │║ Active               ║  
+  │ Sanctuary            ││ Overcast             ││ Heavy Blow           │║ Lance Rush           ║  
+  │                      ││                      ││                      │║                      ║  
+  │ HP   28              ││ HP   28              ││ HP   28              │║ HP   28              ║  
+  │ Str  11              ││ Str  11              ││ Str  11              │║ Str  11              ║  
+  │ Mag   0              ││ Mag   0              ││ Mag   0              │║ Mag   0              ║  
+  │ Dex   7              ││ Dex   7              ││ Dex   7              │║ Dex   7              ║  
+  │ Spd   5              ││ Spd   5              ││ Spd   5              │║ Spd   5              ║  
+  │ Def  49              ││ Def  49              ││ Def  49              │║ Def  49              ║  
+  │ Res   0              ││ Res   0              ││ Res   0              │║ Res   0              ║  
+  │                      ││                      ││                      │║                      ║  
+  │                      ││                      ││                      │║                      ║  
+  └──────────────────────┘└──────────────────────┘└──────────────────────┘╚══════════════════════╝  
+                                                                                                    
+                                                                                                    
+ Left/Right class · f choose · d back                                                               
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddaa
+aaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefghhhhhggggggggggggggggfaa
+aaegiiiiiiiiiiiigggggggggeegiiiiiiiiiiiigggggggggeegiiiiiiiiiiiigggggggggefgiiiiiiiiiiiiiggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeghhhhhhhggggggggggggggeeghhhhhhhggggggggggggggeeghhhhhhhggggggggggggggefghhhhhhhggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeghhhhhhgggggggggggggggeeghhhhhhgggggggggggggggeeghhhhhhgggggggggggggggefghhhhhhgggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggeegiiiiiiiggggggggggggggefgiiiiiiiggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeggggggggggggggggggggggeeggggggggggggggggggggggeeggggggggggggggggggggggefggggggggggggggggggggggfaa
+aaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+addddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:player bg:black
+d = fg:text_dim bg:black
+e = fg:panel_border bg:panel_bg
+f = fg:panel_border_focus bg:panel_bg
+g = fg:text bg:panel_bg
+h = fg:text_highlight bg:panel_bg
+i = fg:text_dim bg:panel_bg
