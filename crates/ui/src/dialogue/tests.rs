@@ -429,6 +429,111 @@ fn the_reaction_leaves_the_portraits_as_they_are() {
     assert_eq!((during.left, during.right), (v.left, v.right));
 }
 
+fn music(cue: &str) -> Step {
+    Step::Music(MusicLine::Cue(cue.into()))
+}
+
+fn cue(cue: &str) -> MusicLine {
+    MusicLine::Cue(cue.into())
+}
+
+/// A `@music` line is handed over when the scene reaches it: with the text
+/// box after it, not before, and once.
+#[test]
+fn music_is_asked_for_when_its_line_is_reached() {
+    let mut player = play(Scene {
+        id: "m".into(),
+        steps: vec![
+            music("village"),
+            narration("One."),
+            narration("Two."),
+            music("talk_calm"),
+            narration("Three."),
+            Step::Music(MusicLine::Stop),
+        ],
+    });
+    // The line before the first text box is reached at once.
+    assert_eq!(player.take_music(), Some(cue("village")));
+    assert_eq!(player.take_music(), None);
+    player.advance();
+    assert_eq!(player.current().text.as_deref(), Some("Two."));
+    assert_eq!(player.take_music(), None);
+    player.advance();
+    assert_eq!(player.current().text.as_deref(), Some("Three."));
+    assert_eq!(player.take_music(), Some(cue("talk_calm")));
+    // A line after the last text box is reached as the scene ends.
+    player.advance();
+    assert!(player.is_finished());
+    assert_eq!(player.take_music(), Some(MusicLine::Stop));
+    player.advance();
+    assert_eq!(player.take_music(), None);
+}
+
+/// Several `@music` lines passed at once (a skip, or two in a row) leave
+/// only the last.
+#[test]
+fn only_the_last_music_line_passed_counts() {
+    let steps = vec![
+        music("village"),
+        music("talk_calm"),
+        narration("One."),
+        Step::Music(MusicLine::Stop),
+        narration("Two."),
+        music("scene_sad"),
+        narration("Three."),
+    ];
+    let mut player = play(Scene {
+        id: "m".into(),
+        steps: steps.clone(),
+    });
+    assert_eq!(player.take_music(), Some(cue("talk_calm")));
+    player.skip_to_choice();
+    assert!(player.is_finished());
+    assert_eq!(player.take_music(), Some(cue("scene_sad")));
+    // Not taking the first one doesn't change what a skip leaves.
+    let mut player = play(Scene {
+        id: "m".into(),
+        steps,
+    });
+    player.skip_to_choice();
+    assert_eq!(player.take_music(), Some(cue("scene_sad")));
+    // A scene without @music asks for nothing.
+    let mut player = play(test_scene());
+    player.skip_to_choice();
+    assert_eq!(player.take_music(), None);
+}
+
+/// A reply's reaction may change the music; the other replies don't.
+#[test]
+fn music_in_a_reaction_plays_only_for_that_reply() {
+    let scene = Scene {
+        id: "m".into(),
+        steps: vec![
+            narration("Well?"),
+            Step::Choice {
+                options: vec![
+                    option("Yes.", vec![music("scene_sad"), narration("Oh.")]),
+                    option("No.", vec![narration("Good.")]),
+                ],
+            },
+            narration("After."),
+        ],
+    };
+    let mut player = play(scene.clone());
+    player.advance();
+    assert!(player.is_choosing());
+    assert_eq!(player.take_music(), None);
+    player.choose(0);
+    assert_eq!(player.current().text.as_deref(), Some("Oh."));
+    assert_eq!(player.take_music(), Some(cue("scene_sad")));
+    let mut player = play(scene);
+    player.advance();
+    player.choose(1);
+    player.skip_to_choice();
+    assert!(player.is_finished());
+    assert_eq!(player.take_music(), None);
+}
+
 /// Skipping stops at each choice, and at the end.
 #[test]
 fn skipping_stops_at_choices() {
@@ -534,7 +639,21 @@ fn arb_step() -> impl Strategy<Value = Step> {
             }
         ),
         "[a-z]{1,6}".prop_map(|text| Step::Narrate { text }),
+        prop_oneof![
+            Just(MusicLine::Stop),
+            Just(MusicLine::Cue("talk_calm".into())),
+            Just(MusicLine::Cue("scene_sad".into())),
+        ]
+        .prop_map(Step::Music),
     ]
+}
+
+/// The last `@music` line of `steps`, if any.
+fn last_music(steps: &[Step]) -> Option<MusicLine> {
+    steps.iter().rev().find_map(|s| match s {
+        Step::Music(music) => Some(music.clone()),
+        _ => None,
+    })
 }
 
 /// A scene step, or a choice of up to 3 replies whose reactions are
@@ -607,6 +726,25 @@ proptest! {
 
     /// Advancing until finished shows every speech and narration exactly
     /// once, in script order.
+    #[test]
+    /// Read or skipped, a scene leaves the same music: its last `@music`.
+    #[test]
+    fn reading_and_skipping_leave_the_same_music(steps in proptest::collection::vec(arb_step(), 0..20)) {
+        let scene = Scene { id: "p".into(), steps: steps.clone() };
+        let mut read = play(scene.clone());
+        let mut heard = read.take_music();
+        for _ in 0..=steps.len() {
+            read.advance();
+            heard = read.take_music().or(heard);
+        }
+        prop_assert!(read.is_finished());
+        let mut skipped = play(scene);
+        skipped.skip_to_choice();
+        prop_assert!(skipped.is_finished());
+        prop_assert_eq!(&heard, &last_music(&steps));
+        prop_assert_eq!(skipped.take_music(), heard);
+    }
+
     #[test]
     fn visits_every_text_step_once_in_order(steps in proptest::collection::vec(arb_step(), 0..20)) {
         let expected: Vec<(String, bool)> = steps
