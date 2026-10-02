@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0404", "0021", "0035", "0110", "0711"]
+blocked_by: ["0404", "0021", "0035", "0110", "0711", "0231"]
 nick_input: decision
 completed:
 ---
@@ -25,8 +25,9 @@ full-body while the strikes play out.
 doesn't want Claude-drawn character art (0021). His words: "I guess we need
 an itch artist who has a pack with portraits and battle sprites". 0110 keeps
 the bought files in the private assets repo, and 0711 draws bought PNG art
-as pixel overlays (ADR-0024). This ticket reuses that drawing for the
-fighters.
+as sprite items (0231, ADR-0038; changed 2026-10-01 from per-pixel
+overlays). This ticket reuses that drawing for the fighters: each fighter
+is one sprite item, moved by changing its `dest`.
 
 **Decided in 0021 (2026-09-30), `look-and-feel.md` § Combat screen:** the
 art is Mega Tiles' Tiny Tales **big still battle images** (one picture per
@@ -96,8 +97,12 @@ combat rules; buying anything.
 4. Public placeholders: a small, plain PNG per class that ships in `assets/`
    so a clone without `assets-private/` builds, tests and runs (0110's rule).
    Not meant to look good; Nick only sees the bought art.
-5. Draw the scene in 0404's playback overlay with 0711's overlay drawing
-   (mirror one fighter so they face each other). Honour the
+5. Draw the scene in 0404's playback overlay with sprite items, as 0711
+   does (mirror one fighter with `flip_x` so they face each other). If a
+   motion Nick picks needs something a sprite item can't do yet (a flash
+   to white, a tint), add it to `Sprite` here (the item, `app`'s renderer,
+   the snapshot line and, if done, 0232's PNG renderer) and note it in
+   ADR-0038's section 2; never fall back to per-pixel rectangles. Honour the
    `combat_animations` setting (off = 0404's plain box). The setting comes
    from the Options menu (0805), which this ticket doesn't wait for: if
    0805 isn't done, keep the value in `Ctx` (as `cursor_style` and

@@ -72,6 +72,11 @@ cinematic*, the zoom rule).
      scene's offset to whole window pixels so glyphs don't smear.
    - Scene pixels outside the scene (the window runs past its edge) show
      the console's clear colour.
+   - The scene's **sprite items** (0231, ADR-0038) scale, shift and clip
+     with it like its rectangles, so a sprite-skinned map (0433) or a
+     picture in a scene pans and zooms too. If 0231 isn't done yet, add a
+     line to 0231's steps saying the backdrop must draw them; if 0232 is
+     done, its PNG renderer draws backdrops as well.
 2. A pure helper for shots, `trpg_ui::cinema::view(scene_px: (u32, u32),
    clip_px: (u32, u32), centre: (f32, f32), zoom: f32) -> (f32, f32)`: the
    `origin_px` that puts `centre` in the middle of the window, clamped so

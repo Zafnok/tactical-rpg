@@ -24,7 +24,7 @@ screen's *Skills* block (0412), one line per skill from
 places where the player actually *chooses* one show only names:
 
 - **Skill menu** (action menu → `Skill`, 0412): `skill_menu` in
-  `skills.rs` draws `Brace  3 dur  Wpn 20/20`. No effect.
+  `skills.rs` draws `Brace     3/3` (its uses left this battle, ticket 0316). No effect.
 - **Arts list** while targeting (0414): `art_menu` in
   `crates/ui/src/screens/battle/art_list.rs` draws
   `Guard Break     −4 dur  D`. No effect. The forecast shows the chosen

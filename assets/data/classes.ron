@@ -245,7 +245,7 @@
             base:    (20,  2,  8,  6,  7,  2, 11),
             growths: (60, 15, 55, 45, 45, 15, 65),
             spells: [(1, "mend")],
-            active: Some("sanctuary_2"), passives: ["white_magic_2"],
+            active: Some("benediction"), passives: ["white_magic_2"],
             promotes_to: ["oracle"],
         ),
         (

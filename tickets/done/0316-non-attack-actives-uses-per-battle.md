@@ -5,10 +5,10 @@ type: feature
 milestone: M2 Core rules
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0311", "0412", "0503"]
 nick_input: sign-off
-completed:
+completed: 2026-10-01
 ---
 
 # 0316 — Non-attack actives cost uses per battle
@@ -123,16 +123,16 @@ battle; say if any number of uses feels wrong (they are *tunable*).
 
 ## Acceptance criteria
 
-- [ ] A Grappler starts a battle with 8 Shoves; each Shove spends one, the 9th is refused, and the next battle starts with 8 again (tests).
-- [ ] A unit with no weapon equipped, or a broken one, can use Brace; using it changes no weapon's durability (tests).
-- [ ] A Priest promoted from a mastered Cleric has Sanctuary (3 uses, adjacent) and Benediction (1 use, 2 tiles), and White Magic adds to both (test).
-- [ ] Keen Edge and Guard Break still cost durability; Overcast still costs a spell use (existing tests pass unchanged).
-- [ ] Rewinding past a use gives it back (test).
-- [ ] The skill menu shows the uses left; an active with none left is dimmed with the reason (snapshots).
-- [ ] A boss holding its tile braces while it has a use left and waits once it has none (tests); ordinary enemies still never do.
-- [ ] Old saves load (the new field defaults).
-- [ ] Content validation refuses a rank 2 that differs from its rank 1 in anything but bigger numbers: one test per case (a wider radius, another condition, another effect kind, a lower number, no number higher); `assets/data/skills.ron` passes.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] A Grappler starts a battle with 8 Shoves; each Shove spends one, the 9th is refused, and the next battle starts with 8 again (tests).
+- [x] A unit with no weapon equipped, or a broken one, can use Brace; using it changes no weapon's durability (tests).
+- [x] A Priest promoted from a mastered Cleric has Sanctuary (3 uses, adjacent) and Benediction (1 use, 2 tiles), and White Magic adds to both (test).
+- [x] Keen Edge and Guard Break still cost durability; Overcast still costs a spell use (existing tests pass unchanged).
+- [x] Rewinding past a use gives it back (test).
+- [x] The skill menu shows the uses left; an active with none left is dimmed with the reason (snapshots).
+- [x] A boss holding its tile braces while it has a use left and waits once it has none (tests); ordinary enemies still never do.
+- [x] Old saves load (the new field defaults).
+- [x] Content validation refuses a rank 2 that differs from its rank 1 in anything but bigger numbers: one test per case (a wider radius, another condition, another effect kind, a lower number, no number higher); `assets/data/skills.ron` passes.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -145,5 +145,71 @@ battle; say if any number of uses feels wrong (they are *tunable*).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**What was done**
+
+- **Cost** (`core::skill`): `SkillCost::Uses(n)`, paid from
+  `CostSource::Own(skill)`; `CostError::NoUsesLeft`. A unit's uses left are
+  `Unit::skill_uses` (`SkillUses`, `#[serde(default)]`), filled by
+  `Unit::prepare_for_battle` for every unit and reinforcement from its usable
+  actives. Spending one emits `Event::SkillUsesChanged`.
+- **Battle** (`plan_skill`): a `Uses` cost needs no weapon and spends no
+  durability; a `Durability` cost on a non-attack active still works (paid
+  from the equipped weapon). Rewind replays the battle, so a rewound use
+  comes back.
+- **Data**: Shove 8, Brace 3, Sanctuary 3, Fortify 2, War Cry 2, Inspire 2,
+  Rally 1. `sanctuary_2` is gone; the Priest's active is `benediction`
+  (1 use, heals allies within 2 tiles), a skill of its own.
+- **Content validation**: `Uses(0)` and `Uses` on a combat or spell active
+  are errors. The rank rule is in `crates/content/src/skill/ranks.rs`: each
+  rank is compared with the rank below it in its family; the shipped data
+  passes (Bow Focus 2 and Leadership 2 included).
+- **UI**: the Skill menu and the info screen show `Brace  2/3`. A skill
+  with no uses left is dimmed with `no uses left`. Picking who to Shove
+  shows `Shove on Brigand (8 → 7 uses)`.
+- **AI**: `Planner::stand` no longer looks at the weapon; the battle refuses
+  an active with no use left, so a boss braces while it has a use and then
+  waits.
+- **Docs**: `combat-arts.md`, `progression.md`, `docs/design/README.md` and
+  ticket 0429's example line.
+
+**Deviations**
+
+- `plan_skill` now checks the cost **before** the skill's targets, so a
+  skill with no uses left says so whoever stands near (the menu's reason
+  comes from the core this way). Only the error a doubly-wrong command
+  gets changed.
+- The validation module is `crates/content/src/skill.rs` plus the new
+  `skill/ranks.rs` (the ticket named a `skill/` directory).
+- `ROADMAP.md` still lists 0316 on row 1: that table is redone at each
+  dependency check, not per ticket.
+
+**Rules Claude had to decide** (*Claude's starting rules*; Nick may veto)
+
+1. **A skill learned in the middle of a battle has no uses until the next
+   battle** (like a spell learned in battle). Nothing in the game teaches an
+   active mid-battle yet, so today this never happens.
+2. **What the screens say**: `Brace  2/3` (uses left / uses per battle),
+   `no uses left` after a dimmed skill, `(8 → 7 uses)` when picking who to
+   Shove.
+3. **A unit whose only non-attack skill is used up** sees `Skill` greyed out
+   in its action menu (as it already was for a skill it can't use now); the
+   `no uses left` reason shows in the skill list when the unit has another
+   skill it can still use. The info screen always shows `Brace  0/3`.
+4. **The rank check, where Nick's rule left room**: a rank 2 may add a stat
+   to a buff the way Bow Focus 2 adds crit (a missing number counts as 0);
+   a stance that only one rank has is a difference; "after moving 4 tiles"
+   vs "after moving 3" counts as another condition, not a number; a
+   durability cost is neither a "higher number" nor a lower one.
+5. **A boss doesn't save its uses**: it braces on every turn it is
+   threatened while it has one (3 turns for Brace).
+
+**Notes for Nick (sign-off, on the Pages build after merge)**
+
+- Guard: Brace 3 times in one battle, then `Skill` is greyed out; next
+  battle it has 3 again. Grappler: 8 Shoves. Cleric: 3 Sanctuaries.
+- None of them touch the weapon's durability any more, and they work with
+  a broken weapon or none.
+- The numbers of uses are *tunable* in `assets/data/skills.ron`. Benediction
+  is still a working name.
+
+**Follow-up tickets:** none.

@@ -3,7 +3,8 @@
 //! and Shove. The test skills are [`skills`].
 
 use super::*;
-use crate::skill::{CostError, TimedEffect, TimedMods};
+use crate::history::BattleHistory;
+use crate::skill::{CostError, SkillUses, TimedEffect, TimedMods};
 use crate::stats::StatKind;
 
 fn sk(id: &str) -> SkillId {
@@ -122,6 +123,29 @@ fn spent(unit: u32, item: ItemId, amount: u32, left: u32) -> Event {
         item,
         amount,
         left,
+    }
+}
+
+/// Unit `unit` has `left` uses of `skill` left after spending one.
+fn uses_changed(unit: u32, skill: &str, left: u8) -> Event {
+    Event::SkillUsesChanged {
+        unit: UnitId(unit),
+        skill: sk(skill),
+        uses_left: left,
+    }
+}
+
+/// The uses unit `id` has left of `skill`.
+fn uses_left(s: &BattleState, id: u32, skill: &str) -> u8 {
+    s.unit(UnitId(id))
+        .map_or(0, |u| u.skill_uses.uses_left(&sk(skill)))
+}
+
+/// Ends phases until the Player phase starts again.
+fn next_turn(s: &mut BattleState) {
+    end(s);
+    while s.phase() != Phase::Player {
+        end(s);
     }
 }
 
@@ -812,19 +836,12 @@ fn siphon_heals_half_the_hp_its_strikes_removed() {
 // ---- Non-combat actives ------------------------------------------------------
 
 #[test]
-fn brace_is_paid_from_the_equipped_weapon_and_lasts_until_the_next_own_phase() {
+fn brace_spends_one_of_its_uses_and_lasts_until_the_next_own_phase() {
     let mut s = start(setup(vec![
-        with_skill(
-            carrying(lord(1, p(0, 0)), &[weapon(1, 1, 3), weapon(1, 1, 4)]),
-            "brace",
-        ),
+        with_skill(lord(1, p(0, 0)), "brace"),
         armed(unit(3, Faction::Enemy, p(2, 0)), 7),
     ]));
-    s.apply(&Command::Equip {
-        unit: UnitId(1),
-        equipped: Equipped::Weapon(1),
-    })
-    .unwrap();
+    assert_eq!(uses_left(&s, 1, "brace"), 3);
     refused_act(
         &mut s,
         1,
@@ -837,17 +854,13 @@ fn brace_is_paid_from_the_equipped_weapon_and_lasts_until_the_next_own_phase() {
         events[1..],
         [
             used(1, "brace"),
-            Event::DurabilitySpent {
-                unit: UnitId(1),
-                slot: 1,
-                item: weapon(1, 1, 4),
-                amount: 3,
-                left: 17,
-            },
+            uses_changed(1, "brace", 2),
             applied(1, "brace", Phase::Player),
             Event::UnitActed { unit: UnitId(1) },
         ]
     );
+    assert_eq!(uses_left(&s, 1, "brace"), 2);
+    // No durability is spent.
     assert_eq!(durability(&s, 1), 20);
     end(&mut s);
     let events = act(&mut s, 3, p(2, 0), attack(1));
@@ -855,13 +868,242 @@ fn brace_is_paid_from_the_equipped_weapon_and_lasts_until_the_next_own_phase() {
 }
 
 #[test]
-fn non_combat_actives_need_an_equipped_weapon_and_are_actions() {
+fn a_grappler_has_8_shoves_a_battle_and_they_refill_the_next_battle() {
+    // The enemy is against the map's edge: it stays put, taking 5 each time.
+    let sturdy = Unit {
+        hp: 60,
+        stats: Stats::from_growable([60, 0, 0, 0, 0, 0, 0], 3),
+        ..unit(3, Faction::Enemy, p(0, 1))
+    };
+    let mut s = start(setup(vec![shover(p(1, 1)), sturdy.clone()]));
+    assert_eq!(uses_left(&s, 1, "shove"), 8);
+    for left in (0..8).rev() {
+        let events = act(&mut s, 1, p(1, 1), use_skill("shove", Some(3)));
+        assert_eq!(
+            events[..2],
+            [used(1, "shove"), uses_changed(1, "shove", left)]
+        );
+        assert_eq!(uses_left(&s, 1, "shove"), left);
+        next_turn(&mut s);
+    }
+    assert_eq!(hp(&s, 3), 20);
+    // The 9th is refused, whoever it is aimed at.
+    let none_left = cannot_pay("shove", CostError::NoUsesLeft);
+    refused_act(
+        &mut s,
+        1,
+        p(1, 1),
+        use_skill("shove", Some(3)),
+        none_left.clone(),
+    );
+    refused_act(&mut s, 1, p(1, 1), use_skill("shove", None), none_left);
+    assert_eq!(durability(&s, 1), 20);
+    // The next battle starts with 8 again.
+    let spent = s.unit(UnitId(1)).cloned().unwrap();
+    assert_eq!(spent.skill_uses.uses_left(&sk("shove")), 0);
+    let mut s = start(setup(vec![spent, sturdy]));
+    assert_eq!(uses_left(&s, 1, "shove"), 8);
+    let events = act(&mut s, 1, p(1, 1), use_skill("shove", Some(3)));
+    assert!(events.contains(&uses_changed(1, "shove", 7)));
+}
+
+#[test]
+fn brace_needs_no_weapon_and_changes_no_durability() {
+    let unarmed = with_skill(mage(lord(1, p(0, 0)), &["bolt"]), "brace");
+    let broken = with_skill(
+        wielding(unit(2, Faction::Player, p(0, 2)), weapon(1, 1, 3), 0),
+        "brace",
+    );
+    let bare = Unit {
+        loadout: Loadout::default(),
+        ..with_skill(unit(4, Faction::Player, p(0, 4)), "brace")
+    };
     let mut s = start(setup(vec![
-        with_skill(mage(lord(1, p(0, 0)), &["bolt"]), "brace"),
+        unarmed,
+        broken,
+        bare,
+        unit(3, Faction::Enemy, p(7, 0)),
+    ]));
+    // A spell equipped, a broken weapon, nothing at all.
+    let equipped =
+        |s: &BattleState, id| s.unit(UnitId(id)).and_then(|u| u.loadout.equipped.clone());
+    assert_eq!(equipped(&s, 1), Some(Equipped::Spell(SpellId::new("bolt"))));
+    assert_eq!(equipped(&s, 4), None);
+    for id in [1, 2, 4] {
+        let at = s.unit(UnitId(id)).map(|u| u.pos).unwrap();
+        let before = s.unit(UnitId(id)).map(|u| u.loadout.clone());
+        let events = act(&mut s, id, at, use_skill("brace", None));
+        assert_eq!(
+            events,
+            [
+                used(id, "brace"),
+                uses_changed(id, "brace", 2),
+                applied(id, "brace", Phase::Player),
+                Event::UnitActed { unit: UnitId(id) },
+            ]
+        );
+        assert_eq!(s.unit(UnitId(id)).map(|u| u.loadout.clone()), before);
+    }
+    assert_eq!(durability(&s, 2), 0);
+}
+
+#[test]
+fn uses_belong_to_the_unit_and_the_skill_and_everyone_gets_them() {
+    // Two Guards, an enemy boss, a green unit and a reinforcement: each has
+    // its own 3 Braces (Nick: "this should count for both the player and
+    // the boss").
+    let guard = |id, faction, pos| with_skill(unit(id, faction, pos), "brace");
+    let boss = Unit {
+        role: Role::Boss,
+        ..guard(3, Faction::Enemy, p(7, 0))
+    };
+    let mut s = start(BattleSetup {
+        reinforcements: vec![reinforcement(2, guard(9, Faction::Enemy, p(7, 4)))],
+        ..setup(vec![
+            with_skill(lord(1, p(0, 0)), "brace"),
+            guard(2, Faction::Player, p(0, 2)),
+            boss,
+            guard(6, Faction::Ally, p(4, 4)),
+            with_skill(unit(5, Faction::Player, p(4, 0)), "keen"),
+        ])
+    });
+    let full = SkillUses {
+        uses_left: [(sk("brace"), 3)].into(),
+    };
+    for id in [1, 2, 3, 6] {
+        assert_eq!(s.unit(UnitId(id)).map(|u| &u.skill_uses), Some(&full));
+    }
+    assert_eq!(s.pending[0].unit.skill_uses, full);
+    // A skill that costs durability has no uses to count.
+    assert_eq!(
+        s.unit(UnitId(5)).map(|u| &u.skill_uses),
+        Some(&SkillUses::default())
+    );
+    act(&mut s, 1, p(0, 0), use_skill("brace", None));
+    assert_eq!([1, 2].map(|id| uses_left(&s, id, "brace")), [2, 3]);
+    // The boss pays the same way.
+    end(&mut s);
+    let events = act(&mut s, 3, p(7, 0), use_skill("brace", None));
+    assert!(events.contains(&uses_changed(3, "brace", 2)));
+}
+
+#[test]
+fn a_skill_missing_from_a_units_uses_has_none() {
+    // A unit that comes to know an active during a battle (or loaded from a
+    // save made before uses existed) has no use of it until the next one.
+    let mut s = start(setup(vec![
+        lord(1, p(0, 0)),
+        unit(3, Faction::Enemy, p(7, 0)),
+    ]));
+    if let Some(u) = s.unit_mut(UnitId(1)) {
+        u.class = skill_class("brace");
+    }
+    refused_act(
+        &mut s,
+        1,
+        p(0, 0),
+        use_skill("brace", None),
+        cannot_pay("brace", CostError::NoUsesLeft),
+    );
+}
+
+#[test]
+fn rewinding_past_a_use_gives_it_back() {
+    let (mut s, _) = BattleState::new(setup(vec![
+        with_skill(lord(1, p(0, 0)), "brace"),
+        unit(3, Faction::Enemy, p(7, 0)),
+    ]));
+    let mut h = BattleHistory::new(s.clone());
+    let brace = Command::Act {
+        unit: UnitId(1),
+        dest: p(0, 0),
+        action: use_skill("brace", None),
+    };
+    for left in [2, 1] {
+        s.apply(&brace).unwrap();
+        h.push(brace.clone());
+        assert_eq!(uses_left(&s, 1, "brace"), left);
+        for _ in 0..2 {
+            s.apply(&Command::EndPhase).unwrap();
+            h.push(Command::EndPhase);
+        }
+    }
+    // Back to just before the second Brace: one use is back, the first
+    // stays spent.
+    let back = h.rewind_to(3).unwrap();
+    assert_eq!(uses_left(&back, 1, "brace"), 2);
+    // Back to the start: all three.
+    let back = h.rewind_to(0).unwrap();
+    assert_eq!(uses_left(&back, 1, "brace"), 3);
+}
+
+#[test]
+fn a_unit_saved_before_skill_uses_existed_loads_with_none() {
+    let s = start(setup(vec![
+        with_skill(lord(1, p(0, 0)), "brace"),
+        unit(3, Faction::Enemy, p(7, 0)),
+    ]));
+    let unit = s.unit(UnitId(1)).cloned().unwrap();
+    let saved = ron::to_string(&unit).unwrap();
+    let field = "skill_uses:(uses_left:{(\"brace\"):3}),";
+    assert!(saved.contains(field), "{saved}");
+    let old: Unit = ron::from_str(&saved.replace(field, "")).unwrap();
+    assert_eq!(
+        old,
+        Unit {
+            skill_uses: SkillUses::default(),
+            ..unit.clone()
+        }
+    );
+    // A save made now keeps the uses left.
+    assert_eq!(ron::from_str::<Unit>(&saved).unwrap(), unit);
+}
+
+#[test]
+fn a_durability_cost_on_a_non_combat_active_is_paid_from_the_equipped_weapon() {
+    let mut s = start(setup(vec![
+        with_skill(
+            carrying(lord(1, p(0, 0)), &[weapon(1, 1, 3), weapon(1, 1, 4)]),
+            "ward",
+        ),
+        armed(unit(3, Faction::Enemy, p(2, 0)), 7),
+    ]));
+    s.apply(&Command::Equip {
+        unit: UnitId(1),
+        equipped: Equipped::Weapon(1),
+    })
+    .unwrap();
+    let events = act(&mut s, 1, p(1, 0), use_skill("ward", None));
+    assert_eq!(
+        events[1..],
+        [
+            used(1, "ward"),
+            Event::DurabilitySpent {
+                unit: UnitId(1),
+                slot: 1,
+                item: weapon(1, 1, 4),
+                amount: 3,
+                left: 17,
+            },
+            applied(1, "ward", Phase::Player),
+            Event::UnitActed { unit: UnitId(1) },
+        ]
+    );
+    assert_eq!(durability(&s, 1), 20);
+    assert_eq!(uses_left(&s, 1, "ward"), 0);
+    end(&mut s);
+    let events = act(&mut s, 3, p(2, 0), attack(1));
+    assert_eq!(combat(&events).attacker.damage, 2);
+}
+
+#[test]
+fn a_durability_active_needs_an_equipped_weapon_and_actives_are_actions() {
+    let mut s = start(setup(vec![
+        with_skill(mage(lord(1, p(0, 0)), &["bolt"]), "ward"),
         with_skill(unit(2, Faction::Player, p(0, 2)), "keen"),
         with_skill(
-            wielding(unit(4, Faction::Player, p(0, 4)), weapon(1, 1, 3), 2),
-            "brace",
+            wielding(unit(4, Faction::Player, p(0, 4)), weapon(1, 1, 3), 0),
+            "ward",
         ),
         learned(unit(5, Faction::Player, p(7, 4)), &["focus"]),
         unit(3, Faction::Enemy, p(7, 0)),
@@ -870,8 +1112,15 @@ fn non_combat_actives_need_an_equipped_weapon_and_are_actions() {
         &mut s,
         1,
         p(0, 0),
-        use_skill("brace", None),
-        cannot_pay("brace", CostError::NoWeapon),
+        use_skill("ward", None),
+        cannot_pay("ward", CostError::NoWeapon),
+    );
+    refused_act(
+        &mut s,
+        4,
+        p(0, 4),
+        use_skill("ward", None),
+        cannot_pay("ward", CostError::WeaponBroken),
     );
     refused_act(
         &mut s,
@@ -1004,8 +1253,10 @@ fn sanctuary_heals_wounded_allies_in_reach() {
         ]
     );
     assert_eq!([1, 2, 5, 7, 3].map(|id| hp(&s, id)), [3, 10, 10, 1, 1]);
-    let mut s = start(setup([vec![cleric("sanctuary_2")], others()].concat()));
-    act(&mut s, 1, p(1, 1), use_skill("sanctuary_2", None));
+    // Benediction reaches 2 tiles, once a battle.
+    let mut s = start(setup([vec![cleric("benediction")], others()].concat()));
+    let events = act(&mut s, 1, p(1, 1), use_skill("benediction", None));
+    assert_eq!(events[1], uses_changed(1, "benediction", 0));
     assert_eq!(hp(&s, 7), 8);
     // White Magic counts (Nick): 2 + 5 + 4.
     let white = learned(cleric("sanctuary"), &["white_magic_2"]);
@@ -1067,7 +1318,7 @@ fn shove_pushes_an_adjacent_enemy_one_tile_away() {
                 path: vec![p(0, 0), p(1, 0), p(1, 1)],
             },
             used(1, "shove"),
-            spent(1, weapon(1, 1, 3), 3, 17),
+            uses_changed(1, "shove", 7),
             Event::Pushed {
                 unit: UnitId(3),
                 from: p(2, 1),
@@ -1482,6 +1733,10 @@ fn skill_error_messages() {
         (
             cannot_pay("x", CostError::WeaponBroken),
             "can't pay for \"x\": the weapon is broken",
+        ),
+        (
+            cannot_pay("x", CostError::NoUsesLeft),
+            "can't pay for \"x\": it has no uses left this battle",
         ),
         (
             CommandError::BadSkillTarget(sk("x")),
