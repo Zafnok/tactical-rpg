@@ -1,8 +1,8 @@
 //! Tests of the Preparations screen on the debug Quick Battle
 //! (`assets/battles/quick.ron`): the test lord (swords), knight (spears,
-//! medium and heavy armour) and archer, with a stock of four weapons, three
-//! armours, three accessories, six Potions and two Elixirs, and a pack cap
-//! of 6.
+//! medium and heavy armour) and archer, the test scout left out of the
+//! battle with a Steel Bow, a stock of three weapons, three armours, three
+//! accessories, six Potions and two Elixirs, and a pack cap of 6.
 
 use insta::assert_snapshot;
 use trpg_content::battle_campaign;
@@ -17,11 +17,14 @@ use crate::screens::battle::QUICK_BATTLE;
 
 use Action::{Cancel, Confirm, CursorDown, CursorLeft, CursorRight, CursorUp};
 
-/// The Quick Battle's setup, before Preparations.
-fn setup(c: &Ctx) -> BattleSetup {
+/// The Quick Battle's setup and bench, before Preparations.
+fn setup(c: &Ctx) -> Preparations {
     let def = &c.content.battles[QUICK_BATTLE];
     let campaign = battle_campaign(&c.content, def, GameMode::Classic, c.lead.clone());
-    campaign.battle_setup(def, &c.content.tables())
+    Preparations {
+        setup: campaign.battle_setup(def, &c.content.tables()),
+        bench: campaign.bench(def),
+    }
 }
 
 fn screen(c: &Ctx) -> PreparationsScreen {
@@ -125,7 +128,6 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
         stock_texts(&s),
         [
             "Steel Spear     can't use spears",
-            "Steel Bow       can't use bows",
             "Iron Axe        can't use axes",
             "Iron Sword      Mt 5 Hit 90 Wt 2 Rng1 20/20",
         ]
@@ -143,7 +145,7 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
         lord_weapons(&s),
         ["iron_sword", "steel_sword", "iron_sword"].map(|w| Some(w.to_owned()))
     );
-    assert_eq!(s.setup().stock.weapons.len(), 3);
+    assert_eq!(s.setup().stock.weapons.len(), 2);
     assert_eq!(s.speed_line().as_deref(), Some("AS 6 with Iron Sword"));
     // The slot now offers to put it back.
     update(&mut s, &mut c, &[Confirm]);
@@ -151,7 +153,7 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
     assert_eq!(s.speed_line().as_deref(), Some("AS 6 → 7 with no weapon"));
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(lord_weapons(&s)[2], None);
-    assert_eq!(s.setup().stock.weapons.len(), 4);
+    assert_eq!(s.setup().stock.weapons.len(), 3);
 }
 
 #[test]
@@ -242,7 +244,7 @@ fn armour_and_accessories_come_from_the_stock_with_their_counts() {
 fn a_slot_with_nothing_in_stock_says_so() {
     let mut c = ctx();
     let mut s = screen(&c);
-    s.setup.stock = trpg_core::Stock::default();
+    s.prep.setup.stock = trpg_core::Stock::default();
     // The lord's empty third slot.
     update(&mut s, &mut c, &[Confirm, Confirm, CursorDown, CursorDown]);
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_cancel"]);
@@ -276,7 +278,7 @@ fn cancel_goes_back_one_list_at_a_time() {
         &mut c,
         &[Confirm, CursorDown, Cancel, CursorUp, CursorUp],
     );
-    assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Archer"));
+    assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Scout"));
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(s.gear_slot(), Some(GearSlot::Weapon(0)));
 }
@@ -335,7 +337,7 @@ fn pack_items_go_back_to_the_stock() {
 fn the_pack_tab_opens_on_the_pack_when_the_stock_has_no_consumables() {
     let mut c = ctx();
     let mut s = screen(&c);
-    s.setup.stock.items.retain(|id, _| *id != potion());
+    s.prep.setup.stock.items.retain(|id, _| *id != potion());
     update(&mut s, &mut c, &[CursorRight, Confirm, Confirm, Confirm]);
     // Both Elixirs packed, none left: the cursor moved to the pack.
     assert!(s.spare().is_empty());
@@ -343,7 +345,7 @@ fn the_pack_tab_opens_on_the_pack_when_the_stock_has_no_consumables() {
     update(&mut s, &mut c, &[Cancel, Confirm]);
     assert_eq!(s.focus(), Focus::Pack);
     // With neither, the tab can't be opened.
-    s.setup.pack.items.clear();
+    s.prep.setup.pack.items.clear();
     update(&mut s, &mut c, &[Cancel]);
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_cancel"]);
     assert_eq!(s.focus(), Focus::Tabs);
@@ -364,6 +366,7 @@ fn leaving_asks_first_and_only_when_allowed() {
     assert_eq!(s.outcome(), Some(PrepOutcome::Leave));
 
     let mut s = PreparationsScreen::new(setup(&c), false);
+    assert_eq!(s.prep().bench.len(), 1);
     assert!(sounds(&mut s, &mut c, &[Cancel]).is_empty());
     assert!(!s.is_asking_leave());
     assert!(!s.help(&c).contains("leave"));
@@ -431,5 +434,52 @@ fn pack_tab_at_the_cap_snapshot() {
 fn fight_tab_and_leave_question_snapshot() {
     let mut h = harness();
     h.keys("Left d");
+    assert_snapshot!(h.snapshot());
+}
+
+/// Nick (0408): with two archers and only one in the battle, the better
+/// bow of the one left out can go to the one who fights.
+#[test]
+fn a_benched_units_gear_is_traded_through_the_stock() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    // The scout is listed last, after the deployed units.
+    update(&mut s, &mut c, &[Confirm, CursorUp, Confirm]);
+    assert_eq!(s.who(), Some(PrepUnit::Benched(0)));
+    assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Scout"));
+    assert_eq!(s.speed_line().as_deref(), Some("AS 2 with Steel Bow"));
+    // Her Steel Bow goes back to the stock.
+    update(&mut s, &mut c, &[Confirm]);
+    assert_eq!(stock_texts(&s)[0], PUT_BACK);
+    update(&mut s, &mut c, &[Confirm]);
+    assert_eq!(s.prep().bench[0].loadout.weapon(0), None);
+    assert_eq!(s.prep().bench[0].loadout.equipped, None);
+    // The archer (the unit above her) takes it in his second slot.
+    update(
+        &mut s,
+        &mut c,
+        &[Cancel, CursorUp, Confirm, CursorDown, Confirm],
+    );
+    assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Archer"));
+    assert_eq!(
+        stock_texts(&s).last().map(String::as_str),
+        Some("Steel Bow       Mt 9 Hit 70 Wt 5 Rng2 25/25")
+    );
+    update(&mut s, &mut c, &[CursorUp, Confirm]);
+    let archer = &s.setup().units[2];
+    assert_eq!(
+        archer.loadout.weapon(1).map(|w| w.def.0.as_str()),
+        Some("steel_bow")
+    );
+    // The scout can take a stock item too, by the same rules.
+    update(&mut s, &mut c, &[Cancel, CursorDown, Confirm, Confirm]);
+    assert_eq!(s.who(), Some(PrepUnit::Benched(0)));
+    assert!(stock_texts(&s)[0].ends_with("can't use spears"));
+}
+
+#[test]
+fn a_benched_unit_snapshot() {
+    let mut h = harness();
+    h.keys("f Up f");
     assert_snapshot!(h.snapshot());
 }

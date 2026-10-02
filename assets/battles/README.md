@@ -53,6 +53,7 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
 | `preparations` | Whether the Preparations screen comes first (0408): the player changes the loadouts of the deployed units and fills the pack **from their own stock**, so such a battle has no `default_pack`. Default `false`. |
 | `pack_cap` | How many consumables the pack may hold, written bare (`pack_cap: 3`). Default: `default_pack_cap` in `items.ron` (6). |
 | `default_pack` | The consumables brought in without Preparations (given for free). Must be empty with `preparations: true`. |
+| `solo_bench` | Characters in the army but not in the battle when it is played on its own (the Quick Battle): Preparations lists them so their gear can be traded. Ignored in the story. Default: empty. |
 | `solo_stock` | The stock when the battle is played on its own (the debug Quick Battle): item ids, one entry per item. Ignored in the story, where the stock is the campaign's. Default: empty. |
 | `clear_gold` | Gold for winning. Default 0. |
 | `objective` | `Rout()`, `DefeatUnit(unit: "garth")` (a character among the enemies or reinforcements), `Seize(pos: (x, y), by_lord: true)`, `Survive(turns: 8)`. The first three take an optional `turn_limit: Some(n)`. |
@@ -66,7 +67,7 @@ All reported at once, naming the entry (`player slot 2 ("bors")`,
 `enemy 3`, `reinforcement 1`):
 
 - the id doesn't match the file name; an unknown map;
-- `preparations: true` with a `default_pack`; an unknown `solo_stock` item;
+- `preparations: true` with a `default_pack`; an unknown `solo_stock` item; a `solo_bench` character that is unknown, in the battle or listed twice;
 - an unknown character or template; an enemy with both or neither;
 - a level outside `1..=level_cap`, or a level given for a character;
 - a loadout the unit can't carry;

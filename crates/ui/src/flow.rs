@@ -13,12 +13,13 @@
 //! and draws the current one, passes on what it pushes (the battle's scene
 //! overlays), and when it pops reads its result and moves on. Its
 //! [`name`](Screen::name) is the current screen's. A battle is played from
-//! its [`BattleSetup`], kept so that `Restart Battle` (map menu) and
+//! its [`BattleSetup`](trpg_core::BattleSetup), kept so that `Restart Battle` (map menu) and
 //! `Retry` (Game Over) rebuild it exactly, every rewind charge back.
 //!
 //! A battle with `preparations: true` opens the Preparations screen (0408)
-//! first, which changes the setup's loadouts and pack; `Fight!` starts the
-//! battle with it. Both restarts go back to Preparations, as the player
+//! first, which changes the setup's loadouts and pack (and the gear of the
+//! roster's units left out of the battle); `Fight!` starts the battle with
+//! it. Both restarts go back to Preparations, as the player
 //! left it (Nick, 0408), so they can change their gear before trying again.
 //! Only the Quick Battle may leave Preparations (back to the title).
 
@@ -26,7 +27,7 @@ use std::any::Any;
 use std::collections::VecDeque;
 
 use trpg_content::{ChapterDef, Scene, battle_campaign, new_campaign};
-use trpg_core::{BattleDef, BattleRewards, BattleSetup, BattleState, Campaign, GameMode, Outcome};
+use trpg_core::{BattleDef, BattleRewards, BattleState, Campaign, GameMode, Outcome, Preparations};
 
 use crate::glyph_buffer::GlyphBuffer;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
@@ -72,7 +73,8 @@ enum Then {
 #[derive(Debug, Clone)]
 struct Fight {
     def: BattleDef,
-    setup: BattleSetup,
+    /// The battle's setup, and the army's units left out of it.
+    prep: Preparations,
 }
 
 /// The game flow: one chapter after another. See the module docs.
@@ -254,10 +256,13 @@ impl FlowScreen {
             self.stage = Stage::ToBeContinued(ToBeContinuedScreen);
             return;
         };
-        let setup = campaign.battle_setup(def, &ctx.content.tables());
+        let prep = Preparations {
+            setup: campaign.battle_setup(def, &ctx.content.tables()),
+            bench: campaign.bench(def),
+        };
         self.fight = Some(Fight {
             def: def.clone(),
-            setup,
+            prep,
         });
         self.restart();
     }
@@ -269,7 +274,7 @@ impl FlowScreen {
             return;
         };
         if fight.def.preparations {
-            let screen = PreparationsScreen::new(fight.setup.clone(), self.can_leave);
+            let screen = PreparationsScreen::new(fight.prep.clone(), self.can_leave);
             self.stage = Stage::Preparations(Box::new(screen));
         } else {
             self.fight();
@@ -281,7 +286,7 @@ impl FlowScreen {
         let Some(fight) = &self.fight else {
             return;
         };
-        let (state, events) = BattleState::new(fight.setup.clone());
+        let (state, events) = BattleState::new(fight.prep.setup.clone());
         self.stage = Stage::Battle(Box::new(BattleScreen::start(state, &events)));
     }
 
@@ -292,7 +297,11 @@ impl FlowScreen {
             return true;
         }
         if let Some(fight) = &mut self.fight {
-            fight.setup = screen.setup().clone();
+            fight.prep = screen.prep().clone();
+            // The benched units keep what Preparations left them with.
+            if let Some(campaign) = &mut self.campaign {
+                campaign.set_members(&fight.prep.bench);
+            }
         }
         self.fight();
         false

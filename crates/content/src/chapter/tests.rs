@@ -145,12 +145,16 @@ fn a_battle_campaign_has_the_battles_characters() {
     let lead = LeadProfile::new("Ellery", LeadGender::Male);
     let game = battle_campaign(&c, quick, GameMode::Classic, lead);
     let names: Vec<_> = game.roster.iter().map(|u| u.name.as_str()).collect();
-    assert_eq!(names, ["Test Lord", "Test Knight", "Test Archer"]);
+    // Its slots' characters, then its bench.
+    assert_eq!(
+        names,
+        ["Test Lord", "Test Knight", "Test Archer", "Test Scout"]
+    );
     assert_eq!(game.gold, 0);
     // The Quick Battle's own stock, to try Preparations with.
     assert_eq!(game.stock, stock_of(&c, &quick.solo_stock));
     assert_eq!(game.stock.count(&ItemId::new("potion")), 6);
-    assert_eq!(game.stock.weapons.len(), 4);
+    assert_eq!(game.stock.weapons.len(), 3);
     // A battle without one starts with an empty stock.
     let test = &c.battles["test"];
     let lead = LeadProfile::new("Ellery", LeadGender::Male);

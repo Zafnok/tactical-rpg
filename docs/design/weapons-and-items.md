@@ -61,6 +61,12 @@ Follow-ups:
 > unique items, this shop won't. It will only sell up to the tier of items
 > you have unlocked as a basic. So for the beginning it might be Potion
 > (heal 20) for the mid it might be a consumable to heal 40, etc."
+>
+> **Units left out of a battle keep their gear out of reach?** (2026-10-01,
+> PR #140) "make sure we have trade option for this case otherwise i
+> agree... but if we have 2 archers and only taking one but the other one
+> has the stronger bow, we should be able to trade their equips around in
+> the prep screen but not once inside battle"
 
 Reference (researched for Nick, 2026-09-25): *Fire Emblem: Fortune's Weave*
 has no weapon triangle. Swords deal 1.2x damage on follow-up strikes, spears
@@ -268,20 +274,26 @@ Nick's shape:
   menu is free (does not end the action) (FE rule).
 - Units don't carry consumables; see Battle pack.
 - Loadouts are set before battle (Preparations). **No trading during
-  battle** (*Claude's starting rule*: loadouts are fixed once the battle
-  starts, and consumables are already shared).
+  battle** (Nick, PR #140: trade "in the prep screen but not once inside
+  battle"; loadouts are fixed once the battle starts, and consumables are
+  already shared).
 - Everything not in a loadout is in the party's **stock** (shared,
   unlimited *tunable*).
 
 **On the Preparations screen** (ticket 0408; all *Claude's starting rules*
 unless marked):
 
-- The `Loadouts` tab lists **the units deployed in this battle**. A unit
-  left out of the battle keeps what it carries; its gear can't be reached
-  from here.
+- The `Loadouts` tab lists **the whole army** (Nick, PR #140): the units
+  going into this battle, then the ones left out of it (dimmed, marked
+  `Not in this battle`), so gear can be **traded between any of them**.
+  With two archers and only one in the battle, the other's stronger bow
+  can go to the one who fights.
 - Pick a unit, then one of its slots, then an item from the stock: the item
   goes in the slot and what was there goes back to the stock. A weapon
-  keeps its durability either way.
+  keeps its durability either way. A trade is two such steps: put the
+  benched archer's bow back in the stock, then give it to the other
+  (*Claude's starting rule*: trades go through the stock, there is no
+  unit-to-unit swap).
 - A unit can only be given **gear it can use**: a weapon of a kind its
   class uses, at a rank it has, and armour of a weight its class wears.
   Anything else is shown dimmed with the reason (`needs rank D`,

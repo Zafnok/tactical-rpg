@@ -263,7 +263,8 @@ fn quick_battle_runs_through_the_flow() {
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
     assert_eq!(campaign.chapter, "quick");
     assert_eq!(campaign.mode, GameMode::Classic);
-    assert_eq!(campaign.roster.len(), 3);
+    // Its three slots' characters and the scout left out of the battle.
+    assert_eq!(campaign.roster.len(), 4);
     assert_eq!(battle(&h).units().len(), 6);
 }
 

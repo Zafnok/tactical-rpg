@@ -1,10 +1,11 @@
 //! The Preparations screen (ticket 0408, `docs/design/weapons-and-items.md`,
 //! *Loadout* and *Battle pack*): before a battle, the player changes the
-//! deployed units' loadouts and fills the shared pack from the stock, then
-//! starts the battle with `Fight!`.
+//! army's loadouts and fills the shared pack from the stock, then starts
+//! the battle with `Fight!`.
 //!
-//! The screen edits a [`BattleSetup`] through the rules in
-//! [`trpg_core::prep`] and hands it back ([`PreparationsScreen::setup`]).
+//! The screen edits a [`Preparations`] (the battle's setup and the units
+//! left out of it) through the rules in [`trpg_core::prep`] and hands it
+//! back ([`PreparationsScreen::prep`]).
 //!
 //! Controls, by [`Focus`]:
 //!
@@ -12,8 +13,9 @@
 //!   Confirm (or Down) opens it; on `Fight!` Confirm starts the battle.
 //!   Cancel does nothing unless the caller allows leaving; then it asks
 //!   [`LEAVE_QUESTION`].
-//! - **Loadouts**: the units, then the chosen unit's slots, then the stock
-//!   for that slot; Confirm goes one list deeper, Cancel one back. Confirm
+//! - **Loadouts**: the units (the ones left out of this battle after the
+//!   others, dimmed, so their gear can be traded: Nick, 0408), then the
+//!   chosen unit's slots, then the stock for that slot; Confirm goes one list deeper, Cancel one back. Confirm
 //!   on a stock item puts it in the slot (what was there goes back to the
 //!   stock); items the unit can't use are dimmed with the reason and can't
 //!   be taken. The attack speed line shows the change before it is made.
@@ -22,8 +24,8 @@
 //!   pack takes no more and says so.
 
 use trpg_core::{
-    ArmourWeight, BattleSetup, Equipped, GearSlot, ItemDef, ItemId, PrepError, StatValue,
-    StockItem, Unit, UnitId, Unusable, WeaponKind,
+    ArmourWeight, BattleSetup, Equipped, GearSlot, ItemDef, ItemId, PrepError, PrepUnit,
+    Preparations, StatValue, StockItem, Unit, Unusable, WeaponKind,
 };
 
 use super::battle::info::bonus_text;
@@ -44,6 +46,8 @@ pub const LEAVE_QUESTION: &str = "Leave preparations?";
 const EMPTY: &str = "-";
 /// The stock row that empties the slot.
 pub const PUT_BACK: &str = "(put back in stock)";
+/// Shown under the slots of a unit left out of the battle.
+pub const NOT_IN_BATTLE: &str = "Not in this battle";
 /// Said when a slot is chosen and the stock has nothing for it.
 pub const NOTHING_IN_STOCK: &str = "Nothing in stock for this slot.";
 
@@ -107,7 +111,7 @@ pub enum Focus {
 /// How the screen closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrepOutcome {
-    /// `Fight!`: start the battle with [`PreparationsScreen::setup`].
+    /// `Fight!`: start the battle with [`PreparationsScreen::prep`].
     Fight,
     /// The player left Preparations.
     Leave,
@@ -172,12 +176,12 @@ fn window_start(focus: usize, len: usize, rows: usize) -> usize {
 /// an [`outcome`](Self::outcome).
 #[derive(Debug, Clone)]
 pub struct PreparationsScreen {
-    setup: BattleSetup,
+    prep: Preparations,
     /// Whether Cancel on the tabs may leave.
     can_leave: bool,
     tab: Tab,
     focus: Focus,
-    /// The chosen unit, among the player units.
+    /// The chosen unit, among the army's ([`Preparations::units`]).
     unit: usize,
     /// The chosen slot, among the unit's slots.
     slot: usize,
@@ -198,11 +202,11 @@ impl PreparationsScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "preparations";
 
-    /// Preparations for `setup`, on the `Loadouts` tab. `can_leave`: Cancel
+    /// The screen for `prep`, on the `Loadouts` tab. `can_leave`: Cancel
     /// on the tabs offers to leave.
-    pub fn new(setup: BattleSetup, can_leave: bool) -> Self {
+    pub fn new(prep: Preparations, can_leave: bool) -> Self {
         Self {
-            setup,
+            prep,
             can_leave,
             tab: Tab::Loadouts,
             focus: Focus::Tabs,
@@ -219,7 +223,12 @@ impl PreparationsScreen {
 
     /// The battle as prepared so far.
     pub fn setup(&self) -> &BattleSetup {
-        &self.setup
+        &self.prep.setup
+    }
+
+    /// The battle and the units left out of it, as prepared so far.
+    pub fn prep(&self) -> &Preparations {
+        &self.prep
     }
 
     /// How the screen closed, once it has popped.
@@ -247,25 +256,25 @@ impl PreparationsScreen {
         self.leaving
     }
 
-    /// The deployed units, in unit order.
-    fn units(&self) -> Vec<&Unit> {
-        self.setup.player_units().collect()
+    /// The army's units: the deployed ones, then the ones left out.
+    fn units(&self) -> Vec<(PrepUnit, &Unit)> {
+        self.prep.units()
     }
 
     /// The chosen unit.
     fn unit(&self) -> Option<&Unit> {
-        self.setup.player_units().nth(self.unit)
+        self.who().and_then(|who| self.prep.unit(who))
     }
 
-    /// The chosen unit's id.
-    fn unit_id(&self) -> Option<UnitId> {
-        self.unit().map(|u| u.id)
+    /// Which unit is chosen.
+    fn who(&self) -> Option<PrepUnit> {
+        self.units().get(self.unit).map(|(who, _)| *who)
     }
 
     /// The chosen unit's slots.
     fn slots(&self) -> Vec<GearSlot> {
-        self.unit_id()
-            .map_or_else(Vec::new, |id| self.setup.gear_slots(id))
+        self.who()
+            .map_or_else(Vec::new, |who| self.prep.gear_slots(who))
     }
 
     /// The chosen slot.
@@ -275,7 +284,7 @@ impl PreparationsScreen {
 
     /// The name of item `id`.
     fn item_name(&self, id: &ItemId) -> String {
-        self.setup
+        self.setup()
             .items
             .get(id)
             .map_or_else(|| id.0.clone(), |d| d.name().to_owned())
@@ -288,7 +297,7 @@ impl PreparationsScreen {
             GearSlot::Weapon(s) => {
                 let copy = unit.loadout.weapon(s)?;
                 let max = self
-                    .setup
+                    .setup()
                     .items
                     .weapon(&copy.def)
                     .map_or(0, |w| w.durability);
@@ -315,7 +324,7 @@ impl PreparationsScreen {
         let (Some(unit), Some(slot)) = (self.unit(), self.gear_slot()) else {
             return Vec::new();
         };
-        let items = &self.setup.items;
+        let items = &self.prep.setup.items;
         let mut rows = Vec::new();
         if self.held(unit, slot).is_some() {
             rows.push(StockRow {
@@ -325,7 +334,7 @@ impl PreparationsScreen {
             });
         }
         let row = |item: StockItem, id: &ItemId, name: String, detail: String| {
-            let unusable = self.setup.unusable(unit.id, id);
+            let unusable = self.who().and_then(|who| self.prep.unusable(who, id));
             let detail = unusable.map_or(detail, reason_text);
             StockRow {
                 item: Some(item),
@@ -335,7 +344,7 @@ impl PreparationsScreen {
         };
         match slot {
             GearSlot::Weapon(_) => {
-                for (i, copy) in self.setup.stock.weapons.iter().enumerate() {
+                for (i, copy) in self.prep.setup.stock.weapons.iter().enumerate() {
                     let Some(def) = items.weapon(&copy.def) else {
                         continue;
                     };
@@ -359,7 +368,7 @@ impl PreparationsScreen {
                 }
             }
             GearSlot::Armour | GearSlot::Accessory => {
-                for (id, count) in &self.setup.stock.items {
+                for (id, count) in &self.prep.setup.stock.items {
                     let detail = match (slot, items.get(id)) {
                         (GearSlot::Armour, Some(ItemDef::Armour(a))) => {
                             format!("{}  Wt {}", bonus_text(&a.bonus), a.weight)
@@ -382,8 +391,8 @@ impl PreparationsScreen {
 
     /// The stock's consumables with how many there are, in id order.
     pub fn spare(&self) -> Vec<(ItemId, u32)> {
-        let items = &self.setup.items;
-        let stock = self.setup.stock.items.iter();
+        let items = &self.prep.setup.items;
+        let stock = self.prep.setup.stock.items.iter();
         stock
             .filter(|(id, _)| items.consumable(id).is_some())
             .map(|(id, n)| (id.clone(), *n))
@@ -394,7 +403,7 @@ impl PreparationsScreen {
     /// was first packed.
     pub fn packed(&self) -> Vec<(ItemId, usize)> {
         let mut groups: Vec<(ItemId, usize)> = Vec::new();
-        for id in &self.setup.pack.items {
+        for id in &self.prep.setup.pack.items {
             match groups.iter_mut().find(|(g, _)| g == id) {
                 Some((_, n)) => *n += 1,
                 None => groups.push((id.clone(), 1)),
@@ -405,14 +414,14 @@ impl PreparationsScreen {
 
     /// `Pack 3/6`.
     pub fn pack_header(&self) -> String {
-        let pack = &self.setup.pack;
+        let pack = &self.prep.setup.pack;
         format!("Pack {}/{}", pack.items.len(), pack.cap)
     }
 
-    /// The setup after Confirm on stock row `row`, if that changes it.
-    fn after(&self, row: &StockRow) -> Option<BattleSetup> {
-        let (unit, slot) = (self.unit_id()?, self.gear_slot()?);
-        let mut after = self.setup.clone();
+    /// The army after Confirm on stock row `row`, if that changes it.
+    fn after(&self, row: &StockRow) -> Option<Preparations> {
+        let (unit, slot) = (self.who()?, self.gear_slot()?);
+        let mut after = self.prep.clone();
         let done = match &row.item {
             Some(item) => after.gear_from_stock(unit, slot, item),
             None => after.gear_to_stock(unit, slot),
@@ -453,9 +462,9 @@ impl PreparationsScreen {
     /// `AS 6 → 4 with Steel Sword`. The speed is with the weapon of the
     /// highlighted weapon slot in hand, else with the equipped weapon.
     pub fn speed_line(&self) -> Option<String> {
-        let unit = self.unit()?;
+        let (who, unit) = (self.who()?, self.unit()?);
         let slot = self.speed_slot();
-        let now: StatValue = self.setup.attack_speed(unit.id, slot)?;
+        let now: StatValue = self.prep.attack_speed(who, slot)?;
         let highlighted = self.stock_rows().into_iter().nth(self.stock);
         let after = (self.focus == Focus::Stock)
             .then_some(highlighted)
@@ -463,15 +472,17 @@ impl PreparationsScreen {
             .and_then(|row| self.after(&row));
         Some(match after {
             Some(after) => {
-                let then = after.attack_speed(unit.id, slot).unwrap_or(now);
+                let then = after.attack_speed(who, slot).unwrap_or(now);
                 let with = after
-                    .player_units()
-                    .nth(self.unit)
-                    .map(|u| Self::in_hand(&after, u, slot))
+                    .unit(who)
+                    .map(|u| Self::in_hand(&after.setup, u, slot))
                     .unwrap_or_default();
                 format!("AS {now} → {then} with {with}")
             }
-            None => format!("AS {now} with {}", Self::in_hand(&self.setup, unit, slot)),
+            None => format!(
+                "AS {now} with {}",
+                Self::in_hand(&self.prep.setup, unit, slot)
+            ),
         })
     }
 
@@ -550,7 +561,7 @@ impl PreparationsScreen {
             return;
         };
         if let Some(after) = self.after(&row) {
-            self.setup = after;
+            self.prep = after;
             self.focus = Focus::Slots;
             self.stock = 0;
             ctx.audio.menu(MenuSound::Select);
@@ -567,12 +578,12 @@ impl PreparationsScreen {
         let Some((item, _)) = self.spare().into_iter().nth(self.spare) else {
             return;
         };
-        match self.setup.pack_from_stock(&item) {
+        match self.prep.setup.pack_from_stock(&item) {
             Ok(()) => ctx.audio.menu(MenuSound::Select),
             Err(e) => {
                 ctx.audio.menu(MenuSound::Denied);
                 if e == PrepError::PackFull {
-                    let pack = &self.setup.pack;
+                    let pack = &self.prep.setup.pack;
                     self.message = Some(format!(
                         "The pack is full ({}/{}).",
                         pack.items.len(),
@@ -593,7 +604,7 @@ impl PreparationsScreen {
         let Some((item, _)) = self.packed().into_iter().nth(self.pack) else {
             return;
         };
-        if self.setup.pack_to_stock(&item).is_ok() {
+        if self.prep.setup.pack_to_stock(&item).is_ok() {
             ctx.audio.menu(MenuSound::Select);
         }
         let left = self.packed().len();
@@ -769,10 +780,11 @@ impl PreparationsScreen {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
         let in_tab = self.focus != Focus::Tabs;
+        // Units left out of the battle are dimmed.
         let units: Vec<(String, bool)> = self
             .units()
             .iter()
-            .map(|u| (u.name.clone(), true))
+            .map(|(who, u)| (u.name.clone(), matches!(who, PrepUnit::Deployed(_))))
             .collect();
         let on_units = self.focus == Focus::Units;
         Self::draw_box(ctx, buf, UNITS_BOX, "Units", on_units);
@@ -781,7 +793,7 @@ impl PreparationsScreen {
         let Some(unit) = self.unit() else {
             return;
         };
-        let class = self.setup.classes.get(&unit.class);
+        let class = self.prep.setup.classes.get(&unit.class);
         let class = class.map_or(unit.class.0.as_str(), |c| c.name.as_str());
         let title = format!("{} · {class}", unit.name);
         let on_slots = self.focus == Focus::Slots;
@@ -806,6 +818,10 @@ impl PreparationsScreen {
         if let Some(line) = self.speed_line() {
             let y = SLOTS_BOX.y + 2 + i32::try_from(rows.len()).unwrap_or(0);
             buf.print(SLOTS_BOX.x + 2, y, &line, c(UiColor::Text), bg);
+            if matches!(self.who(), Some(PrepUnit::Benched(_))) {
+                let dim = c(UiColor::TextDim);
+                buf.print(SLOTS_BOX.x + 2, y + 2, NOT_IN_BATTLE, dim, bg);
+            }
         }
 
         let kind = match self.gear_slot() {
@@ -825,7 +841,7 @@ impl PreparationsScreen {
 
     /// One consumable row: `Potion ×4  Restore 10 HP`.
     fn consumable_row(&self, id: &ItemId, count: usize) -> (String, bool) {
-        let effect = self.setup.items.consumable(id).map(|c| c.effect);
+        let effect = self.prep.setup.items.consumable(id).map(|c| c.effect);
         let effect = effect.map(effect_text).unwrap_or_default();
         let name = self.item_name(id);
         (format!("{name:<15} ×{count:<2}  {effect}"), true)
@@ -875,7 +891,7 @@ impl Screen for PreparationsScreen {
             Tab::Loadouts => self.draw_loadouts(ctx, buf),
             Tab::Pack => self.draw_pack(ctx, buf),
             Tab::Fight => {
-                let units = self.units().len();
+                let units = self.prep.setup.player_units().count();
                 let ready = format!("Units {units}{SEPARATOR}{}", self.pack_header());
                 print_centred(buf, 14, &ready, c(UiColor::Text), black);
             }

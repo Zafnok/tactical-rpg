@@ -1,6 +1,7 @@
 //! Scripted tests of the Preparations screen (ticket 0408) through the real
 //! game: the debug Quick Battle (`assets/battles/quick.ron`) opens it
-//! first, with a stock of spare gear, six Potions and two Elixirs.
+//! first, with a stock of spare gear, six Potions and two Elixirs, and a
+//! scout left out of the battle who carries a Steel Bow.
 
 use trpg_core::{BattleState, ItemId, UnitId};
 use trpg_ui::harness::Harness;
@@ -49,7 +50,7 @@ fn shows(h: &Harness, text: &str) -> bool {
 }
 
 /// Loadouts → the lord → his empty third slot → the Iron Sword (the last
-/// of the stock's four weapons; the others he can't use) → back to the
+/// of the stock's three weapons; the others he can't use) → back to the
 /// tabs; then Pack → two Potions (below the Elixirs) → back to the tabs.
 const SET_UP: &str = "f f Down Down f Up f d d Right f Down f f d";
 
@@ -73,7 +74,7 @@ fn the_battle_starts_with_the_loadout_and_pack_set_up() {
     // What wasn't brought stays in the stock.
     assert_eq!(state.stock().count(&potion()), 4);
     assert_eq!(state.stock().count(&ItemId::new("elixir")), 2);
-    assert_eq!(state.stock().weapons.len(), 3);
+    assert_eq!(state.stock().weapons.len(), 2);
 }
 
 /// Acceptance: the pack can never exceed the cap; unusable items can't be
@@ -118,7 +119,7 @@ fn restart_battle_goes_back_to_preparations_as_they_were_left() {
     let prep = h.flow().and_then(|f| f.preparations());
     let prep = prep.unwrap_or_else(|| panic!("no preparations"));
     assert_eq!(prep.packed(), [(potion(), 2)]);
-    assert_eq!(prep.setup().stock.weapons.len(), 3);
+    assert_eq!(prep.setup().stock.weapons.len(), 2);
     // One more Potion this time.
     h.keys("Right f Down f d Right f");
     assert_eq!(h.screens(), ["title", "battle"]);
@@ -161,4 +162,49 @@ fn rebound_keys_and_a_controller_work() {
     assert_eq!(prep.packed(), [(ItemId::new("elixir"), 1)]);
     h.keys("d j");
     assert_eq!(h.screens(), ["title", "battle"]);
+}
+
+/// Nick (0408): two archers, only one in the battle, and the other has the
+/// better bow: trade it on the Preparations screen. The trade holds through
+/// the battle and a restart, and the scout is left without it.
+#[test]
+fn the_benched_scouts_bow_goes_to_the_archer() {
+    let mut h = preparations();
+    // The scout (last in the list): her only weapon back to the stock.
+    h.keys("f Up f f f");
+    // The archer (above her): his second slot takes it (the last stock row).
+    h.keys("d Up f Down f Up f");
+    assert!(
+        shows(&h, "Weapon     Steel Bow       25/25"),
+        "{}",
+        h.snapshot()
+    );
+    h.keys("d d Left f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    let state = battle(&h);
+    let archer = state.unit(UnitId(3)).unwrap_or_else(|| panic!("no archer"));
+    let bows: Vec<&str> = archer
+        .loadout
+        .weapons
+        .iter()
+        .flatten()
+        .map(|w| w.def.0.as_str())
+        .collect();
+    assert_eq!(bows, ["iron_bow", "steel_bow"]);
+    // The scout isn't in the battle, and in the army she has no bow now.
+    assert_eq!(state.units().len(), 6);
+    let scout = |h: &Harness| {
+        let campaign = h.flow().and_then(|f| f.campaign());
+        let roster = &campaign.unwrap_or_else(|| panic!("no campaign")).roster;
+        roster[3].clone()
+    };
+    assert_eq!(scout(&h).name, "Test Scout");
+    assert_eq!(scout(&h).loadout.weapon_count(), 0);
+    // Restart Battle: Preparations again, the trade as it was left.
+    h.keys("f f f d Down Down f f");
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    let prep = h.flow().and_then(|f| f.preparations());
+    let prep = prep.unwrap_or_else(|| panic!("no preparations")).prep();
+    assert_eq!(prep.bench[0].loadout.weapon_count(), 0);
+    assert_eq!(prep.setup.units[2].loadout.weapon_count(), 2);
 }

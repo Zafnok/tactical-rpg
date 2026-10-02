@@ -20,7 +20,9 @@
 //!   the battle's default pack (empty in a battle with Preparations, where
 //!   the player fills it from the stock, [`crate::prep`]), the campaign's
 //!   gold, stock and mode, and the rewind charges of the battle's
-//!   [`Difficulty`].
+//!   [`Difficulty`]. The roster members without a slot are the battle's
+//!   bench ([`Campaign::bench`]): Preparations may still trade their gear
+//!   ([`crate::prep`]), and [`Campaign::set_members`] puts them back.
 //! - **After a victory** ([`Campaign::apply_result`]), in this order:
 //!   1. Every deployed player unit's roster entry becomes the battle's unit
 //!      (levels, EXP, loadout, weapon ranks, durability all carry over). A
@@ -142,6 +144,9 @@ pub struct BattleDef {
     /// The stock when the battle is played on its own (the debug Quick
     /// Battle), one entry per item. The story uses the campaign's stock.
     pub solo_stock: Vec<ItemId>,
+    /// Characters in the army but not in the battle when it is played on
+    /// its own (the Quick Battle's bench, to try trading gear with).
+    pub solo_bench: Vec<CharacterId>,
     /// Gold for winning.
     pub clear_gold: Gold,
     /// How to win.
@@ -370,6 +375,29 @@ impl Campaign {
             rest(u);
         }
         Ok(rewards)
+    }
+
+    /// The roster's units that battle `def` leaves out (no slot of its
+    /// names them), in roster order: the bench of its Preparations.
+    pub fn bench(&self, def: &BattleDef) -> Vec<Unit> {
+        let deployed = |u: &&Unit| {
+            let slots = &mut def.player_slots.iter();
+            slots.any(|s| u.character.as_ref() == Some(&s.character))
+        };
+        self.roster
+            .iter()
+            .filter(|u| !deployed(u))
+            .cloned()
+            .collect()
+    }
+
+    /// Replaces the roster entries of `units` (by character) with them:
+    /// the bench as Preparations left it. Units not in the roster are
+    /// ignored.
+    pub fn set_members(&mut self, units: &[Unit]) {
+        for unit in units {
+            self.replace(unit.clone());
+        }
     }
 
     /// Classic → Casual. Returns whether the mode changed (Casual never

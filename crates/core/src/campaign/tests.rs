@@ -94,6 +94,7 @@ fn def() -> BattleDef {
         pack_cap: 3,
         default_pack: vec![item("potion"), item("potion")],
         solo_stock: vec![],
+        solo_bench: vec![],
         clear_gold: 500,
         objective: Objective::Rout { turn_limit: None },
         triggers: vec![Trigger {
@@ -408,4 +409,24 @@ fn campaign_round_trips_through_ron() {
     let back: Campaign = ron::from_str(&text).unwrap();
     assert_eq!(back, game);
     assert_eq!(back.lead, LeadProfile::new("Mara", LeadGender::Female));
+}
+
+/// Roster members without a slot are the battle's bench; what Preparations
+/// did to them goes back into the roster.
+#[test]
+fn the_bench_is_the_roster_without_a_slot() {
+    let mut game = campaign(GameMode::Classic);
+    let bench = game.bench(&def());
+    let names: Vec<&str> = bench.iter().map(|u| u.name.as_str()).collect();
+    assert_eq!(names, ["ben"]);
+    assert_eq!(bench[0], game.roster[2]);
+    // Ben gives up nothing yet; hand him a vest, and a stranger too.
+    let mut ben = bench[0].clone();
+    ben.loadout.armour = Some(item("vest"));
+    let stranger = named(unit(93, Faction::Player, p(0, 0)), "dan");
+    let before = game.roster.clone();
+    game.set_members(&[ben.clone(), stranger]);
+    assert_eq!(game.roster.len(), 3);
+    assert_eq!(game.roster[2], ben);
+    assert_eq!(game.roster[..2], before[..2]);
 }

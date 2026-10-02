@@ -265,8 +265,9 @@ pub fn new_campaign(content: &Content, mode: GameMode, lead: LeadProfile) -> Cam
 }
 
 /// A throwaway campaign for playing battle `battle` on its own (the debug
-/// Quick Battle): the characters of its player slots, fresh from the
-/// character data, no gold, and the battle's `solo_stock`.
+/// Quick Battle): the characters of its player slots, then its
+/// `solo_bench`, fresh from the character data, no gold, and the battle's
+/// `solo_stock`.
 pub fn battle_campaign(
     content: &Content,
     battle: &BattleDef,
@@ -277,6 +278,7 @@ pub fn battle_campaign(
         .player_slots
         .iter()
         .map(|s| s.character.clone())
+        .chain(battle.solo_bench.iter().cloned())
         .collect();
     Campaign::new_game(
         mode,

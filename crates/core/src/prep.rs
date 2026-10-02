@@ -6,7 +6,11 @@
 //!
 //! Source: `docs/design/weapons-and-items.md` (Loadout, Battle pack).
 //!
-//! - **Who.** Only the setup's player units (the deployed ones) change.
+//! - **Who** ([`Preparations`]). Every unit of the army: the setup's player
+//!   units (the deployed ones) and the bench (roster units left out of this
+//!   battle). Gear is traded between any of them through the stock (Nick,
+//!   0408: a benched archer's better bow can go to the one who fights).
+//!   Once the battle starts there is no trading.
 //! - **Gear** ([`BattleSetup::gear_from_stock`], [`BattleSetup::gear_to_stock`]):
 //!   a unit has the weapon slots of its class, one armour and one accessory
 //!   ([`BattleSetup::gear_slots`]). A stock item goes in a slot of its kind,
@@ -29,11 +33,10 @@
 //!   without skill bonuses.
 
 use std::fmt;
-use std::sync::Arc;
 
 use crate::battle::BattleSetup;
-use crate::class::{ArmourWeight, ClassDef};
-use crate::item::{Equipped, ItemDef, ItemId, ItemTable, WEAPON_SLOTS};
+use crate::class::{ArmourWeight, ClassDef, ClassTable};
+use crate::item::{Equipped, ItemDef, ItemId, ItemTable, Stock, WEAPON_SLOTS};
 use crate::spell::SpellTable;
 use crate::stats::StatValue;
 use crate::terrain::TerrainRules;
@@ -74,7 +77,7 @@ pub enum Unusable {
 /// Why a Preparations change was refused. Nothing changed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrepError {
-    /// No player unit with that id (or its class is unknown).
+    /// No such unit of the army (or its class is unknown).
     NoUnit,
     /// The unit's class doesn't have that weapon slot.
     NoSlot,
@@ -112,6 +115,14 @@ impl fmt::Display for PrepError {
 
 impl std::error::Error for PrepError {}
 
+/// The tables the gear rules read.
+#[derive(Clone, Copy)]
+struct Tables<'a> {
+    classes: &'a ClassTable,
+    items: &'a ItemTable,
+    spells: &'a SpellTable,
+}
+
 /// Weapon slots a unit of `class` has.
 fn weapon_slots(class: &ClassDef) -> usize {
     usize::from(class.weapon_slots).min(WEAPON_SLOTS)
@@ -131,20 +142,127 @@ fn unusable(unit: &Unit, class: &ClassDef, items: &ItemTable, item: &ItemId) -> 
 
 /// Gives `unit` its default equip unless it has a spell or a weapon it can
 /// wield equipped.
-fn refit(unit: &mut Unit, class: &ClassDef, items: &ItemTable, spells: &SpellTable) {
+fn refit(unit: &mut Unit, class: &ClassDef, t: Tables<'_>) {
     let ok = match &unit.loadout.equipped {
-        Some(Equipped::Weapon(slot)) => unit.usable_weapon(*slot, class, items).is_some(),
+        Some(Equipped::Weapon(slot)) => unit.usable_weapon(*slot, class, t.items).is_some(),
         Some(Equipped::Spell(_)) => true,
         None => false,
     };
     if !ok {
-        unit.loadout.equipped = unit.default_equip(class, items, spells);
+        unit.loadout.equipped = unit.default_equip(class, t.items, t.spells);
     }
+}
+
+/// The loadout slots of `unit`: its class's weapon slots, then armour and
+/// accessory. Empty if its class is unknown.
+fn slots_of(unit: &Unit, classes: &ClassTable) -> Vec<GearSlot> {
+    let Some(class) = classes.get(&unit.class) else {
+        return Vec::new();
+    };
+    (0..weapon_slots(class))
+        .map(GearSlot::Weapon)
+        .chain([GearSlot::Armour, GearSlot::Accessory])
+        .collect()
+}
+
+/// Moves `item` from `stock` into `slot` of `unit`; what the slot held goes
+/// to `stock`.
+fn from_stock(
+    unit: &mut Unit,
+    stock: &mut Stock,
+    slot: GearSlot,
+    item: &StockItem,
+    t: Tables<'_>,
+) -> Result<(), PrepError> {
+    let class = t.classes.get(&unit.class).ok_or(PrepError::NoUnit)?;
+    if matches!(slot, GearSlot::Weapon(s) if s >= weapon_slots(class)) {
+        return Err(PrepError::NoSlot);
+    }
+    let id = match item {
+        StockItem::Weapon(i) => stock.weapons.get(*i).map(|w| w.def.clone()),
+        StockItem::Item(id) => (stock.count(id) > 0).then(|| id.clone()),
+    }
+    .ok_or(PrepError::NotInStock)?;
+    let fits = match (slot, item) {
+        (GearSlot::Weapon(_), StockItem::Weapon(_)) => t.items.weapon(&id).is_some(),
+        (GearSlot::Armour, StockItem::Item(_)) => t.items.armour(&id).is_some(),
+        (GearSlot::Accessory, StockItem::Item(_)) => t.items.accessory(&id).is_some(),
+        _ => false,
+    };
+    if !fits {
+        return Err(PrepError::WrongSlot);
+    }
+    if let Some(why) = unusable(unit, class, t.items, &id) {
+        return Err(PrepError::Unusable(why));
+    }
+    match (slot, item) {
+        (GearSlot::Weapon(s), StockItem::Weapon(i)) => {
+            let copy = stock.weapons.remove(*i);
+            if let Some(old) = unit.loadout.weapons[s].replace(copy) {
+                stock.weapons.insert(*i, old);
+            }
+        }
+        (GearSlot::Armour | GearSlot::Accessory, _) => {
+            stock.take(&id);
+            let worn = if slot == GearSlot::Armour {
+                &mut unit.loadout.armour
+            } else {
+                &mut unit.loadout.accessory
+            };
+            if let Some(old) = worn.replace(id) {
+                stock.add(old);
+            }
+        }
+        (GearSlot::Weapon(_), StockItem::Item(_)) => {}
+    }
+    refit(unit, class, t);
+    Ok(())
+}
+
+/// Moves what `slot` of `unit` holds to `stock`.
+fn to_stock(
+    unit: &mut Unit,
+    stock: &mut Stock,
+    slot: GearSlot,
+    t: Tables<'_>,
+) -> Result<(), PrepError> {
+    let class = t.classes.get(&unit.class).ok_or(PrepError::NoUnit)?;
+    match slot {
+        GearSlot::Weapon(s) => {
+            let held = unit.loadout.weapons.get_mut(s).and_then(Option::take);
+            stock.weapons.push(held.ok_or(PrepError::EmptySlot)?);
+        }
+        GearSlot::Armour => {
+            stock.add(unit.loadout.armour.take().ok_or(PrepError::EmptySlot)?);
+        }
+        GearSlot::Accessory => {
+            stock.add(unit.loadout.accessory.take().ok_or(PrepError::EmptySlot)?);
+        }
+    }
+    refit(unit, class, t);
+    Ok(())
+}
+
+/// `unit`'s attack speed with the weapon in `slot` in hand (`None`: what it
+/// has equipped). `None` if its class is unknown.
+fn speed(unit: &Unit, slot: Option<usize>, t: Tables<'_>) -> Option<StatValue> {
+    let class = t.classes.get(&unit.class)?;
+    // Attack speed doesn't read the terrain.
+    let ground = TerrainRules {
+        name: String::new(),
+        move_cost: Vec::new(),
+        defense: 0,
+        avoid: 0,
+        heal_percent: 0,
+    };
+    let with = slot.map(Equipped::Weapon);
+    let input = unit.combat_input(class, t.classes, t.items, t.spells, with.as_ref(), &ground);
+    Some(input.attack_speed(&t.items.combat_rules()))
 }
 
 /// Preparations: see the module docs.
 impl BattleSetup {
-    /// The player units: the ones Preparations may change, in unit order.
+    /// The player units: the deployed ones, in unit order.
     pub fn player_units(&self) -> impl Iterator<Item = &Unit> {
         self.units.iter().filter(|u| u.faction == Faction::Player)
     }
@@ -160,17 +278,8 @@ impl BattleSetup {
     /// The loadout slots of player unit `unit`: its class's weapon slots,
     /// then armour and accessory. Empty if there is no such unit.
     pub fn gear_slots(&self, unit: UnitId) -> Vec<GearSlot> {
-        let class = self
-            .player_index(unit)
-            .ok()
-            .and_then(|i| self.classes.get(&self.units[i].class));
-        let Some(class) = class else {
-            return Vec::new();
-        };
-        (0..weapon_slots(class))
-            .map(GearSlot::Weapon)
-            .chain([GearSlot::Armour, GearSlot::Accessory])
-            .collect()
+        self.player_index(unit)
+            .map_or_else(|_| Vec::new(), |i| slots_of(&self.units[i], &self.classes))
     }
 
     /// Why player unit `unit` can't use `item`; `None` if it can (or if
@@ -189,78 +298,24 @@ impl BattleSetup {
         slot: GearSlot,
         item: &StockItem,
     ) -> Result<(), PrepError> {
-        let (classes, items) = (Arc::clone(&self.classes), Arc::clone(&self.items));
         let index = self.player_index(unit)?;
-        let class = classes
-            .get(&self.units[index].class)
-            .ok_or(PrepError::NoUnit)?;
-        if matches!(slot, GearSlot::Weapon(s) if s >= weapon_slots(class)) {
-            return Err(PrepError::NoSlot);
-        }
-        let id = match item {
-            StockItem::Weapon(i) => self.stock.weapons.get(*i).map(|w| w.def.clone()),
-            StockItem::Item(id) => (self.stock.count(id) > 0).then(|| id.clone()),
-        }
-        .ok_or(PrepError::NotInStock)?;
-        let fits = match (slot, item) {
-            (GearSlot::Weapon(_), StockItem::Weapon(_)) => items.weapon(&id).is_some(),
-            (GearSlot::Armour, StockItem::Item(_)) => items.armour(&id).is_some(),
-            (GearSlot::Accessory, StockItem::Item(_)) => items.accessory(&id).is_some(),
-            _ => false,
+        let t = Tables {
+            classes: &self.classes,
+            items: &self.items,
+            spells: &self.spells,
         };
-        if !fits {
-            return Err(PrepError::WrongSlot);
-        }
-        let u = &mut self.units[index];
-        if let Some(why) = unusable(u, class, &items, &id) {
-            return Err(PrepError::Unusable(why));
-        }
-        match (slot, item) {
-            (GearSlot::Weapon(s), StockItem::Weapon(i)) => {
-                let copy = self.stock.weapons.remove(*i);
-                if let Some(old) = u.loadout.weapons[s].replace(copy) {
-                    self.stock.weapons.insert(*i, old);
-                }
-            }
-            (GearSlot::Armour | GearSlot::Accessory, _) => {
-                self.stock.take(&id);
-                let worn = if slot == GearSlot::Armour {
-                    &mut u.loadout.armour
-                } else {
-                    &mut u.loadout.accessory
-                };
-                if let Some(old) = worn.replace(id) {
-                    self.stock.add(old);
-                }
-            }
-            (GearSlot::Weapon(_), StockItem::Item(_)) => {}
-        }
-        refit(u, class, &items, &self.spells);
-        Ok(())
+        from_stock(&mut self.units[index], &mut self.stock, slot, item, t)
     }
 
     /// Moves what `slot` of player unit `unit` holds to the stock.
     pub fn gear_to_stock(&mut self, unit: UnitId, slot: GearSlot) -> Result<(), PrepError> {
-        let (classes, items) = (Arc::clone(&self.classes), Arc::clone(&self.items));
         let index = self.player_index(unit)?;
-        let u = &mut self.units[index];
-        let class = classes.get(&u.class).ok_or(PrepError::NoUnit)?;
-        match slot {
-            GearSlot::Weapon(s) => {
-                let held = u.loadout.weapons.get_mut(s).and_then(Option::take);
-                self.stock.weapons.push(held.ok_or(PrepError::EmptySlot)?);
-            }
-            GearSlot::Armour => {
-                self.stock
-                    .add(u.loadout.armour.take().ok_or(PrepError::EmptySlot)?);
-            }
-            GearSlot::Accessory => {
-                self.stock
-                    .add(u.loadout.accessory.take().ok_or(PrepError::EmptySlot)?);
-            }
-        }
-        refit(u, class, &items, &self.spells);
-        Ok(())
+        let t = Tables {
+            classes: &self.classes,
+            items: &self.items,
+            spells: &self.spells,
+        };
+        to_stock(&mut self.units[index], &mut self.stock, slot, t)
     }
 
     /// Moves one consumable `item` from the stock into the pack.
@@ -292,25 +347,120 @@ impl BattleSetup {
     /// wield, counts as no weapon. `None` if there is no such unit.
     pub fn attack_speed(&self, unit: UnitId, slot: Option<usize>) -> Option<StatValue> {
         let u = &self.units[self.player_index(unit).ok()?];
-        let class = self.classes.get(&u.class)?;
-        // Attack speed doesn't read the terrain.
-        let ground = TerrainRules {
-            name: String::new(),
-            move_cost: Vec::new(),
-            defense: 0,
-            avoid: 0,
-            heal_percent: 0,
+        let t = Tables {
+            classes: &self.classes,
+            items: &self.items,
+            spells: &self.spells,
         };
-        let with = slot.map(Equipped::Weapon);
-        let input = u.combat_input(
-            class,
-            &self.classes,
-            &self.items,
-            &self.spells,
-            with.as_ref(),
-            &ground,
-        );
-        Some(input.attack_speed(&self.items.combat_rules()))
+        speed(u, slot, t)
+    }
+}
+
+/// A unit of the army on the Preparations screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PrepUnit {
+    /// A unit going into the battle, by its id in the setup.
+    Deployed(UnitId),
+    /// A unit left out of the battle, by its place on the bench.
+    Benched(usize),
+}
+
+/// A battle being prepared: its setup, and the army's units left out of
+/// it, whose gear can be traded all the same (see the module docs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Preparations {
+    /// The battle, with the deployed units, the stock and the pack.
+    pub setup: BattleSetup,
+    /// The roster's units that aren't in the battle, in roster order.
+    pub bench: Vec<Unit>,
+}
+
+impl Preparations {
+    /// Every unit of the army: the deployed ones in unit order, then the
+    /// bench.
+    pub fn units(&self) -> Vec<(PrepUnit, &Unit)> {
+        let deployed = self
+            .setup
+            .player_units()
+            .map(|u| (PrepUnit::Deployed(u.id), u));
+        let benched = self.bench.iter().enumerate();
+        deployed
+            .chain(benched.map(|(i, u)| (PrepUnit::Benched(i), u)))
+            .collect()
+    }
+
+    /// The unit `who`.
+    pub fn unit(&self, who: PrepUnit) -> Option<&Unit> {
+        match who {
+            PrepUnit::Deployed(id) => self.setup.player_units().find(|u| u.id == id),
+            PrepUnit::Benched(i) => self.bench.get(i),
+        }
+    }
+
+    fn tables(&self) -> Tables<'_> {
+        Tables {
+            classes: &self.setup.classes,
+            items: &self.setup.items,
+            spells: &self.setup.spells,
+        }
+    }
+
+    /// The loadout slots of `who` ([`BattleSetup::gear_slots`]).
+    pub fn gear_slots(&self, who: PrepUnit) -> Vec<GearSlot> {
+        self.unit(who)
+            .map_or_else(Vec::new, |u| slots_of(u, &self.setup.classes))
+    }
+
+    /// Why `who` can't use `item` ([`BattleSetup::unusable`]).
+    pub fn unusable(&self, who: PrepUnit, item: &ItemId) -> Option<Unusable> {
+        let u = self.unit(who)?;
+        let class = self.setup.classes.get(&u.class)?;
+        unusable(u, class, &self.setup.items, item)
+    }
+
+    /// Moves `item` from the stock into `slot` of `who`
+    /// ([`BattleSetup::gear_from_stock`]).
+    pub fn gear_from_stock(
+        &mut self,
+        who: PrepUnit,
+        slot: GearSlot,
+        item: &StockItem,
+    ) -> Result<(), PrepError> {
+        match who {
+            PrepUnit::Deployed(id) => self.setup.gear_from_stock(id, slot, item),
+            PrepUnit::Benched(i) => {
+                let t = Tables {
+                    classes: &self.setup.classes,
+                    items: &self.setup.items,
+                    spells: &self.setup.spells,
+                };
+                let unit = self.bench.get_mut(i).ok_or(PrepError::NoUnit)?;
+                from_stock(unit, &mut self.setup.stock, slot, item, t)
+            }
+        }
+    }
+
+    /// Moves what `slot` of `who` holds to the stock
+    /// ([`BattleSetup::gear_to_stock`]).
+    pub fn gear_to_stock(&mut self, who: PrepUnit, slot: GearSlot) -> Result<(), PrepError> {
+        match who {
+            PrepUnit::Deployed(id) => self.setup.gear_to_stock(id, slot),
+            PrepUnit::Benched(i) => {
+                let t = Tables {
+                    classes: &self.setup.classes,
+                    items: &self.setup.items,
+                    spells: &self.setup.spells,
+                };
+                let unit = self.bench.get_mut(i).ok_or(PrepError::NoUnit)?;
+                to_stock(unit, &mut self.setup.stock, slot, t)
+            }
+        }
+    }
+
+    /// `who`'s attack speed with the weapon in `slot` in hand
+    /// ([`BattleSetup::attack_speed`]).
+    pub fn attack_speed(&self, who: PrepUnit, slot: Option<usize>) -> Option<StatValue> {
+        speed(self.unit(who)?, slot, self.tables())
     }
 }
 

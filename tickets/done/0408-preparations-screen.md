@@ -111,11 +111,21 @@ spare gear, six Potions and two Elixirs to try it with.
   `quick_battle()` packs three Potions itself, so the battle tests see the
   pack they always had.
 
+4. (PR #140) **Trading:** "if we have 2 archers and only taking one but
+   the other one has the stronger bow, we should be able to trade their
+   equips around in the prep screen but not once inside battle". So the
+   `Loadouts` tab lists the whole army: units left out of the battle come
+   after the others, dimmed and marked `Not in this battle`, and their
+   gear moves like anyone's. The Quick Battle has a benched Test Scout
+   with a Steel Bow to try it (`solo_bench` in the battle file).
+   `core::prep::Preparations` holds the setup and the bench;
+   `Campaign::bench` / `set_members` carry the bench in and out.
+
 **Claude's starting rules** (Nick may veto)
 
-1. **Who is listed:** only the units going into this battle. A unit left
-   out keeps its gear, and you can't take it from here. Example: if the
-   archer sits a battle out, her Iron Bow stays with her.
+1. **Trades go through the stock:** to give the benched scout's Steel Bow
+   to the archer, put it back in the stock from her slot, then take it
+   from the stock into his. There is no direct unit-to-unit swap.
 2. **Swapping:** putting the Steel Spear in a slot that holds the Iron
    Spear sends the Iron Spear back to the stock, wear and all.
 3. **What a unit wields:** it goes on holding the weapon it had in hand. If
@@ -131,8 +141,8 @@ spare gear, six Potions and two Elixirs to try it with.
    nowhere to go back to yet); `Fight!` is the way on. The Quick Battle
    asks `Leave preparations?` and returns to the title.
 6. **Taking an item off the pack** removes the copy packed last.
-7. **Quick Battle's test stock** (placeholder data): Steel Spear, Steel
-   Bow, Iron Axe, Iron Sword, Iron Plate, Warded Robe, Chain Mail, Speed
+7. **Quick Battle's test stock** (placeholder data): Steel Spear, Iron
+   Axe, Iron Sword, Iron Plate, Warded Robe, Chain Mail, Speed
    Ring, Power Ring, Focus Charm, 6 Potions, 2 Elixirs.
 
 **Follow-up tickets:** 0038 (decide the Preparations shop's basics and
@@ -142,6 +152,8 @@ tiers, after the playtest), 0430 (the Shop tab, blocked by 0409 and 0038),
 **For Nick to try** (Pages build, title → Quick Battle): `Loadouts` → Test
 Lord → his empty third weapon slot → the Iron Sword (the spear, bow and axe
 are dimmed with why); try the Knight's armour slot (Iron Plate) and a ring.
+Trade: pick Test Scout (dimmed, last in the list), put her Steel Bow back
+in the stock, then give it to Test Archer.
 Then `Pack` → add Potions until it says the pack is full → `Fight!`. In the
 battle, the map menu's `Restart Battle` brings you back to Preparations
 with everything as you left it.

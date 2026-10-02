@@ -67,6 +67,8 @@ struct RawBattle {
     #[serde(default)]
     solo_stock: Vec<String>,
     #[serde(default)]
+    solo_bench: Vec<String>,
+    #[serde(default)]
     clear_gold: u32,
     objective: RawObjective,
     #[serde(default)]
@@ -242,6 +244,7 @@ pub fn from_source(
     let pack_cap = raw.pack_cap.unwrap_or(refs.items.rules.default_pack_cap);
     let default_pack = v.pack(&raw.default_pack, pack_cap);
     let solo_stock = v.solo_stock(&raw.solo_stock);
+    let solo_bench = v.solo_bench(&raw.solo_bench);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
         file,
@@ -270,6 +273,7 @@ pub fn from_source(
         pack_cap,
         default_pack,
         solo_stock,
+        solo_bench,
         clear_gold: raw.clear_gold,
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
@@ -521,6 +525,25 @@ impl Checker<'_, '_> {
             }
         }
         items.iter().map(|i| ItemId::new(i)).collect()
+    }
+
+    /// The solo bench's characters: known, and not in the battle.
+    fn solo_bench(&mut self, characters: &[String]) -> Vec<CharacterId> {
+        for (i, c) in characters.iter().enumerate() {
+            if !self
+                .refs
+                .characters
+                .characters
+                .contains_key(&CharacterId(c.clone()))
+            {
+                self.err(format!("solo_bench: no character \"{c}\""));
+            } else if self.cast.contains(c) || characters[..i].contains(c) {
+                self.err(format!(
+                    "solo_bench: \"{c}\" is already in the battle or listed twice"
+                ));
+            }
+        }
+        characters.iter().map(|c| CharacterId(c.clone())).collect()
     }
 
     /// The solo stock's items: any known items.

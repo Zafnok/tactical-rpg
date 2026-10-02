@@ -377,3 +377,105 @@ fn errors_read_as_sentences() {
     assert_eq!(texts.len(), all.len());
     assert_eq!(PrepError::PackFull.to_string(), "the pack is full");
 }
+
+/// The fencer deployed and a second one (`ben`) on the bench, carrying a
+/// steel sword, mail and a ring.
+fn army() -> Preparations {
+    let mut ben = unit();
+    ben.id = UnitId(0);
+    ben.name = "ben".into();
+    ben.loadout.weapons[0] = Some(copy("javelin", 9));
+    ben.loadout.equipped = Some(Equipped::Weapon(0));
+    ben.loadout.accessory = Some(id("ring"));
+    Preparations {
+        setup: prep(&["sword"], &["vest"]),
+        bench: vec![ben],
+    }
+}
+
+const BEN: PrepUnit = PrepUnit::Benched(0);
+const FENCER: PrepUnit = PrepUnit::Deployed(U);
+
+#[test]
+fn the_army_is_the_deployed_units_then_the_bench() {
+    let a = army();
+    let who: Vec<PrepUnit> = a.units().iter().map(|(w, _)| *w).collect();
+    assert_eq!(who, [FENCER, BEN]);
+    assert_eq!(a.unit(BEN).map(|u| u.name.as_str()), Some("ben"));
+    assert_eq!(a.unit(FENCER).map(|u| u.id), Some(U));
+    assert_eq!(a.unit(PrepUnit::Benched(1)), None);
+    assert_eq!(a.unit(PrepUnit::Deployed(UnitId(9))), None);
+    assert_eq!(a.gear_slots(BEN).len(), 5);
+    assert_eq!(a.gear_slots(FENCER), a.setup.gear_slots(U));
+    assert!(a.gear_slots(PrepUnit::Benched(1)).is_empty());
+    assert_eq!(
+        a.unusable(BEN, &id("bow")),
+        Some(Unusable::Kind(WeaponKind::Bow))
+    );
+    assert_eq!(
+        a.unusable(FENCER, &id("mail")),
+        a.setup.unusable(U, &id("mail"))
+    );
+    assert_eq!(a.unusable(PrepUnit::Benched(1), &id("bow")), None);
+    // Ben: Spd 7, a weapon of weight 2 with Str 5, the ring's Spd +2.
+    assert_eq!(a.attack_speed(BEN, None), Some(8));
+    assert_eq!(a.attack_speed(BEN, Some(1)), Some(9));
+    assert_eq!(a.attack_speed(FENCER, None), Some(7));
+    assert_eq!(a.attack_speed(PrepUnit::Benched(1), None), None);
+}
+
+/// Nick (0408): the benched unit's gear goes to the one who fights,
+/// through the stock.
+#[test]
+fn a_benched_units_gear_is_traded_through_the_stock() {
+    let mut a = army();
+    assert_eq!(a.gear_to_stock(BEN, GearSlot::Weapon(0)), Ok(()));
+    assert_eq!(a.gear_to_stock(BEN, GearSlot::Accessory), Ok(()));
+    assert_eq!(a.bench[0].loadout, crate::item::Loadout::default());
+    assert_eq!(stock_weapons(&a.setup), ["sword", "javelin"]);
+    assert_eq!(
+        a.gear_from_stock(FENCER, GearSlot::Weapon(0), &StockItem::Weapon(1)),
+        Ok(())
+    );
+    let ring = StockItem::Item(id("ring"));
+    assert_eq!(
+        a.gear_from_stock(FENCER, GearSlot::Accessory, &ring),
+        Ok(())
+    );
+    assert_eq!(
+        a.setup.units[0].loadout.weapon(0),
+        Some(&copy("javelin", 9))
+    );
+    assert_eq!(a.setup.units[0].loadout.accessory, Some(id("ring")));
+    // And the benched unit takes what is left.
+    assert_eq!(
+        a.gear_from_stock(BEN, GearSlot::Weapon(2), &StockItem::Weapon(0)),
+        Ok(())
+    );
+    let vest = StockItem::Item(id("vest"));
+    assert_eq!(a.gear_from_stock(BEN, GearSlot::Armour, &vest), Ok(()));
+    assert_eq!(a.bench[0].loadout.weapon(2), Some(&copy("sword", 20)));
+    assert_eq!(a.bench[0].loadout.equipped, Some(Equipped::Weapon(2)));
+    assert_eq!(a.bench[0].loadout.armour, Some(id("vest")));
+    assert!(a.setup.stock.weapons.is_empty());
+    // The same refusals as for a deployed unit.
+    let before = a.clone();
+    assert_eq!(
+        a.gear_from_stock(BEN, GearSlot::Armour, &vest),
+        Err(PrepError::NotInStock)
+    );
+    assert_eq!(
+        a.gear_to_stock(BEN, GearSlot::Accessory),
+        Err(PrepError::EmptySlot)
+    );
+    let nobody = PrepUnit::Benched(1);
+    assert_eq!(
+        a.gear_to_stock(nobody, GearSlot::Armour),
+        Err(PrepError::NoUnit)
+    );
+    assert_eq!(
+        a.gear_from_stock(nobody, GearSlot::Armour, &vest),
+        Err(PrepError::NoUnit)
+    );
+    assert_eq!(a, before);
+}

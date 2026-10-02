@@ -941,7 +941,8 @@ mod tests {
                 "test_archer",
                 "test_knight",
                 "test_lord",
-                "test_rogue"
+                "test_rogue",
+                "test_scout"
             ]
         );
         assert_eq!(t.generics.len(), 2);
