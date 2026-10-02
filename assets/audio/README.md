@@ -59,7 +59,7 @@ crashes it, so the checks below read every file's header.
 - Every cue id (sounds, music and pools together) is unique.
 - `length_ms` is the track's real length: screens that keep time with the
   music wrap their clock there
-  ([ADR-0036](../../docs/adr/0036-music-clock.md)). Don't work it out by
+  ([ADR-0037](../../docs/adr/0037-music-clock.md)). Don't work it out by
   hand: write any number but 0, run `cargo test -p trpg-content`, and copy
   the value from the failure (`... it plays for 133743 ms ... write
   length_ms: 133743`). The same goes for a track that is re-cut.

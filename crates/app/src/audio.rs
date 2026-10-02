@@ -8,7 +8,7 @@
 //! is tested without a sound card.
 //!
 //! It also knows when each track really started ([`Audio::music_playing`],
-//! ADR-0036): a track asked for only sounds once its file has loaded, and
+//! ADR-0037): a track asked for only sounds once its file has loaded, and
 //! screens that keep time with the music need the real moment.
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -121,7 +121,7 @@ impl<B: Backend> Audio<B> {
     /// Plays one frame's sound `requests` (music requests are skipped:
     /// `music` already holds what they mean), applies the `music` commands
     /// and checks on tracks still loading. `now` is the time in seconds on
-    /// a clock that keeps running while the game isn't drawn (ADR-0036): a
+    /// a clock that keeps running while the game isn't drawn (ADR-0037): a
     /// track that starts in this call started at `now`.
     pub(crate) fn play(
         &mut self,

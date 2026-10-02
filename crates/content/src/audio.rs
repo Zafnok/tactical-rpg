@@ -6,7 +6,7 @@
 //! they live in the top-level `music/` folder shipped next to the game, so
 //! the bundle can't check them. [`load`] checks the embedded sounds only;
 //! a test checks the music folder with [`from_source`], including each
-//! track's `length_ms` against its file ([`ogg_length_ms`], ADR-0036).
+//! track's `length_ms` against its file ([`ogg_length_ms`], ADR-0037).
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
@@ -79,7 +79,7 @@ pub struct MusicCue {
     /// Whether it loops (the default) or plays once.
     pub looped: bool,
     /// How long the track plays, in milliseconds (never 0): where the music
-    /// clock wraps a looped track (ADR-0036). The game can't measure it
+    /// clock wraps a looped track (ADR-0037). The game can't measure it
     /// (the player library gives no length), so it is data, checked
     /// against the file by a test.
     pub length_ms: u32,
@@ -737,7 +737,7 @@ mod tests {
     /// Music files aren't embedded, so the game can't check them; this
     /// test checks the repo's `music/` folder instead (ADR-0026): every
     /// file is there, is playable, and is as long as its cue's `length_ms`
-    /// says (ADR-0036). A wrong length fails with the value to write.
+    /// says (ADR-0037). A wrong length fails with the value to write.
     #[test]
     fn every_music_file_is_in_the_music_folder() {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../music");

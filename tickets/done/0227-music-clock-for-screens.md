@@ -147,7 +147,7 @@ None.
 - `Harness`: a small simulated player follows the music commands;
   `music_load_delay(seconds)`, `without_music()`, and `music_clock()` to
   read the result.
-- ADR-0036 (amends ADR-0026); READMEs for the manifest, the audio sources,
+- ADR-0037 (amends ADR-0026); READMEs for the manifest, the audio sources,
   `music/` and `crates/ui`.
 
 **Deviations**

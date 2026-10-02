@@ -155,7 +155,7 @@ fn splitmix64(seed: u64) -> u64 {
 }
 
 /// Where the music is in its track, for a screen that keeps time with it
-/// (ADR-0036), read from [`Ctx::music_clock`](crate::Ctx::music_clock).
+/// (ADR-0037), read from [`Ctx::music_clock`](crate::Ctx::music_clock).
 /// `app` reports what really sounds (a track starts only once its file has
 /// loaded); [`Game::set_music_playing`](crate::Game::set_music_playing)
 /// turns that into this.

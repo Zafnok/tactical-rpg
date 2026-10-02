@@ -1,4 +1,4 @@
-# ADR-0036: A music clock: `app` reports what is sounding, `ui` wraps it at the track's length
+# ADR-0037: A music clock: `app` reports what is sounding, `ui` wraps it at the track's length
 
 - **Status:** Accepted
 - **Date:** 2026-10-01

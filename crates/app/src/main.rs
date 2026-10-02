@@ -71,7 +71,7 @@ async fn main() {
         let mut events = keys::poll();
         events.extend(pads.poll());
         if running {
-            // The music clock (ADR-0036): wall-clock time, which keeps
+            // The music clock (ADR-0037): wall-clock time, which keeps
             // counting while a web tab is hidden and no frames run.
             let now = miniquad::date::now();
             game.set_music_playing(audio.music_playing(now));

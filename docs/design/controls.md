@@ -362,7 +362,8 @@ Help bars and tips name buttons the way **the pad in use** labels them:
   info · R1 next unit · L2 rewind · Options end turn`.
 - The PlayStation shapes `□` and `△` (and a bolder `✕`, `○`) aren't in
   the font: they are drawn as new glyphs in its style (ticket 0220, mockup
-  first).
+  first; the look Nick picked is under *Notes from building it (ticket
+  0220)* below).
 - An action with no button shows `! not mapped`, as for keys.
 - **Moving the cursor** names both the D-pad and the stick (Nick: "just
   render both somehow"): `D-pad/stick move` with the defaults. If the
@@ -464,8 +465,8 @@ Claude proposed six small rules; Nick's replies:
 
 Controllers work on every build: the default buttons above, D-pad and left
 stick, the Switch-style swap, several pads, plugging in and unplugging while
-playing. Help bars and tips still name keys until ticket 0220; rebinding
-buttons is ticket 0816; the `Press any key or button` prompt and when "Pick
+playing. Help bars and tips named keys until ticket 0220 (done, below);
+rebinding buttons is ticket 0816; the `Press any key or button` prompt and when "Pick
 your layout" shows are ticket 0226.
 
 - A pad counts as **Switch-style** when it says Nintendo made it. Other
@@ -475,6 +476,48 @@ your layout" shows are ticket 0226.
 - *Claude's starting rule (Nick can veto):* on the web build a controller
   button already dismisses `Press any key` (the line itself still says
   "key" until 0226), so a controller player isn't stuck on the title.
+
+### Notes from building it (ticket 0220)
+
+Help bars, prompts and tips now name the controller's buttons once a
+button is pressed, and keys again once a key is pressed.
+
+**The look of the PlayStation shapes.** Nick picked from four rendered
+options ([`0220-ps-glyphs.png`](../screenshots/0220-ps-glyphs.png): A thin
+and small, B thin and tall, C bold, D big and two cells wide), 2026-10-01:
+**"A. Thin, small"**. Each shape is one cell, as tall as a lower-case
+letter, drawn with thin lines: `✕ ○ □ △`.
+
+*Claude's starting rules (the design didn't say; Nick can veto):*
+
+- **Only a press that does something switches the text.** A key or button
+  with no job doesn't. Example: Mia plays on her pad and bumps `q` on the
+  keyboard, which does nothing: the help bar keeps naming buttons. She
+  presses an arrow key: it names keys.
+- **Two pads of different kinds:** the text names the buttons of the pad
+  pressed last.
+- **The D-pad's directions are shown as arrows** where a single direction
+  is named. Example: choosing an attack's target and Combat Art reads
+  `←/→ target · ↑/↓ art`.
+- **PlayStation 4 pads show `Create`** like PlayStation 5 ones, not
+  `Share`, for now: the game can't yet tell the two apart (ticket 0229).
+- **The developer debug hint** still names its key on a controller (it has
+  no button).
+- **The "Pick your layout" key list** always shows keys, since it is about
+  the keyboard.
+- **The Key bindings screen** names buttons in its help line on a pad, but
+  still only rebinds keys, and its `Escape` / `Delete` hints stay until
+  rebinding buttons (0816).
+- **Names nobody sees until buttons can be rebound (0816)**, chosen so
+  every button has one: a stick's single direction is `stick ↑` (left
+  stick) or `R-stick ↑`; pressing a stick in is `LS` / `RS` (PlayStation:
+  `L3` / `R3`); a cursor moved to the right stick reads `R-stick move`; a
+  cursor on four unrelated buttons lists them, e.g. `Y/X/A/B move`.
+
+**Found while building it:** giving the optional **Select** action a key
+stops the controller's Confirm from picking on the map (and likewise
+**Confirm end turn** and Start). The help bar then honestly says `! not
+mapped select` on a pad. Ticket 0230 fixes it.
 
 ## Open sub-questions
 

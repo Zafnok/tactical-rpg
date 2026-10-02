@@ -1,6 +1,6 @@
 # ADR-0026: Audio cues as data, played by `app`; music files beside the game
 
-- **Status:** Accepted; allowed licenses and the `credit` field amended by ADR-0027; native music loading (§3, §6) amended by ADR-0028; track lengths and the music clock added by ADR-0036
+- **Status:** Accepted; allowed licenses and the `credit` field amended by ADR-0027; native music loading (§3, §6) amended by ADR-0028; track lengths and the music clock added by ADR-0037
 - **Date:** 2026-09-28
 - **Related tickets:** 0212 (this plumbing), 0213, 0214, 0424, 0425, 0710, 0805, 0807, 0808
 

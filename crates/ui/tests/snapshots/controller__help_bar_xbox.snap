@@ -1,0 +1,6 @@
+---
+source: crates/ui/tests/controller.rs
+expression: "rows(PadKind::Xbox)"
+---
+X danger zone: OFF · Back auto-end: OFF
+A select · Y info · RB next unit · LT rewind · B menu · Start end turn

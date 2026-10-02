@@ -1,11 +1,13 @@
-//! `cargo xtask font-atlas <font.bdf> <out-dir>`: turns a BDF bitmap font into
-//! the game's font atlas (`atlas.png` + `atlas.ron`, see
-//! `trpg_content::font`). Only glyphs in [`ATLAS_RANGES`] are kept.
+//! `cargo xtask font-atlas <font.bdf>... <out-dir>`: turns a BDF bitmap font
+//! into the game's font atlas (`atlas.png` + `atlas.ron`, see
+//! `trpg_content::font`). Only glyphs in [`ATLAS_RANGES`] are kept. Further
+//! BDF files add glyphs the first lacks (our own, e.g. the controller
+//! button shapes).
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::BufWriter;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use trpg_content::FontAtlasDef;
 
@@ -21,6 +23,7 @@ pub const ATLAS_RANGES: &[(char, char)] = &[
     ('\u{2300}', '\u{23ff}'), // Miscellaneous technical (⌂ ⌐)
     ('\u{2500}', '\u{25ff}'), // Box drawing, blocks, geometric shapes
     ('\u{2600}', '\u{26ff}'), // Miscellaneous symbols (☺ ♣ ♪)
+    ('\u{2715}', '\u{2715}'), // ✕ (ours: the PlayStation cross button)
 ];
 
 /// Atlas cells per row.
@@ -36,6 +39,26 @@ pub struct BitmapFont {
     pub cell_h: u32,
     /// Glyph pixels by character.
     pub glyphs: BTreeMap<char, Vec<bool>>,
+}
+
+impl BitmapFont {
+    /// Adds `extra`'s glyphs. Fails if its cell size differs or it has a
+    /// glyph this font already has: extra files add glyphs, they never
+    /// change the font's own.
+    pub fn add(&mut self, extra: Self) -> Result<(), String> {
+        if (extra.cell_w, extra.cell_h) != (self.cell_w, self.cell_h) {
+            return Err(format!(
+                "cell size {}×{}, expected {}×{}",
+                extra.cell_w, extra.cell_h, self.cell_w, self.cell_h
+            ));
+        }
+        for (c, pixels) in extra.glyphs {
+            if self.glyphs.insert(c, pixels).is_some() {
+                return Err(format!("U+{:04X} is already in the font", u32::from(c)));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Numbered, trimmed lines of a BDF file.
@@ -239,12 +262,31 @@ pub fn decode_png(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
     Ok((info.width, info.height, buf))
 }
 
-/// Runs the command: reads `font_path`, writes `atlas.png` and `atlas.ron`
+/// Reads and parses the BDF font at `path`.
+fn read_font(path: &Path) -> Result<BitmapFont, String> {
+    let text = fs::read_to_string(path).map_err(|e| format!("reading {}: {e}", path.display()))?;
+    parse_bdf(&text).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// The font sources the committed atlas is built from, relative to the
+/// repo root: Terminus, then our own extra glyphs.
+#[cfg(test)]
+pub const SOURCES: [&str; 2] = [
+    "assets-src/fonts/ter-u16n.bdf",
+    "assets-src/fonts/pad-shapes.bdf",
+];
+
+/// Runs the command: reads the fonts at `font_paths` (the first is the
+/// font; the rest add glyphs to it), writes `atlas.png` and `atlas.ron`
 /// into `out_dir`. Fails if the result lacks a required glyph.
-pub fn run(font_path: &Path, out_dir: &Path) -> Result<String, String> {
-    let text = fs::read_to_string(font_path)
-        .map_err(|e| format!("reading {}: {e}", font_path.display()))?;
-    let font = parse_bdf(&text).map_err(|e| format!("{}: {e}", font_path.display()))?;
+pub fn run(font_paths: &[PathBuf], out_dir: &Path) -> Result<String, String> {
+    let (font_path, extras) = font_paths.split_first().ok_or("no font given")?;
+    let mut font = read_font(font_path)?;
+    for path in extras {
+        let extra = read_font(path)?;
+        font.add(extra)
+            .map_err(|e| format!("{}: {e}", path.display()))?;
+    }
     let atlas = build_atlas(&font);
     let problems = atlas.def.problems();
     if !problems.is_empty() {
@@ -254,10 +296,12 @@ pub fn run(font_path: &Path, out_dir: &Path) -> Result<String, String> {
             problems.join("\n  ")
         ));
     }
-    let name = font_path
-        .file_name()
-        .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-    let ron = atlas_ron(&atlas.def, &name)?;
+    let names: Vec<String> = font_paths
+        .iter()
+        .filter_map(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .collect();
+    let ron = atlas_ron(&atlas.def, &names.join(" + "))?;
     let png = encode_png(atlas.width, atlas.height, &atlas.rgba)?;
     fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
     for (file, bytes) in [("atlas.png", png.as_slice()), ("atlas.ron", ron.as_bytes())] {
@@ -391,15 +435,70 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let bdf = dir.join("tiny.bdf");
         fs::write(&bdf, TINY).unwrap();
-        let err = run(&bdf, &dir.join("out")).unwrap_err();
+        let err = run(std::slice::from_ref(&bdf), &dir.join("out")).unwrap_err();
         assert!(err.contains("missing required glyphs"), "{err}");
         assert!(!dir.join("out").exists());
         assert!(
-            run(&dir.join("missing.bdf"), &dir)
+            run(&[dir.join("missing.bdf")], &dir)
                 .unwrap_err()
                 .starts_with("reading ")
         );
+        // An extra font that can't be read or doesn't fit is named.
+        let err = run(&[bdf.clone(), dir.join("missing.bdf")], &dir).unwrap_err();
+        assert!(err.starts_with("reading ") && err.contains("missing.bdf"));
+        let err = run(&[bdf.clone(), bdf], &dir).unwrap_err();
+        assert!(err.contains("tiny.bdf: U+0041 is already in the font"));
+        assert_eq!(run(&[], &dir).unwrap_err(), "no font given");
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn extra_fonts_add_glyphs_and_never_replace_one() {
+        let extra = |body: &str| parse_bdf(&format!("FONTBOUNDINGBOX 4 4 0 -1\n{body}")).unwrap();
+        let mut font = parse_bdf(TINY).unwrap();
+        let c = "STARTCHAR c\nENCODING 99\nBBX 1 1 0 0\nBITMAP\n80\nENDCHAR\n";
+        font.add(extra(c)).unwrap();
+        assert_eq!(font.glyphs.keys().collect::<String>(), "Abc");
+        assert_eq!(grid(&font, 'c'), ["....", "....", "#...", "...."]);
+        assert_eq!(grid(&font, 'A'), ["....", "##..", "#...", "...."]);
+        // The same glyph again, or another cell size: refused.
+        assert_eq!(
+            font.add(extra(c)).unwrap_err(),
+            "U+0063 is already in the font"
+        );
+        let wide = parse_bdf("FONTBOUNDINGBOX 5 4 0 -1\n").unwrap();
+        assert_eq!(font.add(wide).unwrap_err(), "cell size 5×4, expected 4×4");
+        let tall = parse_bdf("FONTBOUNDINGBOX 4 5 0 -1\n").unwrap();
+        assert_eq!(font.add(tall).unwrap_err(), "cell size 4×5, expected 4×4");
+    }
+
+    /// The controller button shapes are our own glyphs, in the atlas next
+    /// to Terminus's, each 7×7 on the baseline.
+    #[test]
+    fn the_pad_shapes_are_in_the_atlas() {
+        let root = repo_root();
+        let shapes = read_font(&root.join(SOURCES[1])).unwrap();
+        assert_eq!(shapes.glyphs.keys().collect::<String>(), "□△◯✕");
+        assert_eq!(
+            grid(&shapes, '△')[5..12],
+            [
+                "...#....", "...#....", "..#.#...", "..#.#...", ".#...#..", ".#...#..", "#######."
+            ]
+        );
+        for (c, pixels) in &shapes.glyphs {
+            let rows: Vec<&[bool]> = pixels.chunks(8).collect();
+            let lit = |row: &&[bool]| row.iter().any(|&on| on);
+            assert_eq!(rows.iter().position(lit), Some(5), "{c}");
+            assert_eq!(rows.iter().rposition(lit), Some(11), "{c}");
+            assert!(
+                rows.iter().all(|row| !row[7]),
+                "{c}: the last column is the gap"
+            );
+            assert!(ATLAS_RANGES.iter().any(|(lo, hi)| (lo..=hi).contains(&c)));
+        }
+        let atlas = fs::read_to_string(root.join("assets/fonts/atlas.ron")).unwrap();
+        let atlas: FontAtlasDef = ron::from_str(&atlas).unwrap();
+        assert!(shapes.glyphs.keys().all(|c| atlas.glyphs.contains_key(c)));
     }
 
     /// The committed atlas must be exactly what the tool produces from the
@@ -408,7 +507,7 @@ mod tests {
     fn committed_atlas_is_up_to_date() {
         let root = repo_root();
         let dir = std::env::temp_dir().join(format!("xtask-atlas-check-{}", std::process::id()));
-        let msg = run(&root.join("assets-src/fonts/ter-u16n.bdf"), &dir).unwrap();
+        let msg = run(&SOURCES.map(|source| root.join(source)), &dir).unwrap();
         assert!(msg.starts_with("font-atlas: "));
         let read = |p: &Path| fs::read_to_string(p).unwrap().replace("\r\n", "\n");
         assert_eq!(
