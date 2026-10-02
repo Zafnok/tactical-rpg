@@ -2,16 +2,19 @@
 //! *Attack forecast*): while a target is chosen it replaces the side panel.
 //! Both sides' names, weapons, HP (with a bar shading what each would lose
 //! if every strike hit), hit and crit; then every strike in the order it
-//! happens, a skull on the strike that kills, and each side's total. All
-//! numbers come from [`AttackPreview`]; nothing is computed here.
+//! happens, a skull on the strike that kills, and each side's total. A
+//! spell's element against the target's affinity (0410) is marked: `!` on
+//! the strikes for Weak (as any effective attack), `(resist)` or `heals N`
+//! under the striker's crit. All numbers come from [`AttackPreview`];
+//! nothing is computed here.
 
 use trpg_core::{
-    ArtNote, AttackPreview, BattleState, Equipped, PlannedStrike, Side, SideForecast, StatValue,
-    Unit,
+    Affinity, ArtNote, AttackPreview, BattleState, Equipped, PlannedStrike, Side, SideForecast,
+    StatValue, Unit,
 };
 
-use super::art_list::{art_name, durability_text, note_text};
-use super::attack::{Targeting, weapon_durability, weapon_name};
+use super::art_list::{art_name, note_text};
+use super::attack::{Targeting, spell_uses, weapon_durability};
 use super::layout::SIDE_PANEL;
 use super::panel::TEXT_X;
 use super::skills::skill_name;
@@ -47,6 +50,9 @@ pub const HP_ROW: i32 = NAME_ROW + 3;
 
 /// Row of the `(broken)` marker: under the weapon, above the HP line.
 pub const BROKEN_ROW: i32 = HP_ROW - 1;
+
+/// Row of the affinity marker (`(resist)`, `heals 9`), under the crit.
+pub const AFFINITY_ROW: i32 = HP_ROW + 3;
 
 /// Row of the line above the strikes.
 pub const RULE_ROW: i32 = HP_ROW + 4;
@@ -98,16 +104,37 @@ fn put(buf: &mut GlyphBuffer, x: i32, y: i32, text: &str, fg: Rgb, w: usize) {
     buf.print(x, y, &cut, fg, bg);
 }
 
-/// The name of what `unit` fights back with: its equipped weapon or spell.
-fn equipped_name(state: &BattleState, unit: &Unit) -> String {
-    match &unit.loadout.equipped {
-        Some(Equipped::Weapon(slot)) => weapon_name(state, unit.id, *slot),
-        Some(Equipped::Spell(id)) => state
-            .spells()
-            .get(id)
-            .map(|s| s.name.clone())
-            .unwrap_or_default(),
-        None => String::new(),
+/// What is left of what a side fights with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Left {
+    /// A weapon's durability left and max (`(broken)` at 0).
+    Durability(u32, u32),
+    /// A spell's uses left and per battle.
+    Uses(u32, u32),
+}
+
+/// What `unit` fights with when it uses `with` (a weapon's slot or a
+/// spell; nothing for `None`): its name and what is left of it.
+fn arms(state: &BattleState, unit: &Unit, with: Option<&Equipped>) -> (String, Option<Left>) {
+    let found = match with {
+        Some(Equipped::Weapon(slot)) => weapon_durability(state, unit.id, *slot)
+            .map(|(name, left, max)| (name, Left::Durability(left, max))),
+        Some(Equipped::Spell(id)) => {
+            spell_uses(state, unit.id, id).map(|(name, left, max)| (name, Left::Uses(left, max)))
+        }
+        None => None,
+    };
+    found.map_or((String::new(), None), |(name, left)| (name, Some(left)))
+}
+
+/// The marker for the target's affinity to a side's attack: `(resist)`, or
+/// `heals 9` for Absorb (`n.damage` is then the HP a hit heals). Weak has
+/// none of its own: its strikes carry the effective `!`.
+pub fn affinity_text(n: &SideForecast) -> Option<String> {
+    match n.affinity? {
+        Affinity::Weak => None,
+        Affinity::Resist => Some("(resist)".to_owned()),
+        Affinity::Absorb => Some(format!("heals {}", n.damage)),
     }
 }
 
@@ -131,24 +158,22 @@ pub fn draw_forecast(buf: &mut GlyphBuffer, palette: &Palette, state: &BattleSta
         return;
     };
     let p = &t.preview;
-    let durability = |unit: &Unit, slot: Option<usize>| {
-        let (_, left, max) = weapon_durability(state, unit.id, slot?)?;
-        Some((left, max))
-    };
+    let (weapon, left) = arms(state, attacker, Some(&t.with));
+    let (counter, counter_left) = arms(state, target, target.loadout.equipped.as_ref());
     let sides = [
         Column {
             x: LEFT_X,
             unit: attacker,
-            weapon: weapon_name(state, attacker.id, t.slot),
-            durability: durability(attacker, Some(t.slot)),
+            weapon,
+            left,
             numbers: Some(p.forecast.attacker),
             hp_after: p.plan.attacker_hp,
         },
         Column {
             x: RIGHT_X,
             unit: target,
-            weapon: equipped_name(state, target),
-            durability: durability(target, target.loadout.equipped_slot()),
+            weapon: counter,
+            left: counter_left,
             numbers: p.forecast.defender,
             hp_after: p.plan.defender_hp,
         },
@@ -210,16 +235,16 @@ struct Column<'a> {
     unit: &'a Unit,
     /// What it fights with.
     weapon: String,
-    /// That weapon's durability left and max (none for a spell).
-    durability: Option<(u32, u32)>,
+    /// What is left of it.
+    left: Option<Left>,
     /// Its numbers (`None`: it can't strike back).
     numbers: Option<SideForecast>,
     /// Its HP if every strike hit.
     hp_after: StatValue,
 }
 
-/// One side's block: name, weapon, its durability (`20/20`, or
-/// `(broken)`), HP with its bar, hit, crit.
+/// One side's block: name, weapon or spell, its durability or uses
+/// (`20/20`, or `(broken)`), HP with its bar, hit, crit, affinity marker.
 fn draw_side(buf: &mut GlyphBuffer, palette: &Palette, side: &Column<'_>) {
     let c = |u| palette.get(u);
     let (text, dim) = (c(UiColor::Text), c(UiColor::TextDim));
@@ -233,18 +258,16 @@ fn draw_side(buf: &mut GlyphBuffer, palette: &Palette, side: &Column<'_>) {
         COLUMN_W,
     );
     put(buf, x, NAME_ROW + 1, &side.weapon, dim, COLUMN_W);
-    let broken = numbers.is_some_and(|n| n.broken) || side.durability.is_some_and(|d| d.0 == 0);
+    let broken =
+        numbers.is_some_and(|n| n.broken) || matches!(side.left, Some(Left::Durability(0, _)));
     if broken {
         put(buf, x, BROKEN_ROW, "(broken)", c(UiColor::HpLow), COLUMN_W);
-    } else if let Some((left, max)) = side.durability {
-        put(
-            buf,
-            x,
-            BROKEN_ROW,
-            &durability_text(left, max),
-            dim,
-            COLUMN_W,
-        );
+    } else if let Some(Left::Durability(left, max) | Left::Uses(left, max)) = side.left {
+        put(buf, x, BROKEN_ROW, &format!("{left}/{max}"), dim, COLUMN_W);
+    }
+    if let Some(marker) = numbers.as_ref().and_then(affinity_text) {
+        let highlight = c(UiColor::TextHighlight);
+        put(buf, x, AFFINITY_ROW, &marker, highlight, COLUMN_W);
     }
     let hp_after = side.hp_after;
     put(buf, x, HP_ROW, "HP", dim, 2);
@@ -502,14 +525,83 @@ mod tests {
     fn a_spell_or_nothing_equipped_names_the_counter_weapon_that_way() {
         let c = ctx();
         let state = skirmish(&c, 20);
-        let mut units = state.units().to_vec();
-        units[3].loadout.equipped = None;
-        let brigand = &units[3];
-        assert_eq!(equipped_name(&state, brigand), "");
-        let mut mage = brigand.clone();
-        let spell = c.content.spells.spells.keys().next().unwrap().clone();
-        mage.loadout.equipped = Some(Equipped::Spell(spell.clone()));
-        let name = c.content.spells.get(&spell).unwrap().name.clone();
-        assert_eq!(equipped_name(&state, &mage), name);
+        let brigand = &state.units()[3];
+        assert_eq!(arms(&state, brigand, None), (String::new(), None));
+        // A spell it doesn't know has no uses left; a weapon has its
+        // durability.
+        let fire = Equipped::Spell(trpg_core::SpellId::new("fire"));
+        assert_eq!(
+            arms(&state, brigand, Some(&fire)),
+            ("Fire".to_owned(), Some(Left::Uses(0, 10)))
+        );
+        assert_eq!(
+            arms(&state, brigand, brigand.loadout.equipped.as_ref()),
+            ("Iron Axe".to_owned(), Some(Left::Durability(20, 20)))
+        );
+        // An empty slot, or a spell missing from the table: nothing.
+        let none = (String::new(), None);
+        assert_eq!(arms(&state, brigand, Some(&Equipped::Weapon(2))), none);
+        let lost = Equipped::Spell(trpg_core::SpellId::new("nope"));
+        assert_eq!(arms(&state, brigand, Some(&lost)), none);
+    }
+
+    #[test]
+    fn affinity_markers_read_as_the_design_writes_them() {
+        let c = ctx();
+        let state = skirmish(&c, 20);
+        let mut t = targeting(&state);
+        let plain = t.preview.forecast.attacker;
+        assert_eq!(affinity_text(&plain), None);
+        let with = |affinity| SideForecast {
+            affinity: Some(affinity),
+            damage: 9,
+            ..plain
+        };
+        assert_eq!(affinity_text(&with(Affinity::Weak)), None);
+        assert_eq!(
+            affinity_text(&with(Affinity::Resist)).as_deref(),
+            Some("(resist)")
+        );
+        assert_eq!(
+            affinity_text(&with(Affinity::Absorb)).as_deref(),
+            Some("heals 9")
+        );
+        // Drawn under the striker's crit, in the highlight colour; nothing
+        // there without an affinity.
+        let buf = render(&state, &t);
+        assert_eq!(text(&buf, LEFT_X, AFFINITY_ROW, 8), "        ");
+        t.preview.forecast.attacker = with(Affinity::Resist);
+        t.preview.forecast.defender = Some(with(Affinity::Absorb));
+        let buf = render(&state, &t);
+        assert_eq!(text(&buf, LEFT_X, AFFINITY_ROW, 8), "(resist)");
+        assert_eq!(text(&buf, RIGHT_X, AFFINITY_ROW, 7), "heals 9");
+        let fg = buf.get(LEFT_X, AFFINITY_ROW).unwrap().fg;
+        assert_eq!(fg, c.palette.get(UiColor::TextHighlight));
+    }
+
+    #[test]
+    fn a_spell_shows_its_uses_and_is_never_broken() {
+        let c = ctx();
+        let state = skirmish(&c, 20);
+        let side = |left| {
+            let t = targeting(&state);
+            let blank = Cell::new(' ', Rgb::new(1, 2, 3), Rgb::new(1, 2, 3));
+            let mut buf = GlyphBuffer::new(CONSOLE_W, CONSOLE_H, blank);
+            let column = Column {
+                x: LEFT_X,
+                unit: &state.units()[0],
+                weapon: "Fire".to_owned(),
+                left,
+                numbers: Some(t.preview.forecast.attacker),
+                hp_after: 5,
+            };
+            draw_side(&mut buf, &c.palette, &column);
+            text(&buf, LEFT_X, BROKEN_ROW, 8)
+        };
+        assert_eq!(side(Some(Left::Uses(6, 10))), "6/10    ");
+        assert_eq!(side(Some(Left::Uses(0, 10))), "0/10    ");
+        assert_eq!(side(Some(Left::Durability(3, 20))), "3/20    ");
+        assert_eq!(side(Some(Left::Durability(0, 20))), "(broken)");
+        assert_eq!(side(None), "        ");
     }
 }

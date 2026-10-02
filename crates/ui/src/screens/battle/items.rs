@@ -1,14 +1,16 @@
 //! The `Item` and `Equip` menus (ticket 0407): the battle pack grouped by
-//! item, who each item can be used on, the equip list of a unit's weapons,
-//! and the item target mode with its `HP 12 → 22` preview. Legality is the
+//! item, who each item can be used on, the equip list of a unit's weapons
+//! and attack spells (0410), and the item target mode with its `HP 12 → 22` preview. Legality is the
 //! core's ([`Command`]s it refuses change nothing); this module only decides
 //! what to offer, so the player is never shown a use that heals nothing.
 
 use trpg_core::{
-    BattleState, Command, ConsumableEffect, Equipped, ItemId, Pos, StatValue, UnitAction, UnitId,
-    WEAPON_SLOTS,
+    BattleState, Command, ConsumableEffect, Equipped, ItemId, Pos, SpellDef, StatValue, UnitAction,
+    UnitId, WEAPON_SLOTS,
 };
 
+use super::attack::{spell_uses, weapon_name};
+use super::info::range_text;
 use super::mode::Selection;
 use crate::color::UiColor;
 use crate::widgets::menu::{Menu, MenuItem};
@@ -224,17 +226,18 @@ impl ItemTargeting {
     }
 }
 
-/// A weapon slot of the equip list.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A line of the equip list: a weapon slot or an attack spell.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EquipChoice {
-    /// The loadout slot.
-    pub slot: usize,
-    /// Whether the unit can wield it (unusable weapons are dimmed and can't
-    /// be chosen).
+    /// What it equips.
+    pub what: Equipped,
+    /// Whether the unit can fight with it: a weapon it can wield, a spell
+    /// with a use left (the others are dimmed and can't be chosen).
     pub usable: bool,
 }
 
-/// The filled weapon slots of `unit`, in slot order.
+/// The filled weapon slots of `unit`, in slot order, then its attack spells
+/// in id order.
 pub fn equip_choices(state: &BattleState, unit: UnitId) -> Vec<EquipChoice> {
     let Some(u) = state.unit(unit) else {
         return vec![];
@@ -242,91 +245,120 @@ pub fn equip_choices(state: &BattleState, unit: UnitId) -> Vec<EquipChoice> {
     let Some(class) = state.classes().get(&u.class) else {
         return vec![];
     };
-    (0..WEAPON_SLOTS)
+    let weapons = (0..WEAPON_SLOTS)
         .filter(|&slot| u.loadout.weapon(slot).is_some())
         .map(|slot| EquipChoice {
-            slot,
+            what: Equipped::Weapon(slot),
             usable: u.usable_weapon(slot, class, state.items()).is_some(),
-        })
-        .collect()
+        });
+    let attack = |id: &&trpg_core::SpellId| state.spells().get(id).is_some_and(SpellDef::is_attack);
+    let spells = u.learned.iter().filter(attack).map(|id| EquipChoice {
+        what: Equipped::Spell(id.clone()),
+        usable: u.castable_attack(id, state.spells()).is_some(),
+    });
+    weapons.chain(spells).collect()
 }
 
-/// Whether `Equip` is enabled: at least two usable weapons.
+/// Whether `Equip` is enabled: at least two usable weapons or spells.
 pub fn can_equip(choices: &[EquipChoice]) -> bool {
     choices.iter().filter(|c| c.usable).count() >= 2
 }
 
-/// The line of a weapon: a marker if equipped, its name and stats and
-/// durability, e.g. `* Iron Sword  Mt 5 Hit 90 Crit 0 Wt 2 Rng1 20/20`.
-fn equip_label(state: &BattleState, unit: UnitId, slot: usize, name_w: usize) -> String {
+/// The name of what a line equips (empty if the unit lacks it).
+fn equip_name(state: &BattleState, unit: UnitId, what: &Equipped) -> String {
+    match what {
+        Equipped::Weapon(slot) => weapon_name(state, unit, *slot),
+        Equipped::Spell(spell) => {
+            spell_uses(state, unit, spell).map_or_else(String::new, |(name, ..)| name)
+        }
+    }
+}
+
+/// The line of a weapon or spell: a marker if equipped, its name and stats
+/// and durability (a spell's uses), e.g. `* Iron Sword  Mt 5 Hit 90 Crit 0
+/// Wt 2 Rng1 20/20`.
+fn equip_label(state: &BattleState, unit: UnitId, what: &Equipped, name_w: usize) -> String {
     let Some(u) = state.unit(unit) else {
         return String::new();
     };
-    let Some(copy) = u.loadout.weapon(slot) else {
+    // Name, combat numbers, and what is left of it.
+    let found = match what {
+        Equipped::Weapon(slot) => u.loadout.weapon(*slot).and_then(|copy| {
+            let def = state.items().weapon(&copy.def)?;
+            let left = (copy.durability_left, def.durability);
+            Some((def.name.clone(), state.items().weapon_stats(copy)?, left))
+        }),
+        Equipped::Spell(spell) => state.spells().get(spell).and_then(|def| {
+            let left = u32::from(u.spells.uses_left(spell));
+            Some((
+                def.name.clone(),
+                def.weapon_stats()?,
+                (left, u32::from(def.uses)),
+            ))
+        }),
+    };
+    let Some((name, numbers, (left, max))) = found else {
         return String::new();
     };
-    let Some(def) = state.items().weapon(&copy.def) else {
-        return String::new();
-    };
-    let marker = if u.loadout.equipped_slot() == Some(slot) {
+    let marker = if u.loadout.equipped.as_ref() == Some(what) {
         '*'
     } else {
         ' '
     };
-    let range = if def.min_range == def.max_range {
-        def.min_range.to_string()
-    } else {
-        format!("{}-{}", def.min_range, def.max_range)
-    };
     format!(
-        "{marker} {:<name_w$}  Mt{:>2} Hit{:>3} Crit{:>2} Wt{:>2} Rng{range} {:>2}/{}",
-        def.name, def.might, def.hit, def.crit, def.weight, copy.durability_left, def.durability
+        "{marker} {name:<name_w$}  Mt{:>2} Hit{:>3} Crit{:>2} Wt{:>2} Rng{} {left:>2}/{max}",
+        numbers.might,
+        numbers.hit,
+        numbers.crit,
+        numbers.weight,
+        range_text(numbers.min_range, numbers.max_range)
     )
 }
 
-/// The equip list: one line per weapon, the equipped one marked and
-/// focused, unusable ones dimmed, broken ones tagged in the warning colour.
+/// The equip list: one line per weapon or attack spell, the equipped one
+/// marked and focused, unusable ones dimmed, broken weapons tagged in the
+/// warning colour.
 pub fn equip_menu(state: &BattleState, unit: UnitId, choices: &[EquipChoice]) -> Menu {
-    let name_of = |slot| super::attack::weapon_name(state, unit, slot);
     let name_w = choices
         .iter()
-        .map(|c| name_of(c.slot).chars().count())
+        .map(|c| equip_name(state, unit, &c.what).chars().count())
         .max()
         .unwrap_or(0);
-    let broken = |slot| {
-        state
+    let broken = |what: &Equipped| match what {
+        Equipped::Weapon(slot) => state
             .unit(unit)
-            .and_then(|u| u.loadout.weapon(slot))
-            .is_some_and(trpg_core::WeaponInstance::is_broken)
+            .and_then(|u| u.loadout.weapon(*slot))
+            .is_some_and(trpg_core::WeaponInstance::is_broken),
+        Equipped::Spell(_) => false,
     };
     let items = choices
         .iter()
         .map(|c| {
-            let label = equip_label(state, unit, c.slot, name_w);
+            let label = equip_label(state, unit, &c.what, name_w);
             let item = if c.usable {
                 MenuItem::new(label)
             } else {
                 MenuItem::disabled(label)
             };
-            if broken(c.slot) {
+            if broken(&c.what) {
                 item.with_suffix("(broken)", UiColor::HpLow)
             } else {
                 item
             }
         })
         .collect();
-    let equipped = state.unit(unit).and_then(|u| u.loadout.equipped_slot());
+    let equipped = state.unit(unit).and_then(|u| u.loadout.equipped.as_ref());
     let focus = choices
         .iter()
-        .position(|c| Some(c.slot) == equipped)
+        .position(|c| Some(&c.what) == equipped)
         .unwrap_or(0);
     Menu::new(items).focused(focus)
 }
 
-/// The command that equips the weapon in `slot`.
-pub fn equip_command(unit: UnitId, slot: usize) -> Command {
+/// The command that equips `what`.
+pub fn equip_command(unit: UnitId, what: Equipped) -> Command {
     Command::Equip {
         unit,
-        equipped: Equipped::Weapon(slot),
+        equipped: what,
     }
 }

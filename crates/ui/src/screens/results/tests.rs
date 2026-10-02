@@ -1,6 +1,6 @@
 //! Tests of the results screen on rewards made by hand over the Quick
 //! Battle's units: the lord (90 EXP) levels up from a 21 EXP bonus, the
-//! knight (10 EXP) doesn't, the archer is at the level cap and gets none.
+//! knight (10 EXP) doesn't, the archer gets none.
 
 use insta::assert_snapshot;
 use trpg_core::{BattleState, Event, Faction, StatGains, Unit, UnitId};
@@ -15,11 +15,11 @@ fn state() -> BattleState {
     quick_battle(&ctx().content).unwrap()
 }
 
-/// The Quick Battle's player units: the lord with 90 EXP, the knight with
+/// The Quick Battle's first three units: the lord with 90 EXP, the knight with
 /// 10 and the archer.
 fn deployed(s: &BattleState) -> Vec<Unit> {
     let players = s.units().iter().filter(|u| u.faction == Faction::Player);
-    let mut units: Vec<Unit> = players.cloned().collect();
+    let mut units: Vec<Unit> = players.take(3).cloned().collect();
     units[0].exp = 90;
     units[1].exp = 10;
     units

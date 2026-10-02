@@ -70,17 +70,18 @@ fn campaign(mode: GameMode) -> Campaign {
 /// at (1,0) and `rook` (5, might 20, joins if defeated) at (1,2); a pack of
 /// two potions; Rout.
 fn def() -> BattleDef {
-    let slot = |id: &str, pos| PlayerSlot {
+    let slot = |id: &str, pos, n| PlayerSlot {
         character: c(id),
         pos,
+        id: BattleDef::slot_id(n),
     };
     BattleDef {
         id: "test".into(),
         map: setup(vec![]).map,
         player_slots: vec![
-            slot("lord", p(0, 0)),
-            slot("ann", p(0, 2)),
-            slot("cal", p(3, 3)),
+            slot("lord", p(0, 0), 0),
+            slot("ann", p(0, 2), 1),
+            slot("cal", p(3, 3), 2),
         ],
         enemies: vec![
             unit(4, Faction::Enemy, p(1, 0)),
@@ -105,6 +106,7 @@ fn def() -> BattleDef {
             once: true,
         }],
         difficulty: Difficulty::Normal,
+        music: BattleMusic::Pool("skirmish".into()),
         seed: 3,
     }
 }
@@ -231,6 +233,16 @@ fn battle_setup_places_the_roster_in_its_slots() {
     assert_eq!(setup.reinforcements, def.reinforcements);
     // The roster itself is untouched.
     assert_eq!(game.roster[0].id, UnitId(91));
+    // A slot numbered after the enemies comes after them, in id order.
+    let mut late = def.clone();
+    late.player_slots[1].id = UnitId(6);
+    let ids: Vec<u32> = game
+        .battle_setup(&late, &tables)
+        .units
+        .iter()
+        .map(|u| u.id.0)
+        .collect();
+    assert_eq!(ids, [1, 4, 5, 6]);
 }
 
 #[test]

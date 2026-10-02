@@ -32,8 +32,8 @@ pub use battle::{
     ShopTxn, TileRect, Trigger, TriggerWhen, Turn, UnitAction, Who,
 };
 pub use campaign::{
-    ApplyError, BattleDef, BattleRewards, Campaign, Difficulty, GameTables, PlayerSlot,
-    UNUSED_CHARGE_PERCENT,
+    ApplyError, BattleDef, BattleMusic, BattleRewards, Campaign, Difficulty, GameTables,
+    PlayerSlot, UNUSED_CHARGE_PERCENT,
 };
 pub use class::{
     ArmourWeight, ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable, Tier, UnitTag, UnitTags,

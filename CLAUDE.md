@@ -69,4 +69,6 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
   macroquad). `.cargo/config.toml` points the `x86_64-pc-windows-gnu` linker
   at the MSYS2 install.
 - Use `cargo install --locked <tool>` (cargo-binstall fails to build here).
+- `cargo xtask clean-merged-targets [--dry-run]` deletes the `target/` build
+  folder of every worktree whose PR has merged (10+ GB each).
 - Git remote: `https://github.com/Zafnok/visions-of-shuyi` (public).
