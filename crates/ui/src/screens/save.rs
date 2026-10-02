@@ -86,7 +86,7 @@ impl SavePromptScreen {
 
     /// The bottom help line.
     pub fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         help_line(&[
             (Some(cursor_keys_name(km)), "choose"),
             (Some(key_name(km, Action::Confirm)), "select"),
@@ -352,7 +352,7 @@ impl SlotPickerScreen {
 
     /// The bottom help line.
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
         if self.asking {

@@ -1,4 +1,4 @@
-# ADR-0036: Saves are versioned RON `SaveFile`s; a battle is saved as its history
+# ADR-0037: Saves are versioned RON `SaveFile`s; a battle is saved as its history
 
 - **Status:** Accepted
 - **Date:** 2026-10-01

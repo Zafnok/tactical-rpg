@@ -24,7 +24,9 @@ use crate::input::{
     clear_slot_key_name, is_capture_abort, is_clear_slot,
 };
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::widgets::help::{NOT_MAPPED, SEPARATOR, cursor_keys_name, help_line, key_name};
+use crate::widgets::help::{
+    HelpKeys, NOT_MAPPED, SEPARATOR, cursor_keys_name, help_line, key_name,
+};
 
 /// Every rebindable action with its player-facing label, in the order the
 /// screen lists them (Nick's pick, ticket 0815): the required actions, then
@@ -336,9 +338,10 @@ impl KeyBindingsScreen {
         true
     }
 
-    /// The bottom help line, naming the keys the screen was opened with.
-    pub fn help(&self) -> String {
-        let km = &self.opened_with;
+    /// The bottom help line, naming the keys the screen was opened with
+    /// (or their buttons, on a controller).
+    pub fn help(&self, ctx: &Ctx) -> String {
+        let km = HelpKeys::new(&self.opened_with, ctx.device);
         if self.capturing {
             let back = help_line(&[(Some(capture_abort_key_name()), "back")]);
             return format!("{CAPTURE_HELP}{SEPARATOR}{back}");
@@ -367,7 +370,7 @@ impl KeyBindingsScreen {
     fn draw_restore_question(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
-        let km = &self.opened_with;
+        let km = HelpKeys::new(&self.opened_with, ctx.device);
         let question = self.restore_question();
         let answers = format!(
             "{} yes / {} no",
@@ -541,7 +544,7 @@ impl Screen for KeyBindingsScreen {
             self.draw_restore_question(ctx, buf);
         }
         let bottom = i32::from(buf.height()) - 1;
-        print_centred(buf, bottom, &self.help(), dim, black);
+        print_centred(buf, bottom, &self.help(ctx), dim, black);
     }
 }
 

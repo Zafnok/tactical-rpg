@@ -39,10 +39,6 @@ impl PadInput {
         let connected = self.source.read();
         #[cfg(target_arch = "wasm32")]
         let connected = web::read();
-        let changes = self.pads.update(&connected);
-        changes
-            .into_iter()
-            .map(|(button, pressed)| RawInputEvent::pad(button, pressed))
-            .collect()
+        RawInputEvent::from_pads(&mut self.pads, &connected)
     }
 }

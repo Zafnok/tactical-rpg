@@ -12,7 +12,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
 | `audio` | `AudioRequest`, the `AudioQueue` screens push to (`ctx.audio`), `MusicState` (which track plays, fades) and its `MusicCommand`s (ADR-0026) |
-| `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys) |
+| `widgets` | `Menu` (vertical list in a box), `help` (help text that names keys, or controller buttons when a pad was pressed last) |
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `DialogueScreen` (full-screen or over the map), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
@@ -89,9 +89,10 @@ debug menu (unless a debug screen is already on top).
    - Anything animated advances by `input.dt`. Use `input.is_held(action)`
      for hold-to-fast-forward.
    - Colours come from `ctx.palette` (`UiColor` names), never raw RGB.
-   - Text that names a key reads it from `ctx.keymap` via `widgets::help`
-     (`key_name`, `cursor_keys_name`, `help_line`): each layout binds actions
-     to different keys.
+   - Text that names a key gets it from `widgets::help` (`key_name`,
+     `cursor_keys_name`, `help_line`) with `ctx.help_keys()`: each layout
+     binds actions to different keys, and after a controller press the same
+     calls name that pad's buttons instead (ADR-0036).
    - Never compute game rules here; send `core` commands and animate events.
    - Shared state that several screens need goes in `Ctx` (a plain struct).
    - Sounds and music: `ctx.audio.play_sound("menu_move")`,

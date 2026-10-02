@@ -16,7 +16,7 @@ completed:
 ## Context
 
 Saves are RON `SaveFile`s with a `SAVE_VERSION`
-([ADR-0036](../../docs/adr/0036-save-file-format.md), ticket 0802). The
+([ADR-0037](../../docs/adr/0037-save-file-format.md), ticket 0802). The
 version must be raised whenever a saved type (`Campaign`, `Unit`,
 `BattleState`, `BattleHistory`, `Command`, anything inside them) changes
 shape or meaning; then old saves show "This save is from an incompatible
@@ -24,7 +24,7 @@ version" instead of failing to parse ("This save can't be read") or, worse,
 loading as something else.
 
 Nothing enforces that today: a ticket that adds a field to `Unit` passes
-every gate without touching `SAVE_VERSION`. Found while writing ADR-0036.
+every gate without touching `SAVE_VERSION`. Found while writing ADR-0037.
 It must be in place before saves reach players (0901 publishes to itch.io,
 so 0901 is blocked by this ticket).
 
@@ -40,7 +40,7 @@ so 0901 is blocked by this ticket).
 - A short "when this test fails" note where the next model will see it.
 
 **Out (do not do):**
-- Migrations of old saves (no ticket yet; ADR-0036 says saves of another
+- Migrations of old saves (no ticket yet; ADR-0037 says saves of another
   version are refused).
 - Any change to the save format itself.
 
@@ -64,7 +64,7 @@ so 0901 is blocked by this ticket).
      rule change that makes old commands replay differently is caught too.
 3. The test's failure message says what to do: "a saved type changed: raise
    `SAVE_VERSION` in `crates/core/src/save.rs`, regenerate the fixtures as
-   `save_v<N>_*.ron` and delete the old ones (ADR-0036)". Put the same two
+   `save_v<N>_*.ron` and delete the old ones (ADR-0037)". Put the same two
    sentences in the doc comment of `SAVE_VERSION`.
 4. A second test: every fixture of an **older** version still in the folder
    (none at first) parses as `SaveHeader` with that version.

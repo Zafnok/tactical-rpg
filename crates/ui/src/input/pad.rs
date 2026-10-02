@@ -63,6 +63,60 @@ impl PadKind {
             _ => button,
         }
     }
+
+    /// What help text calls the button at binding position `button` on
+    /// this kind of pad (`docs/design/controls.md`, *Button names on
+    /// screen*): Xbox letters (also on generic pads), Sony's shapes,
+    /// or Nintendo's letters. The only place buttons get their names.
+    pub fn button_name(self, button: Button) -> &'static str {
+        let [xbox, playstation, nintendo] = names(button);
+        match self {
+            Self::Xbox | Self::Generic => xbox,
+            Self::PlayStation => playstation,
+            Self::Nintendo => nintendo,
+        }
+    }
+}
+
+/// A Sony pad's face buttons' shapes: glyphs of our own in the font
+/// (`assets-src/fonts/pad-shapes.bdf`, ticket 0220).
+const CROSS: &str = "\u{2715}";
+const CIRCLE: &str = "\u{25ef}";
+const SQUARE: &str = "\u{25a1}";
+const TRIANGLE: &str = "\u{25b3}";
+
+/// `button`'s name on an Xbox, a Sony and a Nintendo pad, by
+/// binding position: on a Nintendo pad `South` is the right face button
+/// (see [`PadKind::position`]), so it is its `A`. Directions and stick
+/// presses are named the same on every pad, except Sony's `L3` /
+/// `R3`.
+fn names(button: Button) -> [&'static str; 3] {
+    match button {
+        Button::South => ["A", CROSS, "A"],
+        Button::East => ["B", CIRCLE, "B"],
+        Button::West => ["X", SQUARE, "Y"],
+        Button::North => ["Y", TRIANGLE, "X"],
+        Button::LeftShoulder => ["LB", "L1", "L"],
+        Button::RightShoulder => ["RB", "R1", "R"],
+        Button::LeftTrigger => ["LT", "L2", "ZL"],
+        Button::RightTrigger => ["RT", "R2", "ZR"],
+        Button::Select => ["Back", "Create", "\u{2212}"],
+        Button::Start => ["Start", "Options", "+"],
+        Button::LeftStickPress => ["LS", "L3", "LS"],
+        Button::RightStickPress => ["RS", "R3", "RS"],
+        Button::DpadUp => ["↑"; 3],
+        Button::DpadDown => ["↓"; 3],
+        Button::DpadLeft => ["←"; 3],
+        Button::DpadRight => ["→"; 3],
+        Button::LeftStickUp => ["stick ↑"; 3],
+        Button::LeftStickDown => ["stick ↓"; 3],
+        Button::LeftStickLeft => ["stick ←"; 3],
+        Button::LeftStickRight => ["stick →"; 3],
+        Button::RightStickUp => ["R-stick ↑"; 3],
+        Button::RightStickDown => ["R-stick ↓"; 3],
+        Button::RightStickLeft => ["R-stick ←"; 3],
+        Button::RightStickRight => ["R-stick →"; 3],
+    }
 }
 
 /// A set of [`Button`]s.
@@ -148,6 +202,12 @@ impl PadState {
 /// A stick's direction buttons: up, down, left, right.
 type StickButtons = [Button; 4];
 
+const DPAD: StickButtons = [
+    Button::DpadUp,
+    Button::DpadDown,
+    Button::DpadLeft,
+    Button::DpadRight,
+];
 const LEFT_STICK: StickButtons = [
     Button::LeftStickUp,
     Button::LeftStickDown,
@@ -160,6 +220,35 @@ const RIGHT_STICK: StickButtons = [
     Button::RightStickLeft,
     Button::RightStickRight,
 ];
+
+/// A pad's three sets of direction buttons, each with the name help text
+/// gives the whole set.
+const DIRECTION_SETS: [(&str, StickButtons); 3] = [
+    ("D-pad", DPAD),
+    ("stick", LEFT_STICK),
+    ("R-stick", RIGHT_STICK),
+];
+
+/// What moves the cursor on a pad of `kind`, for help text. `bound` is the
+/// buttons of the cursor's up, down, left and right. Every whole set of
+/// directions among them is named, joined with `/` (`D-pad/stick` with the
+/// defaults); if there is none, each direction's first button, in
+/// up-left-down-right order. `None` if a direction has no button.
+pub(super) fn cursor_buttons_name(kind: PadKind, bound: &[Vec<Button>; 4]) -> Option<String> {
+    let [up, down, left, right] = bound.each_ref().map(|buttons| buttons.first());
+    let first = [up?, left?, down?, right?];
+    let whole: Vec<&str> = DIRECTION_SETS
+        .iter()
+        .filter(|(_, set)| set.iter().zip(bound).all(|(b, list)| list.contains(b)))
+        .map(|&(name, _)| name)
+        .collect();
+    let names = if whole.is_empty() {
+        first.map(|&b| kind.button_name(b)).to_vec()
+    } else {
+        whole
+    };
+    Some(names.join("/"))
+}
 
 /// The one direction button a stick at `(x, y)` holds, if any. `held` is
 /// the one it held last frame.
@@ -256,6 +345,22 @@ impl Pads {
             .map(|b| (b, false))
             .chain(pressed.map(|b| (b, true)))
             .collect()
+    }
+
+    /// The kind of the pad holding `button` (a binding position), the
+    /// first of `connected` if several do: for a button [`update`] has
+    /// just reported pressed, the pad that pressed it. `connected` is what
+    /// `update` was given. `None` if no pad holds it.
+    ///
+    /// [`update`]: Self::update
+    pub fn kind_holding(
+        &self,
+        button: Button,
+        connected: &[(PadId, PadKind, PadState)],
+    ) -> Option<PadKind> {
+        let holds = |id| self.held.get(id).is_some_and(|set| set.contains(button));
+        let pad = connected.iter().find(|(id, _, _)| holds(id));
+        pad.map(|&(_, kind, _)| kind)
     }
 
     /// The buttons held on any pad, by binding position.

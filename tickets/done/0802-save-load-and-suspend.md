@@ -62,7 +62,7 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
 
 ## Completion notes
 
-**Done.** Saving, loading and suspending work; ADR-0036 records the format.
+**Done.** Saving, loading and suspending work; ADR-0037 records the format.
 
 - **`trpg_core::save`**: `SaveFile { version, campaign, point }`,
   `SavePoint` (`ChapterCleared` / `Battle(BattleHistory)`), `SAVE_VERSION`
@@ -104,7 +104,7 @@ and `Load Game`, post-chapter save prompt, map-menu `Suspend`.
 
 - `point: SavePoint` instead of `battle: Option<BattleSave>`: the same
   information, with room for the world map's save point (1007) and no
-  "slot with a battle in it" to police. See ADR-0036.
+  "slot with a battle in it" to police. See ADR-0037.
 - No `saved_at_playtime`: the campaign already has `playtime_s`.
 - A chapter save keeps the chapter just **cleared** and looks up the next
   one when loading, so a save made at the end of the content carries on

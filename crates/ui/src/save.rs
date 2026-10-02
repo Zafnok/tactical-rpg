@@ -1,4 +1,4 @@
-//! Saves in [`Storage`] (ticket 0802, ADR-0036): [`SaveFile`]s as RON text
+//! Saves in [`Storage`] (ticket 0802, ADR-0037): [`SaveFile`]s as RON text
 //! under the keys `slot_01` … `slot_30` (the chapter saves) and `suspend`
 //! (the one-time battle save).
 //!

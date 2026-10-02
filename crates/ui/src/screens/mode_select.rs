@@ -70,7 +70,7 @@ impl ModeSelectScreen {
 
     /// The bottom help line.
     pub fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         help_line(&[
             (Some(cursor_keys_name(km)), "choose"),
             (Some(key_name(km, Action::Confirm)), "select"),

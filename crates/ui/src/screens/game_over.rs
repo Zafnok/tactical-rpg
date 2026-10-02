@@ -77,7 +77,7 @@ impl GameOverScreen {
 
     /// The bottom help line.
     pub fn help(ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         help_line(&[
             (Some(cursor_keys_name(km)), "choose"),
             (Some(key_name(km, Action::Confirm)), "select"),
@@ -139,7 +139,7 @@ impl ToBeContinuedScreen {
 
     /// The bottom help line.
     pub fn help(ctx: &Ctx) -> String {
-        help_line(&[(Some(key_name(&ctx.keymap, Action::Confirm)), "title")])
+        help_line(&[(Some(key_name(ctx.help_keys(), Action::Confirm)), "title")])
     }
 }
 
