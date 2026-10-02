@@ -36,7 +36,7 @@ is on the machine. A ticket that changes files in `assets-private/game/`
 also runs the one test that opts in, and looks at the result in a build:
 
 ```bash
-cargo test -p trpg-content --features private-assets --test private_assets
+cargo test -p trpg-content --features private-assets --test it private_assets::
 cargo run -p trpg-app --features private-assets
 ```
 

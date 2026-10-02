@@ -20,7 +20,7 @@ are in range", "the cursor is here") assert on the `MapScene` or the
 `BattleState`; only tests about a *look* read the frame. Today many battle
 tests learn the state from the glyph look: the two letters in a cell, a
 cell's background colour, the cursor's overlay rectangles at hard-coded
-cell coordinates (e.g. `crates/ui/tests/battle.rs`: `buf.get(36, 18)`,
+cell coordinates (e.g. `crates/ui/tests/it/battle.rs`: `buf.get(36, 18)`,
 `.overlays()`, the helper that reads "the two glyphs drawn on the tile";
 ADR-0024: "tests find the cursor from its overlays").
 
@@ -101,7 +101,7 @@ The rule is in `crates/ui/README.md` (*Writing a Harness test*) and in the
 
 **Moved** (test: before → after):
 
-- `tests/battle.rs`
+- `tests/it/battle.rs`
   - `quick_battle_opens_on_the_player_phase_banner`, `arrows_move_the_cursor_and_the_panel_follows`, `cancelling_the_menu_then_the_selection_restores_the_unit`: cursor's corner-mark overlays at cell x → `cursor_tile()`.
   - `select_move_and_wait_dims_the_unit_and_keeps_its_label_case`: `Lo` at cells (30,16), fg dimmed, `..` at (26,16) → `unit_at((5,5))` is `Lo`, acted; (3,5) empty.
   - `cancelling_the_menu_…`: `Lo`/`╦╦` cells → `unit_at` on (5,5) and (3,5).

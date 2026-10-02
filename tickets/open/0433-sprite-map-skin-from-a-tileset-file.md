@@ -148,7 +148,7 @@ decided with Nick in ticket 0039 and built in 0436.
    `ctx_mut()`), so any scripted test can run under either skin. Then
    run the tests 0434 moved onto the map scene under the sprite skin too
    (a loop over skins in their shared setup, e.g. `quick_battle()` in
-   `crates/ui/tests/battle.rs`, `quick()` in `screens/battle/mod.rs`'s
+   `crates/ui/tests/it/battle.rs`, `quick()` in `screens/battle/mod.rs`'s
    tests): they no longer depend on the look, so they must pass under
    both. The list is in 0434's completion notes.
 7. Render Quick Battle under the sprite skin with `cargo xtask frame-png`
