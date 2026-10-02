@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231"]
+blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0821"]
 nick_input: sign-off
 completed:
 ---
@@ -35,6 +35,9 @@ for each: "sure", "yes"):
 - Non-attack skills cost uses per battle (0316, from Nick's review of
   0503). 0803 waits for it too, so its winning replay and difficulty
   numbers are made with the final skill costs.
+- Game Over offers Rewind while charges are left (0821, from Nick's answer
+  on ticket 0408; asked whether it should be in before the playtest:
+  "yes").
 
 ## Nick input
 

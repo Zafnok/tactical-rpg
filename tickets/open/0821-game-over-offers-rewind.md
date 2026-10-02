@@ -21,6 +21,8 @@ Rewind if charges are left". `Retry Battle` going back to Preparations is
 done (0408). This ticket is the other half: a defeat can be undone with a
 rewind charge instead of starting the battle over
 (`docs/design/death-and-difficulty.md`, *Rewind* and the game-over rules).
+Nick wants it in before the Chapter 1 playtest (PR #140: "yes"), so 0804
+is blocked by this ticket.
 
 Today a lost battle closes the battle screen and the flow shows Game Over
 with `Retry Battle` and `Title`; the battle and its rewind history are

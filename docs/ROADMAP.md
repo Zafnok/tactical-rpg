@@ -82,10 +82,11 @@ files), and 0803 now waits for 0710 and 0807 (it sets Chapter 1's music).
 0231 (pictures as sprite items, ADR-0038) was added to row 1: 0711 draws
 the bought faces with it.
 Nick also put the combat scene (0413), Harl's picture (0035) and 0316
-(non-attack skills cost uses per battle) in front of the playtest.
+(non-attack skills cost uses per battle) in front of the playtest, and
+0821 (Game Over offers Rewind while charges are left; "yes", PR #140).
 
 ```
- 1  0022 0023 0024 0035 0110 0231 0316 0410 0707 0710 0801
+ 1  0022 0023 0024 0035 0110 0231 0316 0410 0707 0710 0801 0821
  2  0711 0802 0807 0810
  3  0413 0706 0809
  4  0803
