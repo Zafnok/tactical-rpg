@@ -1,0 +1,77 @@
+---
+source: crates/ui/tests/credits.rs
+expression: h.snapshot()
+---
+                                                                                                    
+  ┌─ Credits ────────────────────────────────────────────────────────────────────────────────────┐  
+  │                                                                                              │  
+  │ Music                                                                                        │  
+  │                                                                                              │  
+  │   "Aria" by Kistol                                                                           │  
+  │     CC0-1.0 · https://opengameart.org/content/aria                                           │  
+  │                                                                                              │  
+  │   "Battle" by mla                                                                            │  
+  │     CC-BY-4.0 · https://opengameart.org/content/battle-0                                     │  
+  │                                                                                              │  
+  │   "Battle Theme A" by cynicmusic                                                             │  
+  │     CC0-1.0 · https://opengameart.org/content/battle-theme-a                                 │  
+  │                                                                                              │  
+  │   "Battle Theme B for RPG" by cynicmusic                                                     │  
+  │     CC0-1.0 · https://opengameart.org/content/battle-theme-b-for-rpg                         │  
+  │                                                                                              │  
+  │   "Battle Themes 1, 2, 3 and 5" by Alexandr Zhelanov                                         │  
+  │     CC-BY-4.0 · https://opengameart.org/content/battle-themes                                │  
+  │                                                                                              │  
+  │   "Classical Murder" by Alexandr Zhelanov                                                    │  
+  │     CC-BY-4.0 · https://opengameart.org/content/classical-murder                             │  
+  │                                                                                              │  
+  │   "Dark Forest Theme" by cynicmusic                                                          │  
+  │     CC0-1.0 · https://opengameart.org/content/dark-forest-theme                              │  
+  │                                                                                              │  
+  │   "Dark Quest" by Alexandr Zhelanov                                                          │  
+  │     CC-BY-4.0 · https://opengameart.org/content/dark-quest                                 ▼ │  
+  │                                                                                              │  
+  └──────────────────────────────────────────────────────────────────────────────────────────────┘  
+                                                                                                    
+                                       arrows scroll · d back                                       
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdeeeeeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddfffffffffffffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddffffffffffffffffffffffffffffffffffffffffffffffffffffffdddddddddddddddddddddddddddddddddfdbaa
+aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaggggggggggggggggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:panel_border_focus bg:panel_bg
+f = fg:text_dim bg:panel_bg
+g = fg:text_dim bg:black

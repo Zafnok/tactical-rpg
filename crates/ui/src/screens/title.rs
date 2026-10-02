@@ -1,8 +1,8 @@
 //! The title screen: `New Game` starts the game flow ([`FlowScreen`],
 //! ticket 0801); debug builds add `Quick Battle`, a test battle through the
-//! same flow.
+//! same flow; `Credits` opens the [`CreditsScreen`] (ticket 0808).
 
-use super::{centre_x, draw_debug_hint, print_centred};
+use super::{CreditsScreen, centre_x, draw_debug_hint, print_centred};
 use crate::audio::pick_from_pool;
 use crate::color::UiColor;
 use crate::flow::FlowScreen;
@@ -32,6 +32,8 @@ pub const PRESS_ANY_KEY: &str = "Press any key";
 const NEW_GAME: &str = "New Game";
 /// Debug menu item: straight into a test battle.
 const QUICK_BATTLE: &str = "Quick Battle";
+/// Menu item that opens the credits.
+const CREDITS: &str = "Credits";
 /// Menu item that quits.
 const QUIT: &str = "Quit";
 
@@ -50,8 +52,8 @@ fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
     );
 }
 
-/// Title, subtitle and a `New Game` / `Quit` menu, with a help line naming
-/// the keys of the active layout.
+/// Title, subtitle and a `New Game` / `Credits` / `Quit` menu, with a help
+/// line naming the keys of the active layout.
 #[derive(Debug, Clone)]
 pub struct TitleScreen {
     menu: Menu,
@@ -72,13 +74,13 @@ pub struct TitleScreen {
 impl TitleScreen {
     /// The title screen with `New Game` focused.
     pub fn new() -> Self {
-        Self::with_items(vec![NEW_GAME, QUIT])
+        Self::with_items(vec![NEW_GAME, CREDITS, QUIT])
     }
 
     /// The title screen with a debug `Quick Battle` item after `New Game`,
     /// which plays a test battle through the game flow.
     pub fn with_quick_battle() -> Self {
-        Self::with_items(vec![NEW_GAME, QUICK_BATTLE, QUIT])
+        Self::with_items(vec![NEW_GAME, QUICK_BATTLE, CREDITS, QUIT])
     }
 
     fn with_items(items: Vec<&'static str>) -> Self {
@@ -165,7 +167,7 @@ impl Screen for TitleScreen {
                         return Transition::Push(Box::new(flow));
                     }
                 }
-
+                Some(CREDITS) => return Transition::Push(Box::new(CreditsScreen::new(ctx))),
                 Some(QUIT) => return Transition::Quit,
                 _ => {}
             }
@@ -216,8 +218,9 @@ mod tests {
         assert_eq!(outcome(&mut t, &[]), "None");
         assert_eq!(outcome(&mut t, &[Cancel]), "None");
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(credits)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
-        assert_eq!(outcome(&mut t, &[CursorUp]), "None");
+        assert_eq!(outcome(&mut t, &[CursorUp, CursorUp]), "None");
         // Actions after the one that transitions are dropped.
         assert_eq!(outcome(&mut t, &[Confirm, CursorDown]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
@@ -227,12 +230,13 @@ mod tests {
     fn debug_title_offers_quick_battle() {
         use Action::{Confirm, CursorDown, CursorUp};
         let mut t = TitleScreen::with_quick_battle();
-        assert_eq!(t.items, [NEW_GAME, QUICK_BATTLE, QUIT]);
+        assert_eq!(t.items, [NEW_GAME, QUICK_BATTLE, CREDITS, QUIT]);
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(battle)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(credits)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
         assert_eq!(
-            outcome(&mut t, &[CursorUp, CursorUp, Confirm]),
+            outcome(&mut t, &[CursorUp, CursorUp, CursorUp, Confirm]),
             "Push(mode_select)"
         );
         // Without its chapter, Quick Battle does nothing.
@@ -241,7 +245,7 @@ mod tests {
         t.menu = TitleScreen::with_quick_battle().menu;
         let input = FrameInput::new(vec![CursorDown, Confirm], 0.0, vec![]);
         assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
-        assert_eq!(TitleScreen::new().items, [NEW_GAME, QUIT]);
+        assert_eq!(TitleScreen::new().items, [NEW_GAME, CREDITS, QUIT]);
     }
 
     /// The music each update asks for, as cue names (`-` for a stop).
@@ -356,7 +360,7 @@ mod tests {
         let typing = FrameInput::new(vec![Action::CursorDown], 0.0, vec![]);
         naming.update(&mut ctx(), &typing);
         naming.update(&mut ctx(), &input(&[Action::Confirm]));
-        let screens: [&dyn Screen; 7] = [
+        let screens: [&dyn Screen; 8] = [
             &TitleScreen::new(),
             &TitleScreen::with_quick_battle(),
             &crate::screens::ModeSelectScreen::new(),
@@ -364,6 +368,7 @@ mod tests {
             &naming,
             &crate::screens::GameOverScreen::new(),
             &crate::screens::ToBeContinuedScreen,
+            &CreditsScreen::new(&c),
         ];
         for screen in screens {
             let stale = Cell::new(
