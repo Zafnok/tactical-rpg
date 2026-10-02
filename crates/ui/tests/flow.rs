@@ -1,8 +1,9 @@
 //! Scripted tests of the game flow (ticket 0801) through the real game:
 //! New Game → mode → lead → the test chapter (`assets/chapters/test.ron`:
 //! an intro scene, a battle where the lead seizes the fort at (5, 5)
-//! within 3 turns, a victory scene) → "To be continued" → title. Battles
-//! are won and lost with scripted commands.
+//! within 3 turns, a victory scene) → "Save your progress?" (declined
+//! here; `tests/save.rs` saves) → "To be continued" → title. Battles are
+//! won and lost with scripted commands.
 
 use insta::assert_snapshot;
 use trpg_core::{
@@ -112,8 +113,15 @@ fn confirm_until(h: &mut Harness, name: &str) {
     panic!("never reached {name}: {:?}", h.screens());
 }
 
+/// Answers "Save your progress?" with No.
+fn decline_save(h: &mut Harness) {
+    assert_eq!(h.screens(), ["title", "save_prompt"]);
+    h.keys("Down f");
+}
+
 /// Acceptance: New Game on the test chapter → skip the scenes → win with
-/// scripted commands → the victory scene → "To be continued" → title.
+/// scripted commands → the victory scene → the save prompt → "To be
+/// continued" → title.
 #[test]
 fn new_game_plays_the_test_chapter_to_the_end() {
     let mut h = to_battle();
@@ -134,6 +142,7 @@ fn new_game_plays_the_test_chapter_to_the_end() {
     assert_eq!(rewards.unused_charges, 3);
     assert_eq!(rewards.bonus_exp, 21);
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "to_be_continued"]);
     assert_snapshot!(h.snapshot());
     h.keys("f");
@@ -247,8 +256,8 @@ fn restart_battle_from_the_map_menu() {
             action: UnitAction::Wait,
         },
     );
-    // The map menu: Units, Objective, (Options, Suspend), Restart Battle.
-    h.keys("d Down Down f");
+    // The map menu: Units, Objective, (Options), Suspend, Restart Battle.
+    h.keys("d Down Down Down f");
     assert!(
         shows(&h, "Restart the battle from turn 1?"),
         "{}",
@@ -381,7 +390,8 @@ fn skirmish_pick(h: &mut Harness, n: u64) -> String {
 
 /// Ticket 0807: a story battle's cue starts with the battle (the intro
 /// scene still has the title's music), stays through turns, a rewind and
-/// the victory scene, and stops at "To be continued"; then the title's.
+/// the victory scene and the save prompt, and stops at "To be continued";
+/// then the title's.
 #[test]
 fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
     let mut h = title();
@@ -417,6 +427,7 @@ fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
     assert_eq!(h.screens(), ["title", "dialogue"]);
     assert_eq!(music(&h), ["title", "battle_easy"]);
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "to_be_continued"]);
     assert_eq!(music(&h), ["title", "battle_easy", "-"]);
     h.keys("f").wait(0.1);
@@ -455,7 +466,7 @@ fn game_over_is_silent_and_retry_plays_the_battles_music_again() {
 fn restart_battle_asks_for_the_battles_music_again() {
     let mut h = to_battle();
     h.clear_audio();
-    h.keys("d Down Down f f f");
+    h.keys("d Down Down Down f f f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h).turn(), 1);
     assert_eq!(music(&h), [skirmish_pick(&mut h, 1)]);
@@ -469,7 +480,7 @@ fn restart_battle_asks_for_the_battles_music_again() {
     // The battle notes closed.
     h.keys("f");
     h.wait(2.0).clear_audio();
-    h.keys("d Down Down f f f").wait(2.0);
+    h.keys("d Down Down Down f f f").wait(2.0);
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(music(&h), ["battle_easy"]);
     assert!(h.music_commands().is_empty(), "{:?}", h.music_commands());
@@ -530,6 +541,7 @@ fn the_next_chapter_follows_a_victory() {
     seize(&mut h);
     h.keys("f f f");
     skip_scene(&mut h);
+    decline_save(&mut h);
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     assert_eq!(flow.chapter().map(|c| c.id.as_str()), Some("quick"));

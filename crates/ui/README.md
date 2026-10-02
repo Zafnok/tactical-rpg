@@ -219,7 +219,8 @@ fn select_opens_new_game() {
 - `Harness::new()` is a first launch (empty storage: the layout picker is on
   top). `Harness::with_layout(layout)` is a later launch with that layout
   saved. `into_storage()` + `Harness::with_storage(..)` restart with the same
-  storage.
+  storage. Saves live in it too (`trpg_ui::save`: keys `slot_01`…`slot_30`
+  and `suspend`; `crates/ui/tests/save.rs`).
 - `Harness::with_screen(Box::new(MyScreen::new()))` tests a screen on its
   own, with the right-handed layout.
 - Key names in scripts depend on the layout (`docs/design/controls.md`):

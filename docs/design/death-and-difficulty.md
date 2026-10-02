@@ -71,6 +71,18 @@ On 0801's starting rules (PR #127, 2026-09-30):
 (1: every unit is back at full HP for the next battle. 3: a unit that dies
 in Classic sends its whole loadout to the stock.)
 
+On 0802's starting rules (PR #141, 2026-10-01):
+
+> "1. sure 2. make a confirmation screen for this 3. sure 4. sure 5. ok,
+> will need to see this in action to comment on it but it's fine for now
+> 6. no let's make it the first empty one and make sure it mentions if it
+> will overwrite [...] 8. ok 9. ok [...] 10. yea sure"
+
+(1: `Continue` on top of the title menu only while a battle is suspended,
+`Load Game` under `New Game`. 2: `Suspend` asks first. 3: one suspended
+battle at a time. 4: "Save your progress?" is `Yes` / `No`. 5: what a slot
+shows. 6: where the slot list opens when saving.)
+
 ## Falling units
 
 A unit falls when its HP reaches 0.
@@ -161,15 +173,30 @@ Classic → Casual (one way only).
 
 FE style: chapter saves plus a one-time suspend.
 
-- **30 save slots** (Nick). After every chapter victory: "Save your progress?",
-  then a slot picker showing chapter title, mode, roster size and playtime,
-  with an overwrite confirm.
+- **30 save slots** (Nick). After every chapter victory: "Save your progress?"
+  (`Yes` / `No`; `No` goes on without saving), then a slot picker showing
+  chapter title, mode, roster size and playtime.
+  - The picker **opens on the first empty slot** (Nick, PR #141), so
+    Confirm saves without replacing anything.
+  - On a slot that already holds a save, the help line reads `overwrite`
+    instead of `save here`, and choosing it asks "Overwrite slot 03?"
+    first (Nick: "make sure it mentions if it will overwrite").
+  - A slot shows the title of the chapter the save goes on with, the mode,
+    "3 units" and the playtime as `1:02:05`; an empty one reads "Empty".
+    (*Claude's starting look; Nick will comment once he has seen it.*)
 - `Load Game` on the title screen starts the saved campaign at the beginning of
-  its next chapter.
-- **Suspend:** `Suspend` in the map menu saves the whole battle (including rewind
-  history and charges left) to a single suspend save and returns to the title.
-  The title then shows `Continue`. Continuing **deletes** the suspend save, so it
-  can't be reloaded to undo a turn.
+  its next chapter. It sits under `New Game`, greyed out until a slot has a
+  save.
+- **Suspend:** `Suspend` in the map menu asks "Suspend the battle and return
+  to the title?" (Nick, PR #141: "make a confirmation screen for this"),
+  then saves the whole battle (including rewind history and charges left) to
+  a single suspend save and returns to the title. The title then shows
+  `Continue`, on top and highlighted. Continuing **deletes** the suspend
+  save, so it can't be reloaded to undo a turn.
+  - There is one suspended battle at a time: suspending again replaces it.
+    Starting a `New Game` or loading a slot leaves it there.
+  - After `Continue` the cursor starts on the lead: the battle is saved,
+    not where the player was looking.
 - No other saving mid-battle.
 - **World map (added by 0008, 2026-09-26):** once the game reaches the world
   map (after the linear opening chapters), the world map menu has `Save`

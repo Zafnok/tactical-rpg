@@ -16,6 +16,7 @@ pub mod map;
 pub mod movement;
 pub mod progression;
 pub mod rng;
+pub mod save;
 pub mod shop;
 pub mod skill;
 pub mod spell;
@@ -64,6 +65,7 @@ pub use progression::{
     level_up,
 };
 pub use rng::{RandomSource, ScriptedRng, SimRng};
+pub use save::{SAVE_VERSION, SaveFile, SaveHeader, SavePoint};
 pub use shop::{Gold, Loot, Shop, ShopError, ShopKind, ShopSession, repair_cost, sell_price};
 pub use skill::{
     ActiveEffect, Area, Bonuses, Condition, CostError, CostSource, EffectSource, Paid,

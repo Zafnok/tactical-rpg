@@ -6,7 +6,7 @@ milestone: M8 Release
 model: sonnet-5
 effort: low
 status: todo
-blocked_by: ["0107"]
+blocked_by: ["0107", "0821"]
 nick_input: setup
 completed:
 ---

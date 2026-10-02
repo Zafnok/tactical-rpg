@@ -20,7 +20,7 @@ loaded by `trpg_content::chapter` and validated by the all-assets test
 | Field | Meaning |
 | ----- | ------- |
 | `id` | Must match the file name. |
-| `title` | The chapter's title (for the title card, 0812, and save slots, 0802). |
+| `title` | The chapter's title (for the title card, 0812, and the save slots: a save shows the title of the chapter it goes on with). |
 | `intro_scenes` | Scene ids (`assets/dialogue/`) played in order before the battle. Default: none. |
 | `battle` | The battle's id (`assets/battles/`). |
 | `victory_scenes` | Scenes played in order after a victory. Default: none. |
@@ -34,8 +34,8 @@ the battle file (`battle_notes`, `assets/battles/README.md`): they name
 the battle's units, and battles aren't one per chapter.
 
 The flow: intro scenes → the battle → on a victory, the result is applied
-to the army (`Campaign::apply_result`) → victory scenes → (the save prompt,
-0802) → `next`. On a defeat: Game Over, with `Retry` (the battle again from
+to the army (`Campaign::apply_result`) → victory scenes → "Save your
+progress?" (0802) → `next`. On a defeat: Game Over, with `Retry` (the battle again from
 its first turn, every rewind charge back) or `Title`.
 
 Checked: the id matches the file name; every scene exists; the battle

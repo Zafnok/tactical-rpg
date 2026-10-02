@@ -17,7 +17,8 @@
 //!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
 //! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]), the
-//! restart prompt ([`Mode::RestartPrompt`], 0801) and
+//! restart and suspend prompts ([`Mode::RestartPrompt`], 0801;
+//! [`Mode::SuspendPrompt`], 0802) and
 //! the unit info screen ([`Mode::Info`]). Talking (0705): `Talk` in the
 
 //! action menu picks who to talk to ([`Mode::TalkTarget`]); it's free, so
@@ -364,6 +365,9 @@ pub enum Mode {
     /// `Restart the battle from turn 1?`: Confirm restarts
     /// ([`Effect::Restart`]), Cancel goes back to the map menu.
     RestartPrompt,
+    /// `Suspend the battle and return to the title?`: Confirm suspends
+    /// ([`Effect::Suspend`]), Cancel goes back to the map menu.
+    SuspendPrompt,
     /// The info screen for a unit.
     Info {
         /// The unit shown.
@@ -393,6 +397,9 @@ pub enum Effect {
     Cursor(Pos),
     /// Start the battle again (the map menu's `Restart Battle`, confirmed).
     Restart,
+    /// Save the battle and go back to the title (the map menu's `Suspend`,
+    /// confirmed).
+    Suspend,
 }
 
 impl Mode {
@@ -501,6 +508,7 @@ impl Mode {
             | Mode::Objective
             | Mode::EndTurnPrompt { .. }
             | Mode::RestartPrompt
+            | Mode::SuspendPrompt
             | Mode::Info { .. } => None,
         }
     }
@@ -883,6 +891,11 @@ fn step_around(mode: Mode, action: Action, state: &BattleState) -> (Mode, Effect
             Action::Cancel => (open_map_menu(state, MapEntry::Restart), Effect::None),
             _ => (Mode::RestartPrompt, Effect::None),
         },
+        Mode::SuspendPrompt => match action {
+            Action::Confirm => (Mode::default(), Effect::Suspend),
+            Action::Cancel => (open_map_menu(state, MapEntry::Suspend), Effect::None),
+            _ => (Mode::SuspendPrompt, Effect::None),
+        },
         Mode::Info { unit } => step_info(unit, action, state),
         other => (other, Effect::None),
     }
@@ -973,12 +986,11 @@ fn step_map_menu(
             }
             Some(MapEntry::Objective) => (Mode::Objective, Effect::None),
             Some(MapEntry::Restart) => (Mode::RestartPrompt, Effect::None),
+            Some(MapEntry::Suspend) => (Mode::SuspendPrompt, Effect::None),
             Some(MapEntry::EndTurn) => end_turn(state),
 
-            // Disabled: the menu never chooses them.
-            Some(MapEntry::Options | MapEntry::Suspend) | None => {
-                (Mode::MapMenu { menu, entries }, Effect::None)
-            }
+            // Disabled: the menu never chooses it.
+            Some(MapEntry::Options) | None => (Mode::MapMenu { menu, entries }, Effect::None),
         },
         Some(MenuEvent::Cancelled) => (Mode::default(), Effect::None),
         None => (Mode::MapMenu { menu, entries }, Effect::None),
