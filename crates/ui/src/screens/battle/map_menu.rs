@@ -306,9 +306,9 @@ mod tests {
     fn the_unit_list_shows_hp_and_who_is_ready() {
         let mut s = quick_battle(&ctx().content).unwrap();
         wait(&mut s, 2);
-        assert_eq!(ready_players(&s), 2);
+        assert_eq!(ready_players(&s), 3);
         let (menu, ids) = unit_list(&s);
-        assert_eq!(ids, [UnitId(1), UnitId(2), UnitId(3)]);
+        assert_eq!(ids, [UnitId(1), UnitId(2), UnitId(3), UnitId(8)]);
         let rows: Vec<&str> = menu.items().iter().map(|i| i.label.as_str()).collect();
         assert_eq!(
             rows,
@@ -316,6 +316,7 @@ mod tests {
                 "Test Lord    HP 19/19  ready",
                 "Test Knight  HP 20/20  ready",
                 "Test Archer  HP 17/17  acted",
+                "Test Mage    HP 16/16  ready",
             ]
         );
     }

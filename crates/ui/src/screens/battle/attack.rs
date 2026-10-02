@@ -4,7 +4,9 @@
 //! [`BattleState::preview_attack`], the same validation the attack command
 //! gets, so the UI never decides what is legal itself (ADR-0004).
 
-use trpg_core::{AttackPreview, BattleState, Pos, UnitAction, UnitId, WEAPON_SLOTS};
+use trpg_core::{
+    AttackPreview, BattleState, Equipped, Pos, SpellId, UnitAction, UnitId, WEAPON_SLOTS,
+};
 
 use super::art_list::{ArtChoice, Technique, art_choices, art_menu, durability_text};
 use super::mode::Selection;
@@ -15,7 +17,7 @@ use crate::widgets::menu::{Menu, MenuItem};
 /// The weapon attack with the weapon in `slot` on `target`: no art, no
 /// active.
 pub fn attack(target: UnitId, slot: usize) -> UnitAction {
-    Technique::Attack.action(target, slot)
+    Technique::Attack.action(target, &Equipped::Weapon(slot))
 }
 
 /// The units `unit` could attack from `dest` with the weapon in `slot`,
@@ -44,7 +46,7 @@ pub fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> V
         .units()
         .iter()
         .filter(|u| {
-            art_choices(state, unit, dest, slot, u.id)
+            art_choices(state, unit, dest, &Equipped::Weapon(slot), u.id)
                 .iter()
                 .any(|c| c.reason.is_none())
         })
@@ -59,7 +61,7 @@ pub fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> V
 /// enemy).
 pub fn can_hit(state: &BattleState, unit: UnitId, from: Pos, target: UnitId) -> bool {
     (0..WEAPON_SLOTS).any(|slot| {
-        art_choices(state, unit, from, slot, target)
+        art_choices(state, unit, from, &Equipped::Weapon(slot), target)
             .iter()
             .any(|c| c.reason.is_none())
     })
@@ -140,6 +142,17 @@ pub fn weapon_durability(
     Some((def.name.clone(), copy.durability_left, def.durability))
 }
 
+/// Spell `spell` of `unit`: its name, uses left and uses per battle.
+pub fn spell_uses(
+    state: &BattleState,
+    unit: UnitId,
+    spell: &SpellId,
+) -> Option<(String, u32, u32)> {
+    let def = state.spells().get(spell)?;
+    let left = state.unit(unit)?.spells.uses_left(spell);
+    Some((def.name.clone(), u32::from(left), u32::from(def.uses)))
+}
+
 /// The name of the weapon in `unit`'s `slot` (empty if none).
 pub fn weapon_name(state: &BattleState, unit: UnitId, slot: usize) -> String {
     state
@@ -184,14 +197,15 @@ pub fn weapon_menu(state: &BattleState, sel: &Selection, choices: &[WeaponChoice
     Menu::new(items).focused(focus)
 }
 
-/// Picking a target for an attack with one weapon, and what to attack it
-/// with: `Attack`, a Combat Art or a combat active (the arts list, 0414).
+/// Picking a target for an attack with one weapon or attack spell, and what
+/// to attack it with: `Attack`, a Combat Art or a combat active (the arts
+/// list, 0414).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Targeting {
     /// The attacker and its path (it stands at the path's end).
     pub sel: Selection,
-    /// The attacking weapon's loadout slot.
-    pub slot: usize,
+    /// What it attacks with: a weapon's loadout slot, or an attack spell.
+    pub with: Equipped,
     /// Who it can attack, in `(y, x)` order (never empty).
     pub targets: Vec<UnitId>,
     /// The target under the cursor.
@@ -219,20 +233,32 @@ impl Targeting {
         choice: &WeaponChoice,
         weapons: Option<(Menu, Vec<WeaponChoice>)>,
     ) -> Option<Self> {
-        let first = *choice.targets.first()?;
-        let choices = art_choices(state, sel.unit, sel.dest(), choice.slot, first);
+        let with = Equipped::Weapon(choice.slot);
+        Self::with(state, sel, with, choice.targets.clone(), weapons)
+    }
+
+    /// Targeting the first of `targets` with `with`, as [`Targeting::new`].
+    pub fn with(
+        state: &BattleState,
+        sel: Selection,
+        with: Equipped,
+        targets: Vec<UnitId>,
+        weapons: Option<(Menu, Vec<WeaponChoice>)>,
+    ) -> Option<Self> {
+        let first = *targets.first()?;
+        let choices = art_choices(state, sel.unit, sel.dest(), &with, first);
         let list = art_menu(state, &choices, 0);
         let technique = choices
             .get(list.focus())
             .map(|c| c.technique.clone())
             .unwrap_or_default();
         let preview = state
-            .preview_attack(sel.unit, sel.dest(), &technique.action(first, choice.slot))
+            .preview_attack(sel.unit, sel.dest(), &technique.action(first, &with))
             .ok()?;
         Some(Self {
             sel,
-            slot: choice.slot,
-            targets: choice.targets.clone(),
+            with,
+            targets,
             index: 0,
             choices,
             list,
@@ -269,17 +295,32 @@ impl Targeting {
         if n == 0 {
             return;
         }
-        self.index = if forward {
+        let index = if forward {
             (self.index + 1) % n
         } else {
             (self.index + n - 1) % n
         };
+        self.retarget(index, state);
+    }
+
+    /// Moves to `target`, if it is one of the targets, as [`Self::cycle`]
+    /// does.
+    pub fn aim(&mut self, target: UnitId, state: &BattleState) {
+        if let Some(index) = self.targets.iter().position(|&t| t == target) {
+            self.retarget(index, state);
+        }
+    }
+
+    /// Moves to target `index` and updates the list and the forecast (see
+    /// [`Self::cycle`]).
+    fn retarget(&mut self, index: usize, state: &BattleState) {
+        self.index = index;
         let kept = self.technique();
         self.choices = art_choices(
             state,
             self.sel.unit,
             self.sel.dest(),
-            self.slot,
+            &self.with,
             self.target(),
         );
         let at = self
@@ -312,7 +353,7 @@ impl Targeting {
     /// The forecast for the target with the chosen line; `false` (and the
     /// forecast unchanged) if the core refuses it.
     fn refresh(&mut self, state: &BattleState) -> bool {
-        let action = self.technique().action(self.target(), self.slot);
+        let action = self.technique().action(self.target(), &self.with);
         match state.preview_attack(self.sel.unit, self.sel.dest(), &action) {
             Ok(p) => {
                 self.preview = p;
@@ -327,7 +368,7 @@ impl Targeting {
         trpg_core::Command::Act {
             unit: self.sel.unit,
             dest: self.sel.dest(),
-            action: self.technique().action(self.target(), self.slot),
+            action: self.technique().action(self.target(), &self.with),
         }
     }
 }
@@ -412,7 +453,7 @@ mod tests {
         let sel = at(&s, p(7, 2));
         let choice = &weapon_choices(&s, &sel)[1];
         let mut t = Targeting::new(&s, sel, choice, None).unwrap();
-        assert_eq!((t.target(), t.slot), (UnitId(6), 1));
+        assert_eq!((t.target(), &t.with), (UnitId(6), &Equipped::Weapon(1)));
         let forecast_on = |id| {
             s.preview_attack(UnitId(1), p(7, 2), &attack(id, 1))
                 .unwrap()
@@ -450,6 +491,16 @@ mod tests {
         assert_eq!(t3.target(), UnitId(5));
         t3.cycle(false, &s3);
         assert_eq!(t3.target(), UnitId(4));
+        // Aiming at a target moves there; at anyone else, nowhere.
+        t3.aim(UnitId(6), &s3);
+        assert_eq!(t3.target(), UnitId(6));
+        let on = |id| s3.preview_attack(UnitId(1), p(7, 3), &attack(id, 0));
+        assert_eq!(Ok(&t3.preview), on(UnitId(6)).as_ref());
+        t3.aim(UnitId(2), &s3);
+        assert_eq!(t3.target(), UnitId(6));
+        t3.aim(UnitId(5), &s3);
+        assert_eq!(t3.target(), UnitId(5));
+        assert_eq!(Ok(&t3.preview), on(UnitId(5)).as_ref());
         // No target: no targeting.
         let none = WeaponChoice {
             slot: 0,

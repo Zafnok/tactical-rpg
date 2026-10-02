@@ -1,5 +1,5 @@
 ---
-id: "0430"
+id: "0435"
 title: "PLAYER PHASE banner at the start of a battle"
 type: bug
 milestone: M3 Battle UI
@@ -11,7 +11,7 @@ nick_input: none
 completed:
 ---
 
-# 0430 — PLAYER PHASE banner at the start of a battle
+# 0435 — PLAYER PHASE banner at the start of a battle
 
 ## Context
 

@@ -91,7 +91,7 @@ map menu's `Objective` page; the units they are about blink meanwhile.
    **no** `PLAYER PHASE` banner on turn 1 (0405 left it to 0801, which
    didn't add it), so the first banner after the notes is `ENEMY PHASE`.
    The notes are first in the screen's queue, so the turn-1 banner will
-   come after them once it exists: **follow-up ticket 0430** (added to the
+   come after them once it exists: **follow-up ticket 0435** (added to the
    playtest's blockers and the roadmap's critical path).
 3. Preparations (0408) isn't built; the notes show at the battle's start.
    0408 pushes its screen from the flow before the battle screen, so the

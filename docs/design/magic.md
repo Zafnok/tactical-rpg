@@ -61,6 +61,14 @@ Follow-ups:
 > - The burn-out at phase start: "yes, but, fire will damage whatever unit
 >   was present there before burning out. And then reinforcements can come."
 
+> **Casting on the battle screen** (2026-10-01, ticket 0410):
+> - How to choose between hitting an enemy and changing a tile, when a
+>   spell can do both from where the caster stands: "one cursor but make a
+>   glyph or highlight depict when it's damaging a unit versus changing
+>   terrain"
+> - An elemental in the debug Quick Battle, to try the affinity markers:
+>   "One Frost Elemental (Recommended)"
+
 So: magic is **innate spells**, never items in the 3-weapon loadout. Each
 spell has **uses per battle** that refill at the start of every battle.
 Magic classes carry weapons in their first two tiers and **only spells from
@@ -290,6 +298,42 @@ real look):
  ♣ ♣ ♣ . .    ♣ ♣ ^ . .   burning  ♣ ♣ , . .  burnt  ♣ ♣ , . .
  ≈ ≈ ≈ ≈ ≈    ≈ ≈ ≈ ≈ ≈            ≈ ≈ ≈ ≈ ≈         ≈ ≈ ≈ ≈ ░  ice
 ```
+
+## Casting on the battle screen
+
+Built by ticket 0410. What Nick decided is marked; the rest is *Claude's
+starting rule* or look, for Nick to judge at the sign-off.
+
+- **`Magic`** is in the action menu of every unit that knows a spell, under
+  `Attack`. It can be chosen when some spell has something to be cast on
+  from where the unit stands. The menu opens on `Magic` only when a spell
+  reaches an enemy (*Claude's starting rule*: a forest to burn or an ally to
+  heal doesn't pull the cursor off `Wait`).
+- **The spell list** shows every learned spell: `Fire    6/10  Mt5 Hit90
+  Rng1-2`, `Heal    8/8   HP+10 Rng1`. A spell with no target from there is
+  dimmed, and so is one with no uses left.
+- **One cursor for everything the spell can target** (Nick). After a spell
+  is chosen, the cursor steps through its targets in reading order (row by
+  row, left to right): enemies and tiles alike for Fire and Frost, hurt
+  allies for a heal.
+  - On an **enemy**: the attack forecast, as for a weapon, with the spell's
+    uses where a weapon's durability goes. Enemies the spell can hit are
+    tinted red, like attack targets.
+  - On a **tile**: the line `Forest → Burning (1 round)` or `Sea → Ice`
+    over the help bar. Every tile the spell can change is **drawn as the
+    terrain it would become** while the target is picked (*Claude's starting
+    look* for Nick's "glyph or highlight": a red tile is a unit to hurt, a
+    tile showing fire or ice is terrain to change).
+  - On an **ally** (a heal): `Heal on Rex: HP 10 → 25` over the help bar,
+    and the allies it can heal tinted green.
+- **Affinity markers in the forecast:** Weak shows the `!` of an effective
+  strike; `(resist)` or `heals N` is written under the caster's crit.
+- **The unit info screen** marks an equipped spell `E` and lists the class's
+  affinities (`Fire  Weak`).
+- **`Equip`** lists the unit's attack spells after its weapons; a spell with
+  no uses left is dimmed.
+- **A tile whose terrain changes flashes** for 0.4 s (*tunable*), also when
+  a fire burns out.
 
 ## White magic (healing)
 

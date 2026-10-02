@@ -1873,6 +1873,16 @@ impl BattleState {
         self.validate(cmd).map(|_| ())
     }
 
+    /// The HP `unit` moving to `dest` and doing `action` (a heal spell
+    /// cast) would restore, without doing it; `None` if [`Self::apply`]
+    /// would refuse the `Act` or it isn't a heal.
+    pub fn preview_heal(&self, unit: UnitId, dest: Pos, action: &UnitAction) -> Option<StatValue> {
+        match self.plan(unit, dest, action).ok()?.1 {
+            Step::Heal { amount, .. } => Some(amount),
+            _ => None,
+        }
+    }
+
     /// Replaces the battle's luck with a fresh [`SimRng`] seeded by `seed`;
     /// nothing else changes. **For the playtest bots' planning copies
     /// only** (ADR-0033): a bot tries moves on a copy of the battle, and a
