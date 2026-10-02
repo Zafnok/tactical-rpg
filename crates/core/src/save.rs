@@ -1,4 +1,4 @@
-//! What a save holds (ticket 0802, ADR-0037): the campaign and where in it
+//! What a save holds (ticket 0802, ADR-0039): the campaign and where in it
 //! the player stopped. `ui` turns it into text and stores it; this module
 //! is only the data.
 //!

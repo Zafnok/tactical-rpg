@@ -22,7 +22,7 @@ pub mod storage;
 pub mod tips;
 pub mod widgets;
 
-pub use audio::{AudioQueue, AudioRequest, MusicCommand, MusicState};
+pub use audio::{AudioQueue, AudioRequest, MusicClock, MusicCommand, MusicState};
 pub use color::{Palette, Rgb, UiColor};
 pub use game::{FrameOutput, Game, RawInputEvent};
 pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Layer, Overlay, PxRect, Rect};

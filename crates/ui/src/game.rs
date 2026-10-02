@@ -2,7 +2,7 @@
 //! and controller-button events and the frame time and blits the buffer it
 //! returns; the test `Harness` drives it the same way without a window.
 
-use crate::audio::{AudioRequest, MusicCommand, MusicState};
+use crate::audio::{AudioRequest, MusicClock, MusicCommand, MusicState};
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::debug::{self, DebugMenuScreen};
@@ -134,6 +134,18 @@ impl Game {
     pub fn with_debug_screens(mut self, on: bool) -> Self {
         self.ctx.debug_tools = on;
         self
+    }
+
+    /// Tells the game what music is sounding, for
+    /// [`Ctx::music_clock`]: the cue and the seconds since the track really
+    /// started, or `None` in silence. `app` knows (a track starts once its
+    /// file has loaded, ADR-0037) and calls this before every
+    /// [`frame`](Self::frame), so screens read a clock at most one frame
+    /// old.
+    pub fn set_music_playing(&mut self, playing: Option<(&str, f64)>) {
+        let manifest = &self.ctx.content.audio;
+        self.ctx.music_clock =
+            playing.and_then(|(cue, elapsed)| MusicClock::from_elapsed(manifest, cue, elapsed));
     }
 
     /// Runs one frame: applies `events` (in order), advances input by `dt`
@@ -910,6 +922,29 @@ mod tests {
             gain: 0.75,
         };
         assert_eq!(out.music[1..], [gain]);
+    }
+
+    /// Ticket 0227: what `app` reports becomes the clock screens read.
+    #[test]
+    fn the_music_app_reports_becomes_the_clock() {
+        // `ctx_with_cues` tracks loop and are 10 s long.
+        let mut game = noisy();
+        assert_eq!(game.ctx().music_clock, None);
+        game.set_music_playing(Some(("battle", 12.5)));
+        let clock = game.ctx().music_clock.clone().unwrap();
+        assert_eq!(clock.cue, "battle");
+        assert!((clock.position - 2.5).abs() < 1e-5, "{clock:?}");
+        assert!((clock.length - 10.0).abs() < 1e-5, "{clock:?}");
+        // A frame leaves it as reported.
+        game.frame(&[], 0.5);
+        assert_eq!(game.ctx().music_clock, Some(clock));
+        // A cue the manifest lacks has no clock, and silence clears it.
+        game.set_music_playing(Some(("nope", 1.0)));
+        assert_eq!(game.ctx().music_clock, None);
+        game.set_music_playing(Some(("title", 1.0)));
+        assert!(game.ctx().music_clock.is_some());
+        game.set_music_playing(None);
+        assert_eq!(game.ctx().music_clock, None);
     }
 
     #[test]

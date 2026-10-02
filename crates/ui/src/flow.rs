@@ -20,7 +20,7 @@
 //! its [`BattleSetup`], kept so that `Restart Battle` (map menu) and
 //! `Retry` (Game Over) rebuild it exactly, every rewind charge back.
 //!
-//! **Saves** (`death-and-difficulty.md`, ADR-0037). A chapter save holds
+//! **Saves** (`death-and-difficulty.md`, ADR-0039). A chapter save holds
 //! the campaign once its chapter is won, so its
 //! [`chapter`](Campaign::chapter) is the one just cleared until the next
 //! begins; loading one starts the chapter after it. The suspend save holds
