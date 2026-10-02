@@ -35,9 +35,9 @@ use super::layout::MAP_VIEW;
 use super::playback::BOX;
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
-use crate::input::{Action, Keymap};
+use crate::input::Action;
 use crate::portrait::draw_portrait;
-use crate::widgets::help::{help_line, key_name};
+use crate::widgets::help::{HelpKeys, help_line, key_name};
 
 /// How long each page's parts take, in seconds. *Tunable.*
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -523,7 +523,7 @@ impl Progress {
 
 /// The help line of an EXP bar, level-up or class page: skip and fast while
 /// it plays, then continue.
-pub fn help(p: &Progress, km: &Keymap) -> String {
+pub fn help(p: &Progress, km: HelpKeys<'_>) -> String {
     let confirm = key_name(km, Action::Confirm);
     if p.page_played() {
         help_line(&[(Some(confirm), "continue")])
@@ -1248,9 +1248,9 @@ mod tests {
     fn the_help_line_follows_the_page() {
         let c = ctx();
         let mut pb = progress();
-        assert_eq!(help(&pb, &c.keymap), "f skip · hold f fast");
+        assert_eq!(help(&pb, c.help_keys()), "f skip · hold f fast");
         pb.confirm();
-        assert_eq!(help(&pb, &c.keymap), "f continue");
+        assert_eq!(help(&pb, c.help_keys()), "f continue");
     }
 
     #[test]

@@ -143,7 +143,7 @@ impl Screen for DebugMenuScreen {
         let (w, _) = self.menu.size();
         let x = centre_x(buf, usize::try_from(w).unwrap_or(0));
         self.menu.draw(&ctx.palette, buf, x, MENU_TITLE_ROW + 2);
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let help = help_line(&[
             (Some(cursor_keys_name(km)), "move"),
             (Some(key_name(km, Action::Confirm)), "open"),

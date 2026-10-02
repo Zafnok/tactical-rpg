@@ -71,7 +71,7 @@ use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::tips::{draw_tip, fill_placeholders};
-use crate::widgets::help::{SEPARATOR, cursor_keys_name, help_line, key_name};
+use crate::widgets::help::{HelpKeys, SEPARATOR, cursor_keys_name, help_line, key_name};
 
 /// Battle id of the debug Quick Battle (`assets/battles/quick.ron`).
 pub const QUICK_BATTLE: &str = "quick";
@@ -889,7 +889,7 @@ impl BattleScreen {
     }
 
     /// The help line of a tip, EXP or level-up page, or banner on screen.
-    fn overlay_help(&self, km: &crate::input::Keymap) -> Option<String> {
+    fn overlay_help(&self, km: HelpKeys<'_>) -> Option<String> {
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         if self.shown_tip().is_some() {
             return Some(help_line(&[confirm("close")]));
@@ -908,7 +908,7 @@ impl BattleScreen {
     /// select · e info · s next unit · r rewind · d back` over a ready unit while
     /// browsing. Key names come from the keymap.
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let keys = Some(cursor_keys_name(km));
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         let select = |label| (Some(key_name(km, km.select_action())), label);
@@ -999,7 +999,7 @@ impl BattleScreen {
     /// The help line while picking an attack's target: left/right pick the
     /// target and up/down the line of the arts list, if it is shown (0414).
     fn help_targeting(ctx: &Ctx, t: &Targeting) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let confirm = (Some(key_name(km, Action::Confirm)), "attack");
         let cancel = (Some(key_name(km, Action::Cancel)), "back");
         if !t.has_list() {
@@ -1021,7 +1021,7 @@ impl BattleScreen {
         info: (Option<String>, &str),
         back: (Option<String>, &str),
     ) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let select = |label| (Some(key_name(km, km.select_action())), label);
         let next = (Some(key_name(km, Action::NextUnit)), "next unit");
         let moves = (Some(cursor_keys_name(km)), "move");
@@ -1046,7 +1046,7 @@ impl BattleScreen {
     /// `danger zone: OFF`, then the Auto-end key and `auto-end: ON`, each
     /// key named from the active keymap.
     pub fn status(&self, ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let danger = format!("danger zone: {}", on_off(self.danger.is_some()));
         let auto = format!("auto-end: {}", on_off(self.auto_end));
         help_line(&[
@@ -1262,7 +1262,7 @@ impl BattleScreen {
                 map_menu::draw_dialog(buf, p, "Objective", &lines);
             }
             Mode::EndTurnPrompt { ready } => {
-                let km = &ctx.keymap;
+                let km = ctx.help_keys();
                 let yes_no = help_line(&[
                     (Some(key_name(km, Action::Confirm)), "yes"),
                     (Some(key_name(km, Action::Cancel)), "no"),
@@ -1275,7 +1275,7 @@ impl BattleScreen {
                 map_menu::draw_dialog(buf, p, "", &lines);
             }
             Mode::RestartPrompt => {
-                let km = &ctx.keymap;
+                let km = ctx.help_keys();
                 let yes_no = help_line(&[
                     (Some(key_name(km, Action::Confirm)), "yes"),
                     (Some(key_name(km, Action::Cancel)), "no"),
@@ -1364,7 +1364,7 @@ fn menu_origin((x, y): (i32, i32), (w, h): (i32, i32)) -> (i32, i32) {
 
 /// The help line on the rewind screen `r`.
 fn rewind_help(r: &RewindScreen, ctx: &Ctx) -> String {
-    let km = &ctx.keymap;
+    let km = ctx.help_keys();
     let keys = Some(cursor_keys_name(km));
     let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
     let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
@@ -1533,8 +1533,8 @@ impl Screen for BattleScreen {
             .shown_tip()
             .and_then(|t| ctx.content.tips.for_trigger(t))
         {
-            let text = fill_placeholders(&tip.text, &ctx.keymap);
-            let close = help_line(&[(Some(key_name(&ctx.keymap, Action::Confirm)), "close")]);
+            let text = fill_placeholders(&tip.text, ctx.help_keys());
+            let close = help_line(&[(Some(key_name(ctx.help_keys(), Action::Confirm)), "close")]);
             draw_tip(buf, &ctx.palette, &tip.title, &text, &close);
         }
         buf.fill_rect(HELP_BAR, Cell::new(' ', c(UiColor::Text), black));

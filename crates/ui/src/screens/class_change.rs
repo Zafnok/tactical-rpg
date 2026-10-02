@@ -447,7 +447,7 @@ impl ClassChangeScreen {
 
     /// The help line for the stage.
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
         let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
         match &self.stage {
@@ -675,7 +675,7 @@ impl ClassChangeScreen {
         };
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
-        let km = &ctx.keymap;
+        let km = ctx.help_keys();
         let yes_no = help_line(&[
             (Some(key_name(km, Action::Confirm)), "yes"),
             (Some(key_name(km, Action::Cancel)), "no"),

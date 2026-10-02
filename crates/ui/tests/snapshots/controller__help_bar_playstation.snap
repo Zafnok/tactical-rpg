@@ -1,0 +1,6 @@
+---
+source: crates/ui/tests/controller.rs
+expression: "rows(PadKind::PlayStation)"
+---
+□ danger zone: OFF · Create auto-end: OFF
+✕ select · △ info · R1 next unit · L2 rewind · ◯ menu · Options end turn

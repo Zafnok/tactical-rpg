@@ -19,7 +19,7 @@
 use crate::audio::{AudioRequest, MusicCommand};
 use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
-use crate::input::{Button, Chord, Layout};
+use crate::input::{Button, Chord, Device, Layout, PadKind};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
 use crate::storage::{MemoryStorage, Storage};
 
@@ -37,6 +37,8 @@ pub struct Harness {
     audio: Vec<Vec<AudioRequest>>,
     /// Every music command of the run, in order.
     music: Vec<MusicCommand>,
+    /// The kind of controller [`pad`](Self::pad) presses buttons on.
+    pad_kind: PadKind,
 }
 
 impl Harness {
@@ -100,7 +102,17 @@ impl Harness {
             game: game.with_debug_screens(true),
             audio: Vec::new(),
             music: Vec::new(),
+            pad_kind: PadKind::default(),
         }
+    }
+
+    /// From now on [`pad`](Self::pad) and [`hold_pad`](Self::hold_pad)
+    /// press buttons on a controller of `kind` (a generic one until then).
+    /// The button names in scripts stay binding positions: on a Nintendo
+    /// pad `South` is its right face button.
+    pub fn use_pad(&mut self, kind: PadKind) -> &mut Self {
+        self.pad_kind = kind;
+        self
     }
 
     /// Presses and releases each whitespace-separated chord in turn, e.g.
@@ -165,7 +177,7 @@ impl Harness {
     pub fn pad(&mut self, script: &str) -> &mut Self {
         for token in script.split_whitespace() {
             let button = parse_button(token);
-            self.frame(&[RawInputEvent::PadDown(button)], FRAME_DT);
+            self.frame(&[RawInputEvent::PadDown(button, self.pad_kind)], FRAME_DT);
             self.frame(&[RawInputEvent::PadUp(button)], FRAME_DT);
         }
         self
@@ -179,7 +191,7 @@ impl Harness {
     /// On a button [`Button::parse`] rejects.
     pub fn hold_pad(&mut self, button: &str, seconds: f32) -> &mut Self {
         let button = parse_button(button);
-        self.advance(&[RawInputEvent::PadDown(button)], seconds);
+        self.advance(&[RawInputEvent::PadDown(button, self.pad_kind)], seconds);
         self.frame(&[RawInputEvent::PadUp(button)], FRAME_DT);
         self
     }
@@ -271,6 +283,18 @@ impl Harness {
     /// The current frame in the snapshot format of [`crate::snapshot`].
     pub fn snapshot(&self) -> String {
         self.game.buffer().to_snapshot(&self.game.ctx().palette)
+    }
+
+    /// The current frame as it would look had the player pressed `device`
+    /// last: the same screen with that device's key or button names. For
+    /// comparing play on a controller with the same play on the keyboard.
+    pub fn snapshot_as(&mut self, device: Device) -> String {
+        let used = std::mem::replace(&mut self.game.ctx_mut().device, device);
+        self.game.redraw();
+        let snapshot = self.snapshot();
+        self.game.ctx_mut().device = used;
+        self.game.redraw();
+        snapshot
     }
 
     /// The game flow on the stack (New Game or Quick Battle), if any.
@@ -421,6 +445,32 @@ mod tests {
         seen.borrow_mut().clear();
         h.wait(1.0);
         assert!(seen.borrow().iter().all(|(a, _)| a.is_empty()));
+    }
+
+    #[test]
+    fn use_pad_sets_the_kind_of_pad_pressed_and_snapshot_as_only_looks() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        let keys = h.snapshot();
+        assert_eq!(h.game().ctx().device, Device::Keyboard);
+        h.pad("RightTrigger");
+        // Unbound: still the keyboard.
+        assert_eq!(h.game().ctx().device, Device::Keyboard);
+        h.pad("DpadDown DpadUp");
+        assert_eq!(h.game().ctx().device, Device::Pad(PadKind::Generic));
+        let pad = h.snapshot();
+        assert_ne!(pad, keys);
+        assert_eq!(h.snapshot_as(Device::Keyboard), keys);
+        // Looking doesn't change the device or the frame.
+        assert_eq!(h.game().ctx().device, Device::Pad(PadKind::Generic));
+        assert_eq!(h.snapshot(), pad);
+        h.use_pad(PadKind::PlayStation).pad("DpadDown DpadUp");
+        assert_eq!(h.game().ctx().device, Device::Pad(PadKind::PlayStation));
+        assert_ne!(h.snapshot(), pad);
+        h.use_pad(PadKind::Nintendo).hold_pad("DpadDown", 0.0);
+        assert_eq!(h.game().ctx().device, Device::Pad(PadKind::Nintendo));
+        h.keys("Up");
+        assert_eq!(h.game().ctx().device, Device::Keyboard);
+        assert_eq!(h.snapshot(), keys);
     }
 
     #[test]

@@ -559,7 +559,7 @@ fn the_restore_question_can_be_backed_out_of() {
         s.restore_question(),
         "Restore the default keys for Right-handed?"
     );
-    assert_eq!(s.help(), "f yes · d no");
+    assert_eq!(s.help(&c), "f yes · d no");
     sounds(&mut c);
     // Nothing but Confirm and Cancel answers; the clear-slot key and the
     // cursor do nothing.
@@ -585,7 +585,7 @@ fn the_restore_question_can_be_backed_out_of() {
     assert!(!s.is_asking_restore());
     assert_eq!(s.bindings(), &custom);
     assert_eq!(sounds(&mut c), [cue(MenuSound::Cancel)]);
-    assert_eq!(s.help(), "arrows move · f restore · d back");
+    assert_eq!(s.help(&c), "arrows move · f restore · d back");
     let buf = drawn(&s, &c);
     assert!(!(0..i32::from(CONSOLE_H)).any(|y| row_text(&buf, y).contains('║')));
     // The left-handed question names its layout and keys.
@@ -596,7 +596,7 @@ fn the_restore_question_can_be_backed_out_of() {
         s.restore_question(),
         "Restore the default keys for Left-handed?"
     );
-    assert_eq!(s.help(), "j yes · k no");
+    assert_eq!(s.help(&c), "j yes · k no");
 }
 
 #[test]
@@ -633,20 +633,20 @@ fn other_actions_do_nothing() {
 fn help_names_the_keys_the_screen_was_opened_with() {
     let mut c = ctx();
     let mut s = screen(&c);
-    assert_eq!(s.help(), "arrows move · f bind · Delete clear · d back");
+    assert_eq!(s.help(&c), "arrows move · f bind · Delete clear · d back");
     // Edits don't change the help: the old keys still steer the screen.
     bind(&mut s, &mut c, Info, 0, "f");
     bind(&mut s, &mut c, Info, 1, "d");
-    assert_eq!(s.help(), "arrows move · f bind · Delete clear · d back");
+    assert_eq!(s.help(&c), "arrows move · f bind · Delete clear · d back");
     s.update(&mut c, &act(&[Confirm]));
-    assert_eq!(s.help(), "Press the key to put here · Escape back");
+    assert_eq!(s.help(&c), "Press the key to put here · Escape back");
     s.update(&mut c, &press("Escape"));
     s.update(&mut c, &act(&[CursorUp, CursorUp, CursorUp, CursorUp]));
     focus_on_restore(&mut s, &mut c);
-    assert_eq!(s.help(), "arrows move · f restore · d back");
+    assert_eq!(s.help(&c), "arrows move · f restore · d back");
     let left = ctx().with_layout(Layout::LeftHanded);
     assert_eq!(
-        KeyBindingsScreen::new(&left).help(),
+        KeyBindingsScreen::new(&left).help(&left),
         "wasd move · j bind · Delete clear · k back"
     );
 }
