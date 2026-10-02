@@ -64,7 +64,8 @@ The validator reports every broken rule, with the file and line:
   and `_`: `ch01_opening`, `bors`, `surprised`.
 - **Scene ids** are unique across *all* `.dlg` files; battles and chapters
   refer to scenes by id. Several scenes may share a file.
-- **Characters** must exist in `assets/data/characters.ron`.
+- **Characters** must exist in `assets/data/characters.ron`, as a character
+  or in its `speakers` list (someone who talks but isn't a unit).
 - **Two portraits at most**: one left, one right. A character can't stand on
   both sides at once.
 - **Speakers must be on screen.** Narration needs nobody.

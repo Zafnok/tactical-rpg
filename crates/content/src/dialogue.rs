@@ -12,8 +12,8 @@ use std::collections::BTreeMap;
 use trpg_core::CharacterId;
 
 pub use check::{check_duplicates, check_scene};
-pub(crate) use parse::char_problem;
 pub use parse::{ChoiceLines, OptionLines, ParsedScene, parse_dlg};
+pub(crate) use parse::{char_problem, is_id};
 
 use crate::bundle;
 use crate::character::CharacterTable;
