@@ -18,6 +18,7 @@ fn refs(c: &Content) -> BattleRefs<'_> {
         items: &c.items,
         characters: &c.characters,
         dialogue: &c.dialogue,
+        audio: &c.audio,
     }
 }
 
@@ -44,6 +45,7 @@ const OK: &str = r#"(
     objective: DefeatUnit(unit: "test_rogue", turn_limit: Some(9)),
     triggers: [(when: TurnStart(turn: 1, phase: Player), scene: "test", once: true)],
     difficulty: Hard,
+    music: Cue("battle_bright"),
     seed: 42,
 )"#;
 
@@ -122,6 +124,7 @@ fn a_valid_battle_loads() {
         }
     );
     assert_eq!(def.difficulty, Difficulty::Hard);
+    assert_eq!(def.music, BattleMusic::Cue("battle_bright".into()));
     assert_eq!(def.seed, 42);
 }
 
@@ -134,6 +137,7 @@ fn defaults_fill_what_a_battle_leaves_out() {
         player_slots: [(character: "lead", pos: (3, 5))],
         objective: Seize(pos: (5, 5)),
         difficulty: Easy,
+        music: Pool("skirmish"),
         seed: 0,
     )"#;
     let def = load(&c, source).unwrap_or_else(|e| panic!("{e:?}"));
@@ -181,6 +185,49 @@ fn file_level_errors() {
     let e = load(&c, "(id: 1)").err().unwrap_or_default();
     assert_eq!(e.len(), 1);
     assert_eq!(e[0].line, Some(1));
+}
+
+/// The battle's music is required, and names a music cue or a pool of the
+/// audio manifest (a sound cue is neither).
+#[test]
+fn music_errors() {
+    let c = content();
+    let cue = "music: Cue(\"battle_bright\")";
+    let pool = OK.replacen(cue, "music: Pool(\"skirmish\")", 1);
+    let def = load(&c, &pool).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(def.music, BattleMusic::Pool("skirmish".into()));
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"nope\")"),
+        ["music: no music cue \"nope\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Pool(\"nope\")"),
+        ["music: no music pool \"nope\""]
+    );
+    // A pool isn't a cue, nor a cue a pool, nor a sound music.
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"skirmish\")"),
+        ["music: no music cue \"skirmish\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Pool(\"battle_bright\")"),
+        ["music: no music pool \"battle_bright\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"menu_move\")"),
+        ["music: no music cue \"menu_move\""]
+    );
+    let missing = errors(
+        &c,
+        "    music: Cue(\"battle_bright\"),
+",
+        "",
+    );
+    assert_eq!(missing.len(), 1, "{missing:?}");
+    assert!(
+        missing[0].contains("missing field named `music`"),
+        "{missing:?}"
+    );
 }
 
 #[test]
@@ -401,4 +448,8 @@ fn embedded_battles_load() {
     for (id, def) in &c.battles {
         assert_eq!(&def.id, id);
     }
+    // The placeholders are test skirmishes.
+    let skirmish = BattleMusic::Pool("skirmish".into());
+    assert_eq!(quick.music, skirmish);
+    assert_eq!(c.battles["test"].music, skirmish);
 }
