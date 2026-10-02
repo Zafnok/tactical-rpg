@@ -5,6 +5,7 @@
 
 mod check_keys;
 mod font_atlas;
+mod playtest;
 mod sfx;
 mod tickets;
 mod web;
@@ -19,6 +20,7 @@ ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/REA
 check-keys                         fail on keys hard-coded in game code or text\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
+playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 web [--release] [--debug-tools]    build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -34,6 +36,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
+        Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -151,6 +154,30 @@ fn web(args: &[String]) -> u8 {
     }
 }
 
+fn playtest(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", playtest::USAGE);
+        return 0;
+    }
+    let options = match playtest::parse_args(args) {
+        Ok(options) => options,
+        Err(e) => {
+            eprintln!("{e}\n\n{}", playtest::USAGE);
+            return 2;
+        }
+    };
+    match playtest::run(&repo_root(), &options) {
+        Ok(report) => {
+            print!("{report}");
+            0
+        }
+        Err(e) => {
+            eprintln!("playtest: {e}");
+            1
+        }
+    }
+}
+
 fn parse_pr_branch(args: &[String]) -> Result<Option<String>, String> {
     let mut iter = args.iter();
     match iter.next() {
@@ -213,11 +240,58 @@ mod tests {
         );
         assert_eq!(table(&app, "[lints.rust]"), rust);
         // Every other crate inherits the workspace's `forbid`.
-        for other in ["core", "content", "ui", "xtask"] {
+        for other in ["bots", "core", "content", "ui", "xtask"] {
             let manifest =
                 std::fs::read_to_string(root.join(format!("crates/{other}/Cargo.toml"))).unwrap();
             assert_eq!(table(&manifest, "[lints]"), ["workspace = true"], "{other}");
         }
+    }
+
+    /// The playtest bots are dev tooling (ADR-0033): nothing the game is
+    /// built from may depend on them, and they may not depend on the game's
+    /// look (ADR-0038). Every way to a crate of this workspace is a
+    /// manifest here, so reading the manifests covers indirect ones too.
+    #[test]
+    fn bots_stay_out_of_the_game() {
+        // A manifest without its comments.
+        let manifest = |name: &str| {
+            let path = repo_root().join(format!("crates/{name}/Cargo.toml"));
+            let text = std::fs::read_to_string(path).unwrap();
+            let lines: Vec<&str> = text.lines().filter(|l| !l.starts_with('#')).collect();
+            lines.join("\n")
+        };
+        for game in ["core", "content", "ui", "app"] {
+            assert!(!manifest(game).contains("trpg-bots"), "{game}");
+        }
+        for bots in ["bots", "core", "content"] {
+            let manifest = manifest(bots);
+            assert!(!manifest.contains("trpg-ui"), "{bots}");
+            assert!(!manifest.contains("trpg-app"), "{bots}");
+        }
+        assert!(manifest("xtask").contains("trpg-bots"));
+    }
+
+    #[test]
+    fn playtest_help_and_bad_args() {
+        assert_eq!(playtest(&args(&["--help"])), 0);
+        assert_eq!(playtest(&args(&["quick", "--help"])), 0);
+        assert_eq!(playtest(&[]), 2);
+        assert_eq!(playtest(&args(&["quick", "--runs", "0"])), 2);
+        assert_eq!(dispatch(args(&["playtest", "--bogus", "1"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn playtest_reports_a_battle_and_fails_on_an_unknown_one() {
+        let history = std::env::temp_dir().join(format!("xtask-playtest-{}", std::process::id()));
+        let history_arg = history.to_string_lossy().into_owned();
+        let run = |battle: &str| {
+            let run = ["playtest", battle, "--runs", "2", "--history", &history_arg];
+            dispatch(args(&run).into_iter())
+        };
+        assert_eq!(run("quick"), 0);
+        assert!(history.join("quick-classic-baseline.jsonl").is_file());
+        assert_eq!(run("no_such_battle"), 1);
+        std::fs::remove_dir_all(&history).unwrap();
     }
 
     #[test]
