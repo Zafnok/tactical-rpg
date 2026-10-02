@@ -36,7 +36,9 @@
 //!      one level's EXP ([`EXP_PER_LEVEL`]) per unused rewind charge, as one
 //!      award ([`grant_exp`]: only the level cap limits it; no 100-EXP cap,
 //!      Nick), in slot order. Level ups roll on a copy of the battle's RNG,
-//!      so the same battle always gives the same result.
+//!      so the same battle always gives the same result. The
+//!      [`BattleRewards`] returned hold those units as they were before the
+//!      bonus and what each got, for the results screen (0810).
 //!   3. The battle's recruits ([`BattleState::recruited`]) join the roster,
 //!      as player units.
 //!   4. The stock becomes the battle's (with what was bought or found),
@@ -243,12 +245,27 @@ pub struct BattleRewards {
     pub unused_charges: u8,
     /// EXP each deployed unit was offered for them.
     pub bonus_exp: u32,
+    /// The deployed units still in the roster (standing, or retreated in
+    /// Casual), as they were before the bonus, in slot order.
+    pub deployed: Vec<Unit>,
     /// The bonus's EXP and level-up events, with the battle's unit ids.
     pub events: Vec<Event>,
     /// Characters who died (Classic) and left the roster.
     pub lost: Vec<CharacterId>,
     /// Characters who joined.
     pub joined: Vec<CharacterId>,
+}
+
+impl BattleRewards {
+    /// The bonus EXP `unit` got: [`bonus_exp`](Self::bonus_exp), or less
+    /// (down to 0) for a unit at or near the level cap.
+    pub fn exp_gained(&self, unit: UnitId) -> u32 {
+        let gained = |e: &Event| match *e {
+            Event::ExpGained { unit: u, amount } if u == unit => amount,
+            _ => 0,
+        };
+        self.events.iter().map(gained).sum()
+    }
 }
 
 /// Why a battle's result wasn't applied. Nothing changed.
@@ -376,6 +393,7 @@ impl Campaign {
             }
         }
         deployed.sort_by_key(|u| u.id);
+        rewards.deployed.clone_from(&deployed);
         let per_charge = EXP_PER_LEVEL * UNUSED_CHARGE_PERCENT / 100;
         rewards.bonus_exp = per_charge * u32::from(unused_charges);
         let mut rng = state.rng().clone();

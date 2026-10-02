@@ -1,0 +1,122 @@
+---
+source: crates/ui/src/screens/results/tests.rs
+expression: h.snapshot()
+---
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                    ╔══════════════════════════════════════════════════════════╗                    
+                    ║ ┌────────────────────────────────┐                       ║                    
+                    ║ │            ▄▄▄▄▄▄▄▄            │  LEVEL UP!            ║                    
+                    ║ │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │                       ║                    
+                    ║ │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │  Test Lord            ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Lv 1 → 2             ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                       ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  HP   19 → 20  +1     ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Str   6 → 7   +1     ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Mag   1              ║                    
+                    ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Dex   7              ║                    
+                    ║ │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │  Spd   7 → 9   +2     ║                    
+                    ║ │          ▀▀▀▀▀▀▀▀▀▀▀▀          │  Def   4              ║                    
+                    ║ │            ▀▀▀▀▀▀▀▀            │  Res   3              ║                    
+                    ║ │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                       ║                    
+                    ║ │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                       ║                    
+                    ║ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                       ║                    
+                    ║ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                       ║                    
+                    ║ └────────────────────────────────┘                       ║                    
+                    ╚══════════════════════════════════════════════════════════╝                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                             f continue                                             
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcddddddddddddddddddddddddddddddddddcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeeeeeeffffffffeeeeeeeeeeeedccgggggggggccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeeefhhiiiijjjjhhfeeeeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeefhjikljjjjjjjjjmhfeeeeeeedccnnnnnnnnnccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeojjkjjjjjjmjjjjjjpjoeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeojjjjqqrjsqqrjjqjjpoeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeojptuuuuttttuuuvwmpoeeeeeedccccccccccccccccggcccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeojxttyzytAttyzywwsjoeeeeeedccccccccccccccccggcccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeojtttttttBtttttwwwjoeeeeeedccCCCCCCCccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeefDDttBEttEFFtttwwDDfeeeeeedccCCCCCCCccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeeeotttGHHHHGtwwoeeeeeeeeedccccccccccccccccggcccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeeeefyttIIIIqwJfeeeeeeeeeedccCCCCCCCccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeeeeeeoFKKKKKoeeeeeeeeeeeedccCCCCCCCccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeeeLMMNOPQwwwwQPONMMReeeeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeeeLSTTTUVVVVWWVVVVUTTTXReeeeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeeeLSTTTTTUVVVVYYVVVVUTTTTTXReeedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcdeLSTTTTTTTUVVVVYYVVVVUTTTTTTTXRedcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabcddddddddddddddddddddddddddddddddddcccccccccccccccccccccccbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaZZZZZZZZZZaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border_focus bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:panel_border bg:panel_bg
+e = fg:panel_bg bg:panel_bg
+f = fg:portrait_outline bg:panel_bg
+g = fg:text_highlight bg:panel_bg
+h = fg:portrait_outline bg:hair_brown
+i = fg:hair_brown bg:hair_brown_light
+j = fg:hair_brown bg:hair_brown
+k = fg:hair_brown_light bg:hair_brown_light
+l = fg:hair_brown_light bg:hair_brown
+m = fg:hair_brown bg:hair_brown_dark
+n = fg:player bg:panel_bg
+o = fg:portrait_outline bg:portrait_outline
+p = fg:hair_brown_dark bg:hair_brown_dark
+q = fg:skin_light bg:skin_light_mid
+r = fg:hair_brown_dark bg:skin_light_mid
+s = fg:hair_brown bg:skin_light_mid
+t = fg:skin_light bg:skin_light
+u = fg:brow_dark bg:skin_light
+v = fg:brow_dark bg:skin_light_mid
+w = fg:skin_light_mid bg:skin_light_mid
+x = fg:hair_brown_dark bg:skin_light
+y = fg:skin_light bg:portrait_outline
+z = fg:portrait_outline bg:skin_light
+A = fg:skin_light bg:skin_light_highlight
+B = fg:skin_light_highlight bg:skin_light_highlight
+C = fg:text_dim bg:panel_bg
+D = fg:hair_brown bg:portrait_outline
+E = fg:skin_light_highlight bg:skin_light
+F = fg:skin_light bg:skin_light_shadow
+G = fg:mouth_dark bg:mouth_dark
+H = fg:skin_light bg:teeth
+I = fg:lip bg:skin_light
+J = fg:skin_light_mid bg:portrait_outline
+K = fg:skin_light_mid bg:skin_light_shadow
+L = fg:armor_steel_light bg:panel_bg
+M = fg:armor_steel bg:panel_bg
+N = fg:trim_gold bg:panel_bg
+O = fg:cloth_blue bg:panel_bg
+P = fg:portrait_outline bg:cloth_blue
+Q = fg:skin_light_mid bg:cloth_blue
+R = fg:armor_steel_dark bg:panel_bg
+S = fg:armor_steel_light bg:armor_steel
+T = fg:armor_steel bg:armor_steel
+U = fg:trim_gold bg:trim_gold
+V = fg:cloth_blue bg:cloth_blue
+W = fg:trim_gold bg:cloth_blue_dark
+X = fg:armor_steel_dark bg:armor_steel
+Y = fg:cloth_blue_dark bg:cloth_blue_dark
+Z = fg:text_dim bg:black
