@@ -688,7 +688,8 @@ mod tests {
         };
         let mut release = ctx();
         release.debug_tools = false;
-        assert_eq!(names(release), ["title"]); // Down + f chose Quit.
+        // Down + f chose Credits: there is no Quick Battle.
+        assert_eq!(names(release), ["title", "credits"]);
         let mut debug = ctx();
         debug.debug_tools = true;
         assert_eq!(names(debug), ["title", "preparations"]);

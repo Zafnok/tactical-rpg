@@ -80,7 +80,7 @@ fn the_title_menu_works_with_a_pad() {
     h.pad("DpadLeft South");
     assert_eq!(h.screens(), ["title", "battle"]);
     let mut h = title();
-    h.pad("LeftStickDown LeftStickDown South");
+    h.pad("LeftStickDown LeftStickDown LeftStickDown South");
     assert!(h.quit_requested());
 }
 

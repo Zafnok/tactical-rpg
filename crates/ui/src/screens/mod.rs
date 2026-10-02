@@ -2,6 +2,7 @@
 
 pub mod battle;
 pub mod class_change;
+pub mod credits;
 pub mod dialogue;
 pub mod game_over;
 pub mod key_bindings;
@@ -15,6 +16,7 @@ pub mod title;
 
 pub use battle::BattleScreen;
 pub use class_change::{ChangeKind, ClassChangeScreen};
+pub use credits::CreditsScreen;
 pub use dialogue::DialogueScreen;
 pub use game_over::{GameOverScreen, ToBeContinuedScreen};
 pub use key_bindings::KeyBindingsScreen;
