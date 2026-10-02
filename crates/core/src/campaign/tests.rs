@@ -105,6 +105,7 @@ fn def() -> BattleDef {
             once: true,
         }],
         difficulty: Difficulty::Normal,
+        music: BattleMusic::Pool("skirmish".into()),
         seed: 3,
     }
 }

@@ -577,3 +577,29 @@ fn continue_goes_on_even_if_the_save_cant_be_deleted() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle_text(&h), before);
 }
+
+/// Suspending brings the title's music back; Continue starts the battle's
+/// again (0807).
+#[test]
+fn the_music_follows_suspend_and_continue() {
+    let mut h = first_launch(false);
+    if let Some(test) = h.ctx_mut().content.battles.get_mut("test") {
+        test.music = trpg_core::BattleMusic::Cue("battle_easy".into());
+    }
+    let music = |h: &Harness| -> Vec<String> {
+        h.audio_requests()
+            .iter()
+            .filter(|r| !matches!(r, trpg_ui::AudioRequest::PlaySound { .. }))
+            .map(|r| r.cue().unwrap_or("-").to_owned())
+            .collect()
+    };
+    to_battle(&mut h);
+    assert_eq!(music(&h), ["title", "battle_easy"]);
+    suspend(&mut h);
+    h.wait(0.1);
+    assert_eq!(h.screens(), ["title"]);
+    assert_eq!(music(&h), ["title", "battle_easy", "title"]);
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(music(&h), ["title", "battle_easy", "title", "battle_easy"]);
+}

@@ -14,7 +14,7 @@ use trpg_content::{Content, ContentErrors};
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{LeadGender, LeadProfile};
 
-use crate::audio::{AudioQueue, MusicClock};
+use crate::audio::{AudioQueue, MusicClock, pick_from_pool};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
@@ -231,6 +231,10 @@ pub struct Ctx {
     /// [`DEFAULT_MUSIC_SEED`] here, so tests are repeatable; `app` sets it
     /// from the clock at startup so each launch picks differently.
     pub music_seed: u64,
+    /// Random music picks made so far, mixed into
+    /// [`music_seed`](Self::music_seed) so each pick rolls afresh
+    /// ([`Ctx::pick_music`]).
+    music_picks: u64,
     /// Who the player made the lead, for dialogue's name and pronoun
     /// tokens and the lead's portrait: a placeholder until a campaign
     /// starts (New Game asks the player), then the campaign's
@@ -285,6 +289,7 @@ impl Ctx {
             audio: AudioQueue::default(),
             music_clock: None,
             music_seed: DEFAULT_MUSIC_SEED,
+            music_picks: 0,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
             clock_s: 0.0,
             key_prompt: KeyPrompt::Off,
@@ -294,6 +299,17 @@ impl Ctx {
     /// The context for the content embedded in the binary.
     pub fn embedded() -> Result<Self, LoadError> {
         Self::new(trpg_content::load_embedded().map_err(LoadError::Content)?)
+    }
+
+    /// A music cue picked at random from the audio manifest's `pool`
+    /// ([`pick_from_pool`]): the n-th pick of this run uses
+    /// [`music_seed`](Self::music_seed) mixed with n, so a battle started
+    /// again may get another track. `None` if there is no such pool or it
+    /// is empty.
+    pub fn pick_music(&mut self, pool: &str) -> Option<String> {
+        let seed = self.music_seed ^ self.music_picks;
+        self.music_picks = self.music_picks.wrapping_add(1);
+        pick_from_pool(&self.content.audio, pool, seed).map(str::to_owned)
     }
 
     /// What help text names keys from: the active bindings on the device

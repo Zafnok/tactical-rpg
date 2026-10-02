@@ -30,14 +30,20 @@
 //!
 //! No Preparations yet (0408): every battle uses its default pack (the
 //! content validator refuses `preparations: true`).
+//!
+//! Music (ticket 0807, `docs/design/audio.md`): each battle file names its
+//! music, asked for once each time the battle starts (also on `Retry` and
+//! `Restart Battle`, where a pool picks again). The battle screen asks for
+//! none, so the track stays through both phases, combat and rewinds, and
+//! on into the victory scenes. Game Over and "To be continued" stop it.
 
 use std::any::Any;
 use std::collections::VecDeque;
 
 use trpg_content::{ChapterDef, Scene, battle_campaign, new_campaign};
 use trpg_core::{
-    BattleDef, BattleRewards, BattleSetup, BattleState, Campaign, GameMode, Outcome, SaveFile,
-    SavePoint,
+    BattleDef, BattleMusic, BattleRewards, BattleSetup, BattleState, Campaign, GameMode, Outcome,
+    SaveFile, SavePoint,
 };
 
 use crate::glyph_buffer::GlyphBuffer;
@@ -48,6 +54,20 @@ use crate::screens::lead_select::LeadSelectScreen;
 use crate::screens::mode_select::ModeSelectScreen;
 use crate::screens::save::{SavePromptScreen, SlotOutcome, SlotPickerScreen};
 use crate::screens::{BattleScreen, DialogueScreen};
+
+/// Asks for battle `def`'s music: its cue, or a track picked from its
+/// pool. The pick is the UI's, not the battle's RNG (ADR-0019): a rewind or
+/// a replay never changes the track. An empty pool leaves the music as it
+/// is.
+fn play_battle_music(ctx: &mut Ctx, def: &BattleDef) {
+    let cue = match &def.music {
+        BattleMusic::Cue(cue) => Some(cue.clone()),
+        BattleMusic::Pool(pool) => ctx.pick_music(pool),
+    };
+    if let Some(cue) = cue {
+        ctx.audio.play_music(&cue);
+    }
+}
 
 /// The chapter the debug Quick Battle plays (`assets/chapters/quick.ron`).
 pub const QUICK_CHAPTER: &str = "quick";
@@ -157,6 +177,8 @@ impl FlowScreen {
         );
         // If deleting fails the battle still continues.
         let _ = ctx.storage.delete(SUSPEND_KEY);
+        // The battle's music again (a pool picks afresh).
+        play_battle_music(ctx, &def);
         let mut flow = Self::new_game();
         flow.adopt(ctx, campaign);
         flow.chapter = Some(chapter);
@@ -268,9 +290,9 @@ impl FlowScreen {
     /// Starts chapter `id` with its intro scenes. A chapter missing from
     /// the content (validation rules it out) ends the flow at "To be
     /// continued".
-    fn start_chapter(&mut self, ctx: &Ctx, id: &str) {
+    fn start_chapter(&mut self, ctx: &mut Ctx, id: &str) {
         let Some(chapter) = ctx.content.chapters.get(id).cloned() else {
-            self.stage = Stage::ToBeContinued(ToBeContinuedScreen);
+            self.the_end(ctx);
             return;
         };
         self.scenes = chapter.intro_scenes.iter().cloned().collect();
@@ -282,7 +304,7 @@ impl FlowScreen {
     /// Plays the next scene waiting, or goes on to what follows them.
     /// Scenes missing from the content (validation rules it out) are
     /// skipped.
-    fn next_scene(&mut self, ctx: &Ctx) {
+    fn next_scene(&mut self, ctx: &mut Ctx) {
         while let Some(id) = self.scenes.pop_front() {
             if let Some(scene) = ctx.content.dialogue.get(&id) {
                 self.play(scene.clone(), ctx);
@@ -306,13 +328,13 @@ impl FlowScreen {
     }
 
     /// Starts the chapter's battle with the campaign's army.
-    fn start_battle(&mut self, ctx: &Ctx) {
+    fn start_battle(&mut self, ctx: &mut Ctx) {
         let def = self
             .chapter
             .as_ref()
             .and_then(|c| ctx.content.battles.get(&c.battle));
         let (Some(def), Some(campaign)) = (def, &self.campaign) else {
-            self.stage = Stage::ToBeContinued(ToBeContinuedScreen);
+            self.the_end(ctx);
             return;
         };
         let setup = campaign.battle_setup(def, &ctx.content.tables());
@@ -320,31 +342,42 @@ impl FlowScreen {
             def: def.clone(),
             setup,
         });
-        self.restart();
+        self.restart(ctx);
     }
 
-    /// (Re)starts the battle from its setup: turn 1, every rewind charge.
-    fn restart(&mut self) {
+    /// (Re)starts the battle from its setup: turn 1, every rewind charge,
+    /// and its music (a pool picks again).
+    fn restart(&mut self, ctx: &mut Ctx) {
         let Some(fight) = &self.fight else {
             return;
         };
+        play_battle_music(ctx, &fight.def);
         let (state, events) = BattleState::new(fight.setup.clone());
         self.stage = Stage::Battle(Box::new(BattleScreen::start(state, &events)));
     }
 
+    /// "To be continued", in silence.
+    fn the_end(&mut self, ctx: &mut Ctx) {
+        ctx.audio.stop_music();
+        self.stage = Stage::ToBeContinued(ToBeContinuedScreen);
+    }
+
     /// The battle screen closed: a restart, a suspend, or its outcome.
-    /// Returns `true` when the flow is over (suspended: back to the title).
+    /// Game Over is silent (0809 gives it its own music). Returns `true`
+    /// when the flow is over (suspended: back to the title).
     fn battle_over(&mut self, ctx: &mut Ctx, battle: Box<BattleScreen>) -> bool {
         if battle.restart_requested() {
-            self.restart();
+            self.restart(ctx);
             return false;
         }
         if battle.suspend_requested() {
             return self.suspend(ctx, battle);
         }
-        match battle.state().outcome() {
-            Some(Outcome::Victory) => self.won(ctx, &battle),
-            _ => self.stage = Stage::GameOver(GameOverScreen::new()),
+        if battle.state().outcome() == Some(Outcome::Victory) {
+            self.won(ctx, &battle);
+        } else {
+            ctx.audio.stop_music();
+            self.stage = Stage::GameOver(GameOverScreen::new());
         }
         false
     }
@@ -371,7 +404,7 @@ impl FlowScreen {
     }
 
     /// Applies the won battle to the campaign, then the victory scenes.
-    fn won(&mut self, ctx: &Ctx, battle: &BattleScreen) {
+    fn won(&mut self, ctx: &mut Ctx, battle: &BattleScreen) {
         if let (Some(campaign), Some(fight)) = (&mut self.campaign, &self.fight) {
             let charges = battle.history().charges_left();
             self.rewards = campaign
@@ -389,7 +422,7 @@ impl FlowScreen {
 
     /// After a chapter's save prompt (or loading its save): its next
     /// chapter, or "To be continued".
-    fn next_chapter(&mut self, ctx: &Ctx) {
+    fn next_chapter(&mut self, ctx: &mut Ctx) {
         let next = self.chapter.as_ref().and_then(|c| c.next.clone());
         match next {
             Some(id) => {
@@ -398,7 +431,7 @@ impl FlowScreen {
                 }
                 self.start_chapter(ctx, &id);
             }
-            None => self.stage = Stage::ToBeContinued(ToBeContinuedScreen),
+            None => self.the_end(ctx),
         }
     }
 
@@ -421,7 +454,7 @@ impl FlowScreen {
             Stage::Scene(_) => self.next_scene(ctx),
             Stage::Battle(b) => return self.battle_over(ctx, b),
             Stage::GameOver(s) => match s.result() {
-                Some(GameOverChoice::Retry) => self.restart(),
+                Some(GameOverChoice::Retry) => self.restart(ctx),
                 _ => return true,
             },
             Stage::SavePrompt(s) => match (s.result(), &self.campaign) {
