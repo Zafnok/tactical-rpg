@@ -6,6 +6,7 @@
 mod check_keys;
 mod font_atlas;
 mod sfx;
+mod test_card;
 mod tickets;
 mod web;
 
@@ -34,6 +35,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
+        Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -128,6 +130,23 @@ fn parse_sfx_check(args: &[String]) -> Option<bool> {
         [] => Some(false),
         [flag] if flag == "--check" => Some(true),
         _ => None,
+    }
+}
+
+fn test_card(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask test-card");
+        return 2;
+    }
+    match test_card::run(&repo_root()) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("test-card: {e}");
+            1
+        }
     }
 }
 
@@ -321,6 +340,12 @@ mod tests {
     #[test]
     fn sfx_check_passes_on_the_committed_files() {
         assert_eq!(sfx(&args(&["--check"])), 0);
+    }
+
+    #[test]
+    fn test_card_rejects_args() {
+        assert_eq!(test_card(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["test-card", "x"]).into_iter()), 2);
     }
 
     #[test]

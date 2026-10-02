@@ -24,6 +24,7 @@ pub mod widgets;
 pub use audio::{AudioQueue, AudioRequest, MusicCommand, MusicState};
 pub use color::{Palette, Rgb, UiColor};
 pub use game::{FrameOutput, Game, RawInputEvent};
-pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Layer, Overlay, PxRect, Rect};
+pub use glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Item, Layer, Overlay, PxRect, Rect, Sprite};
 pub use screen::{Ctx, FrameInput, KeyPrompt, LoadError, Screen, ScreenStack, Transition};
 pub use storage::{MemoryStorage, Storage, StorageError};
+pub use trpg_content::ImageId;

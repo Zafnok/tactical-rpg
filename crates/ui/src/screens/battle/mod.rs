@@ -2110,7 +2110,7 @@ mod tests {
         let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
         let arms = buf
             .overlays()
-            .iter()
+            .into_iter()
             .map(|o| o.rect)
             .filter(|r| (r.w, r.h) == (1, 3));
         let r = arms
@@ -2483,7 +2483,7 @@ mod tests {
         );
         let buf = render(&s, &c);
         let path = c.palette.get(UiColor::Path);
-        let lines = buf.overlays().iter().filter(|o| o.color == path);
+        let lines = buf.overlays().into_iter().filter(|o| o.color == path);
         assert_eq!(lines.clone().filter(|o| o.layer == Layer::Under).count(), 2);
         assert_eq!(lines.filter(|o| o.layer == Layer::Over).count(), 6);
         // (5, 5) is a fort, drawn `╦╦` from cell 30: no cursor marks
