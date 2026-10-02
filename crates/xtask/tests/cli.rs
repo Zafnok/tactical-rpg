@@ -25,3 +25,25 @@ fn ticket_lint_on_the_real_repo_exits_0() {
     assert_eq!(output.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&output.stdout).contains("ticket-lint: OK"));
 }
+
+#[test]
+fn playtest_prints_the_report_and_exits_0() {
+    let history = std::env::temp_dir().join(format!("xtask-cli-playtest-{}", std::process::id()));
+    let output = xtask()
+        .args(["playtest", "quick", "--runs", "3", "--history"])
+        .arg(&history)
+        .output()
+        .unwrap_or_else(|e| panic!("spawn xtask: {e}"));
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let first = "quick · Classic · baseline · 3 tries (seeds 1–3)\nwon ";
+    assert!(stdout.starts_with(first), "{stdout}");
+    assert!(stdout.contains("\nfallen/try 0: "), "{stdout}");
+    assert!(stdout.contains("\n\ntry 1 · "), "{stdout}");
+    assert!(stdout.contains("\ntry 3 · "), "{stdout}");
+    assert!(
+        stdout.ends_with('\n') && !stdout.ends_with("\n\n"),
+        "{stdout}"
+    );
+    let _ = std::fs::remove_dir_all(&history);
+}

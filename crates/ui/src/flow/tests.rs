@@ -48,8 +48,8 @@ fn a_level_up_from_the_rewind_bonus_shows_the_level_up_screen() {
     let mut flow = FlowScreen::new_game();
     flow.begin(&mut c, campaign);
     let mut h = Harness::from_game(Game::new(c, Box::new(flow)));
-    // Skip the intro; the lead seizes the fort.
-    h.keys("d f");
+    // Skip the intro and close the battle notes; the lead seizes the fort.
+    h.keys("d f f");
     assert_eq!(h.top_screen(), "battle");
     let seize = Command::Act {
         unit: UnitId(1),
