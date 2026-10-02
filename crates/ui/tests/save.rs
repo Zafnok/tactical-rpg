@@ -44,8 +44,8 @@ fn relaunch(h: Harness, chained: bool) -> Harness {
 }
 
 /// From the title: New Game in Classic with the default lead, through the
-/// intro scene to the battle, its notes (0411) and turn 1's `PLAYER PHASE`
-/// banner (0435) closed.
+/// intro scene to the battle, its notes (0411) and turn 1's banner (0435)
+/// closed.
 fn to_battle(h: &mut Harness) {
     assert_eq!(h.screens(), ["title"]);
     // New Game is focused, with or without Load Game enabled.
@@ -70,18 +70,11 @@ fn close_notes(h: &mut Harness) {
     assert!(!notes_open(h));
 }
 
-/// Whether the battle on screen shows a banner.
-fn banner_open(h: &Harness) -> bool {
-    let battle = h.flow().and_then(|f| f.battle());
-    battle.is_some_and(|b| b.banner().is_some())
-}
-
-/// Closes the `PLAYER PHASE` banner a battle starts with, after its notes.
+/// Closes the `PLAYER PHASE` banner that follows the notes.
 fn close_banner(h: &mut Harness) {
-    assert!(banner_open(h));
-    assert!(shows(h, "PLAYER PHASE"), "{}", h.snapshot());
+    assert!(shows(h, "PLAYER PHASE"));
     h.keys("f");
-    assert!(!banner_open(h));
+    assert!(!shows(h, "PLAYER PHASE"));
 }
 
 /// Skips the scene on screen: Cancel, then Confirm on "Skip scene?".
@@ -100,8 +93,11 @@ fn win(h: &mut Harness) {
             action: UnitAction::Seize,
         },
     );
-    // The VICTORY banner, then the victory scene.
+    // The VICTORY banner, the results (0810: a press fills the bars, a
+    // press goes on), then the victory scene.
     h.keys("f");
+    assert_eq!(h.screens(), ["title", "results"]);
+    h.keys("f f");
     skip_scene(h);
     assert_eq!(h.screens(), ["title", "save_prompt"]);
 }
@@ -274,8 +270,8 @@ fn a_continued_battle_restarts_from_its_first_turn() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
-    // From its start, so with its notes and banner; and it is won as any
-    // other.
+    // From its start, so with its notes and turn 1's banner; and it is won
+    // as any other.
     close_notes(&mut h);
     close_banner(&mut h);
     win(&mut h);
