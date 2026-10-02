@@ -52,13 +52,10 @@ fn shows(s: &BattleScreen, c: &Ctx, text: &str) -> bool {
     })
 }
 
-/// The colours (text, background) of the left cell of `unit`'s tile.
-fn colours(s: &BattleScreen, c: &Ctx, unit: UnitId) -> (Rgb, Rgb) {
-    let pos = s.state().unit(unit).unwrap().pos;
-    let (x, y) = super::testing::tile_cell(s, c, pos).unwrap();
-    let buf = render(s, c);
-    let cell = buf.get(x, y).unwrap();
-    (cell.fg, cell.bg)
+/// Whether the map picks `unit` out right now (each skin its own way: the
+/// glyph skin swaps its tile's colours).
+fn picked_out(s: &BattleScreen, c: &Ctx, unit: UnitId) -> bool {
+    s.scene(c).unit(unit).expect("on the map").highlight
 }
 
 #[test]
@@ -224,30 +221,28 @@ fn the_noted_unit_blinks_while_the_notes_are_up() {
     let mut c = ctx();
     let mut s = started(&c);
     let lead = UnitId(1);
-    let inverted = colours(&s, &c, BRIGAND);
-    let lead_plain = colours(&s, &c, lead);
+    assert!(picked_out(&s, &c, BRIGAND));
+    assert!(!picked_out(&s, &c, lead));
     // On for BLINK_S, off for BLINK_S, on again.
     frame(&mut s, &mut c, &[], BLINK_S * 0.9);
-    assert_eq!(colours(&s, &c, BRIGAND), inverted);
+    assert!(picked_out(&s, &c, BRIGAND));
     frame(&mut s, &mut c, &[], BLINK_S * 0.2);
-    let plain = colours(&s, &c, BRIGAND);
-    assert_eq!(plain, (inverted.1, inverted.0), "the colours swap");
-    assert_ne!(plain, inverted);
+    assert!(!picked_out(&s, &c, BRIGAND));
     frame(&mut s, &mut c, &[], BLINK_S);
-    assert_eq!(colours(&s, &c, BRIGAND), inverted);
+    assert!(picked_out(&s, &c, BRIGAND));
     // A unit no note is about never blinks.
-    assert_eq!(colours(&s, &c, lead), lead_plain);
+    assert!(!picked_out(&s, &c, lead));
     frame(&mut s, &mut c, &[], BLINK_S);
-    assert_eq!(colours(&s, &c, BRIGAND), plain);
-    assert_eq!(colours(&s, &c, lead), lead_plain);
+    assert!(!picked_out(&s, &c, BRIGAND));
+    assert!(!picked_out(&s, &c, lead));
     // Closed (and the banner after them): plain, whatever the time.
     frame(&mut s, &mut c, &[Action::Confirm], 0.0);
     frame(&mut s, &mut c, &[Action::Confirm], 0.0);
     assert_eq!(s.banner(), None);
-    assert_eq!(colours(&s, &c, BRIGAND), plain);
+    assert!(!picked_out(&s, &c, BRIGAND));
     frame(&mut s, &mut c, &[], BLINK_S * 2.0);
-    assert_eq!(colours(&s, &c, BRIGAND), plain);
-    assert_eq!(colours(&s, &c, lead), lead_plain);
+    assert!(!picked_out(&s, &c, BRIGAND));
+    assert!(!picked_out(&s, &c, lead));
     // The Objective page lists the notes: the blink starts over, on.
     frame(
         &mut s,
@@ -257,11 +252,11 @@ fn the_noted_unit_blinks_while_the_notes_are_up() {
     );
     assert_eq!(s.mode(), &Mode::Objective);
     assert!(shows(&s, &c, notes::NOTES_HEADING));
-    assert_eq!(colours(&s, &c, BRIGAND), inverted);
+    assert!(picked_out(&s, &c, BRIGAND));
     frame(&mut s, &mut c, &[], BLINK_S);
-    assert_eq!(colours(&s, &c, BRIGAND), plain);
+    assert!(!picked_out(&s, &c, BRIGAND));
     frame(&mut s, &mut c, &[Action::Cancel], BLINK_S);
-    assert_eq!(colours(&s, &c, BRIGAND), plain);
+    assert!(!picked_out(&s, &c, BRIGAND));
 }
 
 #[test]

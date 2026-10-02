@@ -241,6 +241,22 @@ mod tests {
     }
 
     #[test]
+    fn a_unit_under_an_effect_has_the_effect_colour_behind_its_letters() {
+        let p = game_palette();
+        let bg = Rgb::new(0, 0, 100);
+        let mut u = unit("Br", 30, 30, false);
+        u.has_effect = true;
+        let b = drawn(&u);
+        let (enemy, effect) = (p.get(UiColor::Enemy), p.get(UiColor::Effect));
+        let behind = bg.lerp(effect, EFFECT_BLEND);
+        assert_ne!(behind, bg);
+        assert_eq!(b.get(1, 1), Some(&Cell::new('B', enemy, behind)));
+        assert_eq!(b.get(2, 1), Some(&Cell::new('r', enemy, behind)));
+        // The terrain beside it keeps its own.
+        assert_eq!(b.get(3, 1).map(|c| c.bg), Some(bg));
+    }
+
+    #[test]
     fn a_unit_at_the_edge_is_clipped() {
         let p = game_palette();
         let mut b = GlyphBuffer::new(1, 1, Cell::new('.', Rgb::new(1, 1, 1), Rgb::new(0, 0, 0)));

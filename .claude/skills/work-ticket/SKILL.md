@@ -75,6 +75,11 @@ Set `status: in-progress` in the ticket frontmatter.
   happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
+- A test that checks what happened reads the scene or the state. Only a
+  test of a look reads cells, colours or items, and it lives with the
+  skin (`crates/ui/src/map_view/glyph*`). Harness shortcuts:
+  `cursor_tile()`, `unit_at(pos)`, `tints_at(pos)`, `path()`
+  (`crates/ui/README.md`).
 - **Scope creep rule:** if you notice something else worth doing (a bug,
   refactor, missing feature), do NOT do it. Create a new ticket with the
   `write-ticket` skill and mention it in the PR description.

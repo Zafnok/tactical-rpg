@@ -260,6 +260,28 @@ impl MapScene {
         self.units.iter().find(|u| u.id == id)
     }
 
+    /// The unit shown on `pos`, if any (the last one, drawn on top, if two
+    /// share it).
+    pub fn unit_at(&self, pos: Pos) -> Option<&UnitView> {
+        self.units.iter().rev().find(|u| u.pos == pos)
+    }
+
+    /// The ranges `pos` is in, in the order laid on; none if it isn't
+    /// visible.
+    pub fn tints_at(&self, pos: Pos) -> Vec<RangeKind> {
+        self.tile(pos).map(|t| t.tints.clone()).unwrap_or_default()
+    }
+
+    /// The terrain shown on `pos`, if it is a visible map tile.
+    pub fn terrain_at(&self, pos: Pos) -> Option<TerrainId> {
+        self.tile(pos).and_then(|t| t.terrain)
+    }
+
+    /// The tile the cursor is on, if it is shown.
+    pub fn cursor_tile(&self) -> Option<Pos> {
+        self.cursor.map(|c| c.pos)
+    }
+
     /// The scene as text, for tests and bug reports. The same scene always
     /// gives the same text.
     ///
@@ -479,6 +501,34 @@ mod tests {
         assert_eq!(ids, [4, 6]);
         assert_eq!(s.unit(UnitId(6)).map(|u| u.pos), Some(p(1, 1)));
         assert_eq!(s.unit(UnitId(5)), None);
+    }
+
+    #[test]
+    fn tiles_answer_what_is_on_them() {
+        let mut s = MapScene::new(p(1, 1), (3, 2));
+        s.tile_mut(p(2, 1)).unwrap().terrain = Some(TerrainId(4));
+        s.tint([p(2, 1)], RangeKind::Danger);
+        s.tint([p(2, 1)], RangeKind::Move);
+        s.push_unit(brigand(4, p(2, 1)));
+        s.push_unit(brigand(6, p(3, 2)));
+        s.push_unit(brigand(7, p(3, 2)));
+        assert_eq!(s.unit_at(p(2, 1)).map(|u| u.id), Some(UnitId(4)));
+        assert_eq!(s.unit_at(p(3, 2)).map(|u| u.id), Some(UnitId(7)));
+        assert_eq!(s.unit_at(p(1, 1)), None);
+        let both = [RangeKind::Danger, RangeKind::Move];
+        assert_eq!(s.tints_at(p(2, 1)), both);
+        assert!(s.tints_at(p(1, 1)).is_empty());
+        assert!(s.tints_at(p(0, 0)).is_empty());
+        assert_eq!(s.terrain_at(p(2, 1)), Some(TerrainId(4)));
+        assert_eq!(s.terrain_at(p(1, 1)), None);
+        assert_eq!(s.terrain_at(p(9, 9)), None);
+        assert_eq!(s.cursor_tile(), None);
+        s.cursor = Some(CursorView {
+            pos: p(3, 2),
+            brightness: 1.0,
+            style: CursorStyle::Corners,
+        });
+        assert_eq!(s.cursor_tile(), Some(p(3, 2)));
     }
 
     #[test]
