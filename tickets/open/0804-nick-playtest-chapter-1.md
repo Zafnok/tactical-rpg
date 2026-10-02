@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435", "0822"]
+blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435", "0714", "0822"]
 nick_input: sign-off
 completed:
 ---
@@ -38,6 +38,10 @@ for each: "sure", "yes"):
 - Game Over offers Rewind while charges are left (0822, from Nick's answer
   on ticket 0408; asked whether it should be in before the playtest:
   "yes").
+
+**Blocker added 2026-10-02:** 0714 (dialogue speakers who aren't units).
+The Chapter 1 script (0707) can't pass its check without it, and 0803
+needs the script.
 
 ## Nick input
 
