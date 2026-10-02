@@ -22,13 +22,26 @@ adds the second: a skin that paints the map from a tileset image, with a
 **generated test tileset** at a different tile size (24×24) so nothing can
 quietly assume 16×16.
 
-It is a debug tool, not a new look for the game. Which art the game uses on
-the map, and whether players may choose, is Nick's decision (ticket 1006
-for units; a `00xx` ticket if he wants terrain sprites). 1006 waits for
-this ticket: it shows the bought map sprites on the real battle screen
-through this skin.
+It is a debug tool, not a new look for the game: this ticket still uses
+only the generated test tileset.
 
-Not on the Chapter 1 critical path.
+**Changed 2026-10-02 (ticket 0038):** Nick has decided which art the game
+uses on the map: the bought Tiny Tales tilesets and map sprites
+(`docs/design/look-and-feel.md`, *Battle map: bought tiles and unit
+sprites*). The tickets that put that art in build on this one and wait for
+it: 0436 (unit sprites from one image file per unit), 0437 (terrain, with
+auto-tiling), 0438 (per-map lighting) and 0439 (a 1× / 2× zoom toggle).
+Keep this ticket's scope as written; two things help them:
+
+- don't assume a unit picture is as wide as it is tall, or that it comes
+  from the tileset's own image (the bought ones are 16×20 frames in a
+  file per unit);
+- keep everything that depends on `tile_px` behind one value, so 0439 can
+  double it while a battle runs.
+
+**On the Chapter 1 critical path** since 2026-10-02: Nick said the
+playtest waits for the bought-art map, so 0804 waits for 0436 and 0437,
+which wait for this ticket.
 
 ## Nick input
 
@@ -38,7 +51,7 @@ the sprite skin is reachable only from the debug menu.
 The looks below for things art alone doesn't show (whose side a unit is on,
 that it has acted, its HP, an active effect, the cursor) are **Claude's
 placeholders for the test skin**, not decisions. Say so in the PR. They are
-decided with Nick when a real sprite look is chosen.
+decided with Nick in ticket 0039 and built in 0436.
 
 ## Scope
 

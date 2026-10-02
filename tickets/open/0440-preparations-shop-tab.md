@@ -1,17 +1,17 @@
 ---
-id: "0436"
+id: "0440"
 title: "Preparations: a Shop tab with the basic shop"
 type: feature
 milestone: M3 Battle UI
 model: sonnet-5
 effort: medium
 status: todo
-blocked_by: ["0409", "0038"]
+blocked_by: ["0409", "0041"]
 nick_input: sign-off
 completed:
 ---
 
-# 0436 — Preparations: a Shop tab with the basic shop
+# 0440 — Preparations: a Shop tab with the basic shop
 
 ## Context
 
@@ -30,7 +30,7 @@ Builds on:
 - the shop rules in core (0308, `crates/core/src/shop.rs`: `Shop`,
   `ShopSession`, `ShopKind`, `sell_price`) and the shop screen (0409,
   `ShopScreen`), which this tab reuses rather than copying;
-- the decision in 0038: which items are basics, the tiers and what unlocks
+- the decision in 0041: which items are basics, the tiers and what unlocks
   them.
 
 ## Nick input
@@ -42,7 +42,7 @@ them, and comments.
 
 **In:**
 - A `Shop` tab on the Preparations screen, between `Pack` and `Fight!`.
-- The basic shop's inventory by tier, as data, following 0038.
+- The basic shop's inventory by tier, as data, following 0041.
 - Gold shown on the screen; buying puts the item in the stock and takes the
   gold; selling as in `weapons-and-items.md` (half price).
 - The debug Quick Battle gets some gold to try it with (a `solo_gold` field
@@ -50,15 +50,15 @@ them, and comments.
 
 **Out (do not do):**
 - Unique items, town shops, the world map (1007).
-- Repairs, unless 0038 says the basic shop repairs.
+- Repairs, unless 0041 says the basic shop repairs.
 - Changing the on-map shop rules.
 
 ## Implementation steps
 
-1. Read 0038's record in `weapons-and-items.md`. Put the basic shop's
+1. Read 0041's record in `weapons-and-items.md`. Put the basic shop's
    inventory per tier in data (`assets/data/`), loaded and validated by
    `trpg-content` with every error reported (ADR-0005), and the tier the
-   campaign has unlocked wherever 0038 says it comes from.
+   campaign has unlocked wherever 0041 says it comes from.
 2. `core`: a function that builds the basic `Shop` for a tier, and
    `BattleSetup` methods in `prep.rs` to buy into / sell from the stock
    with the setup's gold, reusing `shop.rs`'s price rules. Unit tests.

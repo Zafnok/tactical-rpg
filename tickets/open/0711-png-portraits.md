@@ -42,6 +42,30 @@ grid of 144×144 cells**, each face drawn at 3× (so 48×48 underneath). Check
 this on the bought files before writing the importer; the store pages don't
 state it.
 
+**Checked on the bought files (2026-10-02, ticket 0038).** Each Heroes
+pack has `Facesets/Original`, `Facesets/2X` and `Facesets/3X`. The 576×288
+sheet is the **3X** copy. `Original` already holds what we want, so the
+importer needs no 3× reduction:
+
+- `Facesets/Original/Portraits/<Hero>_<Expression>.png`: one **48×48** file
+  per expression. The 8 expressions are `Neutral`, `Smile`, `Stern`, `Sad`,
+  `Surprise` (two files in Heroes 2 are spelled `Surprised`), `Thinking`,
+  `Sly`, `Unique`.
+- `Facesets/Original/<Hero>.png`: the same 8 as a **192×96** sheet, 4×2.
+- `Facesets/Original/Busts/Bust_<Hero>_<Expression>.png`: an **80×80**
+  bust in the same 8 expressions (320×160 as a sheet). At 3× a bust is
+  240×240, the same as a face at 5×, so this ticket's drawing handles both;
+  which one dialogue uses is Nick's (ticket 0039, question 7; faces until
+  he says otherwise).
+- The Character Generator exports the same two layouts (a 192×96 face
+  sheet with "Crop Face" on, a 320×160 bust sheet with it off), at 1×.
+
+So `portrait-import` takes either a folder of single 48×48 (or 80×80)
+files, or a 4×2 sheet at 1×, and keeps the 3×-sheet path only if it costs
+nothing. On Nick's machine the heroes' files are already sorted per
+character in `D:\tactical-rpg\Tiny Tales Bundle Assets\characters\heroes\
+<Name>\face_<expression>.png` and `bust_<expression>.png`.
+
 Keep the drawing general (any PNG size, any whole scale): 0413 reuses it
 for the big still battle images.
 

@@ -5,8 +5,8 @@ type: design-decision
 milestone: Post–Chapter 1
 model: opus-5.5
 effort: medium
-status: todo
-blocked_by: ["0401", "0021", "0110", "0711", "0433"]
+status: blocked
+blocked_by: ["0401", "0021", "0110", "0711", "0433", "0039"]
 nick_input: decision
 completed:
 ---
@@ -41,6 +41,20 @@ initials (the glyph skin), bought map sprites over glyph terrain, and
 Claude-drawn one-colour icons. How a sprite unit shows its side, that it
 has acted, its HP and an active effect is part of this decision: 0433's
 versions of those are placeholders.
+
+**Changed 2026-10-02 (ticket 0038): the main question is answered.** Nick
+bought the whole Mega Tiles bundle, saw the bought 16×20 map sprites on
+the battle screen (over glyph terrain and over the bought tilesets) and
+chose them: "I think we can go ahead and move forward with replacing our
+tile rendering and battler rendering with these bought sprites without
+regret". Units become bought map sprites in ticket 0436 and terrain bought
+tiles in 0437; a sprite unit shows its side by a coloured outline and
+"acted" by going grey (decided the same day, built in 0436); the effect
+mark is ticket 0039. **What is left of this ticket** is only the Claude-drawn
+one-colour class icons, which Nick didn't ask for and which may clash as
+the Claude-drawn portraits did. Don't start it unless Nick asks for icons
+(for example as a mark on the glyph look, if 0039 keeps that look
+selectable). `status: blocked` until then; Nick unblocks it by asking.
 
 ## Nick input
 

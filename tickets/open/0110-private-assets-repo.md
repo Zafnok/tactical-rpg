@@ -30,13 +30,24 @@ Assets are embedded with `include_dir!` over `assets/`
 
 **Setup** (Claude can't make purchases or create repos for him):
 
-1. Buy the packs 0021 picked on itch.io (at least *Tiny Tales 2D Heroes: A
-   New Beginning*; the others listed in `look-and-feel.md` as he chooses)
-   and download every zip. Claude rechecks prices and licence text first
-   (ADR-0032).
+1. ~~Buy the packs.~~ **Done 2026-10-02:** Nick bought Mega Tiles' whole
+   "2025 Bundle Sale" (37 products, $99.99). The 37 zips are untouched in
+   `D:\tactical-rpg\Tiny Tales Bundle Assets\_original-zips\` on his
+   machine; the same folder holds them unzipped and sorted by kind
+   (`characters/`, `tilesets/`, `battle-backgrounds/`, `ui/`, `tools/`,
+   `licences/`, with `README.md`, `INDEX.md` and `index.html`). That folder
+   is ignored by git through `.git/info/exclude`, which only protects this
+   one machine; this ticket's `.gitignore` entry is the real guard. The
+   purchase is recorded in `THIRD_PARTY_ASSETS.md` and
+   `look-and-feel.md`.
 2. Create a **private** GitHub repo `Zafnok/tactical-rpg-assets`. Upload the
-   zips as they are (the importer in 0711 reads them), plus a copy of each
-   licence text from the store pages.
+   zips as they are (the importers in 0711, 0413, 0436 and 0437 read them
+   or their unzipped folders), plus the licence texts: every pack's
+   `License.txt` and the generator's `EULA.txt` are already collected in
+   the bought folder's `licences/`. The implementing session decides
+   whether the private repo holds the zips, the sorted folders or both,
+   and says how the sorted folder on Nick's machine becomes
+   `assets-private/` (it must not be left as a second copy that drifts).
 3. Create a deploy key (read-only) or a fine-grained token with read access
    to that repo only, and add it to `Zafnok/tactical-rpg` as the Actions
    secret `PRIVATE_ASSETS_KEY`. The implementing session gives him the exact

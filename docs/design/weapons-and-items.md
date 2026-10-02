@@ -349,8 +349,8 @@ Any unit can wear any accessory.
 - **The Preparations shop** (Nick, 0408): the screen also gets a **basic
   shop**. It sells no unique items, only the basics up to the tier the
   player has unlocked (early on a Potion; later a stronger healing item,
-  and so on). Which items are basics and what unlocks a tier: ticket 0038;
-  built in ticket 0436.
+  and so on). Which items are basics and what unlocks a tier: ticket 0041;
+  built in ticket 0440.
 - **Using an item** (*Claude's starting rule*, FE Vulnerary): `Item` in the
   action menu → pick a consumable from the pack → target the unit itself or an
   adjacent ally → the item is consumed and **the unit's action ends**.
@@ -488,10 +488,10 @@ Distance 1.
   side quests on the world map (`world-structure.md`) are the likely sources.
 - **Enemies destroying villages, chest keys, thief classes:** later chapters.
 - **Number scale:** all numbers here rescale with ticket 0013.
-- **The Preparations shop's basics and tiers** (Nick, 0408): ticket 0038.
+- **The Preparations shop's basics and tiers** (Nick, 0408): ticket 0041.
   Nick's examples there ("Potion (heal 20)", then "a consumable to heal
   40") aren't the Potion's current 10 HP; the numbers are settled with
-  0038 and 0013.
+  0041 and 0013.
 - **Green units with their own consumables** (Nick, 0408: "maybe"), not
   drawn from the player's pack: decide when the first green units that
   would carry one are designed.
