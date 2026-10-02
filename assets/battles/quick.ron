@@ -48,5 +48,6 @@
         (when: Talk(a: "test_lord", b: "test_rogue"), scene: "test_talk", once: true),
     ],
     difficulty: Normal,
+    music: Pool("skirmish"),
     seed: 1,
 )

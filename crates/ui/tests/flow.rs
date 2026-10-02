@@ -8,6 +8,7 @@ use insta::assert_snapshot;
 use trpg_core::{
     BattleState, Command, GameMode, LeadGender, LeadProfile, Outcome, Pos, UnitAction, UnitId,
 };
+use trpg_ui::audio::{AudioRequest, pick_from_pool};
 use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
 
@@ -237,6 +238,116 @@ fn restart_battle_from_the_map_menu() {
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);
+}
+
+/// The music the run asked for, in order: cue names, `-` for a stop.
+fn music(h: &Harness) -> Vec<String> {
+    h.audio_requests()
+        .iter()
+        .filter(|r| !matches!(r, AudioRequest::PlaySound { .. }))
+        .map(|r| r.cue().unwrap_or("-").to_owned())
+        .collect()
+}
+
+/// The `n`-th random music pick of a run from the `skirmish` pool (the
+/// test battle's `Pool("skirmish")`), with the harness's music seed.
+fn skirmish_pick(h: &mut Harness, n: u64) -> String {
+    let ctx = h.ctx_mut();
+    pick_from_pool(&ctx.content.audio, "skirmish", ctx.music_seed ^ n)
+        .unwrap_or_else(|| panic!("no skirmish pool"))
+        .to_owned()
+}
+
+/// Ticket 0807: a story battle's cue starts with the battle (the intro
+/// scene still has the title's music), stays through turns, a rewind and
+/// the victory scene, and stops at "To be continued"; then the title's.
+#[test]
+fn the_battles_music_plays_from_its_start_to_the_end_of_the_chapter() {
+    let mut h = title();
+    if let Some(test) = h.ctx_mut().content.battles.get_mut("test") {
+        test.music = trpg_core::BattleMusic::Cue("battle_easy".into());
+    }
+    h.keys("f f Up f");
+    assert_eq!(h.top_screen(), "dialogue");
+    assert_eq!(music(&h), ["title"]);
+    skip_scene(&mut h);
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(music(&h), ["title", "battle_easy"]);
+    // A move, rewound; then a whole turn: enemy phase, player phase.
+    send(
+        &mut h,
+        &Command::Act {
+            unit: LEAD,
+            dest: Pos::new(4, 5),
+            action: UnitAction::Wait,
+        },
+    );
+    h.keys("r f f");
+    assert_eq!(charges(&h), 2);
+    send(&mut h, &Command::EndPhase);
+    send(&mut h, &Command::EndPhase);
+    h.wait(1.0);
+    assert_eq!(battle(&h).turn(), 2);
+    seize(&mut h);
+    // Past the phase and VICTORY banners.
+    confirm_until(&mut h, "dialogue");
+    assert_eq!(h.screens(), ["title", "dialogue"]);
+    assert_eq!(music(&h), ["title", "battle_easy"]);
+    skip_scene(&mut h);
+    assert_eq!(h.screens(), ["title", "to_be_continued"]);
+    assert_eq!(music(&h), ["title", "battle_easy", "-"]);
+    h.keys("f").wait(0.1);
+    assert_eq!(h.screens(), ["title"]);
+    assert_eq!(music(&h), ["title", "battle_easy", "-", "title"]);
+}
+
+/// Ticket 0807: Game Over stops the music; `Retry Battle` starts the
+/// battle's music again, a pool picking afresh; `Title` brings the title's.
+#[test]
+fn game_over_is_silent_and_retry_plays_the_battles_music_again() {
+    let mut h = to_battle();
+    let first = skirmish_pick(&mut h, 0);
+    assert_eq!(music(&h), ["title", first.as_str()]);
+    for _ in 0..6 {
+        send(&mut h, &Command::EndPhase);
+    }
+    confirm_until(&mut h, "game_over");
+    assert_eq!(music(&h), ["title", first.as_str(), "-"]);
+    h.clear_audio();
+    h.keys("f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(music(&h), [skirmish_pick(&mut h, 1)]);
+    for _ in 0..6 {
+        send(&mut h, &Command::EndPhase);
+    }
+    confirm_until(&mut h, "game_over");
+    h.keys("Down f").wait(0.1);
+    assert_eq!(h.screens(), ["title"]);
+    assert_eq!(music(&h), [skirmish_pick(&mut h, 1).as_str(), "-", "title"]);
+}
+
+/// Ticket 0807: `Restart Battle` asks for the battle's music again without
+/// a stop: a pool picks again, a cue (already playing) just carries on.
+#[test]
+fn restart_battle_asks_for_the_battles_music_again() {
+    let mut h = to_battle();
+    h.clear_audio();
+    h.keys("d Down Down f f f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(battle(&h).turn(), 1);
+    assert_eq!(music(&h), [skirmish_pick(&mut h, 1)]);
+
+    let mut h = title();
+    if let Some(test) = h.ctx_mut().content.battles.get_mut("test") {
+        test.music = trpg_core::BattleMusic::Cue("battle_easy".into());
+    }
+    h.keys("f f Up f");
+    skip_scene(&mut h);
+    h.wait(2.0).clear_audio();
+    h.keys("d Down Down f f f").wait(2.0);
+    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(music(&h), ["battle_easy"]);
+    assert!(h.music_commands().is_empty(), "{:?}", h.music_commands());
 }
 
 /// Cancel on the lead screen goes back to the mode; on the mode, to the
