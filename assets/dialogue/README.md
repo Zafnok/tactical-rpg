@@ -199,7 +199,10 @@ their own (`docs/story/names.md`, "Short forms"), used like any other:
 | `<character>.first` | The first name of a character with a two-word name | `{n:retainer.first}` → `Hollis` |
 | `family.<name>` | A family name several people share | `{n:family.marr}` → `Marr` |
 | `<god>.name`, `<god>.title` | A god's name and title on their own | `{n:god.mother.name}` → `Ama`, `{n:god.mother.title}` → `the Mother` |
+| `<character>.last` | A surname only that character has | `{n:sergeant.last}` → `Rook` |
 | `red_captain.nickname` | A nickname | `Red Harl` |
+| `vowmaster.title` | An office, for people who don't say the name | `the Master of Vows` |
+| `faction.brennmark.adj` | A people's name without its article: the adjective, or a nickname | `{n:faction.brennmark.adj}` → `Brennish` |
 
 ### Rules for names
 

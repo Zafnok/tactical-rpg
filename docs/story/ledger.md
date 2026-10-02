@@ -76,3 +76,79 @@ fix an error; add a new one.
   until Act 2).
 - The lead's exile terms: stay in the Thornmarch, bear no arms, and don't use
   the Veyne name or crest. Chapter 1 breaks all three.
+
+## After Chapter 1
+
+Written by 0707 from `assets/dialogue/ch01.dlg`. It describes a battle
+everyone lived through. What changes when a companion died in it (Classic)
+is 0716's to add.
+
+### What happened
+
+- At dawn Hollis gave the lead Dace's letter, unsigned: "Leave the march.
+  Tonight. They are coming for everyone who was there that night. Burn
+  this." The lead named Dace; Hollis didn't. **Hollis didn't burn it. He
+  still carries it in his coat.**
+- Tamsin rode in: Harl had taken the toll-fort and tried to hire her back,
+  showing a sealed paper (his thumb on the seal) that named "the exile, the
+  old man, and the girl with the burned hands".
+- The lead took up steel: one of the two swords from under the floor.
+  Hollis carries the other.
+- The six fought the Red Company at the ford and destroyed it. Harl is
+  dead. One barn in Harrowby burned.
+- Harl's orders were on his body: three hundred crowns a head for the
+  three, sealed in blue wax with the Veyne crest. The party has the paper
+  (who carries it isn't said).
+- Hollis buried Harl himself.
+- At dusk all six left Harrowby for Veyne Hall, to ask Dace. Past the
+  march's boundary the lead is an outlaw.
+- That night at Veyne Hall a Vigil messenger asked Dace, for the Master of
+  Vows, whether it was done. Dace had a report saying the Red Company was
+  dead and the exile was not. He said "Tell him it's done", burned the
+  report, and said to nobody: "I told you to run, Veyne."
+
+### Who knows what (changes since the start of Chapter 1)
+
+| Fact | Now knows | Still doesn't know |
+| ---- | --------- | ------------------ |
+| Dace wrote the warning letter | the lead, Hollis | the other four (nobody told them on screen) |
+| The kill order named the lead, Hollis and Rue, and bore the Veyne seal, which only the lord of Veyne (Dace) may use | all six | why; that the order came from Crane |
+| Harl's last words: "the new lord of Veyne pays in good silver" | whoever was near; treat it as known to all six | — |
+| Rue saw the Veyne seal four years ago "on a cart, at night, with children in it" | all six heard her say it | what the cart was, that she was in it, that Dace was there (she explained nothing; Chapter 3) |
+| Rue is gifted and swears fire | all six: she said she "can light the oven without a match" and fought with fire | that she was a Candle (Chapter 3); only Piers had guessed she was gifted before today |
+| Piers's report brought the killers | Piers (he understood at "the girl with the burned hands") | everyone else. He gave himself away twice in front of them ("I only asked them to...", and later "Somebody was told that Rue is in Harrowby") and nobody asked |
+| Dace's masters believe the three are dead | the player | the party; Crane will learn otherwise (when is later chapters' call) |
+| Dace answers to "the Master of Vows" | the player | the party has not heard the title |
+| The Red Company burned "the farm" for a lord's coin, and Tamsin left over it | Tamsin, Harl (dead). Said aloud only if Tamsin fought Harl (`ch01_boss_engage_sergeant`), and nobody else is shown hearing it | the party: Coldwell is still hers to tell |
+
+Unchanged and still secret: everything else in the start-of-chapter table
+(Dace and Vosse, Hollis's burned purse, Wren alive, the prince, the Door,
+Aske's spying).
+
+### Relationships (changes)
+
+| Pair | State |
+| ---- | ----- |
+| The lead ↔ Rue | Open suspicion, said to the lead's face: the seal on the cart was "your family's to stamp". The lead asked "Where?" and got "You tell me." She comes along, in her words not following but "walking behind you. Where I can see your hands." |
+| The lead ↔ Hollis | Hollis has said nothing about the seal. What he did say: "The boy's at Veyne Hall", and that the lead should say the word and go, outlaw or not. |
+| Hollis ↔ Dace | Hollis has his son's letter and has seen his son's seal on a kill order. He hasn't said his son's name once ("the boy", "him", "his own father"). |
+| Tamsin ↔ Harl | Over. She joked over him, nobody laughed, and she closed his eyes: "Just a job." |
+| The lead ↔ Tamsin | She rides along "as far as there's pay. ...Further, probably." She guessed the seal's owner aloud when nobody else would: "Dace Marr, hero of the war. The Captain's boy." |
+| The lead ↔ Aske | He came "once, for the deer", then stayed: "You owe me eleven arrows, noble." Still "noble". |
+| Piers ↔ Rue | He knows what his letter did and hasn't told her. He tried to hide her in the chapel cellar; she fought instead. |
+| The party | It exists. Nobody has called it anything. |
+
+### Status
+
+- Harl Coster is dead and the Red Company with him.
+- The lead, Hollis, Tamsin, Aske, Piers and Rue are on the road north out
+  of the Thornmarch at dusk, heading for Veyne Hall by Kell's Ford (Chapter
+  2). Dace is at Veyne Hall.
+- The lead's exile terms: the lead bears arms, and is on the road out of
+  the Thornmarch (the crossing itself is Kell's Ford, Chapter 2). No scene
+  has the lead claim the Veyne name or wear the crest; others call them
+  "Veyne", as they always have.
+- Piers has left his chapel without leave. He is not yet an apostate in
+  the Vigil's eyes; Chapter 3 does that.
+- The lead's three replies (the letter, the plan, leaving) are not
+  recorded: tones never change what happened.
