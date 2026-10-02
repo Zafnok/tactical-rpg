@@ -61,6 +61,9 @@ on a follow-up or a counter): Nick wanted to judge them in play.
    preview names the change (`Forest → Burning (1 round)`, `Sea → Ice`).
    Confirm sends `Cast { Tile }`.
 5. On `TerrainChanged`: redraw the tile with a 0.4 s flash (timing tunable).
+   If the map skin (0432, ADR-0038) is done, the flash is a field on the
+   scene's tile that each skin paints, not drawing in the battle screen;
+   if it isn't, draw it as the map is drawn today and 0432 moves it.
    The info screen (0405) lists the unit's spells with uses, and its
    affinities.
 6. Help bar: `f cast · d back` in the spell modes.

@@ -30,6 +30,9 @@ without asking questions.
    - **Acceptance criteria:** checkboxes, each objectively verifiable (a test
      name, a command's output, a visible behaviour).
    - **Tests required:** which layers from ADR-0007.
+   - A ticket that draws a picture or puts something on the battle map
+     says how it follows ADR-0038 (sprite items; the map scene and every
+     map skin), and its tests of behaviour read the scene or the state.
    - Model/effort per the routing table in ADR-0010.
    - `blocked_by`: every ticket whose output this one needs.
 5. Keep it small: one PR's worth of work (roughly ≤ 600 changed lines excluding

@@ -1,7 +1,8 @@
 //! Tests of skills in the battle UI (ticket 0412): the skills block and the
 //! timed effects on the info screen, the `Skill` menu with its target mode,
 //! and the marker on a unit under an effect (combat actives in the attack
-//! flow: `art_tests.rs`). The numbers are always `core`'s.
+//! flow: `art_tests.rs`). The numbers are always `core`'s. Non-attack
+//! actives show their uses left this battle (ticket 0316).
 
 use insta::assert_snapshot;
 use trpg_core::{BattleState, Command, Objective, Phase, Pos, SkillId, UnitAction, UnitId};
@@ -118,6 +119,38 @@ fn knight_menu(c: &mut Ctx, durability: u32) -> BattleScreen {
             .unwrap()
             .durability_left = durability;
     });
+    knight_menu_in(c, state)
+}
+
+/// `state` after the knight braced `times` times, one turn each: the
+/// start of the player's next phase.
+fn braced(mut state: BattleState, times: usize) -> BattleState {
+    let brace = Command::Act {
+        unit: UnitId(2),
+        dest: state.unit(UnitId(2)).unwrap().pos,
+        action: UnitAction::UseSkill {
+            skill: SkillId::new("brace"),
+            target: None,
+        },
+    };
+    for _ in 0..times {
+        state.apply(&brace).unwrap();
+        state.apply(&Command::EndPhase).unwrap();
+        while state.phase() != Phase::Player {
+            state.apply(&Command::EndPhase).unwrap();
+        }
+    }
+    state
+}
+
+/// The uses the knight has left of `skill`.
+fn knight_uses(state: &BattleState, skill: &str) -> u8 {
+    let knight = state.unit(UnitId(2)).unwrap();
+    knight.skill_uses.uses_left(&SkillId::new(skill))
+}
+
+/// The knight selected in `state` and its action menu open where it stands.
+fn knight_menu_in(c: &mut Ctx, state: BattleState) -> BattleScreen {
     let mut s = BattleScreen::new(state);
     // The cursor starts on the lord; walk it to the knight.
     step(&mut s, c, &[Action::CursorRight, Action::CursorDown]);
@@ -159,7 +192,7 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
     let mut s = knight_menu(&mut c, 20);
     let before = shown_def(&mut c, s.state(), UnitId(2));
     focus_entry(&mut s, &mut c, MenuEntry::Skill);
-    // Skill list: Brace, at the cost of 3 of the weapon's 20.
+    // Skill list: Brace, with its 3 uses a battle all left.
     step(&mut s, &mut c, &[Action::Confirm]);
     let Mode::SkillMenu { menu, .. } = s.mode() else {
         panic!("{:?}", s.mode());
@@ -170,15 +203,17 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
         .map(|y| text(&buf, 0, y, 70))
         .find(|l| l.contains("Brace"));
     let line = line.expect("the list shows Brace");
-    assert!(line.contains("3 dur") && line.contains("20/"), "{line}");
+    assert!(line.contains("Brace     3/3"), "{line}");
+    assert!(!line.contains("dur") && !line.contains("Wpn"), "{line}");
     step(&mut s, &mut c, &[Action::Confirm]);
     assert!(matches!(s.mode(), Mode::Idle { .. }), "{:?}", s.mode());
     let after = shown_def(&mut c, s.state(), UnitId(2));
     assert_eq!(after, before + 5);
-    // The knight's weapon paid 3 durability.
+    // One use is spent; the knight's weapon paid nothing.
+    assert_eq!(knight_uses(s.state(), "brace"), 2);
     let knight = s.state().unit(UnitId(2)).unwrap();
     let slot = knight.loadout.equipped_slot().unwrap();
-    assert_eq!(knight.loadout.weapon(slot).unwrap().durability_left, 17);
+    assert_eq!(knight.loadout.weapon(slot).unwrap().durability_left, 20);
     // Player, enemy and other phases pass: at the start of the knight's own
     // phase Brace has ended.
     let mut next = s.state().clone();
@@ -192,12 +227,18 @@ fn brace_from_the_menu_raises_def_on_the_info_screen_until_the_next_own_phase() 
 #[test]
 fn a_skill_menu_entry_needs_a_usable_non_combat_active() {
     let mut c = ctx();
-    // The Guard's Brace (3 dur), weapon at 2: usable, it spends the rest
-    // and the weapon breaks (Nick, 0414 review).
-    let s = knight_menu(&mut c, 2);
+    // The Guard's Brace needs no weapon: a broken one changes nothing.
+    let s = knight_menu(&mut c, 0);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(true));
-    // Broken: the entry is dimmed, and choosing it opens nothing.
-    let mut s = knight_menu(&mut c, 0);
+    // With a use left the entry is on; after its 3 uses it is dimmed (the
+    // cursor skips it).
+    let state = braced(battle(&c, |_| {}), 2);
+    assert_eq!(knight_uses(&state, "brace"), 1);
+    let s = knight_menu_in(&mut c, state);
+    assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(true));
+    let state = braced(battle(&c, |_| {}), 3);
+    assert_eq!(knight_uses(&state, "brace"), 0);
+    let mut s = knight_menu_in(&mut c, state);
     assert_eq!(entry_enabled(&s, MenuEntry::Skill), Some(false));
     step(&mut s, &mut c, &[Action::Cancel]);
     // A unit that knows no non-combat active has no entry at all: the
@@ -273,7 +314,9 @@ fn the_info_screen_lists_skills_with_markers_costs_and_timed_effects() {
     let rows: Vec<String> = (0..30).map(|y| text(&buf, 29, y, 26)).collect();
     let find = |needle: &str| rows.iter().any(|r| r.contains(needle));
     assert!(find("A Brace"), "{rows:?}");
-    assert!(find("3 dur"), "{rows:?}");
+    // One of its 3 uses is spent.
+    assert!(find("2/3"), "{rows:?}");
+    assert!(!find("dur"), "{rows:?}");
     assert!(find("self: Def +5 Res +5"), "{rows:?}");
     let effects: Vec<String> = (0..30).map(|y| text(&buf, 37, y, 18)).collect();
     assert!(effects.iter().any(|r| r == "Effects"), "{effects:?}");
@@ -307,6 +350,93 @@ fn skill_menu_snapshot() {
     focus_entry(&mut s, &mut c, MenuEntry::Skill);
     step(&mut s, &mut c, &[Action::Confirm]);
     assert_snapshot!(render(&s, &c).to_snapshot(&c.palette));
+}
+
+/// The knight also knowing Fortify, after its 3 Braces: the skill list
+/// opened from its action menu.
+fn spent_brace_menu(c: &mut Ctx) -> BattleScreen {
+    let state = battle(c, |units| learn(c, &mut units[1], "fortify"));
+    let mut s = knight_menu_in(c, braced(state, 3));
+    focus_entry(&mut s, c, MenuEntry::Skill);
+    step(&mut s, c, &[Action::Confirm]);
+    s
+}
+
+#[test]
+fn a_skill_with_no_uses_left_is_dimmed_with_the_reason() {
+    let mut c = ctx();
+    let mut s = spent_brace_menu(&mut c);
+    let Mode::SkillMenu { menu, choices, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    let lines: Vec<(&str, bool, Option<&str>)> = choices
+        .iter()
+        .map(|c| (c.skill.0.as_str(), c.usable, c.reason.as_deref()))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            ("brace", false, Some("no uses left")),
+            ("fortify", true, None)
+        ]
+    );
+    let enabled: Vec<bool> = menu.items().iter().map(|i| i.enabled).collect();
+    assert_eq!(enabled, [false, true]);
+    let buf = render(&s, &c);
+    let row = |name: &str| {
+        (0..30)
+            .map(|y| text(&buf, 0, y, 70))
+            .find(|l| l.contains(name))
+            .unwrap_or_else(|| panic!("the list shows {name}"))
+    };
+    let (brace, fortify) = (row("Brace"), row("Fortify"));
+    assert!(brace.contains("Brace       0/3  no uses left"), "{brace}");
+    assert!(fortify.contains("Fortify     2/2 "), "{fortify}");
+    assert!(!fortify.contains("left"), "{fortify}");
+    // The cursor skips the spent skill: it starts on Fortify, which works.
+    assert_eq!(menu.focus(), 1);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(matches!(s.mode(), Mode::Idle { .. }), "{:?}", s.mode());
+    assert_eq!(knight_uses(s.state(), "fortify"), 1);
+    assert_eq!(knight_uses(s.state(), "brace"), 0);
+}
+
+#[test]
+fn skill_menu_with_no_uses_left_snapshot() {
+    let mut c = ctx();
+    let s = spent_brace_menu(&mut c);
+    assert_snapshot!(render(&s, &c).to_snapshot(&c.palette));
+}
+
+#[test]
+fn a_skill_that_only_lacks_someone_to_use_it_on_is_dimmed_without_a_reason() {
+    let mut c = ctx();
+    // The lord knows Shove and Brace, with nobody beside it to shove.
+    let state = battle(&c, |units| {
+        learn(&c, &mut units[0], "shove");
+        learn(&c, &mut units[0], "brace");
+    });
+    let mut s = BattleScreen::new(state);
+    step(&mut s, &mut c, &[Action::Confirm, Action::Confirm]);
+    focus_entry(&mut s, &mut c, MenuEntry::Skill);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    let Mode::SkillMenu { menu, choices, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    let shove = choices.iter().position(|c| c.skill.0 == "shove").unwrap();
+    assert_eq!(
+        (choices[shove].usable, choices[shove].reason.as_deref()),
+        (false, None)
+    );
+    assert!(!menu.items()[shove].enabled);
+    let buf = render(&s, &c);
+    let line = (0..30)
+        .map(|y| text(&buf, 0, y, 70))
+        .find(|l| l.contains("Shove"))
+        .expect("the list shows Shove");
+    // The lord's own Inspire makes the names 7 wide.
+    assert!(line.contains("Shove       8/8 "), "{line}");
+    assert!(!line.contains("left"), "{line}");
 }
 
 #[test]
@@ -357,8 +487,11 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     step(&mut s, &mut c, &[Action::CursorRight]);
     let buf = render(&s, &c);
     let message = text(&buf, 1, 30, 60);
-    assert!(message.starts_with("Shove on Raider"), "{message}");
-    assert!(message.contains("→"), "{message}");
+    // The message says what it costs: one of the 8 uses.
+    assert!(
+        message.starts_with("Shove on Raider (8 → 7 uses)"),
+        "{message}"
+    );
     // Cancel goes back to the list; choose again, pick the brigand, confirm.
     step(&mut s, &mut c, &[Action::Cancel]);
     assert!(matches!(s.mode(), Mode::SkillMenu { .. }), "{:?}", s.mode());
@@ -371,6 +504,8 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     assert!(matches!(s.mode(), Mode::Idle { .. }), "{:?}", s.mode());
     let brigand = s.state().unit(UnitId(4)).unwrap();
     assert_eq!(brigand.pos, p(9, 2));
+    let lord = s.state().unit(UnitId(1)).unwrap();
+    assert_eq!(lord.skill_uses.uses_left(&SkillId::new("shove")), 7);
     // Exactly what the core does with the same command.
     let mut expected = before;
     let cmd = Command::Act {

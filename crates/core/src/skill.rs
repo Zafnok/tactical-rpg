@@ -1,6 +1,6 @@
-//! Class skills: passives, actives paid with durability or spell uses, and
-//! timed effects (`docs/design/progression.md`, *Skills*;
-//! `docs/design/combat-arts.md`, *Class actives now cost durability*).
+//! Class skills: passives, actives paid with durability, spell uses or their
+//! own uses per battle, and timed effects (`docs/design/progression.md`,
+//! *Skills*; `docs/design/combat-arts.md`, *What class actives cost*).
 //!
 //! The skills live in `assets/data/skills.ron`, loaded by `trpg-content` into
 //! a [`SkillTable`]. How a battle uses them is in [`crate::battle`].
@@ -24,14 +24,21 @@
 //!   for each combat ([`SkillContext`]); their bonuses feed the combat maths
 //!   as [`CombatMods`] and stat bonuses ([`Bonuses`]).
 //! - **Actives** cost [`SkillCost::Durability`] (combat actives: the
-//!   attacking weapon; other actives: the equipped weapon) or
-//!   [`SkillCost::ExtraSpellUse`] (spell actives: 1 use on top of the cast).
-//!   [`check_cost`] and [`pay_cost`] hold the rules (`combat-arts.md`,
-//!   *Using an art* 3–5): a durability cost needs an unbroken weapon, and
-//!   with less left than the cost it spends what is left; a spell active needs `uses_left ≥ 2`. The cost
-//!   is paid once, when the action is committed. A weapon brought to 0 by it
-//!   breaks after the action ([`Paid::broke`]). Combat Arts
-//!   ([`crate::art`]) use the same helpers.
+//!   attacking weapon), [`SkillCost::ExtraSpellUse`] (spell actives: 1 use
+//!   on top of the cast) or [`SkillCost::Uses`] (non-attack actives: 1 of
+//!   the skill's own uses per battle). [`check_cost`] and [`pay_cost`] hold
+//!   the rules (`combat-arts.md`, *Using an art* 3–5 and *Non-attack
+//!   actives: uses per battle*): a durability cost needs an unbroken weapon,
+//!   and with less left than the cost it spends what is left; a spell active
+//!   needs `uses_left ≥ 2`; a cost in uses needs one use left, and no
+//!   weapon. The cost is paid once, when the action is committed. A weapon
+//!   brought to 0 by it breaks after the action ([`Paid::broke`]). Combat
+//!   Arts ([`crate::art`]) use the same helpers.
+//! - **Uses per battle** ([`SkillUses`]): each of a unit's usable actives
+//!   that costs [`SkillCost::Uses`] refills to its uses at the start of
+//!   every battle ([`Unit::prepare_for_battle`]), for every unit (the
+//!   player's, bosses, green units). The uses belong to the unit and the
+//!   skill; a skill missing from a unit's uses has none.
 //! - **Timed effects** ([`TimedEffect`]) last until the start of a phase
 //!   ([`TimedEffect::until`]), before anyone acts: a buff or a stance until
 //!   its user's side's next phase, a Combat Art's debuff until the end of
@@ -74,6 +81,9 @@ pub enum SkillCost {
     Durability(u32),
     /// One use of the spell being cast, on top of the cast's own use.
     ExtraSpellUse,
+    /// One of the skill's own uses; it has this many per battle (non-attack
+    /// actives).
+    Uses(u8),
 }
 
 /// When a passive bonus applies.
@@ -325,6 +335,17 @@ impl SkillDef {
         )
     }
 
+    /// Its uses per battle, for an active that costs [`SkillCost::Uses`].
+    pub fn uses_per_battle(&self) -> Option<u8> {
+        match self.kind {
+            SkillKind::Active {
+                cost: SkillCost::Uses(n),
+                ..
+            } => Some(n),
+            _ => None,
+        }
+    }
+
     /// A passive's effects (none for an active).
     pub fn passive_effects(&self) -> &[PassiveEffect] {
         match &self.kind {
@@ -345,6 +366,39 @@ impl SkillTable {
     /// The skill `id`.
     pub fn get(&self, id: &SkillId) -> Option<&SkillDef> {
         self.skills.get(id)
+    }
+}
+
+/// A unit's uses left of its non-attack actives in the current battle.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
+pub struct SkillUses {
+    /// Uses left per skill; a skill missing here has none.
+    pub uses_left: BTreeMap<SkillId, u8>,
+}
+
+impl SkillUses {
+    /// Every skill of `usable` that costs [`SkillCost::Uses`], at its full
+    /// uses.
+    pub fn full(usable: &[&SkillDef]) -> SkillUses {
+        SkillUses {
+            uses_left: usable
+                .iter()
+                .filter_map(|def| Some((def.id.clone(), def.uses_per_battle()?)))
+                .collect(),
+        }
+    }
+
+    /// Uses left of `skill` (0 if it has none).
+    pub fn uses_left(&self, skill: &SkillId) -> u8 {
+        self.uses_left.get(skill).copied().unwrap_or(0)
+    }
+
+    /// Spends one use of `skill` and returns the uses left, or `None` (and
+    /// no change) if it had none.
+    pub fn spend(&mut self, skill: &SkillId) -> Option<u8> {
+        let left = self.uses_left.get_mut(skill).filter(|n| **n > 0)?;
+        *left -= 1;
+        Some(*left)
     }
 }
 
@@ -514,12 +568,15 @@ pub enum CostSource {
     Weapon(usize),
     /// This spell's uses.
     Spell(SpellId),
+    /// This skill's own uses per battle.
+    Own(SkillId),
 }
 
 /// Why a cost can't be paid.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CostError {
-    /// A durability cost with a spell, or a spell-use cost with a weapon.
+    /// A cost paid from the wrong thing: durability with a spell, a spell
+    /// use with a weapon, a skill's own uses with either.
     WrongSource,
     /// No weapon to pay with (empty slot, or nothing equipped).
     NoWeapon,
@@ -530,6 +587,8 @@ pub enum CostError {
         /// Uses left.
         left: u8,
     },
+    /// The skill has no uses left this battle.
+    NoUsesLeft,
 }
 
 impl fmt::Display for CostError {
@@ -541,6 +600,7 @@ impl fmt::Display for CostError {
             CostError::NotEnoughUses { left } => {
                 write!(f, "it needs 2 spell uses and the spell has {left}")
             }
+            CostError::NoUsesLeft => f.write_str("it has no uses left this battle"),
         }
     }
 }
@@ -566,6 +626,12 @@ pub fn check_cost(unit: &Unit, cost: SkillCost, from: &CostSource) -> Result<(),
             }
             Ok(())
         }
+        (SkillCost::Uses(_), CostSource::Own(skill)) => {
+            if unit.skill_uses.uses_left(skill) == 0 {
+                return Err(CostError::NoUsesLeft);
+            }
+            Ok(())
+        }
         _ => Err(CostError::WrongSource),
     }
 }
@@ -573,8 +639,8 @@ pub fn check_cost(unit: &Unit, cost: SkillCost, from: &CostSource) -> Result<(),
 /// What [`pay_cost`] did.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Paid {
-    /// [`Event::DurabilitySpent`] or [`Event::SpellUsesChanged`], to emit
-    /// now.
+    /// [`Event::DurabilitySpent`], [`Event::SpellUsesChanged`] or
+    /// [`Event::SkillUsesChanged`], to emit now.
     pub events: Vec<Event>,
     /// [`Event::ItemBroke`] if the payment broke the weapon: emit it after
     /// the action (the action still uses the unbroken weapon).
@@ -608,6 +674,15 @@ pub fn pay_cost(unit: &mut Unit, cost: SkillCost, from: &CostSource) -> Result<P
                 paid.events.push(Event::SpellUsesChanged {
                     unit: id,
                     spell: spell.clone(),
+                    uses_left,
+                });
+            }
+        }
+        (SkillCost::Uses(_), CostSource::Own(skill)) => {
+            if let Some(uses_left) = unit.skill_uses.spend(skill) {
+                paid.events.push(Event::SkillUsesChanged {
+                    unit: id,
+                    skill: skill.clone(),
                     uses_left,
                 });
             }

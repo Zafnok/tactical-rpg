@@ -134,6 +134,7 @@ fn the_embedded_passives_match_the_design_table() {
 fn the_embedded_actives_match_the_design_tables() {
     let t = embedded();
     let dur = SkillCost::Durability;
+    let uses = SkillCost::Uses;
     let cases = vec![
         (
             "keen_edge",
@@ -181,7 +182,7 @@ fn the_embedded_actives_match_the_design_tables() {
             "fortify",
             1,
             active(
-                dur(5),
+                uses(2),
                 ActiveEffect::Buff {
                     area: Area::Own,
                     mods: TimedMods {
@@ -192,11 +193,24 @@ fn the_embedded_actives_match_the_design_tables() {
             ),
         ),
         (
-            "sanctuary_2",
             "sanctuary",
-            2,
+            "sanctuary",
+            1,
             active(
-                dur(5),
+                uses(3),
+                ActiveEffect::Heal {
+                    radius: 1,
+                    power: 5,
+                },
+            ),
+        ),
+        // A skill of its own, not a rank of Sanctuary (Nick).
+        (
+            "benediction",
+            "benediction",
+            1,
+            active(
+                uses(1),
                 ActiveEffect::Heal {
                     radius: 2,
                     power: 5,
@@ -207,13 +221,60 @@ fn the_embedded_actives_match_the_design_tables() {
             "shove",
             "shove",
             1,
-            active(dur(3), ActiveEffect::Push { collision: 5 }),
+            active(uses(8), ActiveEffect::Push { collision: 5 }),
         ),
     ];
     check_rows(cases);
     assert_eq!(get(&t, "keen_edge").name, "Keen Edge");
+    assert_eq!(get(&t, "benediction").name, "Benediction");
+    assert!(t.get(&SkillId("sanctuary_2".into())).is_none());
     // Every tier 1–2 skill plus the Flier's.
     assert_eq!(t.skills.len(), 48);
+}
+
+/// `combat-arts.md` → *Non-attack actives: uses per battle*: every
+/// non-attack active costs uses, with the table's numbers; every combat
+/// active still costs durability and every spell active a spell use.
+#[test]
+fn the_non_attack_actives_cost_the_uses_of_the_design_table() {
+    let t = embedded();
+    let mut found: Vec<(&str, u8)> = Vec::new();
+    for def in t.skills.values() {
+        let SkillKind::Active { cost, effect } = &def.kind else {
+            continue;
+        };
+        match (effect, cost) {
+            (
+                ActiveEffect::Strike {
+                    with: WeaponReq::Spell,
+                    ..
+                },
+                cost,
+            ) => assert_eq!(*cost, SkillCost::ExtraSpellUse, "{}", def.id.0),
+            (ActiveEffect::Strike { .. }, cost) => {
+                assert!(
+                    matches!(cost, SkillCost::Durability(n) if *n >= 1),
+                    "{}",
+                    def.id.0
+                );
+            }
+            (_, SkillCost::Uses(n)) => found.push((def.id.0.as_str(), *n)),
+            (_, cost) => panic!("{} costs {cost:?}", def.id.0),
+        }
+    }
+    assert_eq!(
+        found,
+        [
+            ("benediction", 1),
+            ("brace", 3),
+            ("fortify", 2),
+            ("inspire", 2),
+            ("rally", 1),
+            ("sanctuary", 3),
+            ("shove", 8),
+            ("war_cry", 2),
+        ]
+    );
 }
 
 #[test]
@@ -297,6 +358,22 @@ fn validation_errors() {
             vec!["skill \"a\": only spell actives (Strike with Spell) cost ExtraSpellUse"],
         ),
         (
+            r#"(id: "a", name: "x", kind: Active(cost: Uses(0), effect: Push(collision: 5)))"#.into(),
+            vec!["skill \"a\": uses per battle must be at least 1"],
+        ),
+        (
+            r#"(id: "a", name: "x", kind: Active(cost: Uses(2), effect: Strike(with: Any)))"#.into(),
+            vec![
+                "skill \"a\": only non-attack actives (Buff, Heal, Push) cost Uses; a combat active costs durability and a spell active ExtraSpellUse",
+            ],
+        ),
+        (
+            r#"(id: "a", name: "x", kind: Active(cost: Uses(0), effect: Strike(with: Spell)))"#.into(),
+            vec![
+                "skill \"a\": only non-attack actives (Buff, Heal, Push) cost Uses; a combat active costs durability and a spell active ExtraSpellUse",
+            ],
+        ),
+        (
             r#"(id: "a", name: "x", kind: Passive([AllyAura(radius: 0, mods: ())]))"#.into(),
             vec!["skill \"a\": an aura's radius must be at least 1"],
         ),
@@ -326,10 +403,95 @@ fn validation_errors() {
         r#"(id: "a", name: "x", kind: Passive([AllyAura(radius: 1, mods: (hit: 1)), HealBonus(1)]))"#,
         r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Heal(radius: 1, power: 5)))"#,
         r#"(id: "a", name: "x", kind: Active(cost: Durability(1), effect: Push(collision: 0)))"#,
+        r#"(id: "a", name: "x", kind: Active(cost: Uses(1), effect: Push(collision: 5)))"#,
+        r#"(id: "a", name: "x", kind: Active(cost: Uses(3), effect: Heal(radius: 1, power: 5)))"#,
+        r#"(id: "a", name: "x", kind: Active(cost: Uses(255), effect: Buff(area: Own, mods: (stats: [(Def, 1)]))))"#,
     ];
     for body in ok {
         assert_eq!(errors_of(body), Vec::<String>::new(), "{body}");
     }
+}
+
+/// The rank rule (`progression.md` → *Superseding*, Nick): one case per way
+/// a rank 2 can differ from its rank 1 in more than bigger numbers. The
+/// field-by-field tests are in `ranks`.
+#[test]
+fn a_higher_rank_must_be_the_rank_below_with_bigger_numbers() {
+    let pair = |lower: &str, higher: &str| {
+        errors_of(&format!(
+            r#"(id: "one", name: "x", family: "f", rank: 1, kind: {lower}), (id: "two", name: "y", family: "f", rank: 2, kind: {higher})"#
+        ))
+    };
+    let wrong = |problem: &str| {
+        vec![format!(
+            "skill \"two\" (rank 2) must be \"one\" (rank 1) with bigger numbers and nothing else: {problem}"
+        )]
+    };
+    let heal = |radius: u32, power: i32| {
+        format!("Active(cost: Uses(1), effect: Heal(radius: {radius}, power: {power}))")
+    };
+    let crit =
+        |n: i32, when: &str| format!("Passive([CombatMod(mods: (crit: {n}), when: {when})])");
+    // A wider radius (Sanctuary 2, as it was).
+    assert_eq!(
+        pair(&heal(1, 5), &heal(2, 5)),
+        wrong("its radius is 2, not 1")
+    );
+    // Another condition.
+    assert_eq!(
+        pair(&crit(10, "WeaponKindEquipped(Sword)"), &crit(20, "Always")),
+        wrong("its condition is Always, not WeaponKindEquipped(Sword)")
+    );
+    // Another kind of effect.
+    assert_eq!(
+        pair("Passive([HealBonus(2)])", "Passive([SpellMight(4)])"),
+        wrong("it has another kind of effect")
+    );
+    // A lower number.
+    assert_eq!(
+        pair(&heal(1, 5), &heal(1, 3)),
+        wrong("its power is 3, less than 5")
+    );
+    // No number higher.
+    assert_eq!(
+        pair(&heal(1, 5), &heal(1, 5)),
+        wrong("none of its numbers is higher")
+    );
+    // Bigger numbers only: fine. So is adding a bonus of the same kind.
+    assert_eq!(pair(&heal(1, 5), &heal(1, 8)), Vec::<String>::new());
+    assert_eq!(
+        pair(
+            "Passive([CombatMod(mods: (hit: 5), when: WeaponKindEquipped(Bow))])",
+            "Passive([CombatMod(mods: (hit: 10, crit: 5), when: WeaponKindEquipped(Bow))])"
+        ),
+        Vec::<String>::new()
+    );
+    // Skills of different families are never compared.
+    assert_eq!(
+        errors_of(&format!(
+            r#"(id: "one", name: "x", kind: {}), (id: "two", name: "y", kind: {})"#,
+            heal(1, 5),
+            heal(2, 5)
+        )),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_rank_error_points_at_the_higher_rank() {
+    let source = "(skills: [\n  (id: \"one\", name: \"x\", family: \"f\", rank: 1, kind: Passive([HealBonus(2)])),\n  (id: \"two\", name: \"y\", family: \"f\", rank: 2, kind: Passive([HealBonus(1)])),\n])";
+    let errors = from_source("skills.ron", source).err().unwrap_or_default();
+    let found: Vec<(Option<u32>, &str)> = errors
+        .iter()
+        .map(|e| (e.line, e.message.as_str()))
+        .collect();
+    assert_eq!(
+        found,
+        [(
+            Some(3),
+            "skill \"two\" (rank 2) must be \"one\" (rank 1) with bigger numbers and nothing else: its heal bonus is 1, less than 2"
+        )]
+    );
 }
 
 #[test]

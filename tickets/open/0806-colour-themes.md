@@ -41,6 +41,8 @@ says whether each still looks like its mockup; tweaks become `tuning` tickets.
 **Out (do not do):**
 - Colour-blind palettes (a later ticket).
 - Portrait colour variants per theme: portraits keep their own colours.
+  The same goes for every image (ADR-0038): a theme recolours glyphs and
+  the UI, never a picture or a tileset.
 
 ## Implementation steps
 
