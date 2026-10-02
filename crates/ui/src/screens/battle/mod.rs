@@ -10,7 +10,8 @@
 //! auto-end), and the phase and outcome [`banner`]s. Every command sent is
 //! kept in a [`BattleHistory`], and Rewind opens the [`rewind`] screen
 //! (0307). One-time [`tips`] pop up over it the first time something new
-//! happens (0406). Scenes the battle's triggers fire (0705) play as a
+//! happens (0406). The battle's [`notes`] (0411) show in a box at its start
+//! and on the map menu's `Objective` page. Scenes the battle's triggers fire (0705) play as a
 //! [`DialogueScreen`] overlay over the map, in order with the banners, or
 //! inside a combat's playback (a boss's line before the combat, a death
 //! quote before the fall). In the Enemy and Other phases the AI acts
@@ -31,6 +32,7 @@ pub mod layout;
 pub mod magic;
 pub mod map_menu;
 pub mod mode;
+pub mod notes;
 pub mod panel;
 pub mod path;
 pub mod playback;
@@ -157,6 +159,8 @@ pub fn danger_tiles(state: &BattleState) -> TileSet {
 /// time in order.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Queued {
+    /// The battle's notes (0411), at its start: closed by Confirm.
+    Notes,
     /// A phase or outcome banner.
     Banner(Banner),
     /// A scene a trigger fired, by id: played as a [`DialogueScreen`]
@@ -214,6 +218,9 @@ pub struct BattleScreen {
     /// Where the cursor and camera were when the player phase ended: they
     /// go back there when the next one starts.
     player_view: Option<(Pos, Camera)>,
+    /// Seconds the battle notes have been up (0411): the units they are
+    /// about blink.
+    notes_t: f32,
 }
 
 impl BattleScreen {
@@ -255,13 +262,18 @@ impl BattleScreen {
             walked: None,
             restart: false,
             player_view: None,
+            notes_t: 0.0,
         }
     }
 
-    /// [`BattleScreen::new`] for a battle just started with `events`: the
-    /// scenes they fire (a turn-1 trigger) play first.
+    /// [`BattleScreen::new`] for a battle just started with `events`: its
+    /// notes (0411) show first, if it has any and isn't already decided,
+    /// then the scenes the events fire (a turn-1 trigger) play.
     pub fn start(state: BattleState, events: &[Event]) -> Self {
         let mut screen = Self::new(state);
+        if !screen.state.battle_notes().is_empty() && screen.state.outcome().is_none() {
+            screen.queue.push_back(Queued::Notes);
+        }
         screen.queue.extend(events.iter().filter_map(|e| match e {
             Event::SceneTriggered { scene } => Some(Queued::Scene(scene.clone())),
             _ => None,
@@ -360,6 +372,62 @@ impl BattleScreen {
         }
     }
 
+    /// Whether the battle's notes are on screen in their box (at the start
+    /// of the battle, until Confirm closes it).
+    pub fn notes_open(&self) -> bool {
+        self.queue.front() == Some(&Queued::Notes)
+    }
+
+    /// Whether the battle's notes are on screen, in their box or on the
+    /// `Objective` page: the units they are about blink.
+    fn notes_shown(&self) -> bool {
+        self.notes_open() || self.mode == Mode::Objective
+    }
+
+    /// Gives `action` to the tip or the battle notes box on screen, if any:
+    /// each takes the keys until it is closed (a tip by Confirm or Cancel,
+    /// the notes by Confirm). Returns whether one took it.
+    fn overlay_key(&mut self, action: Action) -> bool {
+        if let Some(tip) = self.shown_tip() {
+            if matches!(action, Action::Confirm | Action::Cancel) {
+                self.tips.dismiss(tip);
+            }
+            return true;
+        }
+        if self.notes_open() {
+            if action == Action::Confirm {
+                self.queue.pop_front();
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Counts the `dt` seconds the battle notes have been up, from 0 each
+    /// time they come up.
+    fn tick_notes(&mut self, dt: f32) {
+        self.notes_t = if self.notes_shown() {
+            self.notes_t + dt
+        } else {
+            0.0
+        };
+    }
+
+    /// The top row of a box `h` rows tall listing the battle notes: off
+    /// the rows of the units they are about ([`notes::box_top`]).
+    fn notes_top(&self, h: i32) -> i32 {
+        let noted = self.state.battle_notes();
+        let rows: Vec<i32> = self
+            .state
+            .units()
+            .iter()
+            .filter(|u| notes::is_noted(noted, u.id))
+            .filter_map(|u| tile_to_cell(self.drawn_pos(u), &self.camera))
+            .map(|(_, y)| y)
+            .collect();
+        notes::box_top(h, &rows)
+    }
+
     /// The message shown for a moment, if any.
     pub fn toast(&self) -> Option<&str> {
         self.toast.as_ref().map(|(t, _)| t.as_str())
@@ -428,7 +496,8 @@ impl BattleScreen {
     }
 
     /// The tip on screen, if any: the first queued whose moment has come.
-    /// Tips wait out a combat's playback, a scene and the rewind screen;
+    /// Tips wait out a combat's playback, a scene, the battle notes and the
+    /// rewind screen;
     /// the enemy-phase tip shows as that phase begins (over its banner),
     /// the others once a player phase is browsing without a banner.
     pub fn shown_tip(&self) -> Option<TipTrigger> {
@@ -436,6 +505,7 @@ impl BattleScreen {
             || self.playing()
             || self.progress.is_some()
             || self.queued_scene().is_some()
+            || self.notes_open()
         {
             return None;
         }
@@ -926,10 +996,11 @@ impl BattleScreen {
         }
     }
 
-    /// The help line of a tip, EXP or level-up page, or banner on screen.
+    /// The help line of a tip, the battle notes, EXP or level-up page, or
+    /// banner on screen.
     fn overlay_help(&self, km: HelpKeys<'_>) -> Option<String> {
         let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
-        if self.shown_tip().is_some() {
+        if self.shown_tip().is_some() || self.notes_open() {
             return Some(help_line(&[confirm("close")]));
         }
         if let Some(p) = self.progress() {
@@ -1220,11 +1291,17 @@ impl BattleScreen {
         }
     }
 
+    /// Draws the units; while the battle notes are up, those they are
+    /// about blink (their tile's colours swapped).
     fn draw_units(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         if !self.playing() {
+            let blink = self.notes_shown() && notes::blink_on(self.notes_t);
             for unit in self.state.units() {
                 if let Some((x, y)) = tile_to_cell(self.drawn_pos(unit), &self.camera) {
                     units::draw_unit(buf, &ctx.palette, unit, x, y);
+                    if blink && notes::is_noted(self.state.battle_notes(), unit.id) {
+                        units::invert_tile(buf, x, y);
+                    }
                 }
             }
             return;
@@ -1351,18 +1428,26 @@ impl BattleScreen {
         }
     }
 
-    /// Draws the boxes over the map: the unit list, the objective, the
-    /// end-turn question, the info screen, and the banner on screen.
+    /// Draws the boxes over the map: the unit list, the objective (with
+    /// the battle notes under it), the end-turn question, the info screen,
+    /// the battle notes at the start, and the banner on screen.
     fn draw_dialogs(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let p = &ctx.palette;
         match &self.mode {
             Mode::UnitList { menu, .. } => map_menu::draw_centred_menu(buf, p, menu),
             Mode::Objective => {
-                let lines = [
+                let mut lines = vec![
                     (map_menu::objective_text(&self.state), UiColor::Text),
                     (map_menu::turn_text(&self.state), UiColor::Text),
                 ];
-                map_menu::draw_dialog(buf, p, "Objective", &lines);
+                let noted = notes::note_lines(self.state.battle_notes());
+                if !noted.is_empty() {
+                    lines.push((String::new(), UiColor::Text));
+                    lines.push((notes::NOTES_HEADING.to_owned(), UiColor::TextDim));
+                    lines.extend(noted.into_iter().map(|l| (l, UiColor::Text)));
+                }
+                let (_, h) = map_menu::dialog_size("Objective", &lines);
+                map_menu::draw_dialog_at(buf, p, "Objective", &lines, self.notes_top(h));
             }
             Mode::EndTurnPrompt { ready } => {
                 let km = ctx.help_keys();
@@ -1396,6 +1481,14 @@ impl BattleScreen {
                 }
             }
             _ => {}
+        }
+        if self.notes_open() {
+            let lines: Vec<_> = notes::note_lines(self.state.battle_notes())
+                .into_iter()
+                .map(|l| (l, UiColor::Text))
+                .collect();
+            let (_, h) = map_menu::dialog_size(notes::NOTES_TITLE, &lines);
+            map_menu::draw_dialog_at(buf, p, notes::NOTES_TITLE, &lines, self.notes_top(h));
         }
         if let Some(banner) = self.banner() {
             banner.draw(buf, p, map_menu::shown_limit(&self.state));
@@ -1547,11 +1640,7 @@ impl Screen for BattleScreen {
         self.detect_tips();
         self.tips.absorb(ctx);
         for &action in &input.actions {
-            // A tip takes the keys until it is dismissed.
-            if let Some(tip) = self.shown_tip() {
-                if matches!(action, Action::Confirm | Action::Cancel) {
-                    self.tips.dismiss(tip);
-                }
+            if self.overlay_key(action) {
                 continue;
             }
             // The AI's phase: only Confirm (hold: faster) and Cancel (skip
@@ -1610,6 +1699,7 @@ impl Screen for BattleScreen {
             }
         }
 
+        self.tick_notes(dt);
         self.play_sounds(ctx, input);
         let mode = std::mem::take(&mut self.mode);
         self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
@@ -1768,6 +1858,7 @@ pub(crate) mod testing {
             seed: 0,
             triggers: vec![],
             mode: trpg_core::GameMode::Classic,
+            battle_notes: vec![],
         }
     }
 
@@ -1899,6 +1990,9 @@ mod ai_phase_tests;
 
 #[cfg(test)]
 mod trigger_tests;
+
+#[cfg(test)]
+mod notes_tests;
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,105 @@
+---
+source: crates/ui/tests/flow.rs
+expression: h.snapshot()
+---
+                                                                      ┌────────────────────────────┐
+         ╔═ BATTLE NOTES ══════════════════════════════════╗          │ Plain                      │
+         ║                                                 ║          │ DEF +0  AVO +0             │
+         ║ • Brigand: guards the road, but the fort is     ║          │                            │
+         ║   nearer than the fight.                        ║          │                            │
+         ║ • Seize the fort within 3 turns: send your lead ║          │ Ellery                     │
+         ║   straight there.                               ║          │ Exile  Lv 1                │
+         ║                                                 ║          │ HP 19/19   ██████████      │
+         ╚═════════════════════════════════════════════════╝          │ Player                     │
+                                                                      │                            │
+                                                                      │                            │
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
+                    ≈≈≈≈≈≈≈≈....······♣♣♣♣^^^^^^                      │                            │
+                    ≈≈≈≈≈≈====······....♣♣♣♣....                      │                            │
+                    ..≈≈≈≈..··......Br......╦╦..                      │                            │
+                    ....······........▓▓▓▓▓▓▓▓..                      │                            │
+                    ..♣♣··El..╦╦......▓▓░░╦╦▓▓..                      │                            │
+                    ♣♣♣♣··Kn..........▓▓░░░░▓▓..                      │                            │
+                    ♣♣♠♠··............▓▓▓▓▐▌▓▓..                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      └────────────────────────────┘
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ f close                                                                                   F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaabbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaabdcccccddddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabdeeeeeedddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaabdddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaaaaabddddddddddddffffffffffddddddb
+aaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaabdggggggdddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooooookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaahhiiiippppoooooojjjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjqqjjjjjjrrjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjjjoooooojjjjjjjjssssssssjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaajjkkoottjjrrjjjjjjssuurrssjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakkkkoottjjjjjjjjjjssuuuussjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjjjssssvvssjjaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwa
+awwwwwwwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawwwwwwwwa
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text_highlight bg:panel_bg
+d = fg:text bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:hp_high bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:water bg:sea
+i = fg:water bg:water_bg
+j = fg:grass bg:grass_bg
+k = fg:forest bg:forest_bg
+l = fg:thicket bg:thicket_bg
+m = fg:mountain bg:mountain_bg
+n = fg:peak bg:peak_bg
+o = fg:road bg:road_bg
+p = fg:wood bg:water_bg
+q = fg:grass_bg bg:enemy
+r = fg:fort bg:fort_bg
+s = fg:stone bg:stone_bg
+t = fg:player bg:grass_bg
+u = fg:floor bg:floor_bg
+v = fg:wood bg:stone_bg
+w = fg:text_dim bg:black
+--- overlays ---
+over  208,270 16x2  hp_high
+over  208,286 16x2  hp_high
+over  288,238 16x2  hp_high
+over  207,256 3x1  cursor
+over  207,256 1x3  cursor
+over  221,256 3x1  cursor
+over  223,256 1x3  cursor
+over  207,269 3x1  cursor
+over  207,267 1x3  cursor
+over  221,269 3x1  cursor
+over  223,267 1x3  cursor

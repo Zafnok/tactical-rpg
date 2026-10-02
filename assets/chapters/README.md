@@ -29,6 +29,10 @@ loaded by `trpg_content::chapter` and validated by the all-assets test
 A chapter is one battle for now; chapters with several battles come with
 the world map (1007, 1008).
 
+Battle notes (0411) are written with the chapter's content, but live in
+the battle file (`battle_notes`, `assets/battles/README.md`): they name
+the battle's units, and battles aren't one per chapter.
+
 The flow: intro scenes → the battle → on a victory, the result is applied
 to the army (`Campaign::apply_result`) → victory scenes → (the save prompt,
 0802) → `next`. On a defeat: Game Over, with `Retry` (the battle again from
