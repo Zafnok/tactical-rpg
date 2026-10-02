@@ -44,9 +44,9 @@ shots (after Chapter 1's map, faces and script) → **1010** the overworld
 shot (after the world map, 1007). Not on the Chapter 1 critical path.
 
 **Replaceable graphics** (Nick, 2026-10-01: swapping the map's glyphs for
-sprites from image files must be a small job; ADR-0038): **0229** pictures
+sprites from image files must be a small job; ADR-0038): **0231** pictures
 in the frame as sprite items (no open dependencies; 0711 and 0413 now draw
-bought art with it, so it is on the Chapter 1 critical path) → **0230**
+bought art with it, so it is on the Chapter 1 critical path) → **0232**
 `cargo xtask frame-png`, a picture of any scripted frame without a window.
 **0432** the battle map is painted by a map skin from a plain-data map
 scene, look unchanged (no open dependencies) → **0433** a sprite skin read
@@ -79,13 +79,13 @@ What's still open between now and Nick's playtest (0804), by dependency depth
 2026-10-01 from the tickets' `blocked_by` lists, after a dependency check:
 done tickets were dropped, 0711 now waits for 0110 (it needs the bought
 files), and 0803 now waits for 0710 and 0807 (it sets Chapter 1's music).
-0229 (pictures as sprite items, ADR-0038) was added to row 1: 0711 draws
+0231 (pictures as sprite items, ADR-0038) was added to row 1: 0711 draws
 the bought faces with it.
 Nick also put the combat scene (0413), Harl's picture (0035) and 0316
 (non-attack skills cost uses per battle) in front of the playtest.
 
 ```
- 1  0022 0023 0024 0035 0110 0229 0316 0410 0707 0710 0801
+ 1  0022 0023 0024 0035 0110 0231 0316 0410 0707 0710 0801
  2  0711 0802 0807 0810
  3  0413 0706 0809
  4  0803

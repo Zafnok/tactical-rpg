@@ -1,17 +1,17 @@
 ---
-id: "0230"
+id: "0232"
 title: "cargo xtask frame-png: render a scripted frame to a PNG without a window"
 type: infra
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0229"]
+blocked_by: ["0231"]
 nick_input: none
 completed:
 ---
 
-# 0230 — Render a frame to a PNG without a window
+# 0232 — Render a frame to a PNG without a window
 
 ## Context
 
@@ -90,7 +90,7 @@ None.
       half-opacity, clipped sprite of `images/test_card.png` renders to the
       exact pixels listed in the test (at scale 1 and 2).
 - [ ] The same frame drawn by `app` (the "Sprite test" debug tool from
-      0229, in the web build) and by this tool look the same; Completion
+      0231, in the web build) and by this tool look the same; Completion
       notes say what was compared.
 - [ ] Same arguments twice give byte-identical files.
 - [ ] The `ascii-art` skill points at the command.

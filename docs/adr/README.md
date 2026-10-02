@@ -44,6 +44,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0033](0033-playtest-bots.md) | Playtest bots play through `core`'s commands, on reseeded copies, outside the game | Accepted |
 | [0034](0034-controller-input.md) | Controller input: gilrs on native, a Gamepad API plugin on web | Accepted |
 | [0035](0035-battle-and-chapter-files-and-the-flow-screen.md) | Battle and chapter files, a core `Campaign`, and one flow screen that hosts the others | Accepted |
+| [0036](0036-help-text-follows-the-device-and-own-font-glyphs.md) | Help text follows the device pressed last; our own glyphs join the font from a second BDF | Accepted |
 | [0038](0038-graphics-are-a-skin.md) | Graphics are a skin: screens say what to show, a skin says how it looks | Accepted |
 
 Template: [`0000-template.md`](0000-template.md).

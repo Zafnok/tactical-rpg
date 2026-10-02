@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0229", "0432"]
+blocked_by: ["0231", "0432"]
 nick_input: none
 completed:
 ---
@@ -46,7 +46,7 @@ decided with Nick when a real sprite look is chosen.
 - The tileset format `assets/tilesets/<id>.ron` + PNG, its loader and
   validator.
 - `SpriteSkin`, a `MapSkin` that paints a `MapScene` with sprite items
-  (0229) and rectangles.
+  (0231) and rectangles.
 - `cargo xtask test-tileset`: generates `assets/tilesets/test.png` and
   `test.ron` from `terrain.ron`, `classes.ron`, the palette and the font
   atlas.
@@ -124,7 +124,7 @@ decided with Nick when a real sprite look is chosen.
 6. **Harness:** `Harness::with_map_skin(name)` (or a setter on
    `ctx_mut()`), so any scripted test can run under either skin.
 7. Render Quick Battle under the sprite skin with `cargo xtask frame-png`
-   (0230, if done; otherwise look at it in the web build's debug menu) and
+   (0232, if done; otherwise look at it in the web build's debug menu) and
    **look at it**: tiles line up, no seams, ranges read as tinted, a menu
    opened beside a unit sits beside it, popups cut the sprites beneath
    them cleanly.

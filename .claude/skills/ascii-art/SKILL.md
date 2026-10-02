@@ -16,7 +16,7 @@ mood D "Earthy painterly".
 Because cells are tall, a shape that looks square in a text editor looks
 **tall** in game. For glyph art (title screens, UI), make shapes about twice as
 many columns as rows. Bought portraits and battle images are PNGs with
-square pixels, drawn as sprite items (0229, 0711; ADR-0038), so the problem
+square pixels, drawn as sprite items (0231, 0711; ADR-0038), so the problem
 doesn't apply to them.
 
 ## Portraits and battle art: bought, not drawn

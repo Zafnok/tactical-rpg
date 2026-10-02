@@ -17,9 +17,10 @@ use trpg_core::{LeadGender, LeadProfile};
 use crate::audio::AudioQueue;
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Chord, Keymap, Layout, LayoutBindings, PlayerKeys};
+use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::screens::battle::cursor::CursorStyle;
 use crate::storage::{MemoryStorage, Storage, StorageError};
+use crate::widgets::help::HelpKeys;
 
 /// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
 /// e.g. `LeftHanded`, which is also valid RON for the enum).
@@ -182,6 +183,12 @@ pub struct Ctx {
     /// [`choose_layout`](Self::choose_layout) or
     /// [`set_layout_bindings`](Self::set_layout_bindings), never directly.
     pub keymap: Keymap,
+    /// What the player pressed last, the keyboard or a controller, so help
+    /// text names keys or that pad's buttons ([`help_keys`]). `Game` keeps
+    /// it up to date from the input.
+    ///
+    /// [`help_keys`]: Self::help_keys
+    pub device: Device,
     /// The layout in use; `None` until the player has picked one.
     layout: Option<Layout>,
     /// The player's key bindings for every layout, loaded from `storage`.
@@ -258,6 +265,7 @@ impl Ctx {
             content,
             palette,
             keymap,
+            device: Device::default(),
             layout: None,
             player_keys: PlayerKeys::default(),
             warnings: Vec::new(),
@@ -277,6 +285,12 @@ impl Ctx {
     /// The context for the content embedded in the binary.
     pub fn embedded() -> Result<Self, LoadError> {
         Self::new(trpg_content::load_embedded().map_err(LoadError::Content)?)
+    }
+
+    /// What help text names keys from: the active bindings on the device
+    /// the player pressed last.
+    pub fn help_keys(&self) -> HelpKeys<'_> {
+        HelpKeys::new(&self.keymap, self.device)
     }
 
     /// The layout in use, or `None` if the player hasn't picked one yet.

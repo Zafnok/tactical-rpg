@@ -99,7 +99,7 @@ shots.
      uses (make it shareable; don't copy it).
    - Fades: `buf.dim` and the backdrop's brightness by `fade`. A fade must
      cover everything in the frame: cells, rectangles and sprite items
-     (ADR-0038). `dim` only changes cells, so if 0229 is done, fade items
+     (ADR-0038). `dim` only changes cells, so if 0231 is done, fade items
      too (rectangles by colour, sprites by `opacity`).
 5. **Debug tool** (`crates/ui/src/debug.rs`, `TOOLS`): "Play test
    cinematic", a screen that advances `t` by `dt` and loops; Cancel closes

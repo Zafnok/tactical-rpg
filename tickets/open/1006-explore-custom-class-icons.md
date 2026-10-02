@@ -63,7 +63,7 @@ both ways for Nick; if chosen, making it a setting or the default.
    pictures while terrain stays glyphs, add that as a skin that paints
    terrain with the glyph skin and units with the sprite skin.
 2. Render the Quick Battle screen each way (with HP bars) with
-   `cargo xtask frame-png` (0230, if done) and ask Nick with `ask-nick`.
+   `cargo xtask frame-png` (0232, if done) and ask Nick with `ask-nick`.
 3. Record the answer in `look-and-feel.md`; implement if chosen.
 
 ## Acceptance criteria

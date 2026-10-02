@@ -1,5 +1,5 @@
 ---
-id: "0229"
+id: "0231"
 title: "Images in the frame: sprite items drawn from asset files"
 type: feature
 milestone: M1 Engine
@@ -11,7 +11,7 @@ nick_input: none
 completed:
 ---
 
-# 0229 — Images in the frame: sprite items
+# 0231 — Images in the frame: sprite items
 
 ## Context
 
@@ -25,7 +25,7 @@ thousand small rectangles.
 
 This ticket adds the picture item everything else uses: bought portraits
 (0711), combat pictures (0413), a sprite map (0433), the headless PNG
-renderer (0230). It has no dependencies and is on the Chapter 1 critical
+renderer (0232). It has no dependencies and is on the Chapter 1 critical
 path through 0711.
 
 ## Nick input

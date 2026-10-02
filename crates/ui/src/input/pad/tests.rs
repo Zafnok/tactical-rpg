@@ -41,6 +41,155 @@ fn pads() -> Pads {
     Pads::new(stick())
 }
 
+const KINDS: [PadKind; 4] = [
+    PadKind::Xbox,
+    PadKind::PlayStation,
+    PadKind::Nintendo,
+    PadKind::Generic,
+];
+
+/// `docs/design/controls.md`, *Controller → Default buttons* and *Button
+/// names on screen*: each position's name on each kind of pad.
+#[test]
+fn buttons_are_named_as_the_pad_in_use_labels_them() {
+    use Button::{LeftShoulder, LeftTrigger, RightShoulder, RightTrigger, Select};
+    let table = [
+        (South, "A", "✕", "A"),
+        (East, "B", "◯", "B"),
+        (West, "X", "□", "Y"),
+        (North, "Y", "△", "X"),
+        (LeftShoulder, "LB", "L1", "L"),
+        (RightShoulder, "RB", "R1", "R"),
+        (LeftTrigger, "LT", "L2", "ZL"),
+        (RightTrigger, "RT", "R2", "ZR"),
+        (Select, "Back", "Create", "−"),
+        (Start, "Start", "Options", "+"),
+        (Button::LeftStickPress, "LS", "L3", "LS"),
+        (Button::RightStickPress, "RS", "R3", "RS"),
+        (DpadUp, "↑", "↑", "↑"),
+        (Button::DpadDown, "↓", "↓", "↓"),
+        (Button::DpadLeft, "←", "←", "←"),
+        (Button::DpadRight, "→", "→", "→"),
+        (LeftStickUp, "stick ↑", "stick ↑", "stick ↑"),
+        (LeftStickDown, "stick ↓", "stick ↓", "stick ↓"),
+        (LeftStickLeft, "stick ←", "stick ←", "stick ←"),
+        (LeftStickRight, "stick →", "stick →", "stick →"),
+        (RightStickUp, "R-stick ↑", "R-stick ↑", "R-stick ↑"),
+        (RightStickDown, "R-stick ↓", "R-stick ↓", "R-stick ↓"),
+        (RightStickLeft, "R-stick ←", "R-stick ←", "R-stick ←"),
+        (RightStickRight, "R-stick →", "R-stick →", "R-stick →"),
+    ];
+    assert_eq!(table.map(|row| row.0), Button::ALL);
+    for (button, xbox, playstation, nintendo) in table {
+        assert_eq!(PadKind::Xbox.button_name(button), xbox, "{button}");
+        // Steam Deck and unknown pads carry the Xbox letters.
+        assert_eq!(PadKind::Generic.button_name(button), xbox, "{button}");
+        assert_eq!(
+            PadKind::PlayStation.button_name(button),
+            playstation,
+            "{button}"
+        );
+        assert_eq!(PadKind::Nintendo.button_name(button), nintendo, "{button}");
+    }
+}
+
+/// On a Nintendo pad the physical right button is the binding position
+/// `South`, so Confirm's default button is the one labelled `A` there, as
+/// in Fire Emblem on Switch.
+#[test]
+fn a_nintendo_pads_right_button_is_its_a() {
+    let nintendo = PadKind::Nintendo;
+    assert_eq!(nintendo.button_name(nintendo.position(East)), "A");
+    assert_eq!(nintendo.button_name(nintendo.position(South)), "B");
+    assert_eq!(nintendo.button_name(nintendo.position(North)), "X");
+    assert_eq!(nintendo.button_name(nintendo.position(West)), "Y");
+}
+
+/// Within one kind of pad, no two buttons share a name.
+#[test]
+fn button_names_are_distinct_on_each_pad() {
+    for kind in KINDS {
+        let mut names: Vec<&str> = Button::ALL.iter().map(|&b| kind.button_name(b)).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), Button::ALL.len(), "{kind:?}");
+    }
+}
+
+/// Every button name, and every name of a set of directions, can be drawn:
+/// a Sony pad's shapes are glyphs of our own in the atlas.
+#[test]
+fn every_button_name_is_in_the_font() {
+    let font = trpg_content::load_embedded().map_or_else(|e| panic!("{e:?}"), |c| c.font);
+    let names = KINDS
+        .into_iter()
+        .flat_map(|kind| Button::ALL.iter().map(move |&b| kind.button_name(b)))
+        .chain(DIRECTION_SETS.map(|(name, _)| name));
+    for name in names {
+        assert!(!name.is_empty());
+        for c in name.chars() {
+            assert!(
+                font.glyphs.contains_key(&c),
+                "{name}: {c:?} is not in the font"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_sets_of_directions_are_each_up_down_left_right() {
+    let sets = DIRECTION_SETS.map(|(name, set)| (name, set.map(Button::name)));
+    assert_eq!(
+        sets,
+        [
+            ("D-pad", ["DpadUp", "DpadDown", "DpadLeft", "DpadRight"]),
+            (
+                "stick",
+                [
+                    "LeftStickUp",
+                    "LeftStickDown",
+                    "LeftStickLeft",
+                    "LeftStickRight"
+                ]
+            ),
+            (
+                "R-stick",
+                [
+                    "RightStickUp",
+                    "RightStickDown",
+                    "RightStickLeft",
+                    "RightStickRight"
+                ]
+            ),
+        ]
+    );
+}
+
+#[test]
+fn the_pad_holding_a_button_is_the_first_connected_that_does() {
+    let mut p = pads();
+    let sony = PadKind::PlayStation;
+    let connected = [
+        (4, PadKind::Nintendo, holding(&[West])),
+        (2, sony, holding(&[South, West])),
+        (9, PadKind::Xbox, left_at(-1.0, 0.0)),
+    ];
+    p.update(&connected);
+    // A Nintendo pad's left button is still `West`; its `South` would be
+    // its right button.
+    assert_eq!(p.kind_holding(West, &connected), Some(PadKind::Nintendo));
+    assert_eq!(p.kind_holding(South, &connected), Some(sony));
+    assert_eq!(
+        p.kind_holding(LeftStickLeft, &connected),
+        Some(PadKind::Xbox)
+    );
+    assert_eq!(p.kind_holding(North, &connected), None);
+    // A pad `update` hasn't seen holds nothing yet.
+    let late = [(5, PadKind::Xbox, holding(&[North]))];
+    assert_eq!(p.kind_holding(North, &late), None);
+    assert_eq!(pads().kind_holding(South, &connected), None);
+}
+
 #[test]
 fn vendor_ids_give_the_pad_kind() {
     assert_eq!(PadKind::from_vendor(0x045e), PadKind::Xbox);
@@ -428,7 +577,7 @@ fn actions_of(kind: PadKind, buttons: &[Button]) -> Vec<Vec<Action>> {
     let mut frame = |state: PadState| {
         for (button, pressed) in p.update(&[(0, kind, state)]) {
             if pressed {
-                input.pad_down(button);
+                input.pad_down(button, kind);
             } else {
                 input.pad_up(button);
             }
@@ -477,7 +626,7 @@ fn the_left_stick_moves_the_cursor_and_the_right_stick_does_nothing() {
     let mut frame = |state: PadState, dt: f32| {
         for (button, pressed) in p.update(&[xbox(state)]) {
             if pressed {
-                input.pad_down(button);
+                input.pad_down(button, PadKind::Xbox);
             } else {
                 input.pad_up(button);
             }

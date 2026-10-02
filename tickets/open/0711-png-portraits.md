@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0021", "0110", "0229"]
+blocked_by: ["0021", "0110", "0231"]
 nick_input: sign-off
 completed:
 ---
@@ -28,14 +28,14 @@ drawn at the largest whole scale that fits, **5×5 console px per image
 pixel**, takes 240×240 px, centred in that frame with an 8 px margin. So the
 dialogue layout (0704) doesn't change. Cells can't hold pixels of different
 colours at that grain, so each portrait is drawn as **one sprite item**
-(0229, ADR-0038: `GlyphBuffer::add_sprite`, `Sprite`), which `app` draws
+(0231, ADR-0038: `GlyphBuffer::add_sprite`, `Sprite`), which `app` draws
 from the PNG as a texture.
 
 **Changed 2026-10-01 (ADR-0038):** this ticket used to draw each face as one
 solid rectangle per run of same-coloured pixels (over a thousand overlays a
 face, each a line in every snapshot). Pictures are now sprite items, so
-0229 was added to `blocked_by`, and `content` no longer decodes pixels: it
-reads each PNG's size from 0229's image table.
+0231 was added to `blocked_by`, and `content` no longer decodes pixels: it
+reads each PNG's size from 0231's image table.
 
 The store's face sets are RPG Maker MV/MZ files: a **576×288 sheet, a 4×2
 grid of 144×144 cells**, each face drawn at 3× (so 48×48 underneath). Check
@@ -61,7 +61,7 @@ bought portraits, speaker and dimmed listener, next to one with the old art.
 **In:**
 - Portraits as **PNG files** (RGBA, native pixel size, 48×48 for Tiny
   Tales), drawn at the largest whole scale that fits 256×256 console px and
-  centred in the frame. `content` reads only each file's size (0229's
+  centred in the frame. `content` reads only each file's size (0231's
   `Content::images`); `app` decodes and draws it. Colours come from the
   image itself, not `palette.ron`.
 - A sidecar per character, `assets/portraits/<id>.ron`, mapping our
@@ -94,12 +94,12 @@ repo (0110); theme recolouring of portraits.
 ## Implementation steps
 
 1. ADR first: the format and the drawing (a sprite is already one line in
-   `GlyphBuffer::to_snapshot`, from 0229).
+   `GlyphBuffer::to_snapshot`, from 0231).
 2. `trpg_content::portrait`: the sidecar loader and validator, checking each
    named PNG against `Content::images`. `Content::portraits` stays keyed by
    character id.
 3. `trpg_ui::portrait::draw_portrait`: same signature, one sprite item for
-   a PNG portrait. Clipping is the sprite's `clip`, as 0229 defines it.
+   a PNG portrait. Clipping is the sprite's `clip`, as 0231 defines it.
 4. Portrait viewer (0703) and dialogue screen (0704) keep working unchanged.
    Check both.
 5. The importer xtask, with tests on a small fixture face set (a made-up

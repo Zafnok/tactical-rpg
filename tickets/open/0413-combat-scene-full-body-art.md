@@ -6,7 +6,7 @@ milestone: M3 Battle UI
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0404", "0021", "0035", "0110", "0711", "0229"]
+blocked_by: ["0404", "0021", "0035", "0110", "0711", "0231"]
 nick_input: decision
 completed:
 ---
@@ -25,7 +25,7 @@ full-body while the strikes play out.
 doesn't want Claude-drawn character art (0021). His words: "I guess we need
 an itch artist who has a pack with portraits and battle sprites". 0110 keeps
 the bought files in the private assets repo, and 0711 draws bought PNG art
-as sprite items (0229, ADR-0038; changed 2026-10-01 from per-pixel
+as sprite items (0231, ADR-0038; changed 2026-10-01 from per-pixel
 overlays). This ticket reuses that drawing for the fighters: each fighter
 is one sprite item, moved by changing its `dest`.
 
@@ -101,7 +101,7 @@ combat rules; buying anything.
    does (mirror one fighter with `flip_x` so they face each other). If a
    motion Nick picks needs something a sprite item can't do yet (a flash
    to white, a tint), add it to `Sprite` here (the item, `app`'s renderer,
-   the snapshot line and, if done, 0230's PNG renderer) and note it in
+   the snapshot line and, if done, 0232's PNG renderer) and note it in
    ADR-0038's section 2; never fall back to per-pixel rectangles. Honour the
    `combat_animations` setting (off = 0404's plain box). The setting comes
    from the Options menu (0805), which this ticket doesn't wait for: if

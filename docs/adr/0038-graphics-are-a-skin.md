@@ -2,12 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
-- **Related tickets:** 0229, 0230, 0432, 0433, 0434, 0711, 0413, 1006, 0228,
+- **Related tickets:** 0231, 0232, 0432, 0433, 0434, 0711, 0413, 1006, 0228,
   0817, 0813, 0505, 0508
 - **Extends:** ADR-0003 (the frame gains images), ADR-0007 (what snapshots
   show), ADR-0018 (the map's look becomes one skin among several)
 
-(ADR-0036 and ADR-0037 are taken by pull requests open on 2026-10-01.)
+(ADR-0037 is left for a pull request open on 2026-10-01.)
 
 ## Context
 
@@ -57,7 +57,7 @@ for sprites from image files must be a small job, not an engine rewrite
 ### 2. The frame holds three kinds of item
 
 `GlyphBuffer` keeps its name and its cells and rectangles, and gains
-**sprite items** (0229): a picture from an asset file, named by its path in
+**sprite items** (0231): a picture from an asset file, named by its path in
 the asset bundle, with a source rectangle, a destination rectangle in console
 pixels, a layer, a left-right flip and an opacity. `app` draws it from a
 texture. A sprite is one line in a snapshot, so tests stay readable text.
@@ -102,7 +102,7 @@ reachable only from debug tools.
   tiles fit on screen; never the battle state, the events, the sounds or
   the tile the cursor is on. A test in 0433 plays one script under each
   skin and compares them.
-- **Looking at a frame needs no window:** `cargo xtask frame-png` (0230)
+- **Looking at a frame needs no window:** `cargo xtask frame-png` (0232)
   renders any Harness frame, sprites included, to a PNG. Claude uses it to
   check a look and to make pictures for Nick. The browser pane on the web
   build remains the end-to-end check of `app`.
