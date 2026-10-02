@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: medium
 status: todo
-blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435", "0714", "0715", "0716"]
+blocked_by: ["0803", "0802", "0602", "0307", "0406", "0107", "0108", "0414", "0417", "0424", "0425", "0710", "0807", "0814", "0215", "0809", "0810", "0413", "0035", "0316", "0231", "0435", "0714", "0715", "0716", "0436", "0437"]
 nick_input: sign-off
 completed:
 ---
@@ -45,6 +45,13 @@ companion who dies in the battle still talks in the victory scene; 0715
 lets a script mark lines by who is still in the army, and 0716 rewrites
 the Chapter 1 scenes with it. Nick hasn't been asked whether the playtest
 should wait for these; drop them from `blocked_by` if he says no.
+
+**Blockers added 2026-10-02 (ticket 0038):** 0436 and 0437, the battle
+map drawn with the bought unit sprites and tilesets. Nick bought the art
+that day and, asked whether the playtest waits for the bought-art map,
+answered "A" (yes). They bring 0432 and 0433 (the map skin) with them.
+Per-map lighting (0438) and the zoom toggle (0439) were not part of the
+question and don't block the playtest.
 
 ## Nick input
 

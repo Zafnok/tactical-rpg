@@ -51,11 +51,52 @@ weapon type (weapon types have their own rules).
 Nick wants this scene in the Chapter 1 playtest (2026-10-01), so 0804 waits
 for this ticket.
 
+**Changed 2026-10-02 (ticket 0038).** Nick bought the whole Mega Tiles
+bundle and saw two mockups of this scene made from the real files, with a
+bought battle background behind the fighters: G1a, in today's 44-cell box
+over the map, art at its own size (a 336×248 background fits the box
+almost exactly), and G1b, filling the screen with the art at double size.
+His words: "for G1a and G1b I think both are a little off. The main thing
+that's off though is that you put the enemy facing backwards... let's
+always mirror the image to face the player when battling. Other than
+that, I worry G1b won't be able to convey all the info, but maybe it can
+work with some additional in-battle overlays or pop up messages".
+
+- **Decided: the two fighters always face each other**; a picture facing
+  the wrong way is mirrored (`look-and-feel.md`, *Combat screen*). Every
+  still battle picture looked at on the bought files (the heroes and the
+  Vol.1, 4 and 5 classes) **faces right as bought**, so the fighter on the
+  right is the one to mirror. Check each picture when importing it; the
+  sidecar's "which way it faces" field (step 2) is what the game reads.
+- **Still open, ask in this ticket:** box or full screen, and if full
+  screen, what overlays or pop-up messages carry the information the box
+  shows today (names, HP, hit, damage, crit, the strike text); whether a
+  bought background is drawn behind the fighters at all. Show both layouts
+  again with the facing fixed.
+- **What the bundle has for backgrounds:** *Battlebacks Vol.1*, 24
+  pictures of 336×248: desert, oasis, two fields, meadows, two mountains
+  and wasteland, each at day, dusk and night. Nothing indoors, no forest
+  interior, no town, no bridge or water. If backgrounds are in, which one
+  a fight uses follows the terrain the defender stands on and the map's
+  light (ticket 0438: noon → day, dusk → dusk, night → night); say which
+  terrains have no fitting picture and what they fall back to.
+- **Sizes found:** hero pictures are 64–128 wide and 72–80 tall; class
+  pictures 48–128 by 48–96; the *Gods and Gallants* and *Epic Monsters*
+  pictures are much bigger (up to 221×184), so a boss from those towers
+  over a hero at the same scale.
+- The still battle pictures are sorted on Nick's machine in
+  `D:\tactical-rpg\Tiny Tales Bundle Assets\characters\` (`heroes/<Name>/
+  battler.png`, `battler-classes/<pack>/<Name>/battler.png`).
+
 ## Nick input
 
 **Decision** (use `ask-nick`, with rendered mockups made from the bought
 sprites). Ask only what 0021 didn't settle and the packs allow:
 
+- where the scene is shown: the box over the map or the full screen, with
+  the facing fixed, and what tells the player the numbers in the
+  full-screen version (see *Changed 2026-10-02* above);
+- whether a bought battle background is drawn behind the fighters;
 - how big the fighters are on screen (the whole-number scales that fit the
   images' real size in the battle screen);
 - the motions: how far the lunge goes, flash colour, shake, the miss and

@@ -27,6 +27,14 @@ Constraints:
   portraits, so Claude-drawn backgrounds may clash in the same way; say so
   honestly and show them next to the bought portraits.
 - Any bought art follows ADR-0032 and the private assets repo (0110).
+- **Already bought (2026-10-02):** the Mega Tiles bundle includes
+  *Battlebacks Vol.1*: 24 backgrounds, 336×248 pixels, eight outdoor places
+  (desert, oasis, two fields, meadows, two mountains, wasteland) each at
+  day, dusk and night, and the Tower tileset's three sky pictures (384×512).
+  There is nothing indoors and no village or town picture. The tilesets
+  (Overworld, Dungeons 1 and 2, Tower) can also be laid out as a room or a
+  yard and used as a backdrop. Show both under option C before looking for
+  more packs.
 - Glyph-drawn art is the game's own style (ADR-0018).
 
 ## Nick input
