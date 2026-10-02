@@ -296,17 +296,14 @@ impl Screen for DialogueScreen {
     }
 }
 
-/// A character's display name: the name the player gave the lead, else
-/// the character entry's (their id if they have none).
+/// A character's or speaker's display name: the name the player gave the
+/// lead, else their entry in the names table (their id if they have none).
 fn display_name<'a>(ctx: &'a Ctx, lead: &'a LeadProfile, portrait: Portrait<'a>) -> &'a str {
     if portrait.character.0 == LEAD_ID {
         return &lead.name;
     }
-    ctx.content
-        .characters
-        .characters
-        .get(portrait.character)
-        .map_or(portrait.character.0.as_str(), |c| c.name.as_str())
+    let id = portrait.character.0.as_str();
+    ctx.content.names.get(id).unwrap_or(id)
 }
 
 /// One side's frame, portrait (the lead's by gender) and name plate.

@@ -85,6 +85,7 @@ pub(crate) fn start(units: Vec<Unit>) -> BattleState {
         rewind_charges: 0,
         seed: 1,
         triggers: vec![],
+        battle_notes: vec![],
         mode: GameMode::Classic,
         battle_notes: vec![],
     });
