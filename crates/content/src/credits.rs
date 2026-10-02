@@ -278,6 +278,7 @@ mod tests {
             file: "a.ogg".into(),
             volume: 100,
             looped: true,
+            length_ms: 1000,
             credit,
         }
     }

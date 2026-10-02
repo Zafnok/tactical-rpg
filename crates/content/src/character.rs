@@ -922,6 +922,12 @@ mod tests {
 
     /// The placeholder file loads, and every entry makes a valid unit with
     /// its loadout.
+    /// Whether `unit` has something to fight with: a weapon equipped, or a
+    /// learned spell (a spell-only caster equips one when a battle starts).
+    fn armed(unit: &Unit) -> bool {
+        unit.loadout.equipped.is_some() || !unit.learned.is_empty()
+    }
+
     #[test]
     fn embedded_characters_load_and_make_units() {
         let classes = classes();
@@ -941,10 +947,11 @@ mod tests {
                 "test_archer",
                 "test_knight",
                 "test_lord",
+                "test_mage",
                 "test_rogue"
             ]
         );
-        assert_eq!(t.generics.len(), 2);
+        assert_eq!(t.generics.len(), 3);
         let lords: Vec<&str> = t
             .characters
             .values()
@@ -961,15 +968,26 @@ mod tests {
                 Faction::Player,
                 Pos::new(0, 0),
             );
-            assert!(
-                unit.is_ok_and(|u| u.loadout.equipped.is_some()),
-                "{}",
-                def.id.0
-            );
+            assert!(unit.is_ok_and(|u| armed(&u)), "{}", def.id.0);
         }
         for g in t.generics.values() {
             let unit = g.unit(UnitId(0), &classes, &items, Faction::Enemy, Pos::new(0, 0));
-            assert!(unit.is_ok_and(|u| u.loadout.equipped.is_some()), "{}", g.id);
+            assert!(unit.is_ok_and(|u| armed(&u)), "{}", g.id);
         }
+        // The Quick Battle's caster: Fire from its class, Frost and Heal
+        // of its own.
+        let mage = &t.characters[&CharacterId("test_mage".into())];
+        let mage = character_unit(
+            mage,
+            UnitId(0),
+            &classes,
+            &items,
+            Faction::Player,
+            Pos::new(0, 0),
+        );
+        let spells: Vec<String> = mage
+            .map(|u| u.learned.iter().map(|s| s.0.clone()).collect())
+            .unwrap_or_default();
+        assert_eq!(spells, ["fire", "frost", "heal"]);
     }
 }

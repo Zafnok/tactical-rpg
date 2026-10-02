@@ -17,5 +17,6 @@
     clear_gold: 500,
     objective: Seize(pos: (5, 5), by_lord: true, turn_limit: Some(3)),
     difficulty: Normal,
+    music: Pool("skirmish"),
     seed: 1,
 )

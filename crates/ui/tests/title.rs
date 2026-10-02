@@ -126,8 +126,14 @@ fn the_title_asks_for_its_music_once() {
         }]
     );
     // Moving around the menu doesn't ask again.
-    h.keys("Down Up f d");
+    h.keys("Down Up");
     assert_eq!(music(&h), ["title"]);
+    // Back from New Game it asks again (its battles change the music),
+    // which doesn't restart a track that is still playing.
+    h.clear_audio();
+    h.keys("f d").wait(0.1);
+    assert_eq!(music(&h), ["title"]);
+    assert!(h.music_commands().is_empty(), "{:?}", h.music_commands());
 }
 
 /// Menu sounds (ticket 0425): the highlight moving, choosing, backing out;
@@ -215,7 +221,14 @@ fn back_on_the_web_title_shows_the_menu_not_the_prompt() {
     h.keys("f f d");
     assert_eq!(h.top_screen(), "title");
     assert_eq!(h.snapshot(), title().snapshot());
-    assert_eq!(music(&h), ["title"]);
+    // Asked for again on the way back from New Game (0807), which the
+    // track still playing ignores.
+    assert_eq!(music(&h), ["title", "title"]);
+    let starts = h
+        .music_commands()
+        .iter()
+        .filter(|c| matches!(c, trpg_ui::audio::MusicCommand::Start { .. }));
+    assert_eq!(starts.count(), 1, "{:?}", h.music_commands());
 }
 
 #[test]

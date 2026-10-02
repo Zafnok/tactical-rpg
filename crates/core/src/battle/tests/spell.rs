@@ -385,6 +385,21 @@ fn heal_reproduces_example_m3() {
 }
 
 #[test]
+fn a_heal_preview_is_the_hp_the_cast_would_restore() {
+    let s = clinic();
+    let before = s.clone();
+    let preview = |target| s.preview_heal(UnitId(2), p(1, 1), &cast_on("heal", target));
+    // Example M3: 15 on the ally at 10/25, only the 5 missing at 20/25.
+    assert_eq!(preview(5), Some(15));
+    assert_eq!(preview(7), Some(5));
+    // Refused casts (full HP, an enemy) and other actions: none.
+    assert_eq!(preview(6), None);
+    assert_eq!(preview(9), None);
+    assert_eq!(s.preview_heal(UnitId(2), p(1, 1), &UnitAction::Wait), None);
+    assert_eq!(s, before);
+}
+
+#[test]
 fn heal_target_errors_leave_the_state_unchanged() {
     let mut s = clinic();
     let heal = |target| cast_on("heal", target);

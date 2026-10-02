@@ -18,6 +18,7 @@ fn refs(c: &Content) -> BattleRefs<'_> {
         items: &c.items,
         characters: &c.characters,
         dialogue: &c.dialogue,
+        audio: &c.audio,
     }
 }
 
@@ -44,6 +45,7 @@ const OK: &str = r#"(
     objective: DefeatUnit(unit: "test_rogue", turn_limit: Some(9)),
     triggers: [(when: TurnStart(turn: 1, phase: Player), scene: "test", once: true)],
     difficulty: Hard,
+    music: Cue("battle_bright"),
     seed: 42,
 )"#;
 
@@ -122,6 +124,7 @@ fn a_valid_battle_loads() {
         }
     );
     assert_eq!(def.difficulty, Difficulty::Hard);
+    assert_eq!(def.music, BattleMusic::Cue("battle_bright".into()));
     assert_eq!(def.seed, 42);
 }
 
@@ -134,6 +137,7 @@ fn defaults_fill_what_a_battle_leaves_out() {
         player_slots: [(character: "lead", pos: (3, 5))],
         objective: Seize(pos: (5, 5)),
         difficulty: Easy,
+        music: Pool("skirmish"),
         seed: 0,
     )"#;
     let def = load(&c, source).unwrap_or_else(|e| panic!("{e:?}"));
@@ -181,6 +185,49 @@ fn file_level_errors() {
     let e = load(&c, "(id: 1)").err().unwrap_or_default();
     assert_eq!(e.len(), 1);
     assert_eq!(e[0].line, Some(1));
+}
+
+/// The battle's music is required, and names a music cue or a pool of the
+/// audio manifest (a sound cue is neither).
+#[test]
+fn music_errors() {
+    let c = content();
+    let cue = "music: Cue(\"battle_bright\")";
+    let pool = OK.replacen(cue, "music: Pool(\"skirmish\")", 1);
+    let def = load(&c, &pool).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(def.music, BattleMusic::Pool("skirmish".into()));
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"nope\")"),
+        ["music: no music cue \"nope\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Pool(\"nope\")"),
+        ["music: no music pool \"nope\""]
+    );
+    // A pool isn't a cue, nor a cue a pool, nor a sound music.
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"skirmish\")"),
+        ["music: no music cue \"skirmish\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Pool(\"battle_bright\")"),
+        ["music: no music pool \"battle_bright\""]
+    );
+    assert_eq!(
+        errors(&c, cue, "music: Cue(\"menu_move\")"),
+        ["music: no music cue \"menu_move\""]
+    );
+    let missing = errors(
+        &c,
+        "    music: Cue(\"battle_bright\"),
+",
+        "",
+    );
+    assert_eq!(missing.len(), 1, "{missing:?}");
+    assert!(
+        missing[0].contains("missing field named `music`"),
+        "{missing:?}"
+    );
 }
 
 #[test]
@@ -351,6 +398,42 @@ fn reinforcements_are_numbered_in_order() {
 }
 
 #[test]
+fn a_slot_marked_after_enemies_is_numbered_after_them() {
+    let c = content();
+    let late = OK.replace(
+        "(character: \"test_knight\", pos: (3, 6))",
+        "(character: \"test_knight\", pos: (3, 6), after_enemies: true),
+                 (character: \"test_lord\", pos: (2, 6), after_enemies: true)",
+    );
+    let def = load(&c, &late).unwrap_or_else(|e| panic!("{e:?}"));
+    let slots: Vec<_> = def
+        .player_slots
+        .iter()
+        .map(|s| (s.character.0.as_str(), s.id.0))
+        .collect();
+    // The lead first, the enemy, then the two marked slots in order, then
+    // the reinforcement.
+    assert_eq!(slots, [("lead", 1), ("test_knight", 3), ("test_lord", 4)]);
+    assert_eq!(def.enemies[0].id, UnitId(2));
+    assert_eq!(def.reinforcements[0].unit.id, UnitId(5));
+    // A marked slot before an unmarked one: the unmarked one still counts
+    // from 1.
+    let mixed = OK.replace(
+        "(character: \"lead\", pos: (3, 5))",
+        "(character: \"lead\", pos: (3, 5), after_enemies: true)",
+    );
+    let def = load(&c, &mixed).unwrap_or_else(|e| panic!("{e:?}"));
+    let ids: Vec<u32> = def.player_slots.iter().map(|s| s.id.0).collect();
+    assert_eq!(ids, [3, 1]);
+    assert_eq!(def.enemies[0].id, UnitId(2));
+    assert_eq!(def.reinforcements[0].unit.id, UnitId(4));
+    // Unmarked slots are numbered in order.
+    let plain = load(&c, OK).unwrap_or_else(|e| panic!("{e:?}"));
+    let ids: Vec<u32> = plain.player_slots.iter().map(|s| s.id.0).collect();
+    assert_eq!(ids, [1, 2]);
+}
+
+#[test]
 fn pack_errors() {
     let c = content();
     // A full pack is fine.
@@ -401,4 +484,8 @@ fn embedded_battles_load() {
     for (id, def) in &c.battles {
         assert_eq!(&def.id, id);
     }
+    // The placeholders are test skirmishes.
+    let skirmish = BattleMusic::Pool("skirmish".into());
+    assert_eq!(quick.music, skirmish);
+    assert_eq!(c.battles["test"].music, skirmish);
 }

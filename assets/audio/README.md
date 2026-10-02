@@ -33,7 +33,9 @@ crashes it, so the checks below read every file's header.
     ],
     music: [
         // file: relative to music/. Loops unless `looped: false`.
-        (id: "title", file: "new_sunrise_v1.ogg", volume: 100, credit: Credit("new_sunrise")),
+        // length_ms: how long the file plays, in milliseconds.
+        (id: "title", file: "new_sunrise_v1.ogg", volume: 100, length_ms: 133743,
+         credit: Credit("new_sunrise")),
     ],
     pools: [
         // Music cues one is picked from (e.g. skirmish battles).
@@ -55,6 +57,12 @@ crashes it, so the checks below read every file's header.
   (ADR-0013, ADR-0027). A credit that isn't `Own` needs a `title`, an
   `author` and a `source` link. The license texts are in `licenses/`.
 - Every cue id (sounds, music and pools together) is unique.
+- `length_ms` is the track's real length: screens that keep time with the
+  music wrap their clock there
+  ([ADR-0037](../../docs/adr/0037-music-clock.md)). Don't work it out by
+  hand: write any number but 0, run `cargo test -p trpg-content`, and copy
+  the value from the failure (`... it plays for 133743 ms ... write
+  length_ms: 133743`). The same goes for a track that is re-cut.
 
 ## Third-party files
 
@@ -67,7 +75,8 @@ work to `THIRD_PARTY_ASSETS.md` too.
 
 `cargo test -p trpg-content` refuses: a duplicate id, an unknown or missing
 file, a wrong file format (by extension and by header; wrong sample rate or
-channel count), a volume over 100, a disallowed license, a credit
+channel count), a music `length_ms` of 0 or more than 20 ms from its
+file's length, a volume over 100, a disallowed license, a credit
 without title/author/link, an unknown credit (or an empty `Credits` list),
 and a pool that is empty or names anything but a music cue. The game
 checks the embedded sounds at start-up; the music folder is checked by the
