@@ -1,6 +1,6 @@
 ---
 source: crates/ui/src/screens/battle/mod.rs
-expression: buf.to_snapshot(&c.palette)
+expression: "render(&s, &c).to_snapshot(&c.palette)"
 ---
 ^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣┌────────────────────────────┐
 ^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣♣♣♣♣······≈≈≈≈≈≈^^^^^^......♣♣│ Plain                      │
@@ -84,8 +84,8 @@ m = fg:enemy bg:grass_bg
 n = fg:text bg:black
 o = fg:text_dim bg:black
 --- overlays ---
-over  16,46 16x2  hp_high
-over  544,478 16x2  hp_high
+over  17,46 14x2  hp_high
+over  545,478 14x2  hp_high
 over  543,464 3x1  cursor
 over  543,464 1x3  cursor
 over  557,464 3x1  cursor

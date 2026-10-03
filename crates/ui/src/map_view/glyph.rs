@@ -389,8 +389,9 @@ pub(crate) mod tests {
         expect.extend([path; 6]);
         expect.extend([pal.get(UiColor::Cursor); 8]);
         assert_eq!(colors, expect);
-        // The HP bar under the unit: cells 14..16 of row 5.
-        assert_eq!(buf.overlays()[0].rect, Rect::new(112, 94, 16, 2));
+        // The HP bar under the unit: cells 14..16 of row 5, a pixel in
+        // from each side.
+        assert_eq!(buf.overlays()[0].rect, Rect::new(113, 94, 14, 2));
     }
 
     #[test]

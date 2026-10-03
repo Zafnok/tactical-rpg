@@ -292,8 +292,8 @@ table. The corner mark was only ever in a throwaway build.
   cells replace it, what stands past its edges goes too.
 - The sign-off frame shows the knight braced and the archer's Pinning
   Shot, not the lord's fight, so both arrows are in it.
-- 0441 isn't done: the glyph look's bar is untouched. It can reuse
-  `sprite::units::hp_bar`.
+- 0441 landed on `main` while this was in work: both looks share the
+  bar's inset, height and fill (`hp_fill`).
 
 **Claude's starting rules (veto any):**
 

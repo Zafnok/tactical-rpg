@@ -15,6 +15,7 @@ mod key_bindings_screen;
 mod layout_picker;
 mod map_skin;
 mod save;
+mod scene_camera;
 mod split_keys;
 mod sprite_test;
 mod title;

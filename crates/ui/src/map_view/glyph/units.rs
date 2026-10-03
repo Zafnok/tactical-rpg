@@ -1,7 +1,7 @@
 //! How the glyph skin draws a unit (ADR-0018, `docs/design/look-and-feel.md`):
 //! its two-letter map label in its faction colour on the terrain background,
 //! dimmed once it has acted (the label keeps its case), and a 2-px HP bar
-//! along the bottom of its tile.
+//! along the bottom of its tile, one pixel in from each side.
 
 use trpg_core::StatValue;
 
@@ -12,8 +12,13 @@ use crate::glyph_buffer::{Cell, GlyphBuffer, Layer, Overlay, Rect};
 use crate::map_view::scene::UnitView;
 use crate::screens::battle::units::{faction_color, hp_fill};
 
-/// Full HP bar length, in pixels: the tile's width (two 8-px cells).
-const HP_BAR_W: i32 = 16;
+/// How far the HP bar stops short of each side of its tile, in pixels, so
+/// the bars of units standing side by side don't run together.
+pub const HP_BAR_INSET: i32 = 1;
+
+/// Full HP bar length, in pixels: the tile's width (two 8-px cells) less
+/// the inset on each side.
+const HP_BAR_W: i32 = 14;
 
 /// HP bar thickness, in pixels, at the bottom of the tile.
 pub const HP_BAR_H: i32 = 2;
@@ -26,7 +31,7 @@ pub const ACTED_DIM: f32 = 0.5;
 /// glyphs' background (`0` = none, `1` = all of it). *Tunable.*
 pub const EFFECT_BLEND: f32 = 0.8;
 
-/// The filled length of the HP bar (`round(16 × hp / max)`, in `0..=16`)
+/// The filled length of the HP bar (`round(14 × hp / max)`, in `0..=14`)
 /// and its colour: see [`hp_fill`].
 pub fn hp_bar(hp: StatValue, max: StatValue) -> (i32, UiColor) {
     hp_fill(hp, max, HP_BAR_W)
@@ -76,10 +81,10 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i
         } else {
             cell.bg
         };
-        buf.set(x + i, y, Cell { glyph, fg, bg });
+        buf.set(x + i, y, Cell::new(glyph, fg, bg));
     }
     let (width, color) = hp_bar(unit.hp.0, unit.hp.1);
-    let px = x * i32::from(CELL_W_PX);
+    let px = x * i32::from(CELL_W_PX) + HP_BAR_INSET;
     let py = (y + 1) * i32::from(CELL_H_PX) - HP_BAR_H;
     let bar = |bx: i32, w: i32, c: UiColor| {
         let color = palette.get(c).lerp(tile_bg, k);
@@ -157,24 +162,28 @@ mod tests {
     }
 
     #[test]
-    fn hp_bar_spans_the_tile() {
-        assert_eq!(HP_BAR_W, TILE_W_CELLS * i32::from(CELL_W_PX));
+    fn hp_bar_spans_the_tile_less_a_pixel_each_side() {
+        let tile = TILE_W_CELLS * i32::from(CELL_W_PX);
+        assert_eq!(HP_BAR_INSET, 1);
+        assert_eq!(HP_BAR_W, tile - 2 * HP_BAR_INSET);
+        assert_eq!(HP_BAR_W, 14);
     }
 
     #[test]
     fn hp_bar_at_the_thresholds() {
         use UiColor::{HpHigh, HpLow, HpMid};
-        assert_eq!(hp_bar(30, 30), (16, HpHigh));
-        assert_eq!(hp_bar(21, 30), (11, HpHigh)); // 11.2
-        assert_eq!(hp_bar(20, 30), (11, HpMid)); // exactly 2/3: 10.67
-        assert_eq!(hp_bar(11, 30), (6, HpMid)); // 5.87
-        assert_eq!(hp_bar(10, 30), (5, HpLow)); // exactly 1/3: 5.33
-        assert_eq!(hp_bar(1, 30), (1, HpLow)); // 0.53 rounds up
-        assert_eq!(hp_bar(1, 40), (0, HpLow)); // 0.4 rounds down
+        assert_eq!(hp_bar(30, 30), (14, HpHigh));
+        assert_eq!(hp_bar(21, 30), (10, HpHigh)); // 9.8
+        assert_eq!(hp_bar(20, 30), (9, HpMid)); // exactly 2/3: 9.33
+        assert_eq!(hp_bar(15, 30), (7, HpMid)); // half
+        assert_eq!(hp_bar(11, 30), (5, HpMid)); // 5.13
+        assert_eq!(hp_bar(10, 30), (5, HpLow)); // exactly 1/3: 4.67
+        assert_eq!(hp_bar(1, 20), (1, HpLow)); // 0.7 rounds up
+        assert_eq!(hp_bar(1, 30), (0, HpLow)); // 0.47 rounds down
         assert_eq!(hp_bar(0, 30), (0, HpLow));
-        assert_eq!(hp_bar(1, 32), (1, HpLow)); // exactly 0.5 rounds up
+        assert_eq!(hp_bar(1, 28), (1, HpLow)); // exactly 0.5 rounds up
         assert_eq!(hp_bar(-5, 30), (0, HpLow));
-        assert_eq!(hp_bar(99, 30), (16, HpHigh));
+        assert_eq!(hp_bar(99, 30), (14, HpHigh));
         assert_eq!(hp_bar(5, 0), (0, HpLow));
         assert_eq!(hp_bar(5, -3), (0, HpLow));
     }
@@ -207,12 +216,30 @@ mod tests {
         let bar = |x, w, c| Overlay::new(Rect::new(x, 30, w, 2), p.get(c), Layer::Over);
         assert_eq!(
             b.overlays(),
-            [bar(8, 11, UiColor::HpMid), bar(19, 5, UiColor::Black)]
+            [bar(9, 9, UiColor::HpMid), bar(18, 5, UiColor::Black)]
         );
+    }
+
+    /// The bar is the rectangle `(tile x + 1, tile bottom - 2, 14, 2)`: here
+    /// the tile's left edge is at pixel 8 and its bottom at pixel 32.
+    #[test]
+    fn hp_bar_is_14_pixels_wide_one_pixel_in_from_each_side() {
+        let p = game_palette();
+        let bar = |x, w, c| Overlay::new(Rect::new(x, 30, w, 2), p.get(c), Layer::Over);
         let full = drawn(&unit("Br", 30, 30, false));
-        assert_eq!(full.overlays(), [bar(8, 16, UiColor::HpHigh)]);
+        assert_eq!(full.overlays(), [bar(9, 14, UiColor::HpHigh)]);
+        let half = drawn(&unit("Br", 15, 30, false));
+        assert_eq!(
+            half.overlays(),
+            [bar(9, 7, UiColor::HpMid), bar(16, 7, UiColor::Black)]
+        );
+        let one = drawn(&unit("Br", 1, 20, false));
+        assert_eq!(
+            one.overlays(),
+            [bar(9, 1, UiColor::HpLow), bar(10, 13, UiColor::Black)]
+        );
         let empty = drawn(&unit("Br", 0, 30, false));
-        assert_eq!(empty.overlays(), [bar(8, 16, UiColor::Black)]);
+        assert_eq!(empty.overlays(), [bar(9, 14, UiColor::Black)]);
     }
 
     #[test]
@@ -329,7 +356,7 @@ mod tests {
         assert_eq!(
             b.overlays(),
             [Overlay::new(
-                Rect::new(0, 14, 8, 2),
+                Rect::new(1, 14, 7, 2),
                 p.get(UiColor::HpMid),
                 Layer::Over
             )]

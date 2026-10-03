@@ -1,0 +1,129 @@
+---
+source: crates/ui/tests/it/scene_camera.rs
+expression: four
+---
+  Scene camera (debug)                                                                              
+                                                                                                    
+  zoom 4x   window starts at 64.0,36.0                                                              
+                         ┌────────────────────────────────────────────────┐                         
+                         │ Text over the scene                            │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                                │                         
+                         │                                    ╔══════════════════════╗              
+                         │                                    ║ A text box drawn     ║              
+                         │                                    ║ over the scene       ║              
+                         └────────────────────────────────────║ hides it.            ║              
+                                                              ╚══════════════════════╝              
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  arrows pan (hold) · f zoom · d back                                                               
+--- colours ---
+aabbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacdeeeeeeeeeeeeeeeeeeeddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddddddddddddddcaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddffffffffffffffffffffffffaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddfggggggggggggggggggggggfaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacddddddddddddddddddddddddddddddddddddfggggggggggggggggggggggfaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccccccfggggggggggggggggggggggfaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:panel_border bg:black
+d = fg:text bg:see-through
+e = fg:text_highlight bg:see-through
+f = fg:panel_border_focus bg:panel_bg
+g = fg:text bg:panel_bg
+h = fg:text_dim bg:black
+--- backdrop: clip 26,4 48x14  origin 64.0,36.0  zoom 4 ---
+≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲
+≈≈≈≈≈≈≈≈....······♣♣♣♣^^^^^^
+≈≈≈≈≈≈====······....♣♣♣♣....
+..≈≈≈≈..··..............╦╦..
+....······........▓▓▓▓▓▓▓▓..
+..♣♣··....╦╦......▓▓░░╦╦▓▓..
+♣♣♣♣··............▓▓░░░░▓▓..
+♣♣♠♠··............▓▓▓▓▐▌▓▓..
+--- colours ---
+aaaaaabbbbccccddddeeeeffffgg
+aaaabbbbcccchhhhhhddddffffff
+aabbbbiiiihhhhhhccccddddcccc
+ccbbbbcchhccccccccccccccjjcc
+cccchhhhhhcccccccckkkkkkkkcc
+ccddhhccccjjcccccckklljjkkcc
+ddddhhcccccccccccckkllllkkcc
+ddeehhcccccccccccckkkkmmkkcc
+--- legend ---
+a = fg:water bg:sea
+b = fg:water bg:water_bg
+c = fg:grass bg:grass_bg
+d = fg:forest bg:forest_bg
+e = fg:thicket bg:thicket_bg
+f = fg:mountain bg:mountain_bg
+g = fg:peak bg:peak_bg
+h = fg:road bg:road_bg
+i = fg:wood bg:water_bg
+j = fg:fort bg:fort_bg
+k = fg:stone bg:stone_bg
+l = fg:floor bg:floor_bg
+m = fg:wood bg:stone_bg
+--- overlays ---
+under 48,55 10x3  path
+under 55,55 19x3  path
+under 71,55 3x19  path
+under 71,71 19x3  path
+over  85,67 1x11  path
+over  86,68 1x9  path
+over  87,69 1x7  path
+over  88,70 1x5  path
+over  89,71 1x3  path
+over  90,72 1x1  path
+over  111,48 3x1  cursor
+over  111,48 1x3  cursor
+over  125,48 3x1  cursor
+over  127,48 1x3  cursor
+over  111,61 3x1  cursor
+over  111,59 1x3  cursor
+over  125,61 3x1  cursor
+over  127,59 1x3  cursor

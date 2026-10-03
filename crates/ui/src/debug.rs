@@ -8,12 +8,15 @@
 //! screen opens on a test unit, to promote or reclass it (ticket 0603),
 //! until the between-battle menus exist. "Map skin" switches how battle
 //! maps look between the glyph skin and the test tileset (ticket 0433);
-//! the choice isn't saved.
+//! the choice isn't saved. The scene camera pans and zooms the test map
+//! as a backdrop behind a window (ticket 0228, ADR-0048).
 
 mod portrait_viewer;
+mod scene_camera;
 mod sprite_test;
 
 pub use portrait_viewer::PortraitViewerScreen;
+pub use scene_camera::SceneCameraScreen;
 pub use sprite_test::SpriteTestScreen;
 
 use crate::audio::MenuSound;
@@ -32,17 +35,18 @@ use crate::widgets::{Menu, MenuEvent, MenuItem};
 /// Names of every screen the debug key does nothing on: the debug screens,
 /// and the Key bindings screen (the Debug key is a key like any other while
 /// it captures one, and is refused as reserved).
-pub const SCREENS: [&str; 5] = [
+pub const SCREENS: [&str; 6] = [
     DebugMenuScreen::NAME,
     GlyphSamplerScreen::NAME,
     PortraitViewerScreen::NAME,
     KeyBindingsScreen::NAME,
     SpriteTestScreen::NAME,
+    SceneCameraScreen::NAME,
 ];
 
 /// The debug tools, in menu order, before "Map skin" ([`MAP_SKIN_TOOL`]),
 /// whose label names the skin in use.
-const TOOLS: [&str; 8] = [
+const TOOLS: [&str; 9] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
@@ -51,6 +55,7 @@ const TOOLS: [&str; 8] = [
     "Sprite test",
     "Class change: promote",
     "Class change: reclass",
+    "Scene camera",
 ];
 /// Index of "Key bindings" in [`TOOLS`].
 const KEY_BINDINGS_TOOL: usize = 4;
@@ -60,6 +65,8 @@ const SPRITE_TEST_TOOL: usize = 5;
 const PROMOTE_TOOL: usize = 6;
 /// Index of "Class change: reclass" in [`TOOLS`].
 const RECLASS_TOOL: usize = 7;
+/// Index of "Scene camera" in [`TOOLS`].
+const SCENE_CAMERA_TOOL: usize = 8;
 /// Index of "Map skin" in the menu: after [`TOOLS`].
 const MAP_SKIN_TOOL: usize = TOOLS.len();
 /// The scene the "Play test scene" tools play.
@@ -128,6 +135,9 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(SPRITE_TEST_TOOL)) => {
                     return Transition::Push(Box::new(SpriteTestScreen));
+                }
+                Some(MenuEvent::Chosen(SCENE_CAMERA_TOOL)) => {
+                    return Transition::Push(Box::new(SceneCameraScreen::new(ctx)));
                 }
                 Some(MenuEvent::Chosen(MAP_SKIN_TOOL)) => {
                     switch_skin(ctx);
@@ -489,6 +499,10 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(class_change)"
         );
+        assert_eq!(
+            outcome(&mut menu, &[CursorDown, Confirm]),
+            "Push(scene_camera)"
+        );
         assert_eq!(outcome(&mut menu, &[Cancel, Confirm]), "Pop");
         // Without the test scene, its tools do nothing; nor do the class
         // change tools without their test character.
@@ -508,13 +522,15 @@ mod tests {
                 "glyph_sampler",
                 "portrait_viewer",
                 "key_bindings",
-                "sprite_test"
+                "sprite_test",
+                "scene_camera"
             ]
         );
         assert_eq!(TOOLS[KEY_BINDINGS_TOOL], "Key bindings");
         assert_eq!(TOOLS[SPRITE_TEST_TOOL], "Sprite test");
         assert_eq!(TOOLS[PROMOTE_TOOL], "Class change: promote");
         assert_eq!(TOOLS[RECLASS_TOOL], "Class change: reclass");
+        assert_eq!(TOOLS[SCENE_CAMERA_TOOL], "Scene camera");
     }
 
     #[test]

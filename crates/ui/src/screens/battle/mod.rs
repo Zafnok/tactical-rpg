@@ -60,7 +60,7 @@ use trpg_core::{
 use self::ai_phase::{AiAction, PACING};
 use self::banner::{Banner, BannerKind};
 
-use self::attack::Targeting;
+use self::attack::{Targeting, aimed_first, aimed_options};
 use self::camera::Camera;
 use self::cursor::Cursor;
 use self::event_sounds::CueQueue;
@@ -1180,7 +1180,15 @@ impl BattleScreen {
                     .and_then(|t| self.state.unit(t))
                     .is_some_and(|u| u.pos == self.cursor.pos);
                 if aimed {
-                    help_line(&[moves, select("attack"), cancel("cancel")])
+                    // The forecast opens with a weapon or a spell (0430).
+                    let options = sel.target.map_or_else(Vec::new, |t| {
+                        aimed_options(&self.state, sel.unit, sel.dest(), t)
+                    });
+                    let verb = match aimed_first(&self.state, sel.unit, &options) {
+                        Some(Equipped::Spell(_)) => "cast",
+                        _ => "attack",
+                    };
+                    help_line(&[moves, select(verb), cancel("cancel")])
                 } else if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
                     help_line(&[moves, select("move here"), cancel("cancel")])
                 } else {
@@ -1245,10 +1253,22 @@ impl BattleScreen {
         };
         let confirm = (Some(key_name(km, Action::Confirm)), verb);
         let cancel = (Some(key_name(km, Action::Cancel)), "back");
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
+        if t.can_swap() {
+            // Left and right swap the weapon or spell of a forecast opened
+            // by pointing (0430); the unit keys then change the target.
+            let mut entries = vec![
+                (pair(Action::CursorLeft, Action::CursorRight), "swap"),
+                (pair(Action::PrevUnit, Action::NextUnit), "target"),
+            ];
+            if t.has_list() {
+                entries.push((pair(Action::CursorUp, Action::CursorDown), "art"));
+            }
+            return help_line(&[entries, vec![confirm, cancel]].concat());
+        }
         if !t.has_list() {
             return help_line(&[(Some(cursor_keys_name(km)), "next target"), confirm, cancel]);
         }
-        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
         help_line(&[
             (pair(Action::CursorLeft, Action::CursorRight), "target"),
             (pair(Action::CursorUp, Action::CursorDown), "art"),

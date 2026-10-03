@@ -26,6 +26,10 @@ use crate::history::BattleHistory;
 
 /// The save format this build reads and writes. Raise it whenever a saved
 /// type changes shape or meaning.
+///
+/// The golden saves of `crates/core/tests/it/save_format.rs` fail when a
+/// saved type changed. Then raise `SAVE_VERSION` here, regenerate the
+/// fixtures as `save_v<N>_*.ron` and delete the old ones (ADR-0039).
 pub const SAVE_VERSION: u32 = 1;
 
 /// One save: a slot's chapter save, or the suspend save.

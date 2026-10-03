@@ -7,7 +7,7 @@
   tileset file names, and which skin the game starts with), ADR-0040 (the
   bought map sprites and their tileset are private files)
 
-(Number 0048 is taken by a pull request open on 2026-10-03.)
+(ADR-0048 is the backdrop, from ticket 0228, which landed the same day.)
 
 ## Context
 

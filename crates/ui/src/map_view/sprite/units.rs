@@ -12,7 +12,7 @@ use trpg_content::image::EFFECT_MARKS_PATH;
 use trpg_content::{Picture, Tileset};
 use trpg_core::{CharacterId, Pos};
 
-use super::super::glyph::units::HP_BAR_H;
+use super::super::glyph::units::{HP_BAR_H, HP_BAR_INSET};
 use super::super::grid::Grid;
 use super::super::scene::{MapScene, UnitView};
 use super::{side, src_rect};
@@ -20,10 +20,6 @@ use crate::color::{UiColor, to_channel};
 use crate::glyph_buffer::{GlyphBuffer, Layer, Overlay, Paint, PxRect, Rect, Sprite};
 use crate::screen::Ctx;
 use crate::screens::battle::units::{faction_color, hp_fill};
-
-/// How far the HP bar stops short of each side of its tile, in pixels, so
-/// the bars of units side by side don't run together.
-pub const HP_BAR_INSET: i32 = 1;
 
 /// The side of an effect arrow's box in [`EFFECT_MARKS_PATH`], in pixels:
 /// the 5 × 5 arrow and its 1-pixel dark edge.
@@ -118,7 +114,8 @@ pub fn outline_dests(dest: PxRect) -> [PxRect; 4] {
 }
 
 /// A unit's HP bar on the pixels `tile`: the filled part and the empty
-/// part, along the bottom, [`HP_BAR_INSET`] in from each side.
+/// part, along the bottom, [`HP_BAR_INSET`] in from each side: the glyph
+/// skin's bar (ticket 0441), for any tile size.
 pub fn hp_bar(unit: &UnitView, tile: PxRect) -> [(PxRect, UiColor); 2] {
     let full = (tile.w - 2 * HP_BAR_INSET).max(0);
     let (filled, color) = hp_fill(unit.hp.0, unit.hp.1, full);
