@@ -67,6 +67,10 @@ Follow-ups:
 > agree... but if we have 2 archers and only taking one but the other one
 > has the stronger bow, we should be able to trade their equips around in
 > the prep screen but not once inside battle"
+>
+> **Trades only through the stock?** (2026-10-03, PR #140) "we can have
+> direct unit to unit swaps otherwise I think I agree w your starting
+> rules"
 
 Reference (researched for Nick, 2026-09-25): *Fire Emblem: Fortune's Weave*
 has no weapon triangle. Swords deal 1.2x damage on follow-up strikes, spears
@@ -280,8 +284,8 @@ Nick's shape:
 - Everything not in a loadout is in the party's **stock** (shared,
   unlimited *tunable*).
 
-**On the Preparations screen** (ticket 0408; all *Claude's starting rules*
-unless marked):
+**On the Preparations screen** (ticket 0408; *Claude's starting rules*
+unless marked, which Nick agreed to on PR #140, 2026-10-03):
 
 - The `Loadouts` tab lists **the whole army** (Nick, PR #140): the units
   going into this battle, then the ones left out of it (dimmed, marked
@@ -290,10 +294,14 @@ unless marked):
   can go to the one who fights.
 - Pick a unit, then one of its slots, then an item from the stock: the item
   goes in the slot and what was there goes back to the stock. A weapon
-  keeps its durability either way. A trade is two such steps: put the
-  benched archer's bow back in the stock, then give it to the other
-  (*Claude's starting rule*: trades go through the stock, there is no
-  unit-to-unit swap).
+  keeps its durability either way.
+- **Direct swaps** (Nick, PR #140): the list beside a slot also shows what
+  the other units hold in such a slot (`Steel Bow 25/25 from Test Scout`).
+  Taking one swaps the two units' items in one step: the archer gets the
+  scout's Steel Bow and she gets his Iron Bow. *Claude's starting rules:*
+  if the other unit can't use what comes back (a knight can't wear the
+  lord's Leather Vest), it goes to the stock instead; and the list only
+  shows other units' items that this unit can use.
 - A unit can only be given **gear it can use**: a weapon of a kind its
   class uses, at a rank it has, and armour of a weight its class wears.
   Anything else is shown dimmed with the reason (`needs rank D`,

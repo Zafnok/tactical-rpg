@@ -123,11 +123,18 @@ spare gear, six Potions and two Elixirs to try it with.
    `core::prep::Preparations` holds the setup and the bench;
    `Campaign::bench` / `set_members` carry the bench in and out.
 
-**Claude's starting rules** (Nick may veto)
+5. (PR #140, 2026-10-03) "we can have direct unit to unit swaps otherwise
+   I think I agree w your starting rules". So the list beside a slot also
+   shows what the other units hold in such a slot
+   (`Steel Bow 25/25 from Test Scout`), and taking one swaps the two
+   units' items in one step (`Preparations::gear_from_unit`).
 
-1. **Trades go through the stock:** to give the benched scout's Steel Bow
-   to the archer, put it back in the stock from her slot, then take it
-   from the stock into his. There is no direct unit-to-unit swap.
+**Claude's starting rules** (Nick agreed, PR #140; 1 is new with the swap)
+
+1. **Direct swaps:** if the other unit can't use what comes back (the
+   knight can't wear the lord's Leather Vest), it goes to the stock. The
+   list only shows other units' items that this unit can use, and not an
+   armour or accessory identical to the one it already wears.
 2. **Swapping:** putting the Steel Spear in a slot that holds the Iron
    Spear sends the Iron Spear back to the stock, wear and all.
 3. **What a unit wields:** it goes on holding the weapon it had in hand. If

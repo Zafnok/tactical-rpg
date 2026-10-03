@@ -516,3 +516,180 @@ fn a_setup_takes_the_preparations_of_the_battles_first_state() {
     assert_eq!(other.units[0].loadout, fresh.units[0].loadout);
     assert_eq!(other.pack, prepared.pack);
 }
+
+/// Nick (PR #140): gear goes straight from one unit to another, and what
+/// the taker's slot held goes back the other way.
+#[test]
+fn two_units_swap_what_their_slots_hold() {
+    let mut a = army();
+    // The fencer takes the stock's sword, then swaps it for ben's javelin.
+    assert_eq!(
+        a.gear_from_stock(FENCER, GearSlot::Weapon(1), &StockItem::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(
+        a.gear_from_unit(FENCER, GearSlot::Weapon(1), BEN, GearSlot::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(
+        a.setup.units[0].loadout.weapon(1),
+        Some(&copy("javelin", 9))
+    );
+    assert_eq!(a.setup.units[0].loadout.equipped, Some(Equipped::Weapon(1)));
+    assert_eq!(a.bench[0].loadout.weapon(0), Some(&copy("sword", 20)));
+    assert_eq!(a.bench[0].loadout.equipped, Some(Equipped::Weapon(0)));
+    assert!(a.setup.stock.weapons.is_empty());
+    // Into an empty slot: the giver's slot is left empty, and the giver
+    // wields nothing.
+    assert_eq!(
+        a.gear_from_unit(FENCER, GearSlot::Weapon(0), BEN, GearSlot::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(a.setup.units[0].loadout.weapon(0), Some(&copy("sword", 20)));
+    assert_eq!(a.bench[0].loadout.weapon_count(), 0);
+    assert_eq!(a.bench[0].loadout.equipped, None);
+    // The other way round, and an accessory and armour the same way.
+    assert_eq!(
+        a.gear_from_unit(BEN, GearSlot::Weapon(2), FENCER, GearSlot::Weapon(1)),
+        Ok(())
+    );
+    assert_eq!(a.bench[0].loadout.weapon(2), Some(&copy("javelin", 9)));
+    assert_eq!(a.bench[0].loadout.equipped, Some(Equipped::Weapon(2)));
+    assert_eq!(a.setup.units[0].loadout.weapon(1), None);
+    assert_eq!(
+        a.gear_from_unit(FENCER, GearSlot::Accessory, BEN, GearSlot::Accessory),
+        Ok(())
+    );
+    assert_eq!(a.setup.units[0].loadout.accessory, Some(id("ring")));
+    assert_eq!(a.bench[0].loadout.accessory, None);
+    a.setup.units[0].loadout.armour = Some(id("vest"));
+    assert_eq!(
+        a.gear_from_unit(BEN, GearSlot::Armour, FENCER, GearSlot::Armour),
+        Ok(())
+    );
+    assert_eq!(a.bench[0].loadout.armour, Some(id("vest")));
+    assert_eq!(a.setup.units[0].loadout.armour, None);
+    assert_eq!(a.setup.stock.count(&id("vest")), 1, "the stock's own");
+}
+
+/// What comes back goes to the stock when the giver can't use it.
+#[test]
+fn a_swap_sends_what_the_giver_cant_use_to_the_stock() {
+    let mut a = army();
+    // The fencer has rank D and a steel sword; ben, rank E, can't take it.
+    a.setup.units[0]
+        .weapon_ranks
+        .insert(WeaponKind::Sword, WeaponRank::D);
+    a.setup.units[0].loadout.weapons[0] = Some(copy("steel_sword", 5));
+    a.setup.units[0].loadout.armour = Some(id("mail"));
+    a.bench[0].loadout.armour = Some(id("vest"));
+    assert_eq!(
+        a.gear_from_unit(FENCER, GearSlot::Weapon(0), BEN, GearSlot::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(
+        a.setup.units[0].loadout.weapon(0),
+        Some(&copy("javelin", 9))
+    );
+    assert_eq!(a.bench[0].loadout.weapon(0), None);
+    assert_eq!(a.setup.stock.weapons.last(), Some(&copy("steel_sword", 5)));
+    // Mail (medium) is not for a fencer: it goes to the stock too.
+    assert_eq!(
+        a.gear_from_unit(FENCER, GearSlot::Armour, BEN, GearSlot::Armour),
+        Ok(())
+    );
+    assert_eq!(a.setup.units[0].loadout.armour, Some(id("vest")));
+    assert_eq!(a.bench[0].loadout.armour, None);
+    assert_eq!(a.setup.stock.count(&id("mail")), 1);
+}
+
+#[test]
+fn a_swap_that_cant_be_made_changes_nothing() {
+    let mut a = army();
+    a.bench[0].loadout.weapons[1] = Some(copy("steel_sword", 20));
+    let before = a.clone();
+    let (w0, w1) = (GearSlot::Weapon(0), GearSlot::Weapon(1));
+    let nobody = PrepUnit::Benched(1);
+    let cases = [
+        // With itself, or between slots of different kinds.
+        (BEN, w1, BEN, w0, PrepError::WrongSlot),
+        (FENCER, w0, BEN, GearSlot::Accessory, PrepError::WrongSlot),
+        (
+            FENCER,
+            GearSlot::Armour,
+            BEN,
+            GearSlot::Accessory,
+            PrepError::WrongSlot,
+        ),
+        (
+            FENCER,
+            GearSlot::Accessory,
+            BEN,
+            GearSlot::Armour,
+            PrepError::WrongSlot,
+        ),
+        // No such unit, slot or item.
+        (FENCER, w0, nobody, w0, PrepError::NoUnit),
+        (nobody, w0, BEN, w0, PrepError::NoUnit),
+        (FENCER, GearSlot::Weapon(3), BEN, w0, PrepError::NoSlot),
+        (FENCER, w0, BEN, GearSlot::Weapon(2), PrepError::EmptySlot),
+        (FENCER, w0, BEN, GearSlot::Weapon(3), PrepError::EmptySlot),
+        (
+            FENCER,
+            GearSlot::Armour,
+            BEN,
+            GearSlot::Armour,
+            PrepError::EmptySlot,
+        ),
+        // The fencer's rank is too low for ben's steel sword.
+        (
+            FENCER,
+            w0,
+            BEN,
+            w1,
+            PrepError::Unusable(Unusable::Rank(WeaponRank::D)),
+        ),
+    ];
+    for (who, slot, from, from_slot, error) in cases {
+        assert_eq!(
+            a.gear_from_unit(who, slot, from, from_slot),
+            Err(error),
+            "{who:?} {slot:?} {from:?} {from_slot:?}"
+        );
+        assert_eq!(a, before);
+    }
+    // An enemy is nobody's to swap with.
+    a.setup.units[0].faction = Faction::Enemy;
+    assert_eq!(
+        a.gear_from_unit(BEN, w1, FENCER, w0),
+        Err(PrepError::NoUnit)
+    );
+}
+
+/// A swap finds its units by id, whatever their place in the setup.
+#[test]
+fn a_swap_is_between_the_two_units_named() {
+    let mut a = army();
+    let mut second = unit();
+    second.id = UnitId(2);
+    second.loadout.weapons[0] = Some(copy("sword", 11));
+    a.setup.units.push(second);
+    let second = PrepUnit::Deployed(UnitId(2));
+    assert_eq!(
+        a.gear_from_unit(second, GearSlot::Weapon(1), BEN, GearSlot::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(a.setup.units[0].loadout, crate::item::Loadout::default());
+    assert_eq!(
+        a.setup.units[1].loadout.weapon(1),
+        Some(&copy("javelin", 9))
+    );
+    // And back out of the second unit, into the bench.
+    assert_eq!(
+        a.gear_from_unit(BEN, GearSlot::Weapon(2), second, GearSlot::Weapon(0)),
+        Ok(())
+    );
+    assert_eq!(a.bench[0].loadout.weapon(2), Some(&copy("sword", 11)));
+    assert_eq!(a.setup.units[1].loadout.weapon(0), None);
+    assert_eq!(a.setup.units[0].loadout, crate::item::Loadout::default());
+}

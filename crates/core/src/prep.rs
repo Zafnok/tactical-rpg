@@ -8,9 +8,12 @@
 //!
 //! - **Who** ([`Preparations`]). Every unit of the army: the setup's player
 //!   units (the deployed ones) and the bench (roster units left out of this
-//!   battle). Gear is traded between any of them through the stock (Nick,
-//!   0408: a benched archer's better bow can go to the one who fights).
-//!   Once the battle starts there is no trading.
+//!   battle). Gear is traded between any of them (Nick, 0408: a benched
+//!   archer's better bow can go to the one who fights), through the stock
+//!   or straight from one unit to another
+//!   ([`Preparations::gear_from_unit`]): the taker's slot gets the item, and
+//!   what it held goes back to the giver's slot, or to the stock if the
+//!   giver can't use it. Once the battle starts there is no trading.
 //! - **Gear** ([`BattleSetup::gear_from_stock`], [`BattleSetup::gear_to_stock`]):
 //!   a unit has the weapon slots of its class, one armour and one accessory
 //!   ([`BattleSetup::gear_slots`]). A stock item goes in a slot of its kind,
@@ -33,10 +36,11 @@
 //!   without skill bonuses.
 
 use std::fmt;
+use std::sync::Arc;
 
 use crate::battle::{BattleSetup, BattleState};
 use crate::class::{ArmourWeight, ClassDef, ClassTable};
-use crate::item::{Equipped, ItemDef, ItemId, ItemTable, Stock, WEAPON_SLOTS};
+use crate::item::{Equipped, ItemDef, ItemId, ItemTable, Stock, WEAPON_SLOTS, WeaponInstance};
 use crate::spell::SpellTable;
 use crate::stats::StatValue;
 use crate::terrain::TerrainRules;
@@ -243,6 +247,57 @@ fn to_stock(
     Ok(())
 }
 
+/// What a loadout slot holds.
+enum Held {
+    Weapon(WeaponInstance),
+    Item(ItemId),
+}
+
+impl Held {
+    fn id(&self) -> &ItemId {
+        match self {
+            Held::Weapon(copy) => &copy.def,
+            Held::Item(id) => id,
+        }
+    }
+}
+
+/// Empties `slot` of `unit`, giving what it held.
+fn take_held(unit: &mut Unit, slot: GearSlot) -> Option<Held> {
+    match slot {
+        GearSlot::Weapon(s) => {
+            let held = unit.loadout.weapons.get_mut(s).and_then(Option::take);
+            held.map(Held::Weapon)
+        }
+        GearSlot::Armour => unit.loadout.armour.take().map(Held::Item),
+        GearSlot::Accessory => unit.loadout.accessory.take().map(Held::Item),
+    }
+}
+
+/// Puts `held` in `slot` of `unit` (a slot of its kind that the unit has).
+fn put_held(unit: &mut Unit, slot: GearSlot, held: Held) {
+    match (slot, held) {
+        (GearSlot::Weapon(s), Held::Weapon(copy)) => {
+            if let Some(place) = unit.loadout.weapons.get_mut(s) {
+                *place = Some(copy);
+            }
+        }
+        (GearSlot::Armour, Held::Item(id)) => unit.loadout.armour = Some(id),
+        (GearSlot::Accessory, Held::Item(id)) => unit.loadout.accessory = Some(id),
+        _ => {}
+    }
+}
+
+/// Whether two slots hold the same kind of gear.
+fn same_kind(a: GearSlot, b: GearSlot) -> bool {
+    matches!(
+        (a, b),
+        (GearSlot::Weapon(_), GearSlot::Weapon(_))
+            | (GearSlot::Armour, GearSlot::Armour)
+            | (GearSlot::Accessory, GearSlot::Accessory)
+    )
+}
+
 /// `unit`'s attack speed with the weapon in `slot` in hand (`None`: what it
 /// has equipped). `None` if its class is unknown.
 fn speed(unit: &Unit, slot: Option<usize>, t: Tables<'_>) -> Option<StatValue> {
@@ -411,6 +466,75 @@ impl Preparations {
             PrepUnit::Deployed(id) => self.setup.player_units().find(|u| u.id == id),
             PrepUnit::Benched(i) => self.bench.get(i),
         }
+    }
+
+    fn unit_mut(&mut self, who: PrepUnit) -> Option<&mut Unit> {
+        match who {
+            PrepUnit::Deployed(id) => {
+                let units = &mut self.setup.units;
+                units
+                    .iter_mut()
+                    .find(|u| u.id == id && u.faction == Faction::Player)
+            }
+            PrepUnit::Benched(i) => self.bench.get_mut(i),
+        }
+    }
+
+    /// Moves what `from_slot` of unit `from` holds straight into `slot` of
+    /// `who` (a slot of the same kind, on another unit). What `who`'s slot
+    /// held goes back into `from_slot`, or to the stock if `from` can't use
+    /// it.
+    pub fn gear_from_unit(
+        &mut self,
+        who: PrepUnit,
+        slot: GearSlot,
+        from: PrepUnit,
+        from_slot: GearSlot,
+    ) -> Result<(), PrepError> {
+        if who == from || !same_kind(slot, from_slot) {
+            return Err(PrepError::WrongSlot);
+        }
+        let classes = Arc::clone(&self.setup.classes);
+        let items = Arc::clone(&self.setup.items);
+        let spells = Arc::clone(&self.setup.spells);
+        let t = Tables {
+            classes: &classes,
+            items: &items,
+            spells: &spells,
+        };
+        let class_of = |u: Option<&Unit>| u.and_then(|u| classes.get(&u.class));
+        let taker_class = class_of(self.unit(who)).ok_or(PrepError::NoUnit)?;
+        let giver_class = class_of(self.unit(from)).ok_or(PrepError::NoUnit)?;
+        if matches!(slot, GearSlot::Weapon(s) if s >= weapon_slots(taker_class)) {
+            return Err(PrepError::NoSlot);
+        }
+        // On a copy, so that a refusal changes nothing.
+        let mut after = self.clone();
+        let giver = after.unit_mut(from).ok_or(PrepError::NoUnit)?;
+        let item = take_held(giver, from_slot).ok_or(PrepError::EmptySlot)?;
+        let taker = after.unit_mut(who).ok_or(PrepError::NoUnit)?;
+        if let Some(why) = unusable(taker, taker_class, &items, item.id()) {
+            return Err(PrepError::Unusable(why));
+        }
+        let back = take_held(taker, slot);
+        put_held(taker, slot, item);
+        refit(taker, taker_class, t);
+        let giver = after.unit_mut(from).ok_or(PrepError::NoUnit)?;
+        let back = match back {
+            Some(held) if unusable(giver, giver_class, &items, held.id()).is_none() => {
+                put_held(giver, from_slot, held);
+                None
+            }
+            other => other,
+        };
+        refit(giver, giver_class, t);
+        match back {
+            Some(Held::Weapon(copy)) => after.setup.stock.weapons.push(copy),
+            Some(Held::Item(id)) => after.setup.stock.add(id),
+            None => {}
+        }
+        *self = after;
+        Ok(())
     }
 
     fn tables(&self) -> Tables<'_> {

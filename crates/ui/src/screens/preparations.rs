@@ -17,7 +17,8 @@
 //!   others, dimmed, so their gear can be traded: Nick, 0408), then the
 //!   chosen unit's slots, then the stock for that slot; Confirm goes one list deeper, Cancel one back. Confirm
 //!   on a stock item puts it in the slot (what was there goes back to the
-//!   stock); items the unit can't use are dimmed with the reason and can't
+//!   stock); the list also has what the other units hold in such a slot,
+//!   and Confirm on one of those swaps the two units' items; items the unit can't use are dimmed with the reason and can't
 //!   be taken. The attack speed line shows the change before it is made.
 //! - **Pack**: the stock's consumables on the left, the pack on the right;
 //!   Left and Right switch sides, Confirm moves one item across. A full
@@ -117,11 +118,22 @@ pub enum PrepOutcome {
     Leave,
 }
 
+/// Where a row of the stock list takes its item from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Source {
+    /// The row that empties the slot: its item goes back to the stock.
+    PutBack,
+    /// The stock.
+    Stock(StockItem),
+    /// This slot of another unit: the two units swap.
+    Unit(PrepUnit, GearSlot),
+}
+
 /// One row of the stock list beside the slots.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StockRow {
-    /// What Confirm takes; `None` for the row that empties the slot.
-    pub item: Option<StockItem>,
+    /// What Confirm takes.
+    pub from: Source,
     /// The row's text.
     pub text: String,
     /// Why the unit can't use it, if it can't (the row is dimmed).
@@ -328,7 +340,7 @@ impl PreparationsScreen {
         let mut rows = Vec::new();
         if self.held(unit, slot).is_some() {
             rows.push(StockRow {
-                item: None,
+                from: Source::PutBack,
                 text: PUT_BACK.to_owned(),
                 unusable: None,
             });
@@ -337,7 +349,7 @@ impl PreparationsScreen {
             let unusable = self.who().and_then(|who| self.prep.unusable(who, id));
             let detail = unusable.map_or(detail, reason_text);
             StockRow {
-                item: Some(item),
+                from: Source::Stock(item),
                 text: format!("{name:<15} {detail}"),
                 unusable,
             }
@@ -386,6 +398,61 @@ impl PreparationsScreen {
                 }
             }
         }
+        rows.extend(self.unit_rows(slot));
+        rows
+    }
+
+    /// The rows for what the other units hold in slots of `slot`'s kind
+    /// that the chosen unit can use, in unit then slot order:
+    /// `Steel Bow  25/25  from Test Scout`.
+    fn unit_rows(&self, slot: GearSlot) -> Vec<StockRow> {
+        let Some(who) = self.who() else {
+            return Vec::new();
+        };
+        let same_kind =
+            |other: GearSlot| std::mem::discriminant(&other) == std::mem::discriminant(&slot);
+        let mut rows = Vec::new();
+        for (holder, unit) in self.units() {
+            if holder == who {
+                continue;
+            }
+            let slots = self.prep.gear_slots(holder);
+            for theirs in slots.into_iter().filter(|s| same_kind(*s)) {
+                let id = match theirs {
+                    GearSlot::Weapon(s) => unit.loadout.weapon(s).map(|w| &w.def),
+                    GearSlot::Armour => unit.loadout.armour.as_ref(),
+                    GearSlot::Accessory => unit.loadout.accessory.as_ref(),
+                };
+                let (Some(id), Some((name, wear))) = (id, self.held(unit, theirs)) else {
+                    continue;
+                };
+                // Only what this unit could take: the stock's dimmed rows
+                // say what it can't use, and an army's worth more would
+                // bury the list.
+                if self.prep.unusable(who, id).is_some() {
+                    continue;
+                }
+                // Nor the same armour or accessory the slot already holds.
+                let mine = match slot {
+                    GearSlot::Weapon(_) => None,
+                    GearSlot::Armour => self.unit().and_then(|u| u.loadout.armour.as_ref()),
+                    GearSlot::Accessory => self.unit().and_then(|u| u.loadout.accessory.as_ref()),
+                };
+                if mine == Some(id) {
+                    continue;
+                }
+                let detail = if wear.is_empty() {
+                    format!("from {}", unit.name)
+                } else {
+                    format!("{wear}  from {}", unit.name)
+                };
+                rows.push(StockRow {
+                    from: Source::Unit(holder, theirs),
+                    text: format!("{name:<15} {detail}"),
+                    unusable: None,
+                });
+            }
+        }
         rows
     }
 
@@ -422,9 +489,10 @@ impl PreparationsScreen {
     fn after(&self, row: &StockRow) -> Option<Preparations> {
         let (unit, slot) = (self.who()?, self.gear_slot()?);
         let mut after = self.prep.clone();
-        let done = match &row.item {
-            Some(item) => after.gear_from_stock(unit, slot, item),
-            None => after.gear_to_stock(unit, slot),
+        let done = match &row.from {
+            Source::Stock(item) => after.gear_from_stock(unit, slot, item),
+            Source::PutBack => after.gear_to_stock(unit, slot),
+            Source::Unit(from, theirs) => after.gear_from_unit(unit, slot, *from, *theirs),
         };
         done.ok().map(|()| after)
     }

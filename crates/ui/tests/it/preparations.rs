@@ -247,3 +247,33 @@ fn a_continued_battle_keeps_its_preparations() {
     assert_eq!(lord_weapons(&again), lord_weapons(&start));
     assert_eq!(again.pack(), start.pack());
 }
+
+/// Nick (PR #140): the scout's bow goes straight to the archer, whose own
+/// bow goes back to her.
+#[test]
+fn the_archer_swaps_bows_with_the_benched_scout() {
+    let mut h = preparations();
+    // The archer (third unit), his first slot; the last row of its list is
+    // the scout's Steel Bow.
+    h.keys("f Down Down f f Up");
+    assert!(
+        shows(&h, "Steel Bow       25/25  from Test Scout"),
+        "{}",
+        h.snapshot()
+    );
+    h.keys("f d d Left f");
+    assert_eq!(h.screens(), ["title", "battle"]);
+    let state = battle(&h);
+    let archer = state.unit(UnitId(3)).unwrap_or_else(|| panic!("no archer"));
+    assert_eq!(
+        archer.loadout.weapon(0).map(|w| w.def.0.as_str()),
+        Some("steel_bow")
+    );
+    let campaign = h.flow().and_then(|f| f.campaign());
+    let roster = &campaign.unwrap_or_else(|| panic!("no campaign")).roster;
+    assert_eq!(roster[4].name, "Test Scout");
+    assert_eq!(
+        roster[4].loadout.weapon(0).map(|w| w.def.0.as_str()),
+        Some("iron_bow")
+    );
+}

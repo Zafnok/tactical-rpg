@@ -213,6 +213,8 @@ fn armour_and_accessories_come_from_the_stock_with_their_counts() {
             "Chain Mail      ×1  Def +3  Wt 2",
             "Iron Plate      can't wear heavy armour",
             "Warded Robe     ×1  Res +2  Wt 0",
+            // The knight's, to swap for; the others wear the same vest.
+            "Chain Mail      from Test Knight",
         ]
     );
     // With no weapon slot highlighted, the speed is the equipped weapon's.
@@ -485,7 +487,8 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
 #[test]
 fn a_benched_unit_snapshot() {
     let mut h = harness();
-    h.keys("f Up f");
+    // The scout's first slot, its list on the archer's Iron Bow.
+    h.keys("f Up f f Up");
     assert_snapshot!(h.snapshot());
 }
 
@@ -579,4 +582,59 @@ fn seals_are_not_offered() {
         s.prep.setup.pack_from_stock(&ItemId::new("tier_2_seal")),
         Err(PrepError::NotConsumable)
     );
+}
+
+/// Nick (PR #140): the list also has what the other units hold, and
+/// taking one of those swaps the two units' items directly.
+#[test]
+fn another_units_item_is_swapped_directly() {
+    let mut c = ctx();
+    let mut s = screen(&c);
+    // The archer (third unit), his first slot: an Iron Bow.
+    update(&mut s, &mut c, &[Confirm, CursorDown, CursorDown, Confirm]);
+    update(&mut s, &mut c, &[Confirm]);
+    assert_eq!(
+        stock_texts(&s),
+        [
+            PUT_BACK,
+            "Steel Spear     can't use spears",
+            "Iron Axe        can't use axes",
+            "Iron Sword      can't use swords",
+            "Steel Bow       25/25  from Test Scout",
+        ]
+    );
+    let last = s.stock_rows().pop().map(|r| r.from);
+    let scout = PrepUnit::Benched(0);
+    assert_eq!(last, Some(Source::Unit(scout, GearSlot::Weapon(0))));
+    update(&mut s, &mut c, &[CursorUp]);
+    assert_eq!(s.speed_line().as_deref(), Some("AS 3 → 1 with Steel Bow"));
+    assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_select"]);
+    let bow = |u: &Unit| u.loadout.weapon(0).map(|w| w.def.0.clone());
+    assert_eq!(bow(&s.setup().units[2]).as_deref(), Some("steel_bow"));
+    assert_eq!(bow(&s.prep().bench[0]).as_deref(), Some("iron_bow"));
+    assert_eq!(s.setup().stock.weapons.len(), 3, "the stock isn't touched");
+    // Now the list offers the Iron Bow back, from the scout.
+    update(&mut s, &mut c, &[Confirm]);
+    assert_eq!(
+        stock_texts(&s).last().map(String::as_str),
+        Some("Iron Bow        20/20  from Test Scout")
+    );
+    // The lord's armour: the knight's Chain Mail for his Leather Vest,
+    // which the knight can't wear, so it goes to the stock.
+    update(
+        &mut s,
+        &mut c,
+        &[Cancel, Cancel, CursorUp, CursorUp, Confirm],
+    );
+    update(
+        &mut s,
+        &mut c,
+        &[CursorUp, CursorUp, Confirm, CursorUp, Confirm],
+    );
+    assert_eq!(
+        s.setup().units[0].loadout.armour,
+        Some(ItemId::new("chain_mail"))
+    );
+    assert_eq!(s.setup().units[1].loadout.armour, None);
+    assert_eq!(s.setup().stock.count(&ItemId::new("leather_vest")), 1);
 }
