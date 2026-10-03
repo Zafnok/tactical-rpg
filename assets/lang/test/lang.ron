@@ -1,0 +1,6 @@
+// The pack the tests use (ticket 0233): English in capitals. It is never
+// offered to players; it only shows where debug tools are on.
+(
+    name: "TEST",
+    made_by: Machine,
+)

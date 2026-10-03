@@ -238,6 +238,17 @@ terrain changed; `>` then the terrain a spell would turn it into; `*n` =
      `cursor_keys_name`, `help_line`) with `ctx.help_keys()`: each layout
      binds actions to different keys, and after a controller press the same
      calls name that pad's buttons instead (ADR-0036).
+   - Text the player reads is never a string literal (ADR-0045). Put it
+     in `assets/lang/en/ui.ron` under a `screen.thing` key and ask for it
+     with `ctx.text("title.new_game")`, or `ctx.text_with("results.turns",
+     &[("count", &n)])` for text with `{count}`-style values in it (which
+     also fills `{Confirm}`-style key names, so a help line is one key:
+     `"{Cursor} move · {Confirm} select"`). One key per meaning, and one
+     key for a whole sentence rather than pieces joined in code: word
+     order differs by language. A key the file lacks panics in debug
+     builds. Look text up when drawing, or again whenever the screen is
+     shown, so it follows `ctx.lang`. `cargo xtask check-text` counts the
+     literals left and fails on a new one.
    - Never compute game rules here; send `core` commands and animate events.
    - Shared state that several screens need goes in `Ctx` (a plain struct).
    - Sounds and music: `ctx.audio.play_sound("menu_move")`,
