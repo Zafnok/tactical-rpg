@@ -49,7 +49,8 @@ fn painter(with_card: bool) -> (Painter, ImageTable) {
     )
 }
 
-/// 3×2 cells: an 'A' on a blue cell, a glyph the atlas lacks, a green
+/// 3×2 cells: an 'A' on a blue cell, a white one on a green cell below
+/// right, a glyph the atlas lacks, a green
 /// `Under` line through the 'A', a red `Over` dot on it, a white `Over`
 /// square, and the test card, flipped, half-opaque and clipped to its
 /// middle-top 8×8, over the bottom row.
@@ -61,6 +62,11 @@ fn hand_checked_frame(table: &ImageTable) -> GlyphBuffer {
         Cell::new('A', Rgb::new(200, 100, 50), Rgb::new(0, 0, 128)),
     );
     buf.set(1, 0, Cell::new('Z', Rgb::new(1, 2, 3), CLEAR));
+    buf.set(
+        2,
+        1,
+        Cell::new('A', Rgb::new(255, 255, 255), Rgb::new(0, 128, 0)),
+    );
     let under = Overlay::new(Rect::new(0, 2, 8, 1), Rgb::new(0, 255, 0), Layer::Under);
     buf.add_overlay(under);
     buf.add_overlay(Overlay::new(
@@ -84,11 +90,13 @@ fn hand_checked_frame(table: &ImageTable) -> GlyphBuffer {
 }
 
 /// Pixels of the hand-checked frame at scale 1, worked out by hand.
-const EXPECTED: [((u32, u32), [u8; 3]); 15] = [
+const EXPECTED: [((u32, u32), [u8; 3]); 17] = [
     // The 'A': its block in fg, the rest of the cell its bg.
     ((0, 0), [200, 100, 50]),
     ((2, 1), [200, 100, 50]),
     ((5, 5), [0, 0, 128]),
+    ((16, 16), [255, 255, 255]),
+    ((21, 20), [0, 128, 0]),
     // The `Under` line shows only beside the glyph.
     ((0, 2), [200, 100, 50]),
     ((5, 2), [0, 255, 0]),
@@ -209,6 +217,7 @@ fn rejects_bad_arguments() {
         &["a.png", "--scale", "0"],
         &["a.png", "--scale", "9"],
         &["a.png", "--bogus"],
+        &["--bogus"],
     ] {
         assert!(parse_args(&args(bad)).is_err(), "{bad:?}");
     }
@@ -305,4 +314,22 @@ fn empty_pictures_and_pixels_off_the_picture_are_harmless() {
     assert_eq!(image.texel(5, 5), [255, 255, 255, 255]);
     assert_eq!(image.texel(-5, -5), [7; 4]);
     assert_eq!(image.pixel(2, 0), None);
+}
+
+#[test]
+fn a_16_bit_picture_without_alpha_decodes_to_rgba8() {
+    let mut out = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut out, 1, 1);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Sixteen);
+        let mut writer = encoder.write_header().unwrap();
+        writer
+            .write_image_data(&[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc])
+            .unwrap();
+    }
+    assert_eq!(
+        decode_png(&out).unwrap(),
+        (1, 1, vec![0x12, 0x56, 0x9a, 255])
+    );
 }

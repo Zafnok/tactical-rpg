@@ -396,6 +396,21 @@ mod tests {
     }
 
     #[test]
+    fn frame_png_help_bad_args_and_a_run() {
+        assert_eq!(frame_png(&args(&["--help"])), 0);
+        assert_eq!(frame_png(&[]), 2);
+        assert_eq!(
+            dispatch(args(&["frame-png", "a.png", "--bogus"]).into_iter()),
+            2
+        );
+        let out = std::env::temp_dir().join(format!("xtask-frame-png-{}.png", std::process::id()));
+        let out_arg = out.to_string_lossy().into_owned();
+        assert_eq!(frame_png(&args(&[&out_arg, "--scale", "1"])), 0);
+        assert!(out.is_file());
+        std::fs::remove_file(&out).unwrap();
+    }
+
+    #[test]
     fn repo_root_points_at_the_workspace_root() {
         let root = repo_root();
         assert!(root.join("Cargo.toml").is_file());
