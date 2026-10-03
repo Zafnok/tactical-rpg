@@ -692,13 +692,25 @@ pub fn render_all() -> Vec<(&'static str, Vec<i16>)> {
     raw.into_iter()
         .map(|(name, samples)| {
             let scaled: Vec<f64> = samples.iter().map(|x| x * gain).collect();
-            let end = scaled
-                .iter()
-                .rposition(|x| x.abs() >= SILENCE)
-                .map_or(0, |i| i + 1);
+            let end = audible_len(&scaled);
             (name, scaled[..end].iter().map(|&x| to_i16(x)).collect())
         })
         .collect()
+}
+
+/// How many of `samples` are left once trailing silence (quieter than
+/// [`SILENCE`]) is trimmed: up to and including the last audible one.
+fn audible_len(samples: &[f64]) -> usize {
+    samples
+        .iter()
+        .rposition(|x| x.abs() >= SILENCE)
+        .map_or(0, |i| i + 1)
+}
+
+/// The three notes of [`test_phrase`] number `index`: every second one of
+/// [`TEST_NOTES`] from `index` on, going round.
+fn phrase_notes(index: usize) -> [&'static str; 3] {
+    [0, 1, 2].map(|step| TEST_NOTES[(index + step * 2) % TEST_NOTES.len()])
 }
 
 /// The notes [`test_phrase`] picks from.
@@ -711,20 +723,14 @@ const TEST_NOTES: [&str; 5] = ["D4", "G4", "A4", "B4", "D5"];
 pub fn test_phrase(index: usize) -> Vec<i16> {
     let mut mix = Mix::new();
     let p25 = Wave::pulse(0.25);
-    for (step, t) in [0.0, 0.12, 0.24].into_iter().enumerate() {
-        let note = TEST_NOTES[(index + step * 2) % TEST_NOTES.len()];
+    for (note, t) in phrase_notes(index).into_iter().zip([0.0, 0.12, 0.24]) {
         mix.add(&chip(&p25, note, t, 0.14, 0.04, 0.12, 1700.0));
     }
     let samples = mix.master();
     let loudest = samples.iter().fold(0.0, |m: f64, x| m.max(x.abs()));
-    let end = samples
-        .iter()
-        .rposition(|x| x.abs() * PEAK >= SILENCE * loudest)
-        .map_or(0, |i| i + 1);
-    samples[..end]
-        .iter()
-        .map(|&x| to_i16(x * PEAK / loudest))
-        .collect()
+    let scaled: Vec<f64> = samples.iter().map(|x| x * PEAK / loudest).collect();
+    let end = audible_len(&scaled);
+    scaled[..end].iter().map(|&x| to_i16(x)).collect()
 }
 
 fn to_i16(x: f64) -> i16 {
@@ -1161,6 +1167,23 @@ mod tests {
         assert!(matches(&bytes, &[2, -3]));
         assert!(!matches(&bytes, &[3, -2]));
         assert!(!matches(&bytes, &[1, -2, 0]));
+    }
+
+    #[test]
+    fn trailing_silence_is_trimmed_after_the_last_audible_sample() {
+        assert_eq!(audible_len(&[0.5, 0.0, -0.002, 0.0005, 0.0]), 3);
+        assert_eq!(audible_len(&[0.5]), 1);
+        assert_eq!(audible_len(&[SILENCE]), 1, "at the threshold is audible");
+        assert_eq!(audible_len(&[0.0005, 0.0]), 0);
+        assert_eq!(audible_len(&[]), 0);
+    }
+
+    #[test]
+    fn a_test_phrase_takes_every_second_note_going_round() {
+        assert_eq!(phrase_notes(0), ["D4", "A4", "D5"]);
+        assert_eq!(phrase_notes(1), ["G4", "B4", "D4"]);
+        assert_eq!(phrase_notes(4), ["D5", "G4", "B4"]);
+        assert_eq!(phrase_notes(5), phrase_notes(0));
     }
 
     /// The voice playback test clips: half a second of three notes, at

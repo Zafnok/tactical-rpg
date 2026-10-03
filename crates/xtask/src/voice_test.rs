@@ -49,6 +49,12 @@ pub fn plan(root: &Path) -> Result<Vec<(String, Vec<i16>)>, String> {
 
 /// The `ffmpeg` to run: MSYS2's where it is installed, else the one on the
 /// `PATH`.
+///
+/// Not covered by mutation testing (`#[mutants::skip]`), like [`encode`]:
+/// the two only find and spawn an external tool that isn't installed
+/// where the tests run (as `web.rs` does for `wasm-opt`). What they make
+/// is checked: a test compares the committed clips with [`plan`].
+#[mutants::skip]
 fn ffmpeg() -> &'static str {
     if Path::new(MSYS_FFMPEG).is_file() {
         MSYS_FFMPEG
@@ -60,6 +66,9 @@ fn ffmpeg() -> &'static str {
 /// Encodes the WAV at `wav` as OGG Vorbis at `ogg`: mono, 44.1 kHz
 /// (ADR-0026 §4), without the encoder's name and date so the same input
 /// gives the same file.
+///
+/// Not covered by mutation testing: see [`ffmpeg`].
+#[mutants::skip]
 fn encode(wav: &Path, ogg: &Path) -> Result<(), String> {
     let output = Command::new(ffmpeg())
         .args(["-hide_banner", "-nostats", "-loglevel", "error", "-y", "-i"])
