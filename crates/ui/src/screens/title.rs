@@ -2,9 +2,10 @@
 //! ticket 0801); `Continue` (shown only while there is a suspend save)
 //! carries on the suspended battle and `Load Game` opens the save slots
 //! (0802); debug builds add `Quick Battle`, a test battle through the same
-//! flow; `Credits` opens the [`CreditsScreen`] (0808).
+//! flow; `Options` opens the [`OptionsScreen`] (0805); `Credits` opens the
+//! [`CreditsScreen`] (0808).
 
-use super::{CreditsScreen, centre_x, draw_debug_hint, print_centred};
+use super::{CreditsScreen, OptionsScreen, centre_x, draw_debug_hint, print_centred};
 use crate::audio::MenuSound;
 use crate::color::UiColor;
 use crate::flow::FlowScreen;
@@ -34,6 +35,8 @@ enum Item {
     LoadGame,
     /// Debug: straight into a test battle.
     QuickBattle,
+    /// Opens the options.
+    Options,
     /// Opens the credits.
     Credits,
     /// Quits.
@@ -48,6 +51,7 @@ impl Item {
             Self::NewGame => "title.new_game",
             Self::LoadGame => "title.load_game",
             Self::QuickBattle => "title.quick_battle",
+            Self::Options => "title.options",
             Self::Credits => "title.credits",
             Self::Quit => "title.quit",
         }
@@ -64,7 +68,7 @@ fn clear(ctx: &Ctx, buf: &mut GlyphBuffer) {
 }
 
 /// Title, subtitle and a menu (`Continue` while a battle is suspended,
-/// `New Game`, `Load Game`, `Credits`, `Quit`), with a help line naming
+/// `New Game`, `Load Game`, `Options`, `Credits`, `Quit`), with a help line naming
 /// the keys of the active layout.
 #[derive(Debug, Clone)]
 pub struct TitleScreen {
@@ -124,6 +128,7 @@ impl TitleScreen {
         if quick_battle {
             items.push(Item::QuickBattle);
         }
+        items.push(Item::Options);
         items.push(Item::Credits);
         items.push(Item::Quit);
         let entries = items.iter().map(|&item| {
@@ -238,8 +243,9 @@ impl Screen for TitleScreen {
                         return self.open(Box::new(flow));
                     }
                 }
-                // Not `open`: the credits change neither the saves nor
-                // the music (they play the title's).
+                // Not `open`: the options and the credits change neither
+                // the saves nor the music (they play the title's).
+                Some(Item::Options) => return Transition::Push(Box::new(OptionsScreen::new())),
                 Some(Item::Credits) => return Transition::Push(Box::new(CreditsScreen::new(ctx))),
                 Some(Item::Quit) => return Transition::Quit,
                 _ => {}
@@ -280,7 +286,7 @@ mod tests {
     use crate::audio::{AudioRequest, pick_from_pool};
     use crate::input::Action;
     use crate::screen::tests::ctx;
-    use Item::{Continue, Credits, LoadGame, NewGame, QuickBattle, Quit};
+    use Item::{Continue, Credits, LoadGame, NewGame, Options, QuickBattle, Quit};
 
     /// The pool the Quick Battle's file names (`assets/battles/quick.ron`).
     const QUICK_BATTLE_MUSIC_POOL: &str = "skirmish";
@@ -302,9 +308,10 @@ mod tests {
         assert_eq!(outcome(&mut t, &[]), "None");
         assert_eq!(outcome(&mut t, &[Cancel]), "None");
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(options)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(credits)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
-        assert_eq!(outcome(&mut t, &[CursorUp, CursorUp]), "None");
+        assert_eq!(outcome(&mut t, &[CursorUp, CursorUp, CursorUp]), "None");
         // Actions after the one that transitions are dropped.
         assert_eq!(outcome(&mut t, &[Confirm, CursorDown]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
@@ -314,13 +321,17 @@ mod tests {
     fn debug_title_offers_quick_battle() {
         use Action::{Confirm, CursorDown, CursorUp};
         let mut t = TitleScreen::with_quick_battle(&ctx());
-        assert_eq!(t.items, [NewGame, LoadGame, QuickBattle, Credits, Quit]);
+        assert_eq!(
+            t.items,
+            [NewGame, LoadGame, QuickBattle, Options, Credits, Quit]
+        );
         assert_eq!(outcome(&mut t, &[Confirm]), "Push(mode_select)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(battle)");
+        assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(options)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Push(credits)");
         assert_eq!(outcome(&mut t, &[CursorDown, Confirm]), "Quit");
         assert_eq!(
-            outcome(&mut t, &[CursorUp, CursorUp, CursorUp, Confirm]),
+            outcome(&mut t, &[CursorUp, CursorUp, CursorUp, CursorUp, Confirm]),
             "Push(mode_select)"
         );
         // Without its chapter, Quick Battle does nothing.
@@ -331,7 +342,7 @@ mod tests {
         assert_eq!(format!("{:?}", t.update(&mut c, &input)), "None");
         assert_eq!(
             TitleScreen::new(&ctx()).items,
-            [NewGame, LoadGame, Credits, Quit]
+            [NewGame, LoadGame, Options, Credits, Quit]
         );
     }
 
@@ -454,6 +465,7 @@ mod tests {
         let none = [
             ("New Game", true),
             ("Load Game", false),
+            ("Options", true),
             ("Credits", true),
             ("Quit", true),
         ];
@@ -465,11 +477,12 @@ mod tests {
         let saved = [
             ("New Game", true),
             ("Load Game", true),
+            ("Options", true),
             ("Credits", true),
             ("Quit", true),
         ];
         assert_eq!(labels(&t), saved);
-        assert_eq!(t.items, [NewGame, LoadGame, Credits, Quit]);
+        assert_eq!(t.items, [NewGame, LoadGame, Options, Credits, Quit]);
         assert_eq!(t.menu.focus(), 0);
         // A suspend save: Continue, first and focused.
         let c = ctx_with_saves(Some("junk"), None);
@@ -481,13 +494,22 @@ mod tests {
                 ("New Game", true),
                 ("Load Game", false),
                 ("Quick Battle", true),
+                ("Options", true),
                 ("Credits", true),
                 ("Quit", true)
             ]
         );
         assert_eq!(
             t.items,
-            [Continue, NewGame, LoadGame, QuickBattle, Credits, Quit]
+            [
+                Continue,
+                NewGame,
+                LoadGame,
+                QuickBattle,
+                Options,
+                Credits,
+                Quit
+            ]
         );
         assert_eq!(t.menu.focus(), 0);
     }
@@ -499,7 +521,7 @@ mod tests {
         use Action::CursorDown;
         let mut c = ctx();
         let mut t = TitleScreen::new(&c);
-        // Down from New Game skips the disabled Load Game: Credits.
+        // Down from New Game skips the disabled Load Game: Options.
         t.update(&mut c, &input(&[CursorDown]));
         assert_eq!(t.menu.focus(), 2);
         t.refresh(&c);
@@ -527,6 +549,7 @@ mod tests {
                 ("LOAD GAME", false),
                 ("QUICK BATTLE", true),
                 // Missing from the test pack: English.
+                ("OPTIONS", true),
                 ("Credits", true),
                 ("QUIT", true)
             ]
@@ -537,7 +560,15 @@ mod tests {
     #[test]
     fn every_item_has_its_own_text() {
         let c = ctx();
-        let all = [Continue, NewGame, LoadGame, QuickBattle, Credits, Quit];
+        let all = [
+            Continue,
+            NewGame,
+            LoadGame,
+            QuickBattle,
+            Options,
+            Credits,
+            Quit,
+        ];
         let labels: std::collections::BTreeSet<&str> =
             all.iter().map(|i| c.text(i.key())).collect();
         assert_eq!(labels.len(), all.len());
@@ -560,12 +591,15 @@ mod tests {
         // The saves don't change under the title itself: no look.
         c.storage.write(save::SUSPEND_KEY, "junk").unwrap();
         t.update(&mut c, &input(&[]));
-        assert_eq!(t.items, [NewGame, LoadGame, Credits, Quit]);
+        assert_eq!(t.items, [NewGame, LoadGame, Options, Credits, Quit]);
         // Back from another screen with a battle suspended: Continue,
         // focused.
         t.update(&mut c, &input(&[Confirm]));
         t.update(&mut c, &input(&[]));
-        assert_eq!(t.items, [Continue, NewGame, LoadGame, Credits, Quit]);
+        assert_eq!(
+            t.items,
+            [Continue, NewGame, LoadGame, Options, Credits, Quit]
+        );
         assert_eq!(t.menu.focus(), 0);
     }
 

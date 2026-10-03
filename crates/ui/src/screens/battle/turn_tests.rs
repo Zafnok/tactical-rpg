@@ -12,6 +12,7 @@ use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::map_view::RangeKind;
 use crate::screen::tests::ctx;
+use crate::settings::SETTINGS_KEY;
 
 fn quick() -> BattleScreen {
     BattleScreen::new(quick_battle(&ctx().content).unwrap())
@@ -391,20 +392,49 @@ fn objective_shows_the_goal_and_the_turn() {
         panic!("{:?}", s.mode());
     };
     assert_eq!(menu.focus(), 1);
-    // Down skips the disabled Options to Suspend, then Restart Battle,
-    // then End Turn.
-    press(&mut s, &mut c, &[Action::CursorDown]);
-    let Mode::MapMenu { menu, .. } = s.mode() else {
-        panic!("{:?}", s.mode());
-    };
-    assert_eq!(menu.focus(), 3);
-    press(&mut s, &mut c, &[Action::CursorDown]);
-    let Mode::MapMenu { menu, .. } = s.mode() else {
-        panic!("{:?}", s.mode());
-    };
-    assert_eq!(menu.focus(), 4);
+    // Down goes on to Options, Suspend, Restart Battle, then End Turn.
+    for focus in [2, 3, 4] {
+        press(&mut s, &mut c, &[Action::CursorDown]);
+        let Mode::MapMenu { menu, .. } = s.mode() else {
+            panic!("{:?}", s.mode());
+        };
+        assert_eq!(menu.focus(), focus);
+    }
     press(&mut s, &mut c, &[Action::CursorDown, Action::Confirm]);
     assert_eq!(s.mode(), &Mode::EndTurnPrompt { ready: 4 });
+}
+
+/// Ticket 0805: `Options` in the map menu opens the Options screen over
+/// the battle, and the map menu stays open under it.
+#[test]
+fn options_opens_the_options_screen_over_the_map_menu() {
+    let mut c = ctx();
+    let mut s = quick();
+    // The map menu: Units, Objective, Options. The key after the one
+    // that opens it isn't the battle's.
+    let keys = [
+        Action::Cancel,
+        Action::CursorDown,
+        Action::CursorDown,
+        Action::Confirm,
+        Action::CursorDown,
+    ];
+    c.audio.take();
+    assert_eq!(press(&mut s, &mut c, &keys), "Push(options)");
+    let Mode::MapMenu { menu, .. } = s.mode() else {
+        panic!("{:?}", s.mode());
+    };
+    assert_eq!(menu.focus(), 2);
+    let last = c
+        .audio
+        .take()
+        .pop()
+        .and_then(|r| r.cue().map(str::to_owned));
+    assert_eq!(last.as_deref(), Some("menu_select"));
+    // Once: the battle doesn't open it again by itself.
+    assert_eq!(press(&mut s, &mut c, &[]), "None");
+    // It opens in the enemy phase too (and after the battle is decided).
+    assert!(map_menu::MapEntry::Options.enabled(s.state()));
 }
 
 /// The map menu beside the cursor on the lord, focused on `Units`.
@@ -413,9 +443,10 @@ fn objective_shows_the_goal_and_the_turn() {
 fn suspend_asks_first() {
     let mut c = ctx();
     let mut s = quick();
-    // The map menu: Units, Objective, (Options), Suspend.
+    // The map menu: Units, Objective, Options, Suspend.
     let to_suspend = [
         Action::Cancel,
+        Action::CursorDown,
         Action::CursorDown,
         Action::CursorDown,
         Action::Confirm,
@@ -549,6 +580,16 @@ fn auto_end_is_off_by_default_and_toggles_on() {
     assert_eq!(s.toast(), Some("Auto-end: ON"));
     frame(&mut s, &mut c, &[], 1.0);
     assert_eq!(s.state().phase(), Phase::Player);
+    // It is the player's setting (0805): saved, and on in the next battle.
+    assert!(c.settings().auto_end_turn);
+    let saved = c.storage.read(SETTINGS_KEY).unwrap().unwrap();
+    assert!(saved.contains("auto_end_turn: true"), "{saved}");
+    let mut s = quick();
+    press(&mut s, &mut c, &[]);
+    assert!(s.auto_end());
+    press(&mut s, &mut c, &[Action::ToggleAutoEnd]);
+    assert!(!s.auto_end() && !c.settings().auto_end_turn);
+    assert_eq!(s.toast(), Some("Auto-end: OFF"));
     // On: a message for a moment, and the last unit's action ends the
     // phase.
     let mut s = quick();

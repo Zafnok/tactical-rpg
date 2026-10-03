@@ -349,8 +349,8 @@ fn restart_battle_from_the_map_menu() {
             action: UnitAction::Wait,
         },
     );
-    // The map menu: Units, Objective, (Options), Suspend, Restart Battle.
-    h.keys("d Down Down Down f");
+    // The map menu: Units, Objective, Options, Suspend, Restart Battle.
+    h.keys("d Down Down Down Down f");
     assert!(
         shows(&h, "Restart the battle from turn 1?"),
         "{}",
@@ -559,7 +559,7 @@ fn game_over_is_silent_and_retry_plays_the_battles_music_again() {
 fn restart_battle_asks_for_the_battles_music_again() {
     let mut h = to_battle();
     h.clear_audio();
-    h.keys("d Down Down Down f f f");
+    h.keys("d Down Down Down Down f f f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h).turn(), 1);
     assert_eq!(music(&h), [skirmish_pick(&mut h, 1)]);
@@ -573,7 +573,7 @@ fn restart_battle_asks_for_the_battles_music_again() {
     // The battle notes closed.
     h.keys("f");
     h.wait(2.0).clear_audio();
-    h.keys("d Down Down Down f f f").wait(2.0);
+    h.keys("d Down Down Down Down f f f").wait(2.0);
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(music(&h), ["battle_easy"]);
     assert!(h.music_commands().is_empty(), "{:?}", h.music_commands());

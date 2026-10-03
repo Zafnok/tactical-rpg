@@ -21,8 +21,9 @@ use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Device, Layout, PadKind};
 use crate::map_view::{MapScene, RangeKind, UnitView, skin_named};
-use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
+use crate::screen::{Ctx, KeyPrompt, Screen};
 use crate::screens::BattleScreen;
+use crate::settings::{SETTINGS_KEY, Settings};
 use crate::storage::{MemoryStorage, Storage};
 use trpg_core::Pos;
 
@@ -44,6 +45,9 @@ pub struct Harness {
     player: Player,
     /// The kind of controller [`pad`](Self::pad) presses buttons on.
     pad_kind: PadKind,
+    /// What the last frame told `app`: the music and sound volumes and
+    /// whether to fill the screen.
+    mixer: (f32, f32, bool),
 }
 
 /// The Harness's stand-in for `app`'s music player (ADR-0037): which track
@@ -110,7 +114,8 @@ impl Harness {
     /// with that layout's keys.
     pub fn with_layout(layout: Layout) -> Self {
         let mut storage = MemoryStorage::new();
-        if let Err(e) = storage.write(LAYOUT_KEY, layout.name()) {
+        let settings = Settings::default().with_layout(layout);
+        if let Err(e) = storage.write(SETTINGS_KEY, &settings.to_ron()) {
             panic!("saving the layout: {e}");
         }
         Self::with_storage(Box::new(storage))
@@ -157,6 +162,8 @@ impl Harness {
             music: Vec::new(),
             player: Player::default(),
             pad_kind: PadKind::default(),
+            // Nothing told yet: as `app` starts.
+            mixer: (1.0, 1.0, false),
         }
     }
 
@@ -308,6 +315,7 @@ impl Harness {
         self.player.advance(dt);
         self.game.set_music_playing(self.player.playing());
         let out = self.game.frame(events, dt);
+        self.mixer = (out.music_volume, out.sound_volume, out.fullscreen);
         self.audio.push(out.audio.to_vec());
         self.music.extend_from_slice(out.music);
         for command in out.music {
@@ -336,6 +344,17 @@ impl Harness {
     /// frames, press and release; this is the release).
     pub fn last_frame_audio(&self) -> &[AudioRequest] {
         self.audio.last().map_or(&[], Vec::as_slice)
+    }
+
+    /// The volumes the last frame told `app` to play at, 0–1: the music's
+    /// and the sounds' ([`FrameOutput`](crate::FrameOutput)).
+    pub fn volumes(&self) -> (f32, f32) {
+        (self.mixer.0, self.mixer.1)
+    }
+
+    /// Whether the last frame told `app` to fill the screen.
+    pub fn fullscreen(&self) -> bool {
+        self.mixer.2
     }
 
     /// Every music command of the run so far, in order.

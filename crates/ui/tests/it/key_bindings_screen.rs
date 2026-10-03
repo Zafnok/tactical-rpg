@@ -1,6 +1,6 @@
 //! Scripted tests of the Key bindings screen through the real game (ticket
-//! 0815, `docs/design/controls.md` *Rebinding keys*), opened from the debug
-//! menu until the Options menu (0805) exists.
+//! 0815, `docs/design/controls.md` *Rebinding keys*), opened from the
+//! Options screen's "Key bindings" row (0805).
 //!
 //! Rows, top to bottom: Cursor up, down, left, right, Confirm, Cancel, End
 //! turn, Select, Confirm end turn, Previous / Next ready unit, Unit info, …,
@@ -25,13 +25,25 @@ fn open(layout: Layout) -> Harness {
     h
 }
 
-/// Opens the screen from the title, with `h`'s current keys.
+/// Opens the screen from the title, with `h`'s current keys: Options is
+/// two rows under New Game (past Quick Battle), and Key bindings three
+/// rows up from the Options screen's first (round past Restore defaults
+/// and Reset tips).
 fn reopen(h: &mut Harness) {
     let km = h.game().ctx().keymap.clone();
     let key = |a| km.primary(a).map(|c| c.to_string()).unwrap_or_default();
-    let (down, confirm) = (key(Action::CursorDown), key(Action::Confirm));
-    h.keys(&format!("F2 {down} {down} {down} {down} {confirm}"));
-    assert_eq!(h.screens(), ["title", "debug_menu", "key_bindings"]);
+    let (up, down) = (key(Action::CursorUp), key(Action::CursorDown));
+    let confirm = key(Action::Confirm);
+    h.keys(&format!("{down} {down} {confirm} {up} {up} {up} {confirm}"));
+    assert_eq!(h.screens(), ["title", "options", "key_bindings"]);
+}
+
+/// Opens the screen again from the title, which is still on Options after
+/// the screen was closed back to it.
+fn reopen_from_options(h: &mut Harness) {
+    assert_eq!(h.screens(), ["title"]);
+    h.keys("f Up Up Up f");
+    assert_eq!(h.screens(), ["title", "options", "key_bindings"]);
 }
 
 fn bindings(h: &Harness, layout: Layout) -> LayoutBindings {
@@ -92,14 +104,14 @@ fn a_key_bound_twice_moves_and_the_loser_shows_not_mapped() {
     // Nothing changes in the game until the screen closes.
     assert_eq!(h.game().ctx().keymap.action(chord("e")), Some(Action::Info));
     h.keys("d");
-    assert_eq!(h.screens(), ["title", "debug_menu"]);
+    assert_eq!(h.screens(), ["title", "options"]);
     h.keys("d");
     let keymap = &h.game().ctx().keymap;
     assert_eq!(keymap.action(chord("e")), Some(Action::Confirm));
     assert_eq!(keymap.primary(Action::Info), None);
-    // `e` confirms at the title.
+    // `e` confirms at the title (still on Options).
     h.keys("e");
-    assert_eq!(h.screens(), ["title", "mode_select"]);
+    assert_eq!(h.screens(), ["title", "options"]);
 }
 
 /// Acceptance: with Confirm's only key moved away, Cancel doesn't leave.
@@ -122,10 +134,10 @@ fn leaving_is_blocked_until_confirm_has_a_key_again() {
     assert!(row(&h, "Confirm").contains(" g "));
     assert_eq!(message(&h), "");
     h.keys("d");
-    assert_eq!(h.screens(), ["title", "debug_menu"]);
+    assert_eq!(h.screens(), ["title", "options"]);
     h.keys("f");
-    assert_eq!(h.screens(), ["title", "debug_menu"], "f is Unit info now");
-    // The debug menu is still on "Key bindings": `g` confirms it.
+    assert_eq!(h.screens(), ["title", "options"], "f is Unit info now");
+    // Options is still on "Key bindings": `g` confirms it.
     h.keys("g");
     assert_eq!(h.top_screen(), "key_bindings");
 }
@@ -188,17 +200,20 @@ fn navigation_survives_moving_every_cursor_key_away() {
     h.keys("Up Up Up Up Up Up Up Up Up Up Up Up Up Up");
     h.keys("f i Down f k Down f j Down f l");
     h.keys("d");
-    assert_eq!(h.screens(), ["title", "debug_menu"]);
+    assert_eq!(h.screens(), ["title", "options"]);
     let keymap = &h.game().ctx().keymap;
     assert_eq!(keymap.primary(Action::CursorUp), Some(chord("i")));
     assert_eq!(keymap.primary(Action::CursorRight), Some(chord("l")));
     assert_eq!(keymap.action(chord("Up")), Some(Action::Info));
-    // In the game the new keys steer: `k` is Cursor down in the debug menu
-    // (from "Key bindings", past the sprite test, the two class change
-    // tools, the scene camera and the map skin after it, round to the
-    // first), and the arrows no longer move there.
-    h.keys("Down k k k k k k f");
-    assert_eq!(h.top_screen(), "glyph_sampler");
+    // In the game the new keys steer: `k` is Cursor down on the Options
+    // screen (from "Key bindings" past Reset tips to Restore defaults,
+    // which asks first), and the arrows no longer move there.
+    h.keys("Down k k f");
+    assert_eq!(h.top_screen(), "options");
+    assert!(
+        h.snapshot()
+            .contains("Restore every option to its default?")
+    );
 }
 
 /// Acceptance: edits persist across a restart, per layout.
@@ -242,7 +257,7 @@ fn restore_defaults_leaves_the_other_layout_alone() {
         bindings(&h, Layout::RightHanded),
         defaults(&h, Layout::RightHanded)
     );
-    reopen(&mut h);
+    reopen_from_options(&mut h);
     // One Up from the first row is Restore defaults. It asks first, and
     // Cancel there answers no without leaving the screen.
     h.keys("Up f");

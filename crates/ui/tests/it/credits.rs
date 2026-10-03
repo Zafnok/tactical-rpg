@@ -12,7 +12,7 @@ use trpg_ui::input::Layout;
 /// The title screen, then Credits chosen from its menu.
 fn credits() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down Down f");
+    h.keys("Down Down Down f");
     h
 }
 
@@ -105,16 +105,16 @@ fn after_the_last_row_the_list_starts_again_from_the_top() {
 fn cancel_returns_to_the_title() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     let title = h.snapshot();
-    h.keys("Down Down f");
+    h.keys("Down Down Down f");
     assert_eq!(h.top_screen(), "credits");
     h.keys("Down Down d");
     assert_eq!(h.screens(), ["title"]);
     // Credits is still focused; back up at New Game it is the title as it
     // was.
-    h.keys("Up Up");
+    h.keys("Up Up Up");
     assert_eq!(h.snapshot(), title);
     // Escape also backs out; Confirm doesn't leave.
-    h.keys("Down Down f f");
+    h.keys("Down Down Down f f");
     assert_eq!(h.top_screen(), "credits");
     h.keys("Escape");
     assert_eq!(h.top_screen(), "title");
@@ -194,8 +194,11 @@ fn every_glyph_drawn_is_in_the_font() {
 #[test]
 fn sounds_and_music() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.wait(0.1).clear_audio().keys("Down Down f");
-    assert_eq!(h.sounds(), ["menu_move", "menu_move", "menu_select"]);
+    h.wait(0.1).clear_audio().keys("Down Down Down f");
+    assert_eq!(
+        h.sounds(),
+        ["menu_move", "menu_move", "menu_move", "menu_select"]
+    );
     // A row scrolled ticks; Up at the top is silent; Confirm clicks.
     h.clear_audio().keys("Up f Down");
     assert_eq!(h.sounds(), ["menu_select", "menu_move"]);

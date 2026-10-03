@@ -111,7 +111,8 @@ fn browsing_shows_the_terrain_the_units_and_the_cursor() {
 #[test]
 fn the_cursor_has_the_players_style_and_its_pulse() {
     let mut c = ctx();
-    c.cursor_style = CursorStyle::TileGlow;
+    c.change_settings(|s| s.cursor_style = CursorStyle::TileGlow)
+        .unwrap();
     let mut s = quick();
     wait(&mut s, &mut c, 0.5);
     let cursor = s.scene(&c).cursor.unwrap();

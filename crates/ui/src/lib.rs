@@ -19,6 +19,7 @@ pub mod portrait;
 pub mod save;
 pub mod screen;
 pub mod screens;
+pub mod settings;
 pub mod snapshot;
 pub mod storage;
 pub mod tips;
@@ -31,5 +32,6 @@ pub use glyph_buffer::{
     Backdrop, BoxStyle, Cell, GlyphBuffer, Item, Layer, Overlay, PxRect, Rect, Sprite,
 };
 pub use screen::{Ctx, FrameInput, KeyPrompt, LoadError, Screen, ScreenStack, Transition};
+pub use settings::Settings;
 pub use storage::{MemoryStorage, Storage, StorageError};
 pub use trpg_content::ImageId;

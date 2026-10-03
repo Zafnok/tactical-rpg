@@ -61,6 +61,15 @@ pub struct FrameOutput<'a> {
     pub audio: &'a [AudioRequest],
     /// What to do to the music this frame (ADR-0026).
     pub music: &'a [MusicCommand],
+    /// The player's music volume, 0–1: `app` multiplies the music's own
+    /// volume by it, also for a track already playing.
+    pub music_volume: f32,
+    /// The player's sound volume, 0–1: `app` multiplies every sound's own
+    /// volume by it.
+    pub sound_volume: f32,
+    /// Whether the game should fill the screen (the Fullscreen setting);
+    /// `app` switches when this changes.
+    pub fullscreen: bool,
 }
 
 /// Owns the screens, input state, shared context and the console buffer.
@@ -83,8 +92,8 @@ impl Game {
     }
 
     /// A game starting at the title screen. If no layout is in use yet, the
-    /// saved one is loaded from `ctx.storage`; if none is saved (first
-    /// launch), the layout picker opens on top of the title.
+    /// saved one (the settings') is loaded from `ctx.storage`; if none is
+    /// saved (first launch), the layout picker opens on top of the title.
     pub fn start(mut ctx: Ctx) -> Self {
         if ctx.layout().is_none()
             && let Some(layout) = ctx.saved_layout()
@@ -163,6 +172,9 @@ impl Game {
             quit: self.quit,
             audio: &self.audio_out,
             music: &self.music_out,
+            music_volume: self.ctx.settings().music_factor(),
+            sound_volume: self.ctx.settings().sound_factor(),
+            fullscreen: self.ctx.settings().fullscreen,
         }
     }
 
@@ -688,8 +700,8 @@ mod tests {
         };
         let mut release = ctx();
         release.debug_tools = false;
-        // Down + f chose Credits: there is no Quick Battle.
-        assert_eq!(names(release), ["title", "credits"]);
+        // Down + f chose Options: there is no Quick Battle.
+        assert_eq!(names(release), ["title", "options"]);
         let mut debug = ctx();
         debug.debug_tools = true;
         assert_eq!(names(debug), ["title", "battle"]);

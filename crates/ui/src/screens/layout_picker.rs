@@ -1,6 +1,7 @@
 //! The first-launch "Pick your layout" screen (`docs/design/controls.md`):
 //! one panel per [`Layout`] with a small keyboard diagram and a legend, both
-//! read from that layout's bindings.
+//! read from that layout's bindings. The Options screen opens it again to
+//! switch layout ([`LayoutPickerScreen::change`]).
 
 use super::print_centred;
 use crate::color::UiColor;
@@ -86,26 +87,40 @@ pub fn label(layout: Layout) -> &'static str {
     }
 }
 
-/// Shows both layouts and saves the one picked. It can't be cancelled: the
-/// game needs a layout. Pops itself once a layout is picked.
+/// Shows both layouts and saves the one picked. On first launch it can't
+/// be cancelled: the game needs a layout. Pops itself once a layout is
+/// picked.
 #[derive(Debug, Clone)]
 pub struct LayoutPickerScreen {
     menu: Menu,
+    /// Whether Cancel backs out without changing anything (opened from
+    /// Options).
+    cancellable: bool,
 }
 
 impl LayoutPickerScreen {
     /// The picker with the first layout (right-handed) focused.
     pub fn new() -> Self {
         Self {
-            menu: Menu::new(
-                Layout::ALL
-                    .iter()
-                    .map(|&l| MenuItem::new(label(l)))
-                    .collect(),
-            )
             // A layout must be picked.
-            .without_cancel(),
+            menu: Self::menu().without_cancel(),
+            cancellable: false,
         }
+    }
+
+    /// The picker as Options opens it, to switch layout: the layout in use
+    /// focused, and Cancel backs out without changing anything.
+    pub fn change(ctx: &Ctx) -> Self {
+        let current = Layout::ALL.iter().position(|&l| Some(l) == ctx.layout());
+        Self {
+            menu: Self::menu().focused(current.unwrap_or(0)),
+            cancellable: true,
+        }
+    }
+
+    fn menu() -> Menu {
+        let items = Layout::ALL.iter().map(|&l| MenuItem::new(label(l)));
+        Menu::new(items.collect())
     }
 
     /// The focused layout.
@@ -120,6 +135,12 @@ impl LayoutPickerScreen {
     /// Confirm key, from the active keymap (before any layout is chosen,
     /// the layout picker's own keys).
     pub fn help(ctx: &Ctx) -> String {
+        Self::help_with(ctx, false)
+    }
+
+    /// [`help`](Self::help), with the Cancel key to go `back` when the
+    /// picker can be backed out of (`cancellable`).
+    fn help_with(ctx: &Ctx, cancellable: bool) -> String {
         let km = ctx.help_keys();
         let choose = Some(format!(
             "{} {}",
@@ -129,6 +150,7 @@ impl LayoutPickerScreen {
         help_line(&[
             (choose, "choose"),
             (Some(all_key_names(km, Action::Confirm)), "pick"),
+            (cancellable.then(|| key_name(km, Action::Cancel)), "back"),
         ])
     }
 
@@ -250,13 +272,16 @@ impl Screen for LayoutPickerScreen {
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         for &action in &input.actions {
-            if let Some(MenuEvent::Chosen(i)) = self.menu.handle_with_sound(action, &mut ctx.audio)
-            {
-                let layout = Layout::ALL.get(i).copied().unwrap_or(Layout::RightHanded);
-                // If saving fails the layout is still used this session;
-                // the player is just asked again next launch.
-                let _ = ctx.choose_layout(layout);
-                return Transition::Pop;
+            match self.menu.handle_with_sound(action, &mut ctx.audio) {
+                Some(MenuEvent::Chosen(i)) => {
+                    let layout = Layout::ALL.get(i).copied().unwrap_or(Layout::RightHanded);
+                    // If saving fails the layout is still used this
+                    // session; the player is just asked again next launch.
+                    let _ = ctx.choose_layout(layout);
+                    return Transition::Pop;
+                }
+                Some(MenuEvent::Cancelled) => return Transition::Pop,
+                None => {}
             }
         }
         Transition::None
@@ -273,7 +298,8 @@ impl Screen for LayoutPickerScreen {
             Self::draw_panel(ctx, buf, layout, layout == self.focused(), x, y);
         }
         let bottom = i32::from(buf.height()) - 1;
-        print_centred(buf, bottom, &Self::help(ctx), c(UiColor::TextDim), black);
+        let help = Self::help_with(ctx, self.cancellable);
+        print_centred(buf, bottom, &help, c(UiColor::TextDim), black);
     }
 }
 

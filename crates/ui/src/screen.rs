@@ -14,19 +14,22 @@ use std::rc::Rc;
 use trpg_content::lang::TEST;
 use trpg_content::{Content, ContentErrors, LangCode};
 use trpg_core::lead::DEFAULT_NAME;
-use trpg_core::{LeadGender, LeadProfile};
+use trpg_core::{GameMode, LeadGender, LeadProfile};
 
 use crate::audio::{AudioQueue, MusicClock, pick_from_pool};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
-use crate::map_view::{CursorStyle, MapSkin};
+use crate::map_view::MapSkin;
+use crate::settings::{SETTINGS_KEY, Settings};
 use crate::storage::{MemoryStorage, Storage, StorageError};
 use crate::tips::fill_text;
 use crate::widgets::help::HelpKeys;
 
-/// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
-/// e.g. `LeftHanded`, which is also valid RON for the enum).
+/// [`Storage`] key under which the chosen [`Layout`] was saved (its name,
+/// e.g. `LeftHanded`) before the settings held it (ticket 0805). Still
+/// read, for a player who picked a layout back then
+/// ([`Ctx::saved_layout`]); never written.
 pub const LAYOUT_KEY: &str = "layout";
 
 /// [`Storage`] key under which the player's key bindings are saved
@@ -36,9 +39,6 @@ pub const KEYBINDINGS_KEY: &str = "keybindings";
 /// Whether this build offers debug tools: debug builds, and release builds
 /// with the `debug-tools` feature (ADR-0023).
 pub const DEBUG_TOOLS: bool = cfg!(any(debug_assertions, feature = "debug-tools"));
-
-/// Default dialogue [`Ctx::text_speed`], in characters per second.
-pub const DEFAULT_TEXT_SPEED: f32 = 60.0;
 
 /// One screen of the game: title, battle map, a menu overlay, …
 pub trait Screen {
@@ -202,25 +202,25 @@ pub struct Ctx {
     /// `localStorage` on web. Defaults to [`MemoryStorage`]; `app` swaps in
     /// the platform implementation with [`Ctx::with_storage`].
     pub storage: Box<dyn Storage>,
+    /// The player's settings (0805), loaded from `storage`. Change them
+    /// with [`change_settings`](Self::change_settings), which saves them.
+    settings: Settings,
+    /// The mode of the campaign being played, for the Options screen:
+    /// `None` with no campaign (the title). The game flow keeps it up to
+    /// date, and takes a change to Casual here
+    /// ([`switch_to_casual`](Self::switch_to_casual)) into its campaign.
+    pub campaign_mode: Option<GameMode>,
     /// Whether debug tools are offered: the debug menu key and the title
     /// screen's Quick Battle. On in debug builds and with the `debug-tools`
     /// feature (the Pages build, ADR-0023); the test harness turns it on
     /// everywhere so tests don't depend on the build profile.
     pub debug_tools: bool,
-    /// How the battle cursor is drawn (corner marks unless the player picks
-    /// an accessibility style). Lives here until the Options menu (0805)
-    /// moves it into the saved settings.
-    pub cursor_style: CursorStyle,
     /// How battle maps look (ADR-0038): the glyph skin, unless a debug tool
     /// swaps in another. Screens build a `MapScene` and this paints it.
     pub map_skin: Rc<dyn MapSkin>,
     /// Whether battles show their one-time tips (0406). Off here, so
-    /// screen tests aren't interrupted by them; `app` turns it on, and the
-    /// Options menu (0805) will let the player switch it.
+    /// screen tests aren't interrupted by them; `app` turns it on.
     pub tips_enabled: bool,
-    /// How fast dialogue text is revealed, in characters per second. Lives
-    /// here until the Options menu (0805) moves it into the saved settings.
-    pub text_speed: f32,
     /// Sounds and music screens ask for this frame (ADR-0026), e.g.
     /// `ctx.audio.play_sound("menu_move")`. `Game` passes them to `app`.
     pub audio: AudioQueue,
@@ -292,11 +292,11 @@ impl Ctx {
             player_keys: PlayerKeys::default(),
             warnings: Vec::new(),
             storage: Box::new(MemoryStorage::new()),
+            settings: Settings::default(),
+            campaign_mode: None,
             debug_tools: DEBUG_TOOLS,
-            cursor_style: CursorStyle::default(),
             map_skin: crate::map_view::default_skin(),
             tips_enabled: false,
-            text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),
             music_clock: None,
             music_seed: DEFAULT_MUSIC_SEED,
@@ -436,29 +436,90 @@ impl Ctx {
         self
     }
 
-    /// The player picked `layout`: switches to it and saves it under
-    /// [`LAYOUT_KEY`]. The switch happens even if saving fails (the player
-    /// is then asked again next launch).
+    /// The player picked `layout`: switches to it (its own keys if the
+    /// player changed them, else its defaults) and saves it in the
+    /// settings. The switch happens even if saving fails (the player is
+    /// then asked again next launch).
     pub fn choose_layout(&mut self, layout: Layout) -> Result<(), StorageError> {
         self.use_layout(layout);
-        self.storage.write(LAYOUT_KEY, layout.name())
+        self.settings.layout = Some(layout);
+        self.save_settings()
     }
 
-    /// The layout saved by an earlier [`choose_layout`](Self::choose_layout).
+    /// The layout saved by an earlier [`choose_layout`](Self::choose_layout):
+    /// the saved settings', else the one under the old [`LAYOUT_KEY`].
     /// `None` if nothing is saved, or if the saved value can't be read or
     /// isn't a known layout (the player is simply asked again).
     pub fn saved_layout(&self) -> Option<Layout> {
-        let saved = self.storage.read(LAYOUT_KEY).ok()??;
-        Layout::from_name(saved.trim())
+        let read = |key| self.storage.read(key).ok().flatten();
+        let in_settings = read(SETTINGS_KEY)
+            .and_then(|text| Settings::from_ron(&text).ok())
+            .and_then(|s| s.layout());
+        in_settings.or_else(|| Layout::from_name(read(LAYOUT_KEY)?.trim()))
+    }
+
+    /// The player's settings.
+    pub fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    /// Lets `change` edit the settings and, if it changed anything, saves
+    /// them under [`SETTINGS_KEY`]. The change applies even if saving
+    /// fails (it is then lost on quit).
+    pub fn change_settings(
+        &mut self,
+        change: impl FnOnce(&mut Settings),
+    ) -> Result<(), StorageError> {
+        let before = self.settings.clone();
+        change(&mut self.settings);
+        // The layout changes only with the keys (`choose_layout`).
+        self.settings.layout = before.layout;
+        if self.settings == before {
+            return Ok(());
+        }
+        self.save_settings()
+    }
+
+    fn save_settings(&mut self) -> Result<(), StorageError> {
+        self.storage.write(SETTINGS_KEY, &self.settings.to_ron())
+    }
+
+    /// Loads the settings from `storage`: the defaults if none are saved,
+    /// or (with a warning) if they can't be read. A layout picked before
+    /// the settings held it ([`LAYOUT_KEY`]) is taken over.
+    fn load_settings(&mut self) {
+        let loaded = match self.storage.read(SETTINGS_KEY) {
+            Ok(Some(text)) => Settings::from_ron(&text),
+            Ok(None) => Ok(Settings::default()),
+            Err(e) => Err(format!("can't be read: {e}")),
+        };
+        self.settings = loaded.unwrap_or_else(|why| {
+            self.warnings
+                .push(format!("{SETTINGS_KEY}: {why}, using the defaults"));
+            Settings::default()
+        });
+        self.settings.layout = self.saved_layout();
+    }
+
+    /// The Options screen's switch to Casual: one way, and only from a
+    /// Classic campaign (`docs/design/death-and-difficulty.md`). Returns
+    /// whether the mode changed.
+    pub fn switch_to_casual(&mut self) -> bool {
+        let classic = self.campaign_mode == Some(GameMode::Classic);
+        if classic {
+            self.campaign_mode = Some(GameMode::Casual);
+        }
+        classic
     }
 
     /// Replaces the storage backend (the harness and tests keep
     /// [`MemoryStorage`]; `app` installs the platform implementation) and
-    /// loads the player's key bindings from it.
+    /// loads the player's key bindings and settings from it.
     #[must_use]
     pub fn with_storage(mut self, storage: Box<dyn Storage>) -> Self {
         self.storage = storage;
         self.load_player_keys();
+        self.load_settings();
         self
     }
 }
@@ -887,12 +948,92 @@ pub(crate) mod tests {
             let mut c = Ctx::embedded().unwrap();
             assert_eq!(c.choose_layout(layout), Ok(()));
             assert_eq!(c.layout(), Some(layout));
-            assert_eq!(
-                c.storage.read(LAYOUT_KEY),
-                Ok(Some(layout.name().to_owned()))
-            );
+            // In the settings (0805), no longer under its own key.
+            assert_eq!(c.settings().layout(), Some(layout));
+            assert_eq!(c.storage.read(LAYOUT_KEY), Ok(None));
+            let saved = c.storage.read(SETTINGS_KEY).unwrap().unwrap();
+            assert_eq!(saved, c.settings().to_ron());
             assert_eq!(c.saved_layout(), Some(layout));
         }
+    }
+
+    #[test]
+    fn a_layout_saved_before_the_settings_is_still_found() {
+        let mut storage = MemoryStorage::new();
+        storage.write(LAYOUT_KEY, "LeftHanded").unwrap();
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(storage));
+        assert_eq!(c.saved_layout(), Some(Layout::LeftHanded));
+        assert_eq!(c.settings().layout(), Some(Layout::LeftHanded));
+        // The next save of the settings carries it.
+        c.change_settings(|s| s.fullscreen = true).unwrap();
+        let saved = c.storage.read(SETTINGS_KEY).unwrap().unwrap();
+        let saved = Settings::from_ron(&saved).unwrap();
+        assert_eq!(saved.layout(), Some(Layout::LeftHanded));
+        // The settings' layout beats the old key.
+        c.choose_layout(Layout::RightHanded).unwrap();
+        assert_eq!(c.saved_layout(), Some(Layout::RightHanded));
+    }
+
+    #[test]
+    fn settings_are_saved_on_change_and_loaded_with_the_storage() {
+        let mut c = ctx();
+        assert_eq!(*c.settings(), Settings::default());
+        // Nothing changed: nothing written.
+        assert_eq!(c.change_settings(|_| {}), Ok(()));
+        assert_eq!(c.storage.read(SETTINGS_KEY), Ok(None));
+        c.change_settings(|s| {
+            s.music_volume = 3;
+            s.combat_animations = false;
+        })
+        .unwrap();
+        assert_eq!(c.settings().music_volume, 3);
+        let storage = std::mem::replace(&mut c.storage, Box::new(MemoryStorage::new()));
+        let mut again = Ctx::embedded().unwrap().with_storage(storage);
+        assert_eq!(again.settings(), c.settings());
+        assert!(again.take_warnings().is_empty());
+    }
+
+    #[test]
+    fn change_settings_cant_change_the_layout() {
+        let mut c = ctx();
+        c.choose_layout(Layout::LeftHanded).unwrap();
+        c.change_settings(|s| *s = Settings::default()).unwrap();
+        assert_eq!(c.settings().layout(), Some(Layout::LeftHanded));
+        assert_eq!(c.layout(), Some(Layout::LeftHanded));
+    }
+
+    #[test]
+    fn unreadable_settings_give_the_defaults_and_a_warning() {
+        let mut storage = MemoryStorage::new();
+        storage.write(SETTINGS_KEY, "nonsense").unwrap();
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(storage));
+        assert_eq!(*c.settings(), Settings::default());
+        let warnings = c.take_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].starts_with("settings: unreadable: ")
+                && warnings[0].ends_with(", using the defaults"),
+            "{warnings:?}"
+        );
+    }
+
+    #[test]
+    fn a_failed_save_still_changes_the_settings() {
+        let mut c = Ctx::embedded().unwrap().with_storage(Box::new(Failing));
+        assert!(c.change_settings(|s| s.sound_volume = 1).is_err());
+        assert_eq!(c.settings().sound_volume, 1);
+    }
+
+    #[test]
+    fn only_a_classic_campaign_switches_to_casual() {
+        let mut c = ctx();
+        assert!(!c.switch_to_casual());
+        assert_eq!(c.campaign_mode, None);
+        c.campaign_mode = Some(GameMode::Classic);
+        assert!(c.switch_to_casual());
+        assert_eq!(c.campaign_mode, Some(GameMode::Casual));
+        assert!(!c.switch_to_casual());
+        assert_eq!(c.campaign_mode, Some(GameMode::Casual));
     }
 
     #[test]
@@ -943,8 +1084,12 @@ pub(crate) mod tests {
         assert_eq!(c.player_keys(), &PlayerKeys::default());
         assert_eq!(
             c.take_warnings(),
-            ["keybindings: can't be read, using the default keys: storage error: down"]
+            [
+                "keybindings: can't be read, using the default keys: storage error: down",
+                "settings: can't be read: storage error: down, using the defaults"
+            ]
         );
+        assert_eq!(*c.settings(), Settings::default());
         assert!(c.take_warnings().is_empty());
     }
 

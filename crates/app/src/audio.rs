@@ -57,6 +57,10 @@ pub(crate) struct Audio<B: Backend> {
     rng: VariantRng,
     /// Problems to log (missing files, decode errors).
     warnings: Vec<String>,
+    /// The player's music and sound volumes (the Options screen's), 0–1:
+    /// multipliers on every cue's own volume.
+    music_volume: f32,
+    sound_volume: f32,
 }
 
 struct Track<B: Backend> {
@@ -115,6 +119,24 @@ impl<B: Backend> Audio<B> {
             music_dir,
             rng: VariantRng::new(seed),
             warnings,
+            music_volume: 1.0,
+            sound_volume: 1.0,
+        }
+    }
+
+    /// Sets the player's volumes (the Options screen's, 0–1): every sound
+    /// and track plays at its own volume times these. A change to the
+    /// music's reaches the tracks already playing.
+    pub(crate) fn set_volumes(&mut self, backend: &mut B, music: f32, sound: f32) {
+        self.sound_volume = sound;
+        if (music - self.music_volume).abs() <= f32::EPSILON {
+            return;
+        }
+        self.music_volume = music;
+        for track in self.tracks.values() {
+            if let (true, TrackState::Ready(sound)) = (track.playing, &track.state) {
+                backend.set_volume(sound, track.volume * track.gain * music);
+            }
         }
     }
 
@@ -165,7 +187,8 @@ impl<B: Backend> Audio<B> {
             return; // Its files failed to load (warned then).
         }
         let sound = &variants[self.rng.below(variants.len())];
-        backend.play(sound, percent(def.volume) * volume, false);
+        let volume = percent(def.volume) * volume * self.sound_volume;
+        backend.play(sound, volume, false);
     }
 
     fn music(&mut self, backend: &mut B, command: &MusicCommand, now: f64) {
@@ -192,7 +215,7 @@ impl<B: Backend> Audio<B> {
                     track.playing = true;
                     track.gain = 1.0;
                     if let TrackState::Ready(sound) = &track.state {
-                        backend.play(sound, track.volume, track.looped);
+                        backend.play(sound, track.volume * self.music_volume, track.looped);
                         track.started_at = Some(now);
                     }
                 }
@@ -201,7 +224,8 @@ impl<B: Backend> Audio<B> {
                 if let Some(track) = self.tracks.get_mut(cue) {
                     track.gain = *gain;
                     if let (true, TrackState::Ready(sound)) = (track.playing, &track.state) {
-                        backend.set_volume(sound, track.volume * track.gain);
+                        let volume = track.volume * track.gain * self.music_volume;
+                        backend.set_volume(sound, volume);
                     }
                 }
             }
@@ -240,7 +264,8 @@ impl<B: Backend> Audio<B> {
                 None => {}
                 Some(Ok(sound)) => {
                     if track.playing {
-                        backend.play(&sound, track.volume * track.gain, track.looped);
+                        let volume = track.volume * track.gain * self.music_volume;
+                        backend.play(&sound, volume, track.looped);
                         track.started_at = Some(now);
                     }
                     track.state = TrackState::Ready(sound);
@@ -712,6 +737,66 @@ mod tests {
         audio.play(&mut fake, &[], &[cmd(stop, "title")], 0.0);
         assert_eq!(fake.calls(), ["stop music/title.ogg"]);
         assert!(audio.tracks.is_empty());
+    }
+
+    /// Ticket 0805: the player's volumes multiply every cue's own.
+    #[test]
+    fn the_players_volumes_scale_sounds_and_music() {
+        let mut fake = Fake::default();
+        fake.ready.push("music/title.ogg".into());
+        let mut audio = audio(&mut fake);
+        audio.set_volumes(&mut fake, 0.5, 0.2);
+        assert!(fake.calls().is_empty(), "nothing is playing yet");
+        // Sounds: the cue's 50 %, the request's volume, the player's 20 %.
+        audio.play(
+            &mut fake,
+            &[sound("beep", 1.0), sound("beep", 0.5)],
+            &[],
+            0.0,
+        );
+        assert_eq!(fake.calls(), ["play wav100 0.10", "play wav100 0.05"]);
+        // Music starts at the cue's 80 % times the player's 50 %.
+        let begin = [cmd(load, "title"), cmd(start, "title")];
+        audio.play(&mut fake, &[], &begin, 0.0);
+        assert_eq!(
+            fake.calls(),
+            ["load music/title.ogg", "play music/title.ogg 0.40 looped"]
+        );
+        // The same volumes again change nothing; a new music volume
+        // reaches the track playing, and a fade multiplies with it.
+        audio.set_volumes(&mut fake, 0.5, 0.2);
+        assert!(fake.calls().is_empty());
+        audio.set_volumes(&mut fake, 1.0, 0.2);
+        assert_eq!(fake.calls(), ["volume music/title.ogg 0.80"]);
+        audio.play(&mut fake, &[], &[gain("title", 0.5)], 0.0);
+        assert_eq!(fake.calls(), ["volume music/title.ogg 0.40"]);
+        audio.set_volumes(&mut fake, 0.5, 0.2);
+        assert_eq!(fake.calls(), ["volume music/title.ogg 0.20"]);
+        // Silent: sounds and music at 0.
+        audio.set_volumes(&mut fake, 0.0, 0.0);
+        assert_eq!(fake.calls(), ["volume music/title.ogg 0.00"]);
+        audio.play(&mut fake, &[sound("beep", 1.0)], &[], 0.0);
+        assert_eq!(fake.calls(), ["play wav100 0.00"]);
+    }
+
+    /// A track already loaded and started later, or still loading when the
+    /// volume is set, starts at the player's volume.
+    #[test]
+    fn a_track_that_starts_later_uses_the_players_volume() {
+        let mut fake = Fake::default();
+        let mut audio = audio(&mut fake);
+        let begin = [cmd(load, "title"), cmd(start, "title")];
+        audio.play(&mut fake, &[], &begin, 0.0);
+        fake.calls();
+        // Still loading: nothing to change yet.
+        audio.set_volumes(&mut fake, 0.25, 1.0);
+        assert!(fake.calls().is_empty());
+        fake.ready.push("music/title.ogg".into());
+        audio.play(&mut fake, &[], &[], 0.0);
+        assert_eq!(fake.calls(), ["play music/title.ogg 0.20 looped"]);
+        // Started again once loaded (ADR-0026: `Start` on a ready track).
+        audio.play(&mut fake, &[], &[cmd(start, "title")], 0.0);
+        assert_eq!(fake.calls(), ["play music/title.ogg 0.20 looped"]);
     }
 
     #[test]

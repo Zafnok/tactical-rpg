@@ -10,6 +10,7 @@ use crate::console::{CELL_H_PX, CELL_W_PX};
 use crate::glyph_buffer::Sprite;
 use crate::portrait::dim_opacity;
 use crate::screen::tests::ctx;
+use crate::settings::TextSpeed;
 
 /// One frame of `dt` seconds with `actions`, Confirm held if `held`.
 fn frame(actions: &[Action], dt: f32, held: bool) -> FrameInput {
@@ -108,11 +109,29 @@ fn reveals_at_the_text_speed() {
     assert!((s.shown - 6.0).abs() < 1e-3, "{}", s.shown);
     assert!(row(&draw(&s, &c), TEXT_Y).contains(" Hello "));
     assert!(!row(&draw(&s, &c), TEXT_Y).contains("Hello t"));
-    c.text_speed = 10.0;
+    // The player's text speed (0805): Slow is 30 characters a second.
+    c.change_settings(|s| s.text_speed = TextSpeed::Slow)
+        .unwrap();
     s.update(&mut c, &frame(&[], 0.1, false));
-    assert!((s.shown - 7.0).abs() < 1e-3, "{}", s.shown);
+    assert!((s.shown - 9.0).abs() < 1e-3, "{}", s.shown);
+    c.change_settings(|s| s.text_speed = TextSpeed::Fast)
+        .unwrap();
+    s.update(&mut c, &frame(&[], 0.05, false));
+    assert!((s.shown - 15.0).abs() < 1e-3, "{}", s.shown);
     // Never past the end.
     s.update(&mut c, &frame(&[], 10.0, false));
+    assert!(s.is_revealed());
+    assert!((s.shown - 20.0).abs() < 1e-3);
+}
+
+#[test]
+fn instant_text_shows_each_page_at_once() {
+    let mut c = ctx();
+    c.change_settings(|s| s.text_speed = TextSpeed::Instant)
+        .unwrap();
+    let mut s = full(two_speakers("Hello there, knight."));
+    // Even a frame of no time.
+    s.update(&mut c, &frame(&[], 0.0, false));
     assert!(s.is_revealed());
     assert!((s.shown - 20.0).abs() < 1e-3);
 }
