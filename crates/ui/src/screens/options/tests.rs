@@ -175,7 +175,7 @@ fn rows_show_their_values() {
     assert_eq!(value(&c, Row::AutoEnd), "On");
     assert_eq!(value(&c, Row::GameMode), "Classic");
     assert_eq!(value(&c, Row::Layout), "Left-handed");
-    assert_eq!(cursor_label(CursorStyle::TileGlow), "Tile glow");
+    assert_eq!(c.text(cursor_key(CursorStyle::TileGlow)), "Tile glow");
     c.campaign_mode = Some(GameMode::Casual);
     assert_eq!(value(&c, Row::GameMode), "Casual");
 }

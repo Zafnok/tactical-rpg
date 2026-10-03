@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: ["0712"]
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0713 — Surname short forms in the names table
@@ -68,10 +68,10 @@ None. The surname is the second word of the character's current name in
 
 ## Acceptance criteria
 
-- [ ] `names.ron` has a `.last` entry for each of the nine surnames above.
-- [ ] A test: a `.dlg` line writing "Rook" out is an error naming
+- [x] `names.ron` has a `.last` entry for each of the nine surnames above.
+- [x] A test: a `.dlg` line writing "Rook" out is an error naming
       `{n:sergeant.last}`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -81,3 +81,15 @@ None. The surname is the second word of the character's current name in
 
 ## Completion notes
 
+- Added the eight missing `.last` ids (Crane, Coster, Vosse, Pellam, Parrow,
+  Ravn, Holt, Mast) to `docs/story/names.md` and `assets/data/names.ron`;
+  `sergeant.last` (from 0707) is unchanged apart from its note.
+- `every_two_word_name_has_short_forms` now checks each person's surname:
+  it is a `family.*` value, or else `<id>.last` holds it (and a person with
+  a family surname has no `.last`). Nine `.last` ids in all.
+- New test `surnames_written_out_are_errors`: "Rook", "Crane" and "Vosse"
+  written out are errors naming their `.last` ids.
+- The README's `.last` row was already there (0707 added it); only the
+  ordinary-words note changed there and in `names.md`.
+- No existing `.dlg` line wrote one of these surnames out. No gameplay
+  rules decided. No follow-up tickets.

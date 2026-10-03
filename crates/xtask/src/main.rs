@@ -4,9 +4,12 @@
 #![allow(clippy::print_stdout)]
 
 mod check_keys;
+mod check_text;
 mod clean_targets;
 mod font_atlas;
 mod frame_png;
+mod lang_status;
+mod lines;
 mod playtest;
 mod portrait_import;
 mod private_assets;
@@ -25,6 +28,8 @@ const USAGE: &str = "usage: cargo xtask <command>\n\n\
 available commands:\n  \
 ticket-lint [--pr-branch <name>]   check tickets/{open,done} against tickets/README.md\n  \
 check-keys                         fail on keys hard-coded in game code or text\n  \
+check-text                         count screen text still written as literals in crates/ui\n  \
+lang-status <code>                 list a language pack's missing and stale keys\n  \
 clean-merged-targets [--dry-run]   delete target/ in worktrees whose PR has merged\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
@@ -34,6 +39,7 @@ test-tileset                       write the sprite map skin's test tileset, ass
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 portrait-import <busts> <id>       cut bought busts into portraits (portrait-import --help)\n  \
+lines [scene]                      list every dialogue line with its line id (lines --help)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -46,6 +52,8 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
     match args.next().as_deref() {
         Some("ticket-lint") => ticket_lint(&args.collect::<Vec<_>>()),
         Some("check-keys") => check_keys(&args.collect::<Vec<_>>()),
+        Some("check-text") => check_text(&args.collect::<Vec<_>>()),
+        Some("lang-status") => lang_status(&args.collect::<Vec<_>>()),
         Some("clean-merged-targets") => clean_merged_targets(&args.collect::<Vec<_>>()),
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
@@ -56,6 +64,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some("portrait-import") => portrait_import(&args.collect::<Vec<_>>()),
+        Some("lines") => lines(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -107,6 +116,57 @@ fn check_keys(args: &[String]) -> u8 {
         eprintln!("  {error}");
     }
     1
+}
+
+fn check_text(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask check-text");
+        return 2;
+    }
+    let (hits, errors) = check_text::run(&repo_root());
+    print!("{}", check_text::report(&hits, check_text::MAX_LITERALS));
+    for error in &errors {
+        eprintln!("check-text: {error}");
+    }
+    match check_text::verdict(hits.len(), check_text::MAX_LITERALS) {
+        Ok(note) => {
+            if let Some(note) = note {
+                println!("{note}");
+            }
+            u8::from(!errors.is_empty())
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            1
+        }
+    }
+}
+
+/// Prints what a language pack lacks. Missing and stale keys are not a
+/// failure (ADR-0045): the exit code is 0 unless the content doesn't load
+/// (1) or there is no such pack (2).
+fn lang_status(args: &[String]) -> u8 {
+    let [code] = args else {
+        eprintln!("usage: cargo xtask lang-status <code>");
+        return 2;
+    };
+    let content = match trpg_content::load_embedded() {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("lang-status: {e}");
+            return 1;
+        }
+    };
+    match lang_status::report(&content.lang, code) {
+        Ok(report) => {
+            print!("{report}");
+            0
+        }
+        Err(e) => {
+            eprintln!("lang-status: {e}");
+            2
+        }
+    }
 }
 
 fn clean_merged_targets(args: &[String]) -> u8 {
@@ -338,6 +398,36 @@ fn parse_pr_branch(args: &[String]) -> Result<Option<String>, String> {
     }
 }
 
+fn lines(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", lines::USAGE);
+        return 0;
+    }
+    let scene = match args {
+        [] => None,
+        [scene] => Some(scene.as_str()),
+        _ => {
+            eprintln!("{}", lines::USAGE);
+            return 2;
+        }
+    };
+    let rows = trpg_content::load_embedded()
+        .map_err(|errors| errors.to_string())
+        .and_then(|content| lines::rows(&content.dialogue, scene));
+    match rows {
+        Ok(rows) => {
+            for row in rows {
+                println!("{row}");
+            }
+            0
+        }
+        Err(e) => {
+            eprintln!("lines: {e}");
+            1
+        }
+    }
+}
+
 /// `xtask` always runs via `cargo xtask`, so `CARGO_MANIFEST_DIR` (this
 /// crate's directory, `<repo>/crates/xtask`) locates the repo root.
 #[allow(clippy::expect_used)] // CARGO_MANIFEST_DIR is baked in at compile time; the two
@@ -546,6 +636,15 @@ mod tests {
     }
 
     #[test]
+    fn lines_lists_a_scene_and_fails_on_an_unknown_one() {
+        assert_eq!(dispatch(args(&["lines", "ch01_intro"]).into_iter()), 0);
+        assert_eq!(lines(&[]), 0);
+        assert_eq!(lines(&args(&["--help"])), 0);
+        assert_eq!(lines(&args(&["no_such_scene"])), 1);
+        assert_eq!(lines(&args(&["ch01_intro", "ch01_prebattle"])), 2);
+    }
+
+    #[test]
     fn repo_root_points_at_the_workspace_root() {
         let root = repo_root();
         assert!(root.join("Cargo.toml").is_file());
@@ -689,6 +788,23 @@ mod tests {
     fn check_keys_passes_on_the_real_repo() {
         assert_eq!(check_keys(&[]), 0);
         assert_eq!(dispatch(args(&["check-keys"]).into_iter()), 0);
+    }
+
+    #[test]
+    fn check_text_passes_on_the_real_repo() {
+        assert_eq!(check_text(&[]), 0);
+        assert_eq!(dispatch(args(&["check-text"]).into_iter()), 0);
+        assert_eq!(check_text(&args(&["--bogus"])), 2);
+    }
+
+    #[test]
+    fn lang_status_exits_zero_with_missing_and_stale_keys() {
+        // The test pack has one of each.
+        assert_eq!(lang_status(&args(&["test"])), 0);
+        assert_eq!(dispatch(args(&["lang-status", "test"]).into_iter()), 0);
+        assert_eq!(lang_status(&args(&["zz"])), 2);
+        assert_eq!(lang_status(&[]), 2);
+        assert_eq!(lang_status(&args(&["test", "ja"])), 2);
     }
 
     #[test]

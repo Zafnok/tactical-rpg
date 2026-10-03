@@ -94,10 +94,10 @@ w = fg:hp_low bg:panel_bg
 x = fg:panel_bg bg:panel_border_focus
 y = fg:text_dim bg:black
 --- overlays ---
-over  208,270 16x2  hp_high
-over  224,286 16x2  hp_high
-over  192,254 16x2  hp_high
-over  288,222 16x2  hp_high
-over  272,254 16x2  hp_high
-over  272,206 16x2  hp_high
-over  208,286 16x2  hp_high
+over  209,270 14x2  hp_high
+over  225,286 14x2  hp_high
+over  193,254 14x2  hp_high
+over  289,222 14x2  hp_high
+over  273,254 14x2  hp_high
+over  273,206 14x2  hp_high
+over  209,286 14x2  hp_high

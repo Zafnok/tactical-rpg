@@ -6,6 +6,7 @@ fn option(tone: &str, text: &str, steps: Vec<Step>) -> ChoiceOption {
     ChoiceOption {
         tone: tone.into(),
         text: text.into(),
+        line: LineId::default(),
         steps,
     }
 }
@@ -26,7 +27,7 @@ fn parses_choice_blocks() {
     let (parsed, errs) = parse_dlg("t.dlg", &src);
     assert_eq!(errs, []);
     assert_eq!(
-        parsed[0].scene.steps[2..],
+        bare(&parsed[0].scene.steps)[2..],
         [
             Step::Choice {
                 options: vec![

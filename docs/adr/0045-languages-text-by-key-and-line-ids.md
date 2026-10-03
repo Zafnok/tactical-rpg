@@ -1,6 +1,6 @@
 # ADR-0045: Languages: text by key, dialogue lines by id, wide glyphs in two cells
 
-- **Status:** Proposed (becomes Accepted with tickets 0717 and 0233, which may adjust details)
+- **Status:** Accepted (§1–2 built by ticket 0233, §3 by ticket 0717; the details each settled are marked *0233* and *As built (ticket 0717)*)
 - **Date:** 2026-10-03
 - **Related tickets:** 0042, 0233, 0234, 0235, 0236, 0237, 0717, 0718, 0719, 0723, 0825, 0907
 - **Amends:** ADR-0016 (the atlas gains 16×16 glyphs from a second font) and
@@ -46,6 +46,16 @@ text shows in English and never fails a gate, so editing English (or a
 writer rewriting a scene) can't block a PR. `cargo xtask lang-status <code>`
 lists both; a release ticket requires the list to be empty or accepted.
 
+*0233:* English's `ui.ron` is a map of key to text; a pack's is a list of
+`(key: …, source: …, text: …)`. A language code is 2 to 8 lowercase
+letters. A pack entry's placeholders must be the same set as its
+**`source`'s** (not today's English's), so that changing English can only
+make an entry stale, never fail a gate. Until 0235 adds `data.ron` and
+`dialogue/`, any other file in a language's directory is an error.
+`assets/lang/test/` is a pack for tests (English in capitals, with one
+stale and one missing entry kept on purpose); it is in the bundle but
+only counts where debug tools are on, and is never offered to players.
+
 ### 2. Keys
 
 | Text | Key | English lives in |
@@ -57,7 +67,11 @@ lists both; a release ticket requires the list to be empty or accepted.
 | Dialogue | the line id (below) | the `.dlg` file, as now |
 
 Screens ask for text with `ctx.text("title.new_game")`; values use named
-placeholders (`{count}`), filled the way tips fill `{Confirm}`. A key the
+placeholders (`{count}`), filled the way tips fill `{Confirm}`
+(*0233:* `ctx.text_with(key, &[("count", &n)])` fills both in one pass, so
+a help line is one text, `{Cursor} move · {Confirm} select`, and a
+translation can reorder it). `cargo xtask check-text` counts the screen
+text still written as literals in `crates/ui/src` and fails on a new one. A key the
 English file lacks panics in debug builds, like an unknown audio cue
 (ADR-0026), so a typo fails a test. Only `ui` and `content` know about
 languages; `core` holds no player-facing text.
@@ -71,6 +85,15 @@ Every speech line, narration line and reply gets an id computed by
 text as written (tokens unexpanded, continuation lines joined). A second
 identical line in the same scene gets `_2`, and so on. The hash is a fixed
 algorithm written in the crate (FNV-1a 64, truncated), never `std`'s hasher.
+
+As built (ticket 0717): the hash is over the speaker, a newline and the
+text, where the speaker is the character id, `>` for narration or `*` for a
+reply, and continuation lines are joined with one space; the id keeps the
+low 32 bits. The lines of a reply's reaction get ids like any other. The
+speaker's expression and a reply's tone are not hashed. Two *different*
+lines of one scene with the same hash are a validation error (reword one):
+numbering them would make their ids depend on their order.
+`cargo xtask lines [scene]` lists every line with its id.
 
 This is how Ren'Py keys translations and automatic voice. It keeps scripts
 free of id clutter, moving or inserting lines changes nothing, and changing

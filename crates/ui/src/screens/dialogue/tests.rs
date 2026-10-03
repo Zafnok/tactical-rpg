@@ -27,6 +27,7 @@ fn say(speaker: &str, text: &str) -> Step {
         speaker: CharacterId(speaker.into()),
         expression: None,
         text: text.into(),
+        line: trpg_content::LineId::default(),
     }
 }
 
@@ -206,7 +207,10 @@ fn text_filling_whole_pages_has_no_empty_page_after() {
 fn two_lines_of_narration_start_at_the_top() {
     let c = ctx();
     let text = format!("{} {}", "a".repeat(60), "b".repeat(60));
-    let mut s = full(scene(vec![Step::Narrate { text }]));
+    let mut s = full(scene(vec![Step::Narrate {
+        text,
+        line: trpg_content::LineId::default(),
+    }]));
     s.shown = 120.0;
     let buf = draw(&s, &c);
     assert!(row(&buf, TEXT_Y).contains(&"a".repeat(60)));
@@ -309,6 +313,7 @@ fn narration_dims_both_and_centres_the_text() {
         place(Side::Right, "test_knight"),
         Step::Narrate {
             text: "Rain.".into(),
+            line: trpg_content::LineId::default(),
         },
     ]));
     let mut s = s;
@@ -443,6 +448,7 @@ fn reply(text: &str, reaction: &str) -> trpg_content::ChoiceOption {
     trpg_content::ChoiceOption {
         tone: "t".into(),
         text: text.into(),
+        line: trpg_content::LineId::default(),
         steps: vec![say("test_knight", reaction)],
     }
 }
@@ -596,6 +602,7 @@ fn a_last_reply_with_nothing_after_ends_the_scene() {
             trpg_content::ChoiceOption {
                 tone: "t".into(),
                 text: "Bye.".into(),
+                line: trpg_content::LineId::default(),
                 steps: vec![],
             },
             reply("Stay.", "Ok."),
@@ -668,7 +675,10 @@ fn music(cue: &str) -> Step {
 }
 
 fn narrate(text: &str) -> Step {
-    Step::Narrate { text: text.into() }
+    Step::Narrate {
+        text: text.into(),
+        line: trpg_content::LineId::default(),
+    }
 }
 
 /// The music requests made since the last call.
@@ -748,6 +758,7 @@ fn music_around_a_choice() {
     let reply = |text: &str, steps| trpg_content::ChoiceOption {
         tone: "wry".into(),
         text: text.into(),
+        line: trpg_content::LineId::default(),
         steps,
     };
     let mut s = full(scene(vec![

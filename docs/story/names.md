@@ -17,10 +17,10 @@ any time.**
   `ledger.md`) use the display names so they stay readable. To rename: change
   the name in this file, then replace the old name across `docs/story/` in the
   same commit. Every name below is unique, so a whole-word find-and-replace is
-  safe (check `Rue`, `Wren`, `Crane` and `Piers`, which are also ordinary
-  English words, by eye).
+  safe (check `Rue`, `Wren`, `Crane`, `Rook`, `Holt`, `Mast` and `Piers`, which
+  are also ordinary English words, by eye).
 - **A name's short forms are separate rows** (the "Short forms" table below:
-  first names, family names, a god's name and title on their own), because
+  first names, surnames, family names, a god's name and title on their own), because
   people mostly say "Hollis", not "Hollis Marr". **Renaming a character means
   changing the full name and every short form of it** (rename Hollis Marr and
   `retainer`, `retainer.first` and, if the family name changes, `family.marr`
@@ -69,19 +69,27 @@ just as it does a full name.
 | -- | ------------------ | --------- |
 | `retainer.first` | Hollis | `retainer` (Hollis Marr) |
 | `sergeant.first` | Tamsin | `sergeant` (Tamsin Rook) |
-| `sergeant.last` | Rook | `sergeant`: what Harl calls her (the other surnames: ticket 0713) |
+| `sergeant.last` | Rook | `sergeant` (Tamsin Rook): what Harl calls her |
 | `rival.first` | Dace | `rival` (Dace Marr) |
 | `vowmaster.first` | Absalom | `vowmaster` (Absalom Crane) |
+| `vowmaster.last` | Crane | `vowmaster` (Absalom Crane) |
 | `vowmaster.title` | the Master of Vows | `vowmaster`: his office in the Vigil, for people who don't say his name |
 | `red_captain.first` | Harl | `red_captain` (Harl Coster) |
+| `red_captain.last` | Coster | `red_captain` (Harl Coster) |
 | `red_captain.nickname` | Red Harl | `red_captain`: what the Thornmarch calls him |
 | `sister.first` | Wren | `sister` (Wren Marr) |
 | `vosse.first` | Harrick | `vosse` (Harrick Vosse) |
+| `vosse.last` | Vosse | `vosse` (Harrick Vosse) |
 | `defector.first` | Joss | `defector` (Joss Pellam) |
+| `defector.last` | Pellam | `defector` (Joss Pellam) |
 | `prizefighter.first` | Gil | `prizefighter` (Gil Parrow) |
+| `prizefighter.last` | Parrow | `prizefighter` (Gil Parrow) |
 | `shieldbearer.first` | Hedda | `shieldbearer` (Hedda Ravn) |
+| `shieldbearer.last` | Ravn | `shieldbearer` (Hedda Ravn) |
 | `envoy.first` | Ragna | `envoy` (Ragna Holt) |
+| `envoy.last` | Holt | `envoy` (Ragna Holt) |
 | `battlemage.first` | Oriel | `battlemage` (Oriel Mast) |
+| `battlemage.last` | Mast | `battlemage` (Oriel Mast) |
 | `family.marr` | Marr | The family name of `retainer`, `rival` and `sister` |
 | `family.veyne` | Veyne | The lead's family name (also in `house.veyne` and `place.veyne_hall`) |
 | `faction.brennmark.adj` | Brennish | `faction.brennmark` without its article: the adjective ("a Brennish bow"), and what Tamsin calls Aske |

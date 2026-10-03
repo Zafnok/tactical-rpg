@@ -20,18 +20,17 @@ use crate::map_view::CursorStyle;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::settings::{AnimSpeed, EnemyPhaseSpeed, MAX_VOLUME, Settings, TextSpeed};
 use crate::tips::reset_tips;
-use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 
-/// Screen title.
-pub const TITLE: &str = "Options";
-/// Shown under the panel once the tips are reset.
-pub const TIPS_RESET_MESSAGE: &str = "Tips will show again";
-/// Shown under the panel once the defaults are back.
-pub const RESTORED_MESSAGE: &str = "Defaults restored";
-/// Shown under the panel once the campaign is Casual.
-pub const CASUAL_MESSAGE: &str = "Game mode is now Casual";
-/// Shown under the panel if something couldn't be saved.
-pub const NOT_SAVED_MESSAGE: &str = "Couldn't save: the change lasts until you quit";
+/// Text key ([`Ctx::text`]) of the screen title.
+pub const TITLE: &str = "options.title";
+/// Text key of the message under the panel once the tips are reset.
+pub const TIPS_RESET_MESSAGE: &str = "options.message.tips_reset";
+/// Text key of the message once the defaults are back.
+pub const RESTORED_MESSAGE: &str = "options.message.restored";
+/// Text key of the message once the campaign is Casual.
+pub const CASUAL_MESSAGE: &str = "options.message.casual";
+/// Text key of the message if something couldn't be saved.
+pub const NOT_SAVED_MESSAGE: &str = "options.message.not_saved";
 
 /// The panel, in cells.
 const PANEL: Rect = Rect::new(20, 3, 60, 20);
@@ -97,23 +96,23 @@ impl Row {
         Row::RestoreDefaults,
     ];
 
-    /// The text shown.
-    pub const fn label(self) -> &'static str {
+    /// The text key ([`Ctx::text`]) of its label.
+    pub const fn key(self) -> &'static str {
         match self {
-            Row::TextSpeed => "Text speed",
-            Row::AnimSpeed => "Animation speed",
-            Row::CombatAnimations => "Combat animations",
-            Row::EnemyPhaseSpeed => "Enemy phase speed",
-            Row::AutoEnd => "Auto-end turn",
-            Row::Fullscreen => "Fullscreen",
-            Row::Cursor => "Cursor",
-            Row::MusicVolume => "Music volume",
-            Row::SoundVolume => "Sound volume",
-            Row::Layout => "Layout",
-            Row::KeyBindings => "Key bindings",
-            Row::GameMode => "Game mode",
-            Row::ResetTips => "Reset tips",
-            Row::RestoreDefaults => "Restore defaults",
+            Row::TextSpeed => "options.row.text_speed",
+            Row::AnimSpeed => "options.row.anim_speed",
+            Row::CombatAnimations => "options.row.combat_animations",
+            Row::EnemyPhaseSpeed => "options.row.enemy_phase_speed",
+            Row::AutoEnd => "options.row.auto_end",
+            Row::Fullscreen => "options.row.fullscreen",
+            Row::Cursor => "options.row.cursor",
+            Row::MusicVolume => "options.row.music_volume",
+            Row::SoundVolume => "options.row.sound_volume",
+            Row::Layout => "options.row.layout",
+            Row::KeyBindings => "options.row.key_bindings",
+            Row::GameMode => "options.row.game_mode",
+            Row::ResetTips => "options.row.reset_tips",
+            Row::RestoreDefaults => "options.row.restore_defaults",
         }
     }
 
@@ -131,12 +130,12 @@ impl Row {
     }
 }
 
-/// The name shown for a cursor style (`docs/design/look-and-feel.md`).
-pub const fn cursor_label(style: CursorStyle) -> &'static str {
+/// The text key of a cursor style's name (`docs/design/look-and-feel.md`).
+pub const fn cursor_key(style: CursorStyle) -> &'static str {
     match style {
-        CursorStyle::Corners => "Corners",
-        CursorStyle::LargeCorners => "Large corners",
-        CursorStyle::TileGlow => "Tile glow",
+        CursorStyle::Corners => "options.cursor.corners",
+        CursorStyle::LargeCorners => "options.cursor.large_corners",
+        CursorStyle::TileGlow => "options.cursor.tile_glow",
     }
 }
 
@@ -147,16 +146,21 @@ const CURSOR_STYLES: [CursorStyle; 3] = [
     CursorStyle::TileGlow,
 ];
 
-/// The name shown for a game mode.
-const fn mode_label(mode: GameMode) -> &'static str {
+/// The text key of a game mode's name.
+const fn mode_key(mode: GameMode) -> &'static str {
     match mode {
-        GameMode::Classic => "Classic",
-        GameMode::Casual => "Casual",
+        GameMode::Classic => "options.mode.classic",
+        GameMode::Casual => "options.mode.casual",
     }
 }
 
-fn on_off(on: bool) -> &'static str {
-    if on { "On" } else { "Off" }
+/// The text key of an on/off value.
+const fn on_off_key(on: bool) -> &'static str {
+    if on {
+        "options.value.on"
+    } else {
+        "options.value.off"
+    }
 }
 
 /// A volume as a bar of [`MAX_VOLUME`] cells and its number.
@@ -201,11 +205,11 @@ pub enum Question {
 }
 
 impl Question {
-    /// The question's text.
-    pub const fn text(self) -> &'static str {
+    /// The text key of the question.
+    pub const fn key(self) -> &'static str {
         match self {
-            Question::SwitchToCasual => "Switch to Casual? This can't be undone.",
-            Question::RestoreDefaults => "Restore every option to its default?",
+            Question::SwitchToCasual => "options.question.casual",
+            Question::RestoreDefaults => "options.question.restore",
         }
     }
 }
@@ -217,7 +221,7 @@ pub struct OptionsScreen {
     row: Row,
     /// The question open, if any.
     asking: Option<Question>,
-    /// The message under the panel, if any.
+    /// The text key of the message under the panel, if any.
     message: Option<&'static str>,
 }
 
@@ -253,7 +257,7 @@ impl OptionsScreen {
         self.asking
     }
 
-    /// The message under the panel, if any.
+    /// The text key of the message under the panel, if any.
     pub fn message(&self) -> Option<&str> {
         self.message
     }
@@ -262,24 +266,27 @@ impl OptionsScreen {
     /// campaign's mode; nothing for the rows that only do something.
     pub fn value(ctx: &Ctx, row: Row) -> String {
         let s = ctx.settings();
-        match row {
-            Row::TextSpeed => s.text_speed.label().to_owned(),
-            Row::AnimSpeed => s.anim_speed.label().to_owned(),
-            Row::CombatAnimations => on_off(s.combat_animations).to_owned(),
-            Row::EnemyPhaseSpeed => s.enemy_phase_speed.label().to_owned(),
-            Row::AutoEnd => on_off(s.auto_end_turn).to_owned(),
-            Row::Fullscreen => on_off(s.fullscreen).to_owned(),
-            Row::Cursor => cursor_label(s.cursor_style).to_owned(),
-            Row::MusicVolume => volume_text(s.music_volume),
-            Row::SoundVolume => volume_text(s.sound_volume),
-            Row::Layout => ctx
-                .layout()
-                .map_or_else(String::new, |l| layout_picker::label(l).to_owned()),
-            Row::GameMode => ctx
-                .campaign_mode
-                .map_or_else(String::new, |m| mode_label(m).to_owned()),
-            Row::KeyBindings | Row::ResetTips | Row::RestoreDefaults => String::new(),
-        }
+        let key = match row {
+            Row::TextSpeed => s.text_speed.key(),
+            Row::AnimSpeed => s.anim_speed.key(),
+            Row::CombatAnimations => on_off_key(s.combat_animations),
+            Row::EnemyPhaseSpeed => s.enemy_phase_speed.key(),
+            Row::AutoEnd => on_off_key(s.auto_end_turn),
+            Row::Fullscreen => on_off_key(s.fullscreen),
+            Row::Cursor => cursor_key(s.cursor_style),
+            Row::MusicVolume => return volume_text(s.music_volume),
+            Row::SoundVolume => return volume_text(s.sound_volume),
+            Row::Layout => {
+                let layout = ctx.layout().map(layout_picker::label);
+                return layout.unwrap_or_default().to_owned();
+            }
+            Row::GameMode => match ctx.campaign_mode {
+                Some(mode) => mode_key(mode),
+                None => return String::new(),
+            },
+            Row::KeyBindings | Row::ResetTips | Row::RestoreDefaults => return String::new(),
+        };
+        ctx.text(key).to_owned()
     }
 
     /// Moves the focus one row up or down, wrapping.
@@ -368,35 +375,26 @@ impl OptionsScreen {
         true
     }
 
-    /// What Confirm does on the focused row, for the help line.
-    fn confirm_hint(&self, ctx: &Ctx) -> Option<&'static str> {
+    /// The text key of the help line for the focused row: what Confirm
+    /// does there, if anything.
+    fn help_key(&self, ctx: &Ctx) -> &'static str {
+        if self.asking.is_some() {
+            return "options.help.question";
+        }
         match self.row {
-            Row::Layout | Row::KeyBindings => Some("open"),
-            Row::GameMode if ctx.campaign_mode == Some(GameMode::Classic) => {
-                Some("switch to Casual")
-            }
-            Row::GameMode => None,
-            Row::ResetTips => Some("reset"),
-            Row::RestoreDefaults => Some("restore"),
-            _ => Some("change"),
+            Row::Layout | Row::KeyBindings => "options.help.open",
+            Row::GameMode if ctx.campaign_mode == Some(GameMode::Classic) => "options.help.switch",
+            Row::GameMode => "options.help.none",
+            Row::ResetTips => "options.help.reset",
+            Row::RestoreDefaults => "options.help.restore",
+            _ => "options.help.change",
         }
     }
 
     /// The bottom help line, naming the keys of the active keymap (or
     /// their buttons, on a controller).
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = ctx.help_keys();
-        let confirm = Some(key_name(km, Action::Confirm));
-        let cancel = Some(key_name(km, Action::Cancel));
-        if self.asking.is_some() {
-            return help_line(&[(confirm, "yes"), (cancel, "no")]);
-        }
-        let hint = self.confirm_hint(ctx);
-        help_line(&[
-            (Some(cursor_keys_name(km)), "move"),
-            (hint.and(confirm), hint.unwrap_or_default()),
-            (cancel, "back"),
-        ])
+        ctx.text_with(self.help_key(ctx), &[])
     }
 
     /// Draws `question` in a double-bordered box in the middle of the
@@ -405,13 +403,8 @@ impl OptionsScreen {
     fn draw_question(ctx: &Ctx, buf: &mut GlyphBuffer, question: Question) {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
-        let km = ctx.help_keys();
-        let answers = format!(
-            "{} yes / {} no",
-            key_name(km, Action::Confirm),
-            key_name(km, Action::Cancel)
-        );
-        let text = question.text();
+        let answers = ctx.text_with("options.question.answers", &[]);
+        let text = ctx.text(question.key());
         let widest = text.chars().count().max(answers.chars().count());
         let w = i32::try_from(widest).unwrap_or(0) + 4;
         let rect = Rect::new(
@@ -502,7 +495,7 @@ impl Screen for OptionsScreen {
         buf.fill_rect(buf.bounds(), Cell::new(' ', text, black));
         buf.fill_rect(PANEL, Cell::new(' ', text, bg));
         buf.draw_box(PANEL, BoxStyle::Single, c(UiColor::PanelBorder), bg);
-        let title = format!(" {TITLE} ");
+        let title = format!(" {} ", ctx.text(TITLE));
         buf.print(PANEL.x + 2, PANEL.y, &title, c(UiColor::TextHighlight), bg);
 
         let mut y = PANEL.y + 2;
@@ -511,10 +504,11 @@ impl Screen for OptionsScreen {
                 y += 1;
             }
             let focused = row == self.row;
+            let label = ctx.text(row.key());
             if focused {
-                buf.print(LABEL_X - 1, y, &format!(" {} ", row.label()), bg, bar);
+                buf.print(LABEL_X - 1, y, &format!(" {label} "), bg, bar);
             } else {
-                buf.print(LABEL_X, y, row.label(), text, bg);
+                buf.print(LABEL_X, y, label, text, bg);
             }
             let value = Self::value(ctx, row);
             let value_fg = if focused {
@@ -532,6 +526,7 @@ impl Screen for OptionsScreen {
         }
 
         if let Some(message) = self.message {
+            let message = ctx.text(message);
             print_centred(buf, MESSAGE_ROW, message, c(UiColor::TextHighlight), black);
         }
         if let Some(question) = self.asking {

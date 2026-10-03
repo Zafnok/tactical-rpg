@@ -3,7 +3,8 @@
 //! (`docs/design/controls.md`): arrows move, `f` selects, `d` backs out.
 
 use insta::assert_snapshot;
-use trpg_content::FontAtlasDef;
+use trpg_content::lang::TEST;
+use trpg_content::{FontAtlasDef, LangCode};
 use trpg_ui::audio::AudioRequest;
 use trpg_ui::harness::Harness;
 use trpg_ui::input::Layout;
@@ -240,9 +241,44 @@ fn picking_a_layout_first_skips_the_prompt() {
     h.keys("Down f");
     assert_eq!(h.top_screen(), "title");
     h.wait(0.1);
-    assert!(
-        !h.snapshot()
-            .contains(trpg_ui::screens::title::PRESS_ANY_KEY)
-    );
+    let prompt = h.game().ctx().text("title.press_any_key");
+    assert!(!h.snapshot().contains(prompt));
     assert_eq!(music(&h), ["title"]);
+}
+
+/// Screen text comes from the language in use (ticket 0233): the test pack
+/// is English in capitals, with one stale entry (the subtitle) and one
+/// missing (Credits), which stay English.
+#[test]
+fn the_title_in_the_test_language() {
+    let mut h = title();
+    h.ctx_mut().lang = LangCode::new(TEST).unwrap();
+    // The title labels its menu again when it is back on top.
+    h.keys("f d");
+    let snap = h.snapshot();
+    assert_snapshot!(snap);
+    for text in [
+        "VISIONS OF SHUYI",
+        "NEW GAME",
+        "LOAD GAME",
+        "QUICK BATTLE",
+        "QUIT",
+        "arrows MOVE · f SELECT · d BACK",
+        // Stale and missing: English.
+        "an ASCII tactics game",
+        "Credits",
+    ] {
+        assert!(snap.contains(text), "{text}");
+    }
+    for text in ["New Game", "AN ASCII", "CREDITS", "Visions"] {
+        assert!(!snap.contains(text), "{text}");
+    }
+}
+
+#[test]
+fn the_web_prompt_in_the_test_language() {
+    let mut h = web_title();
+    h.ctx_mut().lang = LangCode::new(TEST).unwrap();
+    h.wait(0.1);
+    assert!(h.snapshot().contains("PRESS ANY KEY"));
 }

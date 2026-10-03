@@ -1,0 +1,63 @@
+// English screen text, by key (ADR-0045). Screens ask for it with
+// `ctx.text("title.new_game")`. Keys are `screen.thing`: lowercase letters,
+// digits, `_` and `.`.
+//
+// `{Confirm}`, `{Cancel}`, `{Cursor}` and the other action names become
+// the player's keys (never write a key's name here); any other `{name}` is
+// a value the screen fills in.
+{
+    // The title screen.
+    "title.title": "Visions of Shuyi",
+    "title.subtitle": "an ASCII tactics game",
+    "title.press_any_key": "Press any key",
+    "title.continue": "Continue",
+    "title.new_game": "New Game",
+    "title.load_game": "Load Game",
+    "title.quick_battle": "Quick Battle",
+    "title.options": "Options",
+    "title.credits": "Credits",
+    "title.quit": "Quit",
+    "title.help": "{Cursor} move · {Confirm} select · {Cancel} back",
+
+    // The Options screen.
+    "options.title": "Options",
+    "options.row.text_speed": "Text speed",
+    "options.row.anim_speed": "Animation speed",
+    "options.row.combat_animations": "Combat animations",
+    "options.row.enemy_phase_speed": "Enemy phase speed",
+    "options.row.auto_end": "Auto-end turn",
+    "options.row.fullscreen": "Fullscreen",
+    "options.row.cursor": "Cursor",
+    "options.row.music_volume": "Music volume",
+    "options.row.sound_volume": "Sound volume",
+    "options.row.layout": "Layout",
+    "options.row.key_bindings": "Key bindings",
+    "options.row.game_mode": "Game mode",
+    "options.row.reset_tips": "Reset tips",
+    "options.row.restore_defaults": "Restore defaults",
+    "options.value.on": "On",
+    "options.value.off": "Off",
+    "options.value.slow": "Slow",
+    "options.value.normal": "Normal",
+    "options.value.fast": "Fast",
+    "options.value.instant": "Instant",
+    "options.cursor.corners": "Corners",
+    "options.cursor.large_corners": "Large corners",
+    "options.cursor.tile_glow": "Tile glow",
+    "options.mode.classic": "Classic",
+    "options.mode.casual": "Casual",
+    "options.message.tips_reset": "Tips will show again",
+    "options.message.restored": "Defaults restored",
+    "options.message.casual": "Game mode is now Casual",
+    "options.message.not_saved": "Couldn't save: the change lasts until you quit",
+    "options.question.casual": "Switch to Casual? This can't be undone.",
+    "options.question.restore": "Restore every option to its default?",
+    "options.question.answers": "{Confirm} yes / {Cancel} no",
+    "options.help.change": "{Cursor} move · {Confirm} change · {Cancel} back",
+    "options.help.open": "{Cursor} move · {Confirm} open · {Cancel} back",
+    "options.help.switch": "{Cursor} move · {Confirm} switch to Casual · {Cancel} back",
+    "options.help.reset": "{Cursor} move · {Confirm} reset · {Cancel} back",
+    "options.help.restore": "{Cursor} move · {Confirm} restore · {Cancel} back",
+    "options.help.none": "{Cursor} move · {Cancel} back",
+    "options.help.question": "{Confirm} yes · {Cancel} no",
+}

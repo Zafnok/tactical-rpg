@@ -61,13 +61,14 @@ impl TextSpeed {
         }
     }
 
-    /// The name the Options screen shows.
-    pub const fn label(self) -> &'static str {
+    /// The key of the name the Options screen shows
+    /// ([`Ctx::text`](crate::screen::Ctx::text)).
+    pub const fn key(self) -> &'static str {
         match self {
-            Self::Slow => "Slow",
-            Self::Normal => "Normal",
-            Self::Fast => "Fast",
-            Self::Instant => "Instant",
+            Self::Slow => "options.value.slow",
+            Self::Normal => "options.value.normal",
+            Self::Fast => "options.value.fast",
+            Self::Instant => "options.value.instant",
         }
     }
 }
@@ -94,11 +95,12 @@ impl AnimSpeed {
         }
     }
 
-    /// The name the Options screen shows.
-    pub const fn label(self) -> &'static str {
+    /// The key of the name the Options screen shows
+    /// ([`Ctx::text`](crate::screen::Ctx::text)).
+    pub const fn key(self) -> &'static str {
         match self {
-            Self::Normal => "Normal",
-            Self::Fast => "Fast",
+            Self::Normal => "options.value.normal",
+            Self::Fast => "options.value.fast",
         }
     }
 }
@@ -125,11 +127,12 @@ impl EnemyPhaseSpeed {
         }
     }
 
-    /// The name the Options screen shows.
-    pub const fn label(self) -> &'static str {
+    /// The key of the name the Options screen shows
+    /// ([`Ctx::text`](crate::screen::Ctx::text)).
+    pub const fn key(self) -> &'static str {
         match self {
-            Self::Normal => "Normal",
-            Self::Fast => "Fast",
+            Self::Normal => "options.value.normal",
+            Self::Fast => "options.value.fast",
         }
     }
 }
@@ -408,12 +411,16 @@ mod tests {
     fn text_speeds_double_each_step_and_instant_has_none() {
         let speeds: Vec<_> = TextSpeed::ALL.iter().map(|s| s.chars_per_s()).collect();
         assert_eq!(speeds, [Some(30.0), Some(60.0), Some(120.0), None]);
-        let labels: Vec<_> = TextSpeed::ALL.iter().map(|s| s.label()).collect();
-        assert_eq!(labels, ["Slow", "Normal", "Fast", "Instant"]);
-        assert_eq!(AnimSpeed::ALL.map(AnimSpeed::label), ["Normal", "Fast"]);
+        let keys: Vec<_> = TextSpeed::ALL.iter().map(|s| s.key()).collect();
+        let value = |name: &str| format!("options.value.{name}");
+        assert_eq!(keys, ["slow", "normal", "fast", "instant"].map(value));
         assert_eq!(
-            EnemyPhaseSpeed::ALL.map(EnemyPhaseSpeed::label),
-            ["Normal", "Fast"]
+            AnimSpeed::ALL.map(AnimSpeed::key),
+            ["normal", "fast"].map(value)
+        );
+        assert_eq!(
+            EnemyPhaseSpeed::ALL.map(EnemyPhaseSpeed::key),
+            ["normal", "fast"].map(value)
         );
     }
 

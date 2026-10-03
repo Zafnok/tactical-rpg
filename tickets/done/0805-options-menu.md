@@ -77,7 +77,7 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0815's
 
 **Done.**
 
-- `Settings` (`crates/ui/src/settings.rs`, ADR-0048): text speed, animation
+- `Settings` (`crates/ui/src/settings.rs`, ADR-0049): text speed, animation
   speed, combat animations, enemy phase speed, auto-end, fullscreen, cursor
   style, music and sound volume, and the layout picked. Saved as one RON
   record under the `Storage` key `settings` on every change; loaded with
@@ -106,7 +106,7 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0815's
   (the `keyboard-input` skill).
 - Fullscreen goes out in `FrameOutput` as the wanted state every frame, not
   as a one-off request: `app` then needs no separate path for the saved
-  value at start-up (ADR-0048).
+  value at start-up (ADR-0049).
 - The game mode: the Options screen sits on the stack above the game flow,
   which owns the campaign, so it switches the mode through
   `Ctx::campaign_mode`; the flow calls `Campaign::downgrade_mode()` on its

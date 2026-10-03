@@ -1,5 +1,5 @@
 ---
-source: crates/ui/tests/flow.rs
+source: crates/ui/tests/it/flow.rs
 expression: h.snapshot()
 ---
                                                                       ┌────────────────────────────┐
@@ -92,9 +92,9 @@ u = fg:floor bg:floor_bg
 v = fg:wood bg:stone_bg
 w = fg:text_dim bg:black
 --- overlays ---
-over  208,270 16x2  hp_high
-over  208,286 16x2  hp_high
-over  288,238 16x2  hp_high
+over  209,270 14x2  hp_high
+over  209,286 14x2  hp_high
+over  289,238 14x2  hp_high
 over  207,256 3x1  cursor
 over  207,256 1x3  cursor
 over  221,256 3x1  cursor

@@ -2,20 +2,31 @@
 //! integer-scaled, centred, black letterbox. The buffer's items are drawn
 //! scaled, in the order they were added: `Under` ones after the cell
 //! backgrounds, `Over` ones after the glyphs. A rectangle (ADR-0018) is a
-//! solid fill; a sprite (ADR-0038) is part of an image's texture.
+//! solid fill; a sprite (ADR-0038) is part of an image's texture. A
+//! buffer's backdrop (ADR-0048), a second buffer panned and zoomed, is drawn
+//! the same way inside its window, behind the console.
 
 use std::collections::{HashMap, HashSet};
 
 use macroquad::prelude::*;
 use trpg_content::font::{AtlasRect, FALLBACK_GLYPH};
 use trpg_content::{FontAtlasDef, ImageId, ImageTable, bundle};
-use trpg_ui::console::{CELL_H_PX, CELL_W_PX, layout};
-use trpg_ui::{GlyphBuffer, Item, Layer, Rgb, Sprite};
+use trpg_ui::console::{CELL_H_PX, CELL_W_PX, Layout, layout};
+use trpg_ui::{Backdrop, GlyphBuffer, Item, Layer, Rgb, Sprite};
 
 /// The colour of what is missing: the fallback glyph drawn for a glyph the
 /// atlas lacks, and the rectangle drawn for a sprite whose image has no
 /// texture.
 const MISSING_COLOR: Color = MAGENTA;
+
+/// Which solid cells get their background drawn.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Fills {
+    /// All but those in the clear colour: it is already there.
+    NotClear,
+    /// Every one: something else may be behind them.
+    All,
+}
 
 /// Draws glyph buffers with a font atlas texture.
 pub struct Renderer {
@@ -68,27 +79,83 @@ impl Renderer {
     /// `high_dpi`), so the integer scale holds on scaled Windows displays;
     /// coordinates are divided by the DPI factor only because macroquad's
     /// default camera works in logical units.
+    ///
+    /// With a backdrop (ADR-0048) the order is: the clear colour, the
+    /// scene inside its window, then the console over it, whose
+    /// see-through cells have no background.
     pub fn draw(&mut self, buf: &GlyphBuffer) {
         let dpi = screen_dpi_scale();
         // Rounded: logical size × DPI can land a hair under the real pixel
         // count (913.714 × 1.75 = 1599.99…), which would drop a whole scale step.
-        let fit = layout(
-            (screen_width() * dpi).round(),
-            (screen_height() * dpi).round(),
-        );
+        let window_h = (screen_height() * dpi).round();
+        let fit = layout((screen_width() * dpi).round(), window_h);
         #[allow(clippy::cast_precision_loss)] // scale is small
         let scale = fit.scale as f32 / dpi;
         let (offset_x, offset_y) = (fit.offset_x / dpi, fit.offset_y / dpi);
-        let cell_w = f32::from(CELL_W_PX) * scale;
-        let cell_h = f32::from(CELL_H_PX) * scale;
         clear_background(BLACK);
         draw_rectangle(
             offset_x,
             offset_y,
-            f32::from(buf.width()) * cell_w,
-            f32::from(buf.height()) * cell_h,
+            f32::from(buf.width()) * f32::from(CELL_W_PX) * scale,
+            f32::from(buf.height()) * f32::from(CELL_H_PX) * scale,
             color(self.clear),
         );
+        if let Some(backdrop) = buf.backdrop() {
+            self.draw_backdrop(backdrop, &fit, window_h);
+        }
+        // Over a scene, a cell in the clear colour must hide it.
+        let fills = if buf.backdrop().is_some() {
+            Fills::All
+        } else {
+            Fills::NotClear
+        };
+        self.draw_layers(buf, (offset_x, offset_y), scale, fills);
+    }
+
+    /// Draws `backdrop`'s scene in its window: every scene pixel
+    /// `zoom × fit.scale` physical pixels big, placed on whole physical
+    /// pixels ([`Backdrop::scene_offset`]).
+    ///
+    /// The window clips it with a camera whose view is exactly the window,
+    /// one unit per physical pixel: what falls outside a camera's view
+    /// isn't drawn. (macroquad's scissor is only reachable through an
+    /// `unsafe` call, which this workspace forbids.) `window_h` is the
+    /// window's height in physical pixels: a viewport counts rows from the
+    /// bottom.
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // whole pixels
+    fn draw_backdrop(&mut self, backdrop: &Backdrop, fit: &Layout, window_h: f32) {
+        let scale = fit.scale as f32;
+        let clip = backdrop.clip_px();
+        let (x, y) = (
+            fit.offset_x + clip.x as f32 * scale,
+            fit.offset_y + clip.y as f32 * scale,
+        );
+        let (w, h) = (clip.w as f32 * scale, clip.h as f32 * scale);
+        set_camera(&Camera2D {
+            target: vec2(w / 2.0, h / 2.0),
+            zoom: vec2(2.0 / w, 2.0 / h),
+            viewport: Some((x as i32, (window_h - y - h) as i32, w as i32, h as i32)),
+            ..Default::default()
+        });
+        let (dx, dy) = backdrop.scene_offset(fit.scale);
+        let scene_scale = f32::from(backdrop.zoom()) * scale;
+        self.draw_layers(
+            backdrop.scene(),
+            (dx as f32, dy as f32),
+            scene_scale,
+            Fills::NotClear,
+        );
+        set_default_camera();
+    }
+
+    /// Draws `buf`'s cells and items with its top-left corner at `origin`
+    /// and each of its pixels `scale` big: cell backgrounds (`fills` says
+    /// which; never a see-through cell's), `Under` items, glyphs, `Over`
+    /// items.
+    fn draw_layers(&mut self, buf: &GlyphBuffer, origin: (f32, f32), scale: f32, fills: Fills) {
+        let (offset_x, offset_y) = origin;
+        let cell_w = f32::from(CELL_W_PX) * scale;
+        let cell_h = f32::from(CELL_H_PX) * scale;
         let cells = || {
             (0..i32::from(buf.height())).flat_map(move |y| {
                 (0..i32::from(buf.width())).filter_map(move |x| {
@@ -99,11 +166,11 @@ impl Renderer {
             })
         };
         for ((px, py), cell) in cells() {
-            if cell.bg != self.clear {
+            if !cell.see_through && (fills == Fills::All || cell.bg != self.clear) {
                 draw_rectangle(px, py, cell_w, cell_h, color(cell.bg));
             }
         }
-        self.draw_items(buf, Layer::Under, (offset_x, offset_y), scale);
+        self.draw_items(buf, Layer::Under, origin, scale);
         for ((px, py), cell) in cells() {
             if cell.glyph == ' ' {
                 continue;
@@ -123,12 +190,11 @@ impl Renderer {
                 },
             );
         }
-        self.draw_items(buf, Layer::Over, (offset_x, offset_y), scale);
+        self.draw_items(buf, Layer::Over, origin, scale);
     }
 
-    /// Draws `buf`'s items of `layer`, in order. `origin` is the console's
-    /// top-left corner in the window and `scale` the size of a console
-    /// pixel.
+    /// Draws `buf`'s items of `layer`, in order. `origin` is the buffer's
+    /// top-left corner and `scale` the size of one of its pixels.
     fn draw_items(&mut self, buf: &GlyphBuffer, layer: Layer, origin: (f32, f32), scale: f32) {
         for item in buf.items().iter().filter(|item| item.layer() == layer) {
             let visible = item.visible();

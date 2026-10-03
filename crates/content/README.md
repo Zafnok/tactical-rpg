@@ -19,6 +19,10 @@ embedded in the binary (ADR-0005). No filesystem I/O, no macroquad.
   folder's `README.md`): `parse_dlg`, `check_scene`, `print_scene`, `load` →
   `DialogueTable` of `Scene`s (steps: `Caption`, `Place`, `Clear`, `Say`,
   `Narrate`).
+- `lang` — languages (ADR-0045): English screen text by key from
+  `assets/lang/en/ui.ron`, and each pack `assets/lang/<code>/{lang.ron,
+  ui.ron}` laid over it → `Lang` (`text(code, key)`, `status(code)`: the
+  pack's missing and stale keys).
 - `enums` (private) — serde mirrors of `trpg-core` enums (`core` has no serde).
 - `lib.rs` — `Content` (everything) and `load_embedded()`.
 

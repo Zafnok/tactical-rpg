@@ -60,7 +60,7 @@ use trpg_core::{
 use self::ai_phase::{AiAction, PACING};
 use self::banner::{Banner, BannerKind};
 
-use self::attack::Targeting;
+use self::attack::{Targeting, aimed_first, aimed_options};
 use self::camera::Camera;
 use self::cursor::Cursor;
 use self::event_sounds::CueQueue;
@@ -127,16 +127,46 @@ impl TerrainFlash {
     }
 }
 
-/// A `+10` shown over a unit that was healed, for
-/// [`Timings::heal_popup`](playback::Timings::heal_popup) seconds.
+/// What a [`HealPopup`] tells of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PopupKind {
+    /// HP restored: `+10`, in `hp_high`.
+    Heal,
+    /// HP lost to a fire burning out under the unit: `-5`, in `hp_low`.
+    Burn,
+}
+
+/// A `+10` shown over a unit that was healed, or a `-5` over one a fire
+/// burnt, for [`Timings::heal_popup`](playback::Timings::heal_popup)
+/// seconds (a burn's start once no banner is on screen).
 #[derive(Debug, Clone, PartialEq)]
 pub struct HealPopup {
     /// The tile it floats over.
     pub pos: Pos,
-    /// HP restored.
+    /// HP restored or lost.
     pub amount: StatValue,
+    /// Whether the HP was restored or lost.
+    pub kind: PopupKind,
     /// Seconds it has been up.
     pub t: f32,
+}
+
+impl HealPopup {
+    /// What it reads: `+10` for a heal, `-5` for a burn.
+    pub fn text(&self) -> String {
+        match self.kind {
+            PopupKind::Heal => format!("+{}", self.amount),
+            PopupKind::Burn => format!("-{}", self.amount),
+        }
+    }
+
+    /// Its colour: `hp_high` for a heal, `hp_low` for a burn.
+    pub fn color(&self) -> UiColor {
+        match self.kind {
+            PopupKind::Heal => UiColor::HpHigh,
+            PopupKind::Burn => UiColor::HpLow,
+        }
+    }
 }
 
 /// The tiles units hostile to the player could attack this turn
@@ -845,9 +875,16 @@ impl BattleScreen {
                     Some(HealPopup {
                         pos,
                         amount,
+                        kind: PopupKind::Heal,
                         t: 0.0,
                     })
                 }
+                Event::BurnDamage { pos, amount, .. } if amount > 0 => Some(HealPopup {
+                    pos,
+                    amount,
+                    kind: PopupKind::Burn,
+                    t: 0.0,
+                }),
                 _ => None,
             }));
             self.flashes.extend(events.iter().filter_map(|e| match *e {
@@ -1186,7 +1223,15 @@ impl BattleScreen {
                     .and_then(|t| self.state.unit(t))
                     .is_some_and(|u| u.pos == self.cursor.pos);
                 if aimed {
-                    help_line(&[moves, select("attack"), cancel("cancel")])
+                    // The forecast opens with a weapon or a spell (0430).
+                    let options = sel.target.map_or_else(Vec::new, |t| {
+                        aimed_options(&self.state, sel.unit, sel.dest(), t)
+                    });
+                    let verb = match aimed_first(&self.state, sel.unit, &options) {
+                        Some(Equipped::Spell(_)) => "cast",
+                        _ => "attack",
+                    };
+                    help_line(&[moves, select(verb), cancel("cancel")])
                 } else if self.cursor.pos == sel.dest() && sel.reach.is_stoppable(sel.dest()) {
                     help_line(&[moves, select("move here"), cancel("cancel")])
                 } else {
@@ -1251,10 +1296,22 @@ impl BattleScreen {
         };
         let confirm = (Some(key_name(km, Action::Confirm)), verb);
         let cancel = (Some(key_name(km, Action::Cancel)), "back");
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
+        if t.can_swap() {
+            // Left and right swap the weapon or spell of a forecast opened
+            // by pointing (0430); the unit keys then change the target.
+            let mut entries = vec![
+                (pair(Action::CursorLeft, Action::CursorRight), "swap"),
+                (pair(Action::PrevUnit, Action::NextUnit), "target"),
+            ];
+            if t.has_list() {
+                entries.push((pair(Action::CursorUp, Action::CursorDown), "art"));
+            }
+            return help_line(&[entries, vec![confirm, cancel]].concat());
+        }
         if !t.has_list() {
             return help_line(&[(Some(cursor_keys_name(km)), "next target"), confirm, cancel]);
         }
-        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
         help_line(&[
             (pair(Action::CursorLeft, Action::CursorRight), "target"),
             (pair(Action::CursorUp, Action::CursorDown), "art"),
@@ -1497,11 +1554,16 @@ impl BattleScreen {
         }
     }
 
-    /// Ages the heal numbers, the terrain flashes and the message by `dt`
-    /// seconds, dropping those whose time is up.
+    /// Ages the heal and burn numbers, the terrain flashes and the message
+    /// by `dt` seconds, dropping those whose time is up. A burn number
+    /// waits while a banner is on screen: the fire burns out as the phase
+    /// banner comes up, which would cover it for longer than it lasts.
     fn tick_popups(&mut self, dt: f32) {
+        let banner = self.banner().is_some();
         for p in &mut self.popups {
-            p.t += dt;
+            if !(banner && p.kind == PopupKind::Burn) {
+                p.t += dt;
+            }
         }
         self.popups.retain(|p| p.t < TIMINGS.heal_popup);
         for f in &mut self.flashes {
@@ -1516,17 +1578,17 @@ impl BattleScreen {
         }
     }
 
-    /// Draws the heal numbers floating up over the units they healed: over
-    /// where the map skin has their tiles of `scene`.
+    /// Draws the heal and burn numbers floating up over the units they
+    /// tell of: over where the map skin has their tiles of `scene`.
     fn draw_popups(&self, ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene) {
-        let fg = ctx.palette.get(UiColor::HpHigh);
         for p in &self.popups {
+            let fg = ctx.palette.get(p.color());
             let Some(tile) = ctx.map_skin.tile_cells(scene, MAP_VIEW, p.pos) else {
                 continue;
             };
             let y = (tile.y - 1).max(MAP_VIEW.y);
             let bg = ctx.palette.get(UiColor::Black);
-            buf.print(tile.x, y, &format!("+{}", p.amount), fg, bg);
+            buf.print(tile.x, y, &p.text(), fg, bg);
         }
     }
 
