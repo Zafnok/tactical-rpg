@@ -149,6 +149,9 @@ jobs:
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
+          # Voice clips aren't embedded either (ADR-0046): the folder ships
+          # beside the game when this build has one.
+          if [ -d voice ]; then cp -r voice "$pkg/voice"; fi
           cat > "$pkg/README.txt" <<EOF
           Visions of Shuyi $VERSION (Windows x64)
 
@@ -208,6 +211,9 @@ jobs:
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
+          # Voice clips aren't embedded either (ADR-0046): the folder ships
+          # beside the game when this build has one.
+          if [ -d voice ]; then cp -r voice "$pkg/voice"; fi
           cat > "$pkg/README.txt" <<EOF
           Visions of Shuyi $VERSION (Linux x64)
 
@@ -273,6 +279,9 @@ jobs:
           # Music isn't embedded (ADR-0026): the folder ships beside the game.
           mkdir -p "$pkg/music"
           find music -maxdepth 1 -type f -name '*.ogg' -exec cp {} "$pkg/music/" \;
+          # Voice clips aren't embedded either (ADR-0046): the folder ships
+          # beside the game when this build has one.
+          if [ -d voice ]; then cp -r voice "$pkg/voice"; fi
           cat > "$pkg/README.txt" <<EOF
           Visions of Shuyi $VERSION (macOS, universal: Apple Silicon + Intel)
 

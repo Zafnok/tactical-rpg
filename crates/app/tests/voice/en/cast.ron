@@ -1,0 +1,9 @@
+// Which voice says each speaker's lines (docs/voice.md). A test cast: every
+// speaker of the test clips has the same tone "voice".
+(
+    voices: {
+        "test_knight": "test_tone",
+        "test_lord": "test_tone",
+        "test_archer": "test_tone",
+    },
+)

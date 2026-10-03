@@ -195,9 +195,9 @@ fn navigation_survives_moving_every_cursor_key_away() {
     assert_eq!(keymap.action(chord("Up")), Some(Action::Info));
     // In the game the new keys steer: `k` is Cursor down in the debug menu
     // (from "Key bindings", past the sprite test, the two class change
-    // tools and the map skin after it, round to the first), and the arrows
-    // no longer move there.
-    h.keys("Down k k k k k f");
+    // tools, the voice test and the map skin after it, round to the first),
+    // and the arrows no longer move there.
+    h.keys("Down k k k k k k f");
     assert_eq!(h.top_screen(), "glyph_sampler");
 }
 

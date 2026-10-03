@@ -10,7 +10,9 @@
 //! on its `private-assets` feature, which embeds the bought art in
 //! `assets-private/game/` (ADR-0040). The game's music tracks
 //! (`music/*.ogg`, not embedded: ADR-0026) are copied to `dist/web/music/`,
-//! which exists even when there are none.
+//! which exists even when there are none. The voice clips (`voice/`, not
+//! embedded either: ADR-0046) are copied to `dist/web/voice/` when there
+//! is such a folder.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -30,6 +32,9 @@ const SHELL_FILES: &[&str] = &[
 
 /// The music folder, at the repo root and in `dist/web/` (ADR-0026).
 const MUSIC_DIR: &str = "music";
+
+/// The voice folder, at the repo root and in `dist/web/` (ADR-0046).
+const VOICE_DIR: &str = "voice";
 
 /// Parsed `cargo xtask web` arguments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,6 +151,7 @@ fn package(opt: &impl WasmOpt, repo_root: &Path, options: Options) -> Result<Str
     }
 
     copy_music(&repo_root.join(MUSIC_DIR), &dist.join(MUSIC_DIR))?;
+    copy_voice(&repo_root.join(VOICE_DIR), &dist.join(VOICE_DIR))?;
 
     if options.release {
         run_wasm_opt(opt, &wasm_dst);
@@ -177,6 +183,46 @@ fn copy_music(src: &Path, dst: &Path) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// Replaces `dst` with a copy of the voice folder `src`: its manifests
+/// (`.ron`) and clips (`.ogg`), in the same folders, so the web build
+/// fetches them from `voice/`. With no `src` there is no `dst` either: a
+/// build without voices.
+fn copy_voice(src: &Path, dst: &Path) -> Result<(), String> {
+    if dst.exists() {
+        fs::remove_dir_all(dst).map_err(|e| format!("clear {}: {e}", dst.display()))?;
+    }
+    if !src.is_dir() {
+        return Ok(());
+    }
+    let shipped = |path: &Path| {
+        path.extension()
+            .is_some_and(|ext| ext == "ogg" || ext == "ron")
+    };
+    copy_tree(src, dst, &shipped).map(|_| ())
+}
+
+/// Copies the files under `src` that `keep` accepts to the same places
+/// under `dst` (made if missing), folders included. Returns how many files
+/// were copied.
+pub fn copy_tree(src: &Path, dst: &Path, keep: &dyn Fn(&Path) -> bool) -> Result<usize, String> {
+    fs::create_dir_all(dst).map_err(|e| format!("create {}: {e}", dst.display()))?;
+    let entries = fs::read_dir(src).map_err(|e| format!("read {}: {e}", src.display()))?;
+    let mut copied = 0;
+    for entry in entries {
+        let path = entry
+            .map_err(|e| format!("read {}: {e}", src.display()))?
+            .path();
+        let to = dst.join(path.file_name().unwrap_or_default());
+        if path.is_dir() {
+            copied += copy_tree(&path, &to, keep)?;
+        } else if keep(&path) {
+            fs::copy(&path, &to).map_err(|e| format!("copy {}: {e}", path.display()))?;
+            copied += 1;
+        }
+    }
+    Ok(copied)
 }
 
 /// Runs `wasm-opt -Oz` on a wasm binary, abstracted so tests can substitute a
@@ -521,6 +567,68 @@ mod tests {
         names.sort();
         assert_eq!(names, ["title.ogg"]);
         assert_eq!(fs::read_to_string(music.join("title.ogg")).unwrap(), "ogg");
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    /// Ticket 0238: the voice folder goes along whole, manifests and
+    /// clips only; without one the package has none.
+    #[test]
+    fn package_copies_the_voice_folder_if_there_is_one() {
+        let root = fixture("package-voice");
+        let debug = Options {
+            release: false,
+            debug_tools: false,
+            private_assets: false,
+        };
+        write_wasm(&root, debug, b"w");
+        let opt = FakeWasmOpt(|_: &Path, _: &Path| Ok(false));
+        let voice = root.join("dist/web/voice");
+        // A stale copy from an earlier build goes when the source is gone.
+        fs::create_dir_all(voice.join("en")).unwrap();
+        fs::write(voice.join("en/stale.ogg"), "old").unwrap();
+        package(&opt, &root, debug).unwrap();
+        assert!(!voice.exists());
+        fs::create_dir_all(root.join("voice/en/scene")).unwrap();
+        fs::write(root.join("voice/en/voice.ron"), "manifest").unwrap();
+        fs::write(root.join("voice/en/cast.ron"), "cast").unwrap();
+        fs::write(root.join("voice/en/scene/line.ogg"), "clip").unwrap();
+        fs::write(root.join("voice/en/scene/line.m.ogg"), "clip m").unwrap();
+        fs::write(root.join("voice/en/scene/take.wav"), "source").unwrap();
+        fs::write(root.join("voice/notes.md"), "doc").unwrap();
+        fs::write(root.join("voice/ogg"), "no extension").unwrap();
+        package(&opt, &root, debug).unwrap();
+        let read = |path: &str| fs::read_to_string(voice.join(path)).ok();
+        assert_eq!(read("en/voice.ron").as_deref(), Some("manifest"));
+        assert_eq!(read("en/cast.ron").as_deref(), Some("cast"));
+        assert_eq!(read("en/scene/line.ogg").as_deref(), Some("clip"));
+        assert_eq!(read("en/scene/line.m.ogg").as_deref(), Some("clip m"));
+        assert_eq!(read("en/scene/take.wav"), None);
+        assert_eq!(read("notes.md"), None);
+        assert_eq!(read("ogg"), None);
+        // A file named `voice` is not a voice folder.
+        fs::remove_dir_all(root.join("voice")).unwrap();
+        fs::write(root.join("voice"), "a file").unwrap();
+        package(&opt, &root, debug).unwrap();
+        assert!(!voice.exists());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn copy_tree_counts_the_files_it_copies_and_reports_a_missing_source() {
+        let root = fixture("copy-tree");
+        fs::create_dir_all(root.join("src/a/b")).unwrap();
+        fs::write(root.join("src/one.ogg"), "1").unwrap();
+        fs::write(root.join("src/a/two.ogg"), "2").unwrap();
+        fs::write(root.join("src/a/b/three.txt"), "3").unwrap();
+        let ogg = |path: &Path| path.extension().is_some_and(|ext| ext == "ogg");
+        assert_eq!(copy_tree(&root.join("src"), &root.join("dst"), &ogg), Ok(2));
+        assert!(root.join("dst/a/two.ogg").is_file());
+        assert!(root.join("dst/a/b").is_dir());
+        assert!(!root.join("dst/a/b/three.txt").exists());
+        let all = copy_tree(&root.join("src"), &root.join("all"), &|_| true);
+        assert_eq!(all, Ok(3));
+        let error = copy_tree(&root.join("nowhere"), &root.join("dst2"), &ogg).unwrap_err();
+        assert!(error.starts_with("read "), "{error}");
         fs::remove_dir_all(&root).unwrap();
     }
 

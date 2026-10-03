@@ -18,3 +18,4 @@ mod save;
 mod split_keys;
 mod sprite_test;
 mod title;
+mod voice;

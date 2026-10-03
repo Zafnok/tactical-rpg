@@ -701,6 +701,32 @@ pub fn render_all() -> Vec<(&'static str, Vec<i16>)> {
         .collect()
 }
 
+/// The notes [`test_phrase`] picks from.
+const TEST_NOTES: [&str; 5] = ["D4", "G4", "A4", "B4", "D5"];
+
+/// A phrase of three chip notes, 120 ms apart, for the voice playback test
+/// clips (`cargo xtask voice-test-clips`): not speech, and a different
+/// phrase for each `index` up to the number of [`TEST_NOTES`]. Its loudest
+/// sample is at [`PEAK`] and trailing silence is trimmed.
+pub fn test_phrase(index: usize) -> Vec<i16> {
+    let mut mix = Mix::new();
+    let p25 = Wave::pulse(0.25);
+    for (step, t) in [0.0, 0.12, 0.24].into_iter().enumerate() {
+        let note = TEST_NOTES[(index + step * 2) % TEST_NOTES.len()];
+        mix.add(&chip(&p25, note, t, 0.14, 0.04, 0.12, 1700.0));
+    }
+    let samples = mix.master();
+    let loudest = samples.iter().fold(0.0, |m: f64, x| m.max(x.abs()));
+    let end = samples
+        .iter()
+        .rposition(|x| x.abs() * PEAK >= SILENCE * loudest)
+        .map_or(0, |i| i + 1);
+    samples[..end]
+        .iter()
+        .map(|&x| to_i16(x * PEAK / loudest))
+        .collect()
+}
+
 fn to_i16(x: f64) -> i16 {
     #[allow(clippy::cast_possible_truncation)] // clamped to the i16 range first
     let s = (x * 32767.0).round().clamp(-32768.0, 32767.0) as i16;
@@ -1135,6 +1161,33 @@ mod tests {
         assert!(matches(&bytes, &[2, -3]));
         assert!(!matches(&bytes, &[3, -2]));
         assert!(!matches(&bytes, &[1, -2, 0]));
+    }
+
+    /// The voice playback test clips: half a second of three notes, at
+    /// the peak level, and a different phrase for each of the first five.
+    #[test]
+    fn test_phrases_are_short_loud_enough_and_distinct() {
+        let phrases: Vec<Vec<i16>> = (0..TEST_NOTES.len()).map(test_phrase).collect();
+        for (i, phrase) in phrases.iter().enumerate() {
+            // The last note starts at 0.24 s: a + hold + d after it.
+            let recipe = 0.24 + 0.005 + 0.04 + 0.14;
+            assert!(
+                (secs(phrase) - recipe).abs() <= 0.05,
+                "{i}: {}",
+                secs(phrase)
+            );
+            let peak = phrase.iter().map(|s| s.unsigned_abs()).max().unwrap();
+            assert_eq!(peak, to_i16(PEAK).unsigned_abs(), "{i}");
+            assert_ne!(phrase.last(), Some(&0), "{i}: trimmed to the last sound");
+            for other in &phrases[..i] {
+                assert_ne!(phrase, other, "{i}");
+            }
+        }
+        assert_eq!(
+            test_phrase(TEST_NOTES.len()),
+            phrases[0],
+            "then they repeat"
+        );
     }
 
     #[test]

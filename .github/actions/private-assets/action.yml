@@ -64,6 +64,19 @@ runs:
         ref: ${{ steps.plan.outputs.rev }}
         ssh-key: ${{ inputs.key }}
         path: assets-private
-        # Only what the game embeds; the bought packs themselves stay behind.
-        sparse-checkout: game
+        # Only what the game embeds and the voice clips that ship beside it
+        # (ADR-0046); the bought packs themselves stay behind.
+        sparse-checkout: |
+          game
+          voice
         persist-credentials: false
+    - name: Put the voice clips beside the game
+      if: steps.plan.outputs.rev != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Not embedded (ADR-0046): the game and the packaging read voice/.
+        if [ -d assets-private/voice ]; then
+          rm -rf voice
+          cp -r assets-private/voice voice
+        fi

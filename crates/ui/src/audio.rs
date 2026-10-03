@@ -4,6 +4,10 @@
 //! [`FrameOutput`](crate::FrameOutput). Nothing here plays anything, so
 //! screens stay testable in the headless `Harness`.
 //!
+//! Voice clips (ADR-0046) are asked for by dialogue line id, through
+//! [`Ctx::play_voice`](crate::Ctx::play_voice), which knows which lines
+//! have a clip that may be played.
+//!
 //! ```
 //! # use trpg_ui::audio::{AudioQueue, AudioRequest};
 //! let mut audio = AudioQueue::default();
@@ -11,6 +15,8 @@
 //! audio.play_music("title");
 //! assert_eq!(audio.pending()[1], AudioRequest::PlayMusic { cue: "title".into() });
 //! ```
+
+use trpg_content::{LineId, Variant};
 
 /// Something a screen wants heard. Cue ids are the ones in
 /// `assets/audio/audio.ron`.
@@ -31,6 +37,23 @@ pub enum AudioRequest {
     },
     /// Fade the music out.
     StopMusic,
+    /// Say a dialogue line: play its voice clip once, stopping the voice
+    /// that is playing (ADR-0046: one voice at a time).
+    PlayVoice {
+        /// The line.
+        line: LineId,
+        /// Which of the line's clips.
+        variant: Variant,
+    },
+    /// Stop the voice that is playing, if any.
+    StopVoice,
+    /// The clips a scene will ask for, in script order, so `app` can load
+    /// the next few ahead of each [`PlayVoice`](Self::PlayVoice). Replaces
+    /// the list sent before.
+    PreloadVoices {
+        /// The clips, in the order they are expected.
+        lines: Vec<(LineId, Variant)>,
+    },
 }
 
 impl AudioRequest {
@@ -38,7 +61,10 @@ impl AudioRequest {
     pub fn cue(&self) -> Option<&str> {
         match self {
             Self::PlaySound { cue, .. } | Self::PlayMusic { cue } => Some(cue),
-            Self::StopMusic => None,
+            Self::StopMusic
+            | Self::PlayVoice { .. }
+            | Self::StopVoice
+            | Self::PreloadVoices { .. } => None,
         }
     }
 }
@@ -79,6 +105,27 @@ impl AudioQueue {
     /// Fades the music out.
     pub fn stop_music(&mut self) {
         self.requests.push(AudioRequest::StopMusic);
+    }
+
+    /// Plays the `variant` clip of `line`. Screens call
+    /// [`Ctx::play_voice`](crate::Ctx::play_voice) instead, which asks only
+    /// for clips that exist and only while voices are on.
+    pub fn play_voice(&mut self, line: &LineId, variant: Variant) {
+        self.requests.push(AudioRequest::PlayVoice {
+            line: line.clone(),
+            variant,
+        });
+    }
+
+    /// Stops the voice that is playing, if any.
+    pub fn stop_voice(&mut self) {
+        self.requests.push(AudioRequest::StopVoice);
+    }
+
+    /// Tells `app` which clips are coming, in order
+    /// ([`Ctx::preload_voices`](crate::Ctx::preload_voices)).
+    pub fn preload_voices(&mut self, lines: Vec<(LineId, Variant)>) {
+        self.requests.push(AudioRequest::PreloadVoices { lines });
     }
 
     /// The requests made since the last [`take`](Self::take), in order.
@@ -293,11 +340,14 @@ impl MusicState {
         }
     }
 
-    /// Applies one request (sound requests are ignored), appending the
-    /// commands it needs to `out`.
+    /// Applies one request (sound and voice requests are ignored),
+    /// appending the commands it needs to `out`.
     pub fn request(&mut self, request: &AudioRequest, out: &mut Vec<MusicCommand>) {
         match request {
-            AudioRequest::PlaySound { .. } => {}
+            AudioRequest::PlaySound { .. }
+            | AudioRequest::PlayVoice { .. }
+            | AudioRequest::StopVoice
+            | AudioRequest::PreloadVoices { .. } => {}
             AudioRequest::PlayMusic { cue } => self.play(cue, out),
             AudioRequest::StopMusic => self.stop(out),
         }
@@ -558,6 +608,30 @@ mod tests {
             volume: 1.0,
         };
         assert_eq!(frame(&mut m, &[sound], 0.1), []);
+        assert_eq!(m.current(), Some("title"));
+    }
+
+    #[test]
+    fn voice_requests_leave_the_music_alone() {
+        let mut m = playing("title");
+        let line = LineId::new("test_1a2b3c4d");
+        let mut q = AudioQueue::default();
+        q.play_voice(&line, Variant::F);
+        q.stop_voice();
+        q.preload_voices(vec![(line.clone(), Variant::None)]);
+        let expected = [
+            AudioRequest::PlayVoice {
+                line: line.clone(),
+                variant: Variant::F,
+            },
+            AudioRequest::StopVoice,
+            AudioRequest::PreloadVoices {
+                lines: vec![(line, Variant::None)],
+            },
+        ];
+        assert_eq!(q.pending(), expected);
+        assert!(expected.iter().all(|r| r.cue().is_none()));
+        assert_eq!(frame(&mut m, &expected, 0.1), []);
         assert_eq!(m.current(), Some("title"));
     }
 
