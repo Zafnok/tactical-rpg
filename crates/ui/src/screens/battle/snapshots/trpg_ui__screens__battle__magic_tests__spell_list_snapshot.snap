@@ -90,7 +90,7 @@ s = fg:enemy bg:grass_bg
 t = fg:panel_bg bg:panel_border_focus
 u = fg:text_dim bg:black
 --- overlays ---
-over  160,270 16x2  hp_high
-over  272,206 16x2  hp_high
-over  176,254 8x2  hp_high
-over  160,254 16x2  hp_high
+over  161,270 14x2  hp_high
+over  273,206 14x2  hp_high
+over  177,254 7x2  hp_high
+over  161,254 14x2  hp_high

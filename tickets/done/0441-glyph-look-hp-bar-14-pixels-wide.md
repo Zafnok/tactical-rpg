@@ -5,10 +5,10 @@ type: tuning
 milestone: M3 Battle UI
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0441 — Glyph look: the map HP bar is 14 pixels wide
@@ -66,12 +66,12 @@ tile's left edge and is 14 pixels wide; its fill is worked out over those
 
 ## Acceptance criteria
 
-- [ ] Test: a full-HP unit's bar is the rectangle `(tile x + 1, tile
+- [x] Test: a full-HP unit's bar is the rectangle `(tile x + 1, tile
       bottom − 2, 14, 2)`; at half HP the filled part is 7 wide and the
       dark part 7.
-- [ ] Changed snapshots differ only in HP-bar overlay lines.
-- [ ] The frame was looked at (step 4).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Changed snapshots differ only in HP-bar overlay lines.
+- [x] The frame was looked at (step 4).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -80,5 +80,21 @@ tile's left edge and is 14 pixels wide; its fill is worked out over those
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- 0432 was already done, so the change is in the glyph skin
+  (`crates/ui/src/map_view/glyph/units.rs`): `HP_BAR_W` is 14 and a new
+  `HP_BAR_INSET` (1 px) moves both overlays right. 0436 is not done, so
+  there is nothing to share yet; the sprite skin still draws its own
+  16-pixel bar until 0436.
+- The fill keeps its rule (round to the nearest pixel, half up) over 14
+  pixels: full HP fills 14, half fills 7.
+- 43 snapshot files changed. Checked with a script, not by eye: every
+  changed line is an HP-bar overlay (1 pixel right, 2 narrower, or the
+  matching change for a part-filled or clipped bar), plus stale
+  `source:` / `expression:` header lines insta rewrote.
+- Looked at the Quick Battle with `cargo xtask frame-png`: the Mage and
+  the Knight stand side by side and their bars have a gap between them.
+- No game rule was decided here.
+- For Nick: with 14 pixels instead of 16, a unit needs a little more HP
+  to show its first pixel. A unit at 1 HP of 30 showed 1 pixel before
+  and now shows an all-dark bar (a unit at 1 of 40 already did). This is
+  the existing rounding, which the ticket says to keep.
