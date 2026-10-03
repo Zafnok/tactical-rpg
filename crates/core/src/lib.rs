@@ -84,3 +84,8 @@ pub use unit::{
     UnitId, default_map_label, is_valid_map_label,
 };
 pub use weapon::{WeaponKind, WeaponRank};
+
+/// Scratch for ticket 0119: nothing tests this.
+pub fn scratch_0119(x: u32) -> bool {
+    x > 3
+}
