@@ -253,8 +253,9 @@ their own (`docs/story/names.md`, "Short forms"), used like any other:
   Comments aren't checked. Short forms are names too, so `Hollis` alone is
   an error; a line that holds several names reports the longest
   (`Hollis Marr` is reported as `{n:retainer}`). A few short forms are also
-  ordinary words (`Mother`, `Hand`, `Pyre`, `Wren`): with a capital they are
-  always taken as the name, so reword a line that starts with one.
+  ordinary words (`Mother`, `Hand`, `Pyre`, `Wren`, `Crane`, `Rook`, `Holt`,
+  `Mast`): with a capital they are always taken as the name, so reword a
+  line that starts with one.
 - **Lengths** count every name token as the **longest** name in
   `names.ron`, whichever name it is, so renaming anything can't push a line
   over its limit.
