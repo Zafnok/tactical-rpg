@@ -90,7 +90,8 @@ don't make it obvious.
    counts "twelve men, no, fourteen" in `ch01_prebattle` and the lead may
    answer "Only fourteen?": pick an enemy count that fits.
 5. New Game → `ch01`.
-6. **Winning replay test** `crates/ui/tests/ch01_winnable.rs` (or core): a
+6. **Winning replay test** `crates/ui/tests/it/ch01_winnable.rs` plus a `mod` line in
+   `tests/it/main.rs` (or core): a
    hand-authored command list from the chapter seed that wins the map. Keep it
    in a readable `.ron`/text fixture. It must keep passing — if a later balance
    change breaks it, that change must update the replay consciously.

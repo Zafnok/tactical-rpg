@@ -76,7 +76,7 @@ playtest.
       `button_names_are_distinct_on_each_pad` and
       `every_button_name_is_in_the_font` in
       `crates/ui/src/input/pad/tests.rs` by adding the kind to `KINDS`).
-- [x] Harness test (`crates/ui/tests/controller.rs`): with
+- [x] Harness test (`crates/ui/tests/it/controller.rs`): with
       `h.use_pad(PadKind::PlayStation4)` the battle's toggle row shows
       `Share auto-end: OFF`.
 - [x] The web plugin's two version numbers match (existing xtask test).
