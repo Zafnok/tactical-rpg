@@ -2,9 +2,10 @@
 //! and narration. The format is documented in `assets/dialogue/README.md`
 //! (ADR-0005). [`parse_dlg`] turns a file into scenes, [`check_scene`] and
 //! [`check_duplicates`] validate them, and [`print_scene`] writes a scene
-//! back out.
+//! back out. Every line that shows text has a [`LineId`] (ADR-0045).
 
 mod check;
+mod line_id;
 mod parse;
 
 use std::collections::BTreeMap;
@@ -12,6 +13,7 @@ use std::collections::BTreeMap;
 use trpg_core::CharacterId;
 
 pub use check::{check_duplicates, check_scene};
+pub use line_id::{Line, LineId, NARRATION_SPEAKER, REPLY_SPEAKER};
 pub use parse::{ChoiceLines, OptionLines, ParsedScene, parse_dlg};
 pub(crate) use parse::{char_problem, is_id};
 
@@ -102,11 +104,15 @@ pub enum Step {
         expression: Option<String>,
         /// What they say.
         text: String,
+        /// The line's id.
+        line: LineId,
     },
     /// `> text`: narration, no speaker.
     Narrate {
         /// The narration.
         text: String,
+        /// The line's id.
+        line: LineId,
     },
     /// `@choice` … `@endchoice`: the lead's reply choices (2–3), each with
     /// its own reaction steps. Every option rejoins the scene after the
@@ -149,6 +155,8 @@ pub struct ChoiceOption {
     pub tone: String,
     /// What the lead says, shown in the menu.
     pub text: String,
+    /// The reply's id.
+    pub line: LineId,
     /// The reaction: steps played after picking this option (no choices).
     pub steps: Vec<Step>,
 }
@@ -157,7 +165,7 @@ impl Step {
     /// The text of a text step (one text box): a `Say` or `Narrate`.
     pub fn text(&self) -> Option<&str> {
         match self {
-            Step::Say { text, .. } | Step::Narrate { text } => Some(text),
+            Step::Say { text, .. } | Step::Narrate { text, .. } => Some(text),
             Step::Caption { .. }
             | Step::Place { .. }
             | Step::Clear { .. }
@@ -294,13 +302,15 @@ fn print_step(out: &mut String, step: &Step, indent: &str) {
             speaker,
             expression: Some(e),
             text,
+            ..
         } => format!("{}[{e}]: {text}", speaker.0),
         Step::Say {
             speaker,
             expression: None,
             text,
+            ..
         } => format!("{}: {text}", speaker.0),
-        Step::Narrate { text } => format!("> {text}"),
+        Step::Narrate { text, .. } => format!("> {text}"),
         Step::Music(music) => format!("@music {}", music.arg()),
         Step::Choice { options } => {
             out.push_str("@choice\n");

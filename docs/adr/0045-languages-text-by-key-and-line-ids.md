@@ -72,6 +72,15 @@ text as written (tokens unexpanded, continuation lines joined). A second
 identical line in the same scene gets `_2`, and so on. The hash is a fixed
 algorithm written in the crate (FNV-1a 64, truncated), never `std`'s hasher.
 
+As built (ticket 0717): the hash is over the speaker, a newline and the
+text, where the speaker is the character id, `>` for narration or `*` for a
+reply, and continuation lines are joined with one space; the id keeps the
+low 32 bits. The lines of a reply's reaction get ids like any other. The
+speaker's expression and a reply's tone are not hashed. Two *different*
+lines of one scene with the same hash are a validation error (reword one):
+numbering them would make their ids depend on their order.
+`cargo xtask lines [scene]` lists every line with its id.
+
 This is how Ren'Py keys translations and automatic voice. It keeps scripts
 free of id clutter, moving or inserting lines changes nothing, and changing
 a line's words gives it a new id, which is exactly when its translation and
