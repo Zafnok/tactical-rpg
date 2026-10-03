@@ -106,7 +106,7 @@ jobs:
           SHARD: ${{ matrix.shard }}
           OF: ${{ needs.plan.outputs.of }}
         run: >
-          cargo mutants --in-diff git.diff --in-place
+          cargo mutants --in-diff git.diff --jobs 2
           --shard "$SHARD/$OF" --sharding round-robin
           --test-tool=nextest -vV
       - name: Upload mutants.out
