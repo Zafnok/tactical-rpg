@@ -20,7 +20,7 @@ use crate::audio::{AudioRequest, MusicClock, MusicCommand};
 use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Device, Layout, PadKind};
-use crate::map_view::MapScene;
+use crate::map_view::{MapScene, skin_named};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
 use crate::screens::BattleScreen;
 use crate::storage::{MemoryStorage, Storage};
@@ -388,14 +388,32 @@ impl Harness {
         self.game.screen_mut()
     }
 
-    /// What the battle on the stack shows on its map (ADR-0038): the game
-    /// flow's battle, else a battle screen put on the stack itself. `None`
-    /// with no battle. Assert on this (or on the battle's state), not on
-    /// cells and colours, to check what happened.
-    pub fn map_scene(&self) -> Option<MapScene> {
+    /// The battle on the stack: the game flow's, else a battle screen put
+    /// on the stack itself. `None` with no battle.
+    pub fn battle(&self) -> Option<&BattleScreen> {
         let in_flow = self.flow().and_then(FlowScreen::battle);
-        let battle = in_flow.or_else(|| self.game.screen::<BattleScreen>())?;
-        Some(battle.scene(self.game.ctx()))
+        in_flow.or_else(|| self.game.screen::<BattleScreen>())
+    }
+
+    /// What the battle on the stack shows on its map (ADR-0038), as
+    /// [`battle`](Self::battle) finds it. Assert on this (or on the
+    /// battle's state), not on cells and colours, to check what happened.
+    pub fn map_scene(&self) -> Option<MapScene> {
+        Some(self.battle()?.scene(self.game.ctx()))
+    }
+
+    /// Paints battle maps with the skin called `name` from the next frame
+    /// on (`"glyph"`, or `"sprite"` for the test tileset; ADR-0038), as
+    /// the debug menu's "Map skin" does.
+    ///
+    /// # Panics
+    ///
+    /// If there is no such skin.
+    pub fn with_map_skin(&mut self, name: &str) -> &mut Self {
+        let ctx = self.game.ctx_mut();
+        let skin = skin_named(&ctx.content, name);
+        ctx.map_skin = skin.unwrap_or_else(|| panic!("no map skin {name:?}"));
+        self
     }
 
     /// [`map_scene`](Self::map_scene) as text ([`MapScene::to_text`]);
@@ -696,6 +714,27 @@ mod tests {
         // The same map; only the cursor's pulse is a frame behind.
         assert_eq!((bare.tiles, bare.units), (scene.tiles, scene.units));
         assert_eq!(bare.cursor.map(|c| c.pos), scene.cursor.map(|c| c.pos));
+        assert!(h.battle().is_some());
+    }
+
+    #[test]
+    fn the_map_skin_can_be_switched_by_name() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        assert!(h.battle().is_none());
+        h.keys("Down f");
+        assert_eq!(h.battle().map(|b| b.state().units().len()), Some(8));
+        h.with_map_skin("sprite").wait(FRAME_DT);
+        assert_eq!(h.game().ctx().map_skin.name(), "sprite");
+        // The test tileset's 24 px tiles: 23 × 20 of them.
+        assert!(h.map_text().contains(" size 23x20\n"), "{}", h.map_text());
+        h.with_map_skin("glyph");
+        assert_eq!(h.game().ctx().map_skin.name(), "glyph");
+    }
+
+    #[test]
+    #[should_panic(expected = "no map skin \"ascii\"")]
+    fn an_unknown_map_skin_panics() {
+        Harness::with_layout(Layout::RightHanded).with_map_skin("ascii");
     }
 
     #[test]

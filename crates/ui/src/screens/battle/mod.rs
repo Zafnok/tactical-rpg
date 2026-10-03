@@ -755,13 +755,34 @@ impl BattleScreen {
         Camera::centred_on(self.cursor.pos, tiles.width(), tiles.height(), view)
     }
 
-    /// Starts a frame of `dt` seconds: keeps the camera for as many tiles as
-    /// the map skin shows, and advances the cursor's pulse.
+    /// Starts a frame of `dt` seconds: keeps the cameras for as many tiles
+    /// as the map skin shows ([`refit`](Self::refit)), and advances the
+    /// cursor's pulse.
     fn begin_frame(&mut self, ctx: &Ctx, dt: f32) {
         let view = ctx.map_skin.view_tiles(MAP_VIEW);
+        if view != self.view {
+            self.refit(view);
+        }
+        self.cursor.tick(dt);
+    }
+
+    /// The map skin changed (a debug tool) and the viewport now shows
+    /// `view` tiles: the camera centres on the cursor, the camera kept for
+    /// the player's next phase centres on the cursor kept with it, and an
+    /// AI action's pan is worked out again, taking as long as before.
+    fn refit(&mut self, view: (i32, i32)) {
+        let tiles = &self.state.map().tiles;
+        let (w, h) = (tiles.width(), tiles.height());
         self.camera = self.camera_in(view);
         self.view = view;
-        self.cursor.tick(dt);
+        if let Some((pos, camera)) = &mut self.player_view {
+            *camera = Camera::centred_on(*pos, w, h, view);
+        }
+        if let Mode::AiAction(a) = &mut self.mode {
+            let mut to = self.camera;
+            to.follow(a.start(), w, h, view, Camera::MARGIN);
+            a.repan((self.camera.origin, to.origin));
+        }
     }
 
     /// The unit drawn under the cursor, if any.

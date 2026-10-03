@@ -1,0 +1,223 @@
+---
+source: crates/ui/tests/map_skin.rs
+expression: h.snapshot()
+---
+                                                                      ┌────────────────────────────┐
+                                                                      │ Plain                      │
+                                                                      │ DEF +0  AVO +0             │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │ Test Lord                  │
+                                                                      │ Exile  Lv 1                │
+                                                                      │ HP 19/19   ██████████      │
+                                                                      │ Player                     │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      └────────────────────────────┘
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ f select · e info · s next unit · r rewind · d menu · Space end turn                      F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdddddccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabceeeeeeeeeccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccffffffffffccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcggggggcccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhha
+ahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaahhhhhhhha
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:hp_high bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:text_dim bg:black
+--- overlays ---
+under sprite 100,144 24x24  tilesets/test.png 24,24 24x24
+under sprite 124,144 24x24  tilesets/test.png 24,24 24x24
+under sprite 148,144 24x24  tilesets/test.png 24,24 24x24
+under sprite 172,144 24x24  tilesets/test.png 0,24 24x24
+under sprite 196,144 24x24  tilesets/test.png 0,24 24x24
+under sprite 220,144 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,144 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,144 24x24  tilesets/test.png 96,0 24x24
+under sprite 292,144 24x24  tilesets/test.png 96,0 24x24
+under sprite 316,144 24x24  tilesets/test.png 120,0 24x24
+under sprite 340,144 24x24  tilesets/test.png 120,0 24x24
+under sprite 364,144 24x24  tilesets/test.png 144,0 24x24
+under sprite 388,144 24x24  tilesets/test.png 144,0 24x24
+under sprite 412,144 24x24  tilesets/test.png 168,0 24x24
+under sprite 100,168 24x24  tilesets/test.png 24,24 24x24
+under sprite 124,168 24x24  tilesets/test.png 24,24 24x24
+under sprite 148,168 24x24  tilesets/test.png 0,24 24x24
+under sprite 172,168 24x24  tilesets/test.png 0,24 24x24
+under sprite 196,168 24x24  tilesets/test.png 0,0 24x24
+under sprite 220,168 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,168 24x24  tilesets/test.png 24,0 24x24
+under sprite 268,168 24x24  tilesets/test.png 24,0 24x24
+under sprite 292,168 24x24  tilesets/test.png 24,0 24x24
+under sprite 316,168 24x24  tilesets/test.png 96,0 24x24
+under sprite 340,168 24x24  tilesets/test.png 96,0 24x24
+under sprite 364,168 24x24  tilesets/test.png 144,0 24x24
+under sprite 388,168 24x24  tilesets/test.png 144,0 24x24
+under sprite 412,168 24x24  tilesets/test.png 144,0 24x24
+under sprite 100,192 24x24  tilesets/test.png 24,24 24x24
+under sprite 124,192 24x24  tilesets/test.png 0,24 24x24
+under sprite 148,192 24x24  tilesets/test.png 0,24 24x24
+under sprite 172,192 24x24  tilesets/test.png 48,0 24x24
+under sprite 196,192 24x24  tilesets/test.png 48,0 24x24
+under sprite 220,192 24x24  tilesets/test.png 24,0 24x24
+under sprite 244,192 24x24  tilesets/test.png 24,0 24x24
+under sprite 268,192 24x24  tilesets/test.png 24,0 24x24
+under sprite 292,192 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,192 24x24  tilesets/test.png 0,0 24x24
+under sprite 340,192 24x24  tilesets/test.png 96,0 24x24
+under sprite 364,192 24x24  tilesets/test.png 96,0 24x24
+under sprite 388,192 24x24  tilesets/test.png 0,0 24x24
+under sprite 412,192 24x24  tilesets/test.png 0,0 24x24
+under sprite 100,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 124,216 24x24  tilesets/test.png 0,24 24x24
+under sprite 148,216 24x24  tilesets/test.png 0,24 24x24
+under sprite 172,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 196,216 24x24  tilesets/test.png 24,0 24x24
+under sprite 220,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 292,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 340,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 364,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 388,216 24x24  tilesets/test.png 48,24 24x24
+under sprite 412,216 24x24  tilesets/test.png 0,0 24x24
+under sprite 100,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 124,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 148,240 24x24  tilesets/test.png 24,0 24x24
+under sprite 172,240 24x24  tilesets/test.png 24,0 24x24
+under sprite 196,240 24x24  tilesets/test.png 24,0 24x24
+under sprite 220,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 292,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,240 24x24  tilesets/test.png 168,24 24x24
+under sprite 340,240 24x24  tilesets/test.png 168,24 24x24
+under sprite 364,240 24x24  tilesets/test.png 168,24 24x24
+under sprite 388,240 24x24  tilesets/test.png 168,24 24x24
+under sprite 412,240 24x24  tilesets/test.png 0,0 24x24
+under sprite 100,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 124,264 24x24  tilesets/test.png 96,0 24x24
+under sprite 148,264 24x24  tilesets/test.png 24,0 24x24
+under sprite 172,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 196,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 220,264 24x24  tilesets/test.png 48,24 24x24
+under sprite 244,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 292,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,264 24x24  tilesets/test.png 168,24 24x24
+under sprite 340,264 24x24  tilesets/test.png 72,0 24x24
+under sprite 364,264 24x24  tilesets/test.png 48,24 24x24
+under sprite 388,264 24x24  tilesets/test.png 168,24 24x24
+under sprite 412,264 24x24  tilesets/test.png 0,0 24x24
+under sprite 100,288 24x24  tilesets/test.png 96,0 24x24
+under sprite 124,288 24x24  tilesets/test.png 96,0 24x24
+under sprite 148,288 24x24  tilesets/test.png 24,0 24x24
+under sprite 172,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 196,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 220,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 292,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,288 24x24  tilesets/test.png 168,24 24x24
+under sprite 340,288 24x24  tilesets/test.png 72,0 24x24
+under sprite 364,288 24x24  tilesets/test.png 72,0 24x24
+under sprite 388,288 24x24  tilesets/test.png 168,24 24x24
+under sprite 412,288 24x24  tilesets/test.png 0,0 24x24
+under sprite 100,312 24x24  tilesets/test.png 96,0 24x24
+under sprite 124,312 24x24  tilesets/test.png 120,0 24x24
+under sprite 148,312 24x24  tilesets/test.png 24,0 24x24
+under sprite 172,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 196,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 220,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 244,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 268,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 292,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 316,312 24x24  tilesets/test.png 168,24 24x24
+under sprite 340,312 24x24  tilesets/test.png 168,24 24x24
+under sprite 364,312 24x24  tilesets/test.png 72,24 24x24
+under sprite 388,312 24x24  tilesets/test.png 168,24 24x24
+under sprite 412,312 24x24  tilesets/test.png 0,0 24x24
+under sprite 172,264 24x24  tilesets/test.png 168,72 24x24
+over  172,264 24x2  player
+over  172,286 24x2  hp_high
+under sprite 196,288 24x24  tilesets/test.png 120,96 24x24
+over  196,288 24x2  player
+over  196,310 24x2  hp_high
+under sprite 148,240 24x24  tilesets/test.png 24,48 24x24
+over  148,240 24x2  player
+over  148,262 24x2  hp_high
+under sprite 292,192 24x24  tilesets/test.png 0,72 24x24
+over  292,192 24x2  enemy
+over  292,214 24x2  hp_high
+under sprite 268,240 24x24  tilesets/test.png 0,72 24x24
+over  268,240 24x2  enemy
+over  268,262 24x2  hp_high
+under sprite 268,168 24x24  tilesets/test.png 24,144 24x24
+over  268,168 24x2  enemy
+over  268,190 24x2  hp_high
+under sprite 292,312 24x24  tilesets/test.png 48,96 24x24
+over  292,312 24x2  enemy
+over  292,334 24x2  hp_high
+under sprite 172,288 24x24  tilesets/test.png 48,120 24x24
+over  172,288 24x2  player
+over  172,310 24x2  hp_high
+over  172,264 3x1  #edd99e
+over  172,264 1x3  #edd99e
+over  193,264 3x1  #edd99e
+over  195,264 1x3  #edd99e
+over  172,287 3x1  #edd99e
+over  172,285 1x3  #edd99e
+over  193,287 3x1  #edd99e
+over  195,285 1x3  #edd99e

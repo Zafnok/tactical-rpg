@@ -251,7 +251,6 @@ pub fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Strin
 }
 
 /// Decodes a PNG to (width, height, RGBA8 pixels).
-#[cfg(test)]
 pub fn decode_png(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
     let mut decoder = png::Decoder::new(bytes);
     decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::ALPHA);

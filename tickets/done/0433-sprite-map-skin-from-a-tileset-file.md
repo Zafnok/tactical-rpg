@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0231", "0432"]
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0433 — A sprite map skin from a tileset file
@@ -156,27 +156,27 @@ decided with Nick in ticket 0039 and built in 0436.
 
 ## Acceptance criteria
 
-- [ ] Content validation loads `tilesets/test.ron`; each validator error
+- [x] Content validation loads `tilesets/test.ron`; each validator error
       has a test with its message, including "terrain \"…\" has no tile".
-- [ ] Integration test `the_skin_never_changes_the_game`: one long scripted
+- [x] Integration test `the_skin_never_changes_the_game`: one long scripted
       Quick Battle (move, attack, an enemy phase, a rewind) run under the
       glyph skin and under the sprite skin ends with equal `BattleState`s,
       equal cursor tiles after every step, the same screen names and the
       same audio requests.
-- [ ] Property `sprite_skin_paints_only_the_area`, as 0432's for the glyph
+- [x] Property `sprite_skin_paints_only_the_area`, as 0432's for the glyph
       skin.
-- [ ] Test `every_scene_feature_is_painted`: for a scene with one of
+- [x] Test `every_scene_feature_is_painted`: for a scene with one of
       everything (each `RangeKind`, an acted unit, a fading unit, a unit
       with an effect, a cursor in each style, a path), the sprite skin's
       frame differs from the frame without that one feature. A new
       `MapScene` field without paint code must fail this test (build the
       list of features in one place both the test and reviewers can see).
-- [ ] Snapshot: Quick Battle under the sprite skin (sprite lines), and with
+- [x] Snapshot: Quick Battle under the sprite skin (sprite lines), and with
       a unit selected.
-- [ ] Every glyph-skin snapshot is unchanged.
-- [ ] The frame was looked at (step 7); Completion notes say what was seen
+- [x] Every glyph-skin snapshot is unchanged.
+- [x] The frame was looked at (step 7); Completion notes say what was seen
       and list the placeholders for Nick.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -190,5 +190,92 @@ decided with Nick in ticket 0039 and built in 0436.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done.**
+
+- `assets/tilesets/<id>.ron` + PNG, loaded and checked by
+  `trpg_content::tileset` into `Content::tilesets` (format and checks in
+  `assets/tilesets/README.md`). Every error is reported at once with the
+  file name, each with a test.
+- `cargo xtask test-tileset` writes `assets/tilesets/test.png` (192×192)
+  and `test.ron`: 24×24 terrain tiles (`bg` colour, glyphs in `fg`) and a
+  grey disc with the first two letters of each class's name, by class id,
+  plus a `??` fallback. A test fails when the committed files are stale.
+  Listed in `THIRD_PARTY_ASSETS.md` (Terminus glyphs) and
+  `assets-src/README.md`.
+- `map_view::SpriteSkin` (`map_view/sprite.rs`). Everything that depends
+  on the tile size goes through `SpriteSkin::tile_size()` (for 0439's
+  zoom). Unit pictures are `Picture`s (an image and a rectangle), drawn at
+  their own size, centred and standing on the tile's bottom edge, so
+  0436's 16×20 frames from a file per unit fit without changing the skin.
+- Shared with the glyph skin, not copied: `map_view/grid.rs` (`Grid`,
+  where tiles go in pixels; `px_rect`), `map_view/path.rs` (the path
+  arrow, moved out of `glyph/` and worked out from any tile size; the
+  glyph skin's output is unchanged), `hp_fill`, `faction_color`,
+  `range_color`, `OVERLAY_BLEND`, `ACTED_DIM`, `GLOW_MAX`, `HP_BAR_H`.
+- Tints: a tinted tile is an `Under` rectangle of the mixed tint colours
+  under the tile sprite at reduced opacity, worked out so the result is
+  the same blend the glyph skin's `blend_bg` gives (a test checks it).
+- Debug menu: a 9th item, "Map skin: glyph" / "Map skin: test tileset",
+  that switches `ctx.map_skin` (not saved). `map_view::skin_named` and
+  `Harness::with_map_skin("glyph" | "sprite")`, plus `Harness::battle()`.
+- Switching skins mid-battle (the 0432 note): the camera kept for the
+  player's next phase is re-centred for the new view size, and an AI
+  action's pan is worked out again; `AiAction::repan` keeps the pan's
+  length, so the action's timing (and its step sounds) don't change.
+- Tests: the loader and each error; `view_tiles` and the margin for
+  several sizes; picture lookup order; opacity for acted and falling
+  units; `sprite_skin_paints_only_the_area` and
+  `tiles_lie_inside_the_area_edge_to_edge` (any tile size 8..=64);
+  `every_scene_feature_is_painted`; a snapshot of a small scene;
+  `crates/ui/tests/map_skin.rs` with `the_skin_never_changes_the_game` and
+  the two Quick Battle snapshots. No glyph-skin snapshot changed (the
+  debug menu's did: its new item).
+
+**What was seen (step 7).** 0232's `frame-png` isn't done, so: Harness
+frames of the Quick Battle under both skins (start, unit selected, action
+menu, forecast, map menu, danger zone, enemy phase) were composited to
+PNGs offline with a throwaway script, and the web build was run in the
+browser pane, switched to the test tileset from the debug menu, and its
+Quick Battle drawn by `app` from `tilesets/test.png`. Tiles line up with
+no seams; 23×20 tiles fit with 4 px to spare each side; the move, attack
+and danger ranges read as tinted; the path runs through tile centres
+under the units with its arrowhead over them; the action menu opens
+beside the unit (covering the neighbouring tile, as on the glyph skin);
+the menu, the forecast and the tip box cut the sprites under them
+cleanly. Seen in passing: the cursor's 1-px corners are hard to see where
+they cross the placeholder side and HP bars, and side-by-side units' bars
+run into one line; both are for 0039/0436 to settle.
+
+**Placeholders for Nick** (Claude's, *not decided*; ticket 0039 decides,
+0436 builds; nothing here reaches players, the glyph skin stays the game's
+look):
+
+- Whose side: a 2-px bar in the side's colour along the top of the unit's
+  tile; the two-letter label isn't drawn (the test picture shows the class
+  letters instead).
+- Acted: the picture at half opacity (the glyph skin's dimming).
+- HP: the glyph skin's 2-px bar along the bottom, as wide as the tile.
+- Under a timed effect: a 3×3-px mark in the effect colour in the tile's
+  top-right corner.
+- Picked out by a battle note: a light square behind the unit.
+- Falling: the picture fades out; its marks go at half way.
+- Cursor: 3-px (4-px for large) corner marks just inside the tile; the
+  glow style shows the tile faded over the cursor colour.
+- A tile flashing after its terrain changed tints towards its terrain's
+  glyph colour; a tile a spell would change shows the new terrain's tile.
+
+**Deviations.**
+
+- The scene has three things the ticket didn't list (a terrain flash, the
+  terrain a spell would make, a battle note's highlight): painted as above.
+- `every_scene_feature_is_painted` lists every field of `MapScene`,
+  `TileView`, `UnitView` and `CursorView` by name, so a new field doesn't
+  *compile* until it is listed there with a feature (stronger than failing).
+- The ticket's format example counted unit rows from the image's top;
+  they count from `units_origin_px` (README says so). A tileset's `id`
+  must also be its file name.
+- The debug menu's help says "f choose" instead of "f open" (an item now
+  switches rather than opens).
+
+**Gameplay rules decided:** none. Follow-up tickets: none (0039, 0436,
+0437, 0439 already cover what's next).

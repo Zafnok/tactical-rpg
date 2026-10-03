@@ -1,0 +1,33 @@
+---
+source: crates/ui/src/map_view/sprite.rs
+expression: items
+---
+under 16,24 24x24  move_range
+under sprite 16,24 24x24  tilesets/test.png 0,0 24x24 opacity=64
+under 40,24 24x24  forest
+under sprite 40,24 24x24  tilesets/test.png 96,0 24x24 opacity=159
+under sprite 16,48 24x24  tilesets/test.png 0,0 24x24
+under sprite 40,48 24x24  tilesets/test.png 0,0 24x24
+under 27,48 3x14  path
+under sprite 16,24 24x24  tilesets/test.png 168,72 24x24
+over  16,24 24x2  player
+over  16,46 4x2  hp_low
+over  20,46 20x2  black
+under sprite 40,48 24x24  tilesets/test.png 0,72 24x24 opacity=128
+over  40,48 24x2  enemy
+over  61,48 3x3  effect
+over  40,70 24x2  hp_high
+over  23,57 11x1  path
+over  24,58 9x1  path
+over  25,59 7x1  path
+over  26,60 5x1  path
+over  27,61 3x1  path
+over  28,62 1x1  path
+over  16,48 3x1  cursor
+over  16,48 1x3  cursor
+over  37,48 3x1  cursor
+over  39,48 1x3  cursor
+over  16,71 3x1  cursor
+over  16,69 1x3  cursor
+over  37,71 3x1  cursor
+over  39,69 1x3  cursor

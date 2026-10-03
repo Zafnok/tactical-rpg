@@ -8,6 +8,7 @@ use std::rc::Rc;
 use proptest::prelude::*;
 use trpg_core::{BattleMap, Grid, Pos, TerrainId, UnitId};
 
+use super::ai_phase::{AiAction, PACING};
 use super::layout::MAP_VIEW;
 use super::mode::Mode;
 use super::testing::{battle, quick_units, skirmish, vaulted};
@@ -422,6 +423,44 @@ fn the_view_is_as_big_as_the_skin_says() {
     assert_eq!(s.camera().origin, p(28, 16));
     step(&mut s, &mut c, &[]);
     assert_eq!(s.camera().origin, p(17, 5));
+}
+
+#[test]
+fn a_skin_switch_refits_the_kept_camera_and_an_ai_pan() {
+    let mut c = ctx();
+    let mut s = big_battle(&c);
+    step(&mut s, &mut c, &[]);
+    assert_eq!(s.camera().origin, p(13, 5));
+    // As if the player phase had ended with the cursor on the lord, and
+    // an enemy's action were panning over to the archer's tile.
+    s.player_view = Some((p(30, 20), s.camera));
+    let before = s.state.units().to_vec();
+    let archer = before[2].id;
+    s.cursor.jump(p(60, 35));
+    let pan = (s.camera.origin, p(29, 10));
+    let action = AiAction::new(archer, before, pan, vec![], Mode::default(), PACING);
+    let walk_start = action.walk_start();
+    s.mode = Mode::AiAction(Box::new(action));
+    // The debug menu switches to a skin showing 10 × 8 tiles.
+    c.map_skin = Rc::new(Narrow);
+    s.begin_frame(&c, 0.0);
+    // The camera centres on the cursor; the kept one on the kept cursor.
+    assert_eq!(s.camera().origin, p(54, 31));
+    assert_eq!(s.player_view.map(|(_, c)| c.origin), Some(p(25, 16)));
+    // The pan goes from there to show the archer at (35, 20) 3 tiles from
+    // the edges, in the same time.
+    let Mode::AiAction(a) = &s.mode else {
+        panic!("{:?}", s.mode);
+    };
+    let mut a = a.as_ref().clone();
+    assert_eq!(a.camera(), p(54, 31));
+    assert!((a.walk_start() - walk_start).abs() < 1e-6);
+    a.tick(PACING.pan, false);
+    assert_eq!(a.camera(), p(32, 17));
+    // The same size again changes nothing.
+    let kept = (s.camera, s.player_view);
+    s.begin_frame(&c, 0.0);
+    assert_eq!((s.camera, s.player_view), kept);
 }
 
 #[test]

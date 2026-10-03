@@ -8,7 +8,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | Module | What |
 | ------ | ---- |
 | `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console (cells, plus rectangles and sprites placed in pixels; see *What a frame holds*), palette colours, the text snapshot format |
-| `map_view` | The battle map (ADR-0038): `MapScene` (what is on the visible map, plain data), `MapSkin` (how it looks) and the `GlyphSkin`. See *Map view* below |
+| `map_view` | The battle map (ADR-0038): `MapScene` (what is on the visible map, plain data), `MapSkin` (how it looks), the `GlyphSkin` and the `SpriteSkin` (from a tileset file), and what skins share: `Grid` (where tiles go in pixels) and `path` (the path arrow for any tile size). See *Map view* below |
 | `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
 | `game` | `Game`: owns the stack, input state, `Ctx`, buffer and music state; `frame(events, dt)` |
@@ -17,7 +17,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, its battle, the results of a won battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `GameOverScreen`, `ToBeContinuedScreen`, `ResultsScreen` (a won battle's gold, rewind bonus and EXP bars, then its level-up pages, 0810), `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `CreditsScreen` (0808), `DialogueScreen` (full-screen or over the map), `ClassChangeScreen` (`screens/class_change`: promotion and reclass between battles, 0603), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a 32×32-pixel portrait as 32×16 half-block cells, dimmed and/or mirrored (ADR-0018) |
-| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), sprite test, class change on a test unit (promote, reclass) |
+| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), sprite test, class change on a test unit (promote, reclass), Map skin (glyph / test tileset; not saved) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
@@ -124,16 +124,21 @@ The battle map is not drawn by the battle screen (ADR-0038). Each frame:
    on them (where each is drawn, HP, acted, under an effect, how far it has
    faded, whether it is picked out by a battle note), the cursor (if shown) and the selected unit's path. Plain data:
    no colours, glyphs, cells or pixels.
-2. `ctx.map_skin.paint(ctx, &scene, MAP_VIEW, buf)` paints it. The only
-   skin so far is the `GlyphSkin` (`map_view/glyph`): today's look.
+2. `ctx.map_skin.paint(ctx, &scene, MAP_VIEW, buf)` paints it. The
+   `GlyphSkin` (`map_view/glyph`) is the game's look; the `SpriteSkin`
+   (`map_view/sprite`) paints from a tileset (`assets/tilesets/`), and the
+   debug menu's *Map skin* switches to it (with the generated test
+   tileset, 24 px tiles).
 3. Menus and heal numbers go beside a tile by asking the skin where it is
    (`tile_px` / `tile_cells`).
 
 Rules:
 
-- **The tile size is the skin's.** Nothing outside `map_view/glyph` knows a
-  tile is two cells or 16 pixels. The camera gets the view's size in tiles
-  from `skin.view_tiles(area)`.
+- **The tile size is the skin's.** Nothing outside a skin knows a tile is
+  two cells, 16 pixels or 24. The camera gets the view's size in tiles
+  from `skin.view_tiles(area)`; when it changes (a skin switched mid-battle)
+  the battle screen re-centres its cameras, and an AI action's pan is
+  worked out again in the same time.
 - **A new thing on the map** (a village, a spell's flash on a tile) is a new
   field of `MapScene`, set in `BattleScreen::scene` and painted by every
   skin. Never draw it into the buffer from the battle screen.
@@ -142,7 +147,37 @@ Rules:
 - **Tests of what happened read the scene** (or the `BattleState`), not
   cells and colours: `screen.scene(&ctx)` in unit tests, `h.map_scene()` /
   `h.map_text()` in Harness tests. Only tests of a skin's look read the
-  buffer.
+  buffer. `h.with_map_skin("sprite")` runs any Harness script under the
+  sprite skin; `crates/ui/tests/map_skin.rs` plays one under both and
+  checks nothing in the game changes.
+
+### Adding a skin
+
+1. A type in `map_view/<name>.rs` implementing `MapSkin`: `view_tiles`
+   (how many tiles fit in an area), `paint` and `tile_px` (where a tile
+   is, for menus beside it). Work out where tiles go as a `Grid` from your
+   tile size, and draw the path with `path::path_overlays(&scene.path,
+   &grid, colour)`; share colours and fills with the glyph skin
+   (`range_color`, `OVERLAY_BLEND`, `hp_fill`, `ACTED_DIM`, …) rather than
+   copying them.
+2. Paint nothing outside the area: copy the `…_paints_only_the_area`
+   property test.
+3. Paint every feature of the scene: copy `every_scene_feature_is_painted`
+   (`map_view/sprite.rs`), which lists them all.
+4. Give it a name in `map_view::skin_named` so the debug menu and
+   `Harness::with_map_skin` can switch to it, and add its name to
+   `the_skin_never_changes_the_game`.
+
+### Adding a map feature
+
+1. A field on `MapScene` (or `TileView`, `UnitView`, `CursorView`) that
+   says *what* is there, set in `BattleScreen::scene`; add it to
+   `MapScene::to_text`.
+2. Paint it in **every** skin: `map_view/glyph` and `map_view/sprite`.
+3. The feature list in `sprite.rs`'s `features` lists every field, so it
+   won't compile until the new one is there: add a feature for it (a scene
+   without and with it), and `every_scene_feature_is_painted` checks the
+   frames differ.
 
 `MapScene::to_text(&content)` is the scene as text, for snapshots and bug
 reports:
@@ -254,7 +289,10 @@ fn select_opens_new_game() {
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
 - `map_scene()`: what the battle on the stack shows on its map, as a
   `MapScene` (`None` with no battle); `map_text()`: the same as text. Use
-  these to check what happened on the map (*Map view* above).
+  these to check what happened on the map (*Map view* above). `battle()`:
+  the battle screen itself (its `state()`, `cursor()`).
+- `with_map_skin("sprite")` / `with_map_skin("glyph")`: paint battle maps
+  with that skin from the next frame on.
 - `flow()` / `flow_mut()`: the game flow on the stack; `flow_mut()` →
   `battle_mut()` → `send(&Command)` plays its battle with scripted
   commands (`crates/ui/tests/flow.rs`).
