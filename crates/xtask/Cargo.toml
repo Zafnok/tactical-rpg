@@ -17,7 +17,7 @@ trpg-core = { path = "../core" }
 # The Harness, for `frame-png` (ticket 0232).
 trpg-ui = { path = "../ui", features = ["harness"] }
 mutants = "0.0.4"
-png = "0.17"
+png = "0.18"
 ron.workspace = true
 serde.workspace = true
 # The playtest report as JSON, and its history (ticket 0505).
