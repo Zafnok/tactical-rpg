@@ -73,6 +73,8 @@ pub(crate) fn start(units: Vec<Unit>) -> BattleState {
         spells: tables.spells,
         skills: tables.skills,
         arts: tables.arts,
+        supports: tables.supports,
+        bonds: trpg_core::SupportBook::default(),
         pack: BattlePack {
             items: pack.iter().map(|i| ItemId::new(i)).collect(),
             cap: pack.len(),

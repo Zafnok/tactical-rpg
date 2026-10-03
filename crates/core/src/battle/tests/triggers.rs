@@ -569,14 +569,15 @@ fn recruits_survive_a_save_and_load() {
     act(&mut s, 1, p(1, 0), attack(3));
     let text = ron::to_string(&s).unwrap();
     let mut loaded: BattleState = ron::from_str(&text).unwrap();
-    loaded.restore_tables(
-        Arc::new(terrain()),
-        Arc::new(classes()),
-        Arc::new(items_for(&strong())),
-        Arc::new(spells()),
-        Arc::new(skills()),
-        Arc::new(test_arts()),
-    );
+    loaded.restore_tables(&crate::GameTables {
+        terrain: Arc::new(terrain()),
+        classes: Arc::new(classes()),
+        items: Arc::new(items_for(&strong())),
+        spells: Arc::new(spells()),
+        skills: Arc::new(skills()),
+        arts: Arc::new(test_arts()),
+        supports: Arc::default(),
+    });
     assert_eq!(loaded, s);
     assert!(loaded.has_fired(0) && loaded.has_fired(1));
     assert_eq!(loaded.triggers().len(), 2);

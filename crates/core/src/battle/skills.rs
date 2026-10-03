@@ -224,6 +224,8 @@ impl BattleState {
             }
         }
         apply(&mut a, &a_bonus);
+        a.mods.add(&self.support_mods(attacker, fight.dest));
+        d.mods.add(&self.support_mods(defender, defender.pos));
         let d_usable = defender.usable_skills(&self.tables.classes, &self.tables.skills);
         apply(
             &mut d,

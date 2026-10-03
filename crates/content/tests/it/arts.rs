@@ -69,6 +69,8 @@ fn battle(units: Vec<Unit>) -> BattleState {
         spells: Arc::new(c.spells.clone()),
         skills: Arc::new(c.skills.clone()),
         arts: Arc::new(c.arts.clone()),
+        supports: Arc::new(c.supports.clone()),
+        bonds: trpg_core::SupportBook::default(),
         pack: BattlePack::default(),
         gold: 0,
         stock: Stock::default(),

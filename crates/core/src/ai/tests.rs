@@ -430,6 +430,8 @@ fn setup(map: BattleMap, units: Vec<Unit>) -> BattleSetup {
         spells: Arc::new(spells()),
         skills: Arc::new(skills()),
         arts: Arc::new(arts()),
+        supports: Arc::default(),
+        bonds: crate::SupportBook::default(),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 3,

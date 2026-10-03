@@ -41,12 +41,20 @@
 //!   4. The stock becomes the battle's (with what was bought or found),
 //!      plus the pack's unused items; gold becomes the battle's plus the
 //!      battle's `clear_gold`.
-//!   5. Every roster unit is made ready for the next battle: full HP, not
+//!   5. The supports become the battle's ([`BattleState::supports`]: the
+//!      points every battle gives, story battle or skirmish). In
+//!      **Classic**, every support of a dead character ends
+//!      ([`SupportBook::end_for`]); a **Casual** retreat keeps them.
+//!   6. Every roster unit is made ready for the next battle: full HP, not
 //!      acted, no timed effects (*Claude's starting rule* for standing
 //!      units, as in Fire Emblem; the design says it for Casual retreats).
 //!
 //!   A defeat changes nothing ([`ApplyError::NotWon`]): the game is over,
 //!   and Retry starts the battle again from its setup.
+//! - **Supports** (`docs/design/supports.md`, rules in [`crate::support`]):
+//!   between battles, [`Campaign::view_support`] views a pair's unlocked
+//!   conversation, which is what raises its rank. Both characters must be
+//!   in the army, so a dead character's conversations can't be viewed.
 //! - **Mode.** Classic → Casual only ([`Campaign::downgrade_mode`]).
 //! - **Lead.** [`Campaign::new_game`] gives the lead's unit (character
 //!   [`LEAD_ID`]) the player's name, and a map label of that name's first
@@ -71,6 +79,7 @@ use crate::progression::{EXP_PER_LEVEL, grant_exp};
 use crate::shop::Gold;
 use crate::skill::SkillTable;
 use crate::spell::SpellTable;
+use crate::support::{SupportBook, SupportError, SupportPair, SupportTable, SupportViewed};
 use crate::terrain::TerrainTable;
 use crate::unit::{CharacterId, Faction, Role, Unit, UnitId, default_map_label};
 
@@ -204,6 +213,8 @@ pub struct GameTables {
     pub skills: Arc<SkillTable>,
     /// Combat Arts.
     pub arts: Arc<ArtTable>,
+    /// Support rules and pairs.
+    pub supports: Arc<SupportTable>,
 }
 
 /// The player's game between battles: saved by 0802.
@@ -223,6 +234,8 @@ pub struct Campaign {
     pub gold: Gold,
     /// Story flags set by chapters.
     pub flags: BTreeMap<String, bool>,
+    /// Every pair's support so far.
+    pub supports: SupportBook,
     /// Seconds played.
     pub playtime_s: u64,
 }
@@ -302,6 +315,7 @@ impl Campaign {
             stock,
             gold,
             flags: BTreeMap::new(),
+            supports: SupportBook::default(),
             playtime_s: 0,
         }
     }
@@ -332,6 +346,8 @@ impl Campaign {
             spells: Arc::clone(&tables.spells),
             skills: Arc::clone(&tables.skills),
             arts: Arc::clone(&tables.arts),
+            supports: Arc::clone(&tables.supports),
+            bonds: self.supports.clone(),
             pack: BattlePack {
                 items: def.default_pack.clone(),
                 cap: def.pack_cap,
@@ -366,6 +382,7 @@ impl Campaign {
             ..BattleRewards::default()
         };
         let mut stock = state.stock().clone();
+        self.supports = state.supports().clone();
         let is_player = |u: &&Unit| u.faction == Faction::Player && u.character.is_some();
         let standing = state.units().iter().filter(is_player);
         let fallen = state.fallen().iter().filter(is_player);
@@ -378,6 +395,9 @@ impl Campaign {
             match self.mode {
                 GameMode::Classic => {
                     self.lose(u, &mut stock);
+                    if let Some(dead) = &u.character {
+                        self.supports.end_for(dead, state.support_table());
+                    }
                     rewards.lost.extend(u.character.clone());
                 }
                 GameMode::Casual => deployed.push(u.clone()),
@@ -411,6 +431,24 @@ impl Campaign {
             rest(u);
         }
         Ok(rewards)
+    }
+
+    /// Views the unlocked support conversation of characters `a` and `b`,
+    /// at camp: the pair gains its rank, and the conversation to play is
+    /// returned. Both must be in the army.
+    pub fn view_support(
+        &mut self,
+        a: &CharacterId,
+        b: &CharacterId,
+        table: &SupportTable,
+    ) -> Result<SupportViewed, SupportError> {
+        for character in [a, b] {
+            if self.member(character).is_none() {
+                return Err(SupportError::NotInArmy(character.clone()));
+            }
+        }
+        let pair = SupportPair::new(a.clone(), b.clone());
+        self.supports.view(&pair, table)
     }
 
     /// Classic → Casual. Returns whether the mode changed (Casual never

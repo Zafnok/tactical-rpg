@@ -25,6 +25,7 @@ pub mod portrait;
 pub mod ron_loader;
 pub mod skill;
 pub mod spell;
+pub mod support;
 pub mod terrain;
 pub mod tileset;
 pub mod tip;
@@ -36,6 +37,7 @@ use std::sync::Arc;
 
 use trpg_core::{
     AiWeights, ArtTable, BattleDef, ClassTable, GameTables, ItemTable, SkillTable, SpellTable,
+    SupportTable,
 };
 
 pub use audio::{AudioManifest, Credit, CreditRef, MusicCue, SoundCue};
@@ -109,6 +111,8 @@ pub struct Content {
     pub chapters: BTreeMap<String, ChapterDef>,
     /// How a new game starts.
     pub new_game: NewGameDef,
+    /// Support rules and pairs (ticket 1002).
+    pub supports: SupportTable,
 }
 
 impl Content {
@@ -121,6 +125,7 @@ impl Content {
             spells: Arc::new(self.spells.clone()),
             skills: Arc::new(self.skills.clone()),
             arts: Arc::new(self.arts.clone()),
+            supports: Arc::new(self.supports.clone()),
         }
     }
 }
@@ -179,6 +184,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         audio.as_ref().ok(),
     );
     let credits = credits::load(audio.as_ref().ok());
+    let supports = support::load(characters.as_ref().ok(), dialogue.as_ref().ok());
     let tilesets = load_tilesets(
         images.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -210,6 +216,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             battles,
             chapters,
             new_game,
+            supports,
         },
     )
 }
@@ -414,6 +421,7 @@ struct Loaded {
     battles: Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
     chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
     new_game: Result<NewGameDef, Vec<ContentError>>,
+    supports: Result<SupportTable, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -460,6 +468,7 @@ fn assemble(
         battles: take(units.battles, &mut errors),
         chapters: take(units.chapters, &mut errors),
         new_game: take(units.new_game, &mut errors),
+        supports: take(units.supports, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -530,6 +539,10 @@ mod tests {
         credits::load(audio::load().ok().as_ref())
     }
 
+    fn ok_supports() -> Result<SupportTable, Vec<ContentError>> {
+        support::load(ok_characters().ok().as_ref(), ok_dialogue().ok().as_ref())
+    }
+
     fn ok_tilesets() -> Result<BTreeMap<String, Tileset>, Vec<ContentError>> {
         load_tilesets(
             ImageTable::load().ok().as_ref(),
@@ -560,6 +573,7 @@ mod tests {
             battles,
             chapters,
             new_game,
+            supports: ok_supports(),
         }
     }
 
@@ -641,6 +655,10 @@ mod tests {
             content.as_ref().map(|c| &c.tilesets),
             ok_tilesets().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.supports),
+            ok_supports().ok().as_ref()
+        );
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -653,9 +671,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 23] = [
+    const NAMES: [&str; 24] = [
         "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "r",
-        "j", "z", "b", "h", "g",
+        "j", "z", "b", "h", "g", "q",
     ];
 
     #[test]
@@ -687,6 +705,7 @@ mod tests {
                     battles: Err(e("b")),
                     chapters: Err(e("h")),
                     new_game: Err(e("g")),
+                    supports: Err(e("q")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -737,6 +756,7 @@ mod tests {
                     battles: if i == 20 { Err(e("b")) } else { ok_story().0 },
                     chapters: if i == 21 { Err(e("h")) } else { ok_story().1 },
                     new_game: if i == 22 { Err(e("g")) } else { ok_story().2 },
+                    supports: if i == 23 { Err(e("q")) } else { ok_supports() },
                 },
             )
         };
@@ -960,6 +980,15 @@ mod tests {
         assert_eq!(
             content.as_ref().map(|c| &c.dialogue),
             ok_dialogue().ok().as_ref()
+        );
+        assert_eq!(
+            content.as_ref().map(|c| &c.supports),
+            ok_supports().ok().as_ref()
+        );
+        // The battles' tables hold the supports.
+        assert_eq!(
+            content.as_ref().map(|c| c.tables().supports),
+            ok_supports().ok().map(Arc::new)
         );
     }
 }

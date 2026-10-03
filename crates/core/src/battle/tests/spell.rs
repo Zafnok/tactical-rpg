@@ -517,14 +517,15 @@ fn cast_and_equip_errors_leave_the_state_unchanged() {
     // Tables missing after loading: the spell is unknown.
     let text = ron::to_string(&s).unwrap();
     let mut loaded: BattleState = ron::from_str(&text).unwrap();
-    loaded.restore_tables(
-        Arc::new(s.terrain().clone()),
-        Arc::new(s.classes().clone()),
-        Arc::new(s.items().clone()),
-        Arc::new(SpellTable::default()),
-        Arc::new(s.skills().clone()),
-        Arc::new(s.arts().clone()),
-    );
+    loaded.restore_tables(&crate::GameTables {
+        terrain: Arc::new(s.terrain().clone()),
+        classes: Arc::new(s.classes().clone()),
+        items: Arc::new(s.items().clone()),
+        spells: Arc::new(SpellTable::default()),
+        skills: Arc::new(s.skills().clone()),
+        arts: Arc::new(s.arts().clone()),
+        supports: Arc::default(),
+    });
     refused_act(
         &mut loaded,
         2,

@@ -18,6 +18,8 @@
 //! - **Versions.** Every save names the [`SAVE_VERSION`] that wrote it. A
 //!   save of another version is refused, not migrated ([`SaveHeader`] reads
 //!   the version of a save whose other fields no longer parse).
+//!   Version 2 (ticket 1002) added the supports to the campaign and the
+//!   battle state, and [`Event::SupportPoints`](crate::Event::SupportPoints).
 
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +28,7 @@ use crate::history::BattleHistory;
 
 /// The save format this build reads and writes. Raise it whenever a saved
 /// type changes shape or meaning.
-pub const SAVE_VERSION: u32 = 1;
+pub const SAVE_VERSION: u32 = 2;
 
 /// One save: a slot's chapter save, or the suspend save.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
