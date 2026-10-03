@@ -10,6 +10,16 @@
 //! added. They belong to the cells they were drawn with: replacing cells
 //! ([`GlyphBuffer::fill_rect`], [`GlyphBuffer::blit`]) removes the parts of
 //! items over them.
+//!
+//! A buffer may also hold one [`Backdrop`] (ADR-0048): a second buffer, the
+//! *scene*, shown through a window of cells at a pixel offset and a whole
+//! zoom, behind the cells marked [`Cell::see_through`].
+
+mod backdrop;
+
+use std::rc::Rc;
+
+pub use backdrop::{Backdrop, MAX_ZOOM};
 
 use trpg_content::ImageId;
 
@@ -25,12 +35,34 @@ pub struct Cell {
     pub fg: Rgb,
     /// Background colour.
     pub bg: Rgb,
+    /// No background is drawn: the buffer's [`Backdrop`] shows behind the
+    /// glyph (the console's clear colour where there is none). `bg` is
+    /// kept but not shown.
+    pub see_through: bool,
 }
 
 impl Cell {
-    /// Builds a cell.
+    /// Builds a cell with a solid background.
     pub const fn new(glyph: char, fg: Rgb, bg: Rgb) -> Self {
-        Self { glyph, fg, bg }
+        Self {
+            glyph,
+            fg,
+            bg,
+            see_through: false,
+        }
+    }
+
+    /// A cell with no background (ADR-0048): `glyph` in `fg` over the
+    /// buffer's [`Backdrop`]. A space is a plain hole.
+    /// [`GlyphBuffer::print_fg`] over it keeps it see-through; anything
+    /// that sets a whole cell makes it solid again.
+    pub const fn see_through(glyph: char, fg: Rgb) -> Self {
+        Self {
+            glyph,
+            fg,
+            bg: Rgb::new(0, 0, 0),
+            see_through: true,
+        }
     }
 }
 
@@ -308,7 +340,7 @@ fn clip_span(start: i32, len: i32, limit: u16) -> std::ops::Range<i32> {
 }
 
 /// A grid of [`Cell`]s, row-major.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct GlyphBuffer {
     width: u16,
     height: u16,
@@ -316,6 +348,8 @@ pub struct GlyphBuffer {
     /// In drawing order; each one's [`Item::visible`] lies inside
     /// [`pixel_bounds`](Self::pixel_bounds).
     items: Vec<Item>,
+    /// The scene behind the see-through cells, if any.
+    backdrop: Option<Backdrop>,
 }
 
 impl GlyphBuffer {
@@ -326,7 +360,36 @@ impl GlyphBuffer {
             height,
             cells: vec![fill; usize::from(width) * usize::from(height)],
             items: Vec::new(),
+            backdrop: None,
         }
+    }
+
+    /// The scene shown behind the see-through cells, if one is set.
+    pub fn backdrop(&self) -> Option<&Backdrop> {
+        self.backdrop.as_ref()
+    }
+
+    /// Shows `scene` behind the see-through cells of `clip` (console
+    /// cells, clipped to the buffer), replacing any backdrop already set:
+    /// the scene pixel `origin_px` is at the top-left of `clip`, and each
+    /// scene pixel is `zoom` console pixels big (1 to [`MAX_ZOOM`]; other
+    /// values are clamped). A `clip` wholly outside the buffer (or empty)
+    /// removes the backdrop. A backdrop `scene` has of its own is not drawn.
+    pub fn set_backdrop(
+        &mut self,
+        scene: Rc<GlyphBuffer>,
+        clip: Rect,
+        origin_px: (f32, f32),
+        zoom: u8,
+    ) {
+        self.backdrop = clip
+            .intersect(&self.bounds())
+            .map(|clip| Backdrop::new(scene, clip, origin_px, zoom));
+    }
+
+    /// Removes the backdrop.
+    pub fn clear_backdrop(&mut self) {
+        self.backdrop = None;
     }
 
     /// The whole buffer in console pixels.
@@ -496,10 +559,14 @@ impl GlyphBuffer {
     }
 
     /// Sets every cell of `rect` to `cell`, removing the parts of items
-    /// (rectangles and sprites) over it.
+    /// (rectangles and sprites) over it. Filling the whole buffer with a
+    /// solid cell (how a frame is cleared) also removes the backdrop.
     pub fn fill_rect(&mut self, rect: Rect, cell: Cell) {
         self.for_each_in(rect, |_, _, c| *c = cell);
         self.cut_items(rect);
+        if !cell.see_through && rect.intersect(&self.bounds()) == Some(self.bounds()) {
+            self.backdrop = None;
+        }
     }
 
     /// Draws the border of `rect` in `style`; the interior is untouched.
@@ -586,6 +653,8 @@ impl GlyphBuffer {
     }
 }
 
+#[cfg(test)]
+mod backdrop_tests;
 #[cfg(test)]
 mod sprite_tests;
 

@@ -81,7 +81,7 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i
         } else {
             cell.bg
         };
-        buf.set(x + i, y, Cell { glyph, fg, bg });
+        buf.set(x + i, y, Cell::new(glyph, fg, bg));
     }
     let (width, color) = hp_bar(unit.hp.0, unit.hp.1);
     let px = x * i32::from(CELL_W_PX) + HP_BAR_INSET;
