@@ -5,10 +5,10 @@ type: bug
 milestone: M0 Foundation
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0118 — Fix the Pages workflow YAML error that stops every deploy
@@ -88,13 +88,13 @@ pending sign-offs for everything merged since 0110 can then be played.
 
 ## Acceptance criteria
 
-- [ ] `python -c "import yaml; yaml.safe_load(open('.github/workflows/pages.yml'))"`
+- [x] `python -c "import yaml; yaml.safe_load(open('.github/workflows/pages.yml'))"`
       exits 0 (or the equivalent with the new test).
-- [ ] `every_workflow_file_parses` (or the `actionlint` job) fails on the
+- [x] `every_workflow_file_parses` (or the `actionlint` job) fails on the
       line as it is on `main` today and passes with the fix.
 - [ ] Pushing the branch no longer creates a failed
       `.github/workflows/pages.yml` run.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -105,5 +105,27 @@ pending sign-offs for everything merged since 0110 can then be played.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- `.github/workflows/pages.yml`: the command of the step "Check the content
+  loads with the bought art" is now a `>-` block scalar, so the trailing
+  `::` is plain text. The command itself is unchanged.
+- The grep of step 2 found no other `run:` line ending in `:`.
+- New test `every_workflow_file_parses` in `crates/xtask/src/main.rs`: it
+  parses every `*.yml` under `.github/workflows/` and every `action.yml`
+  under `.github/actions/`, and fails with the file name and the parser's
+  message. It uses `serde_norway`, which `xtask` already depends on, so no
+  new crate was added. It runs in CI's test job on every PR that touches a
+  workflow file (workflow files count as code in `changes.yml`).
+- Checked before the fix: the test failed with `pages.yml is not valid
+  YAML: mapping values are not allowed in this context at line 39 column
+  101`. It passes with the fix.
+- The test checks that the files are valid YAML, not that GitHub accepts
+  their content (a wrong key name would still pass). That was the ticket's
+  scope.
+- Still to do after the merge (step 5): confirm the `Pages` run on `main`
+  is green and deployed, and add its URL to the PR description. The third
+  acceptance criterion is checked on the PR once the branch is pushed.
+- Follow-up tickets: none.
+- Gameplay rules decided: none.
+
+**For Nick:** nothing to decide. Once this merges, the Pages site updates by
+itself and everything merged since ticket 0110 can be played there.

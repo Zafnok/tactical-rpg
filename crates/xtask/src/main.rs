@@ -384,6 +384,47 @@ mod tests {
         names
     }
 
+    /// The workflow and action files under `.github`.
+    fn workflow_files() -> Vec<PathBuf> {
+        let github = repo_root().join(".github");
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(github.join("workflows")).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "yml" || e == "yaml") {
+                files.push(path);
+            }
+        }
+        for entry in std::fs::read_dir(github.join("actions")).unwrap() {
+            let action = entry.unwrap().path().join("action.yml");
+            if action.is_file() {
+                files.push(action);
+            }
+        }
+        files.sort();
+        files
+    }
+
+    /// GitHub runs no job of a workflow file that is not valid YAML, and only
+    /// says so after the merge: an unquoted `run:` line ending in `::`
+    /// stopped every Pages deploy (ticket 0118).
+    #[test]
+    fn every_workflow_file_parses() {
+        let files = workflow_files();
+        assert!(files.len() >= 9, "{files:?}");
+        for file in files {
+            let text = std::fs::read_to_string(&file).unwrap();
+            if let Err(e) = serde_norway::from_str::<serde_norway::Value>(&text) {
+                panic!("{} is not valid YAML: {e}", file.display());
+            }
+        }
+
+        // The check sees the mistake.
+        let broken = "steps:
+  - run: cargo test private_assets::
+";
+        assert!(serde_norway::from_str::<serde_norway::Value>(broken).is_err());
+    }
+
     /// Cargo links every file directly under a crate's `tests/` as its own
     /// program (about 100 MB each), so each crate keeps one: new integration
     /// tests are modules of `tests/it/main.rs` (ticket 0114).
