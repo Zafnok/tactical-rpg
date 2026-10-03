@@ -1,48 +1,52 @@
-//! How the glyph skin draws the movement path arrow (ADR-0018,
+//! The movement path arrow, as every map skin draws it (ADR-0018,
 //! `docs/design/look-and-feel.md`): a 3-px line through tile centres, under
 //! the glyphs, from the edge of the unit's tile, ending in a single
-//! arrowhead over the destination tile.
+//! arrowhead over the destination tile. Worked out from the skin's tile
+//! size: on the glyph skin's 16 px tiles the line is pixels 7..=9.
 
 use trpg_core::Pos;
 
-use super::{Layout, px_rect};
+use super::grid::Grid;
 use crate::color::Rgb;
 use crate::glyph_buffer::{Layer, Overlay, PxRect, Rect};
 
-/// A tile's size in pixels (square).
-const TILE_PX: i32 = 16;
-
 /// The path line's thickness, in pixels.
 pub const LINE_W: i32 = 3;
-
-/// Offset of the line from a tile's left (or top) edge: pixels 7..=9 of 16.
-const LINE_OFFSET: i32 = 7;
-
-/// The line's middle pixel from a tile's left (or top) edge; arrowheads
-/// are centred on it.
-const LINE_MID: i32 = 8;
 
 /// The arrowhead's columns (or rows), from its base (11 px across) to its
 /// tip (1 px).
 const ARROW_LEN: i32 = 6;
 
-/// Offset of the arrowhead's base from the tile's edge behind it.
-const ARROW_BASE: i32 = 5;
+/// The line's middle pixel from the edge of a tile `len` pixels long;
+/// arrowheads are centred on it.
+const fn line_mid(len: i32) -> i32 {
+    len / 2
+}
+
+/// Offset of the line from the edge of a tile `len` pixels long.
+const fn line_offset(len: i32) -> i32 {
+    line_mid(len) - LINE_W / 2
+}
+
+/// Offset of the arrowhead's base from the edge behind it, on a tile `len`
+/// pixels long: the arrowhead is centred along the tile.
+const fn arrow_base(len: i32) -> i32 {
+    (len - ARROW_LEN) / 2
+}
 
 /// The line between the centres of adjacent tiles `a` and `b`; with
 /// `from_edge`, only the part outside `a`'s tile.
-fn segment(a: Pos, b: Pos, layout: &Layout, from_edge: bool) -> PxRect {
-    let ((ax, ay), (bx, by)) = (layout.tile_px(a), layout.tile_px(b));
-    let (mut x0, mut y0) = (ax.min(bx) + LINE_OFFSET, ay.min(by) + LINE_OFFSET);
-    let (mut x1, mut y1) = (
-        ax.max(bx) + LINE_OFFSET + LINE_W,
-        ay.max(by) + LINE_OFFSET + LINE_W,
-    );
+fn segment(a: Pos, b: Pos, grid: &Grid, from_edge: bool) -> PxRect {
+    let ((ax, ay), (bx, by)) = (grid.tile_px(a), grid.tile_px(b));
+    let (w, h) = grid.tile;
+    let (ox, oy) = (line_offset(w), line_offset(h));
+    let (mut x0, mut y0) = (ax.min(bx) + ox, ay.min(by) + oy);
+    let (mut x1, mut y1) = (ax.max(bx) + ox + LINE_W, ay.max(by) + oy + LINE_W);
     if from_edge {
         match (b.x - a.x, b.y - a.y) {
-            (1, _) => x0 = ax + TILE_PX,
+            (1, _) => x0 = ax + w,
             (-1, _) => x1 = ax,
-            (_, 1) => y0 = ay + TILE_PX,
+            (_, 1) => y0 = ay + h,
             _ => y1 = ay,
         }
     }
@@ -52,29 +56,31 @@ fn segment(a: Pos, b: Pos, layout: &Layout, from_edge: bool) -> PxRect {
 /// The arrowhead on tile `to`, pointing away from the adjacent tile `from`:
 /// [`ARROW_LEN`] stacked 1-px rects, 11 px across at the base down to 1 at
 /// the tip, centred on the line.
-fn arrowhead(from: Pos, to: Pos, layout: &Layout) -> Vec<PxRect> {
-    let (px, py) = layout.tile_px(to);
-    let mid = LINE_MID;
+fn arrowhead(from: Pos, to: Pos, grid: &Grid) -> Vec<PxRect> {
+    let (px, py) = grid.tile_px(to);
+    let (w, h) = grid.tile;
+    let (mid_x, mid_y) = (line_mid(w), line_mid(h));
     (0..ARROW_LEN)
         .map(|i| {
             let half = ARROW_LEN - 1 - i;
             let across = 2 * half + 1;
-            let near = ARROW_BASE + i;
-            let far = TILE_PX - 1 - ARROW_BASE - i;
+            let near = |len| arrow_base(len) + i;
+            let far = |len| len - 1 - arrow_base(len) - i;
             match (to.x - from.x, to.y - from.y) {
-                (1, _) => Rect::new(px + near, py + mid - half, 1, across),
-                (-1, _) => Rect::new(px + far, py + mid - half, 1, across),
-                (_, 1) => Rect::new(px + mid - half, py + near, across, 1),
-                _ => Rect::new(px + mid - half, py + far, across, 1),
+                (1, _) => Rect::new(px + near(w), py + mid_y - half, 1, across),
+                (-1, _) => Rect::new(px + far(w), py + mid_y - half, 1, across),
+                (_, 1) => Rect::new(px + mid_x - half, py + near(h), across, 1),
+                _ => Rect::new(px + mid_x - half, py + far(h), across, 1),
             }
         })
         .collect()
 }
 
-/// The overlays drawing `path` (the unit's tile first) in `color`: nothing
-/// for a path of one tile. Clipped to the tiles of `layout`.
-pub fn path_overlays(path: &[Pos], layout: &Layout, color: Rgb) -> Vec<Overlay> {
-    let view = px_rect(layout.cells());
+/// The overlays drawing `path` (the unit's tile first) in `color`: the
+/// line `Under` the glyphs, then the arrowhead `Over` them; nothing for a
+/// path of one tile. Clipped to the tiles of `grid`.
+pub fn path_overlays(path: &[Pos], grid: &Grid, color: Rgb) -> Vec<Overlay> {
+    let view = grid.bounds();
     let mut out = Vec::new();
     let mut add = |rect: PxRect, layer| {
         if let Some(rect) = rect.intersect(&view) {
@@ -82,10 +88,10 @@ pub fn path_overlays(path: &[Pos], layout: &Layout, color: Rgb) -> Vec<Overlay> 
         }
     };
     for (i, pair) in path.windows(2).enumerate() {
-        add(segment(pair[0], pair[1], layout, i == 0), Layer::Under);
+        add(segment(pair[0], pair[1], grid, i == 0), Layer::Under);
     }
     if let [.., from, to] = path {
-        for rect in arrowhead(*from, *to, layout) {
+        for rect in arrowhead(*from, *to, grid) {
             add(rect, Layer::Over);
         }
     }
@@ -108,7 +114,7 @@ mod tests {
     /// The overlays of `path` with the camera at the origin, as
     /// `(layer, x, y, w, h)`.
     fn rects(path: &[Pos]) -> Vec<(Layer, i32, i32, i32, i32)> {
-        path_overlays(path, &layout_at(p(0, 0)), RED)
+        path_overlays(path, &layout_at(p(0, 0)).grid(), RED)
             .iter()
             .map(|o| (o.layer, o.rect.x, o.rect.y, o.rect.w, o.rect.h))
             .collect()
@@ -177,7 +183,43 @@ mod tests {
         assert_eq!(base(&[p(2, 1), p(1, 1)]), (Layer::Over, 26, 19, 1, 11));
         assert_eq!(base(&[p(1, 0), p(1, 1)]), (Layer::Over, 19, 21, 11, 1));
         assert_eq!(base(&[p(1, 2), p(1, 1)]), (Layer::Over, 19, 26, 11, 1));
-        assert_eq!(LINE_OFFSET + LINE_W / 2, LINE_MID);
+        assert_eq!(line_offset(16) + LINE_W / 2, line_mid(16));
+        assert_eq!((line_offset(16), line_mid(16), arrow_base(16)), (7, 8, 5));
+    }
+
+    #[test]
+    fn the_geometry_follows_the_tile_size() {
+        // 24 × 20 tiles: tile (1, 1) spans pixels 24..48 × 20..40.
+        let grid = Grid {
+            origin: p(0, 0),
+            corner: (0, 0),
+            tile: (24, 20),
+            tiles: (10, 10),
+        };
+        let r: Vec<_> = path_overlays(&[p(1, 1), p(2, 1), p(2, 2)], &grid, RED)
+            .iter()
+            .map(|o| (o.layer, o.rect.x, o.rect.y, o.rect.w, o.rect.h))
+            .collect();
+        // The line: from x 48 (the unit tile's right edge) along the centre
+        // band of (2, 1) (pixels 59..=61 across, 29..=31 down), then down
+        // into (2, 2)'s.
+        assert_eq!(r[0], (Layer::Under, 48, 29, 14, 3));
+        assert_eq!(r[1], (Layer::Under, 59, 29, 3, 23));
+        // The arrowhead points down on (2, 2) (pixels 48..72 × 40..60): its
+        // base 7 px into the tile, centred on x 60; its tip 5 rows on.
+        assert_eq!(r[2], (Layer::Over, 55, 47, 11, 1));
+        assert_eq!(r[7], (Layer::Over, 60, 52, 1, 1));
+        assert_eq!(r.len(), 8);
+        // Pointing left on a 24 px tile: columns 14 down to 9 of it.
+        let left = path_overlays(&[p(3, 1), p(2, 1)], &grid, RED);
+        let xs: Vec<i32> = left
+            .iter()
+            .filter(|o| o.layer == Layer::Over)
+            .map(|o| o.rect.x)
+            .collect();
+        assert_eq!(xs, [62, 61, 60, 59, 58, 57]);
+        assert_eq!((line_offset(24), line_mid(24), arrow_base(24)), (11, 12, 9));
+        assert_eq!(arrow_base(20), 7);
     }
 
     #[test]
