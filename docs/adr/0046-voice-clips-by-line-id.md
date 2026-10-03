@@ -1,6 +1,6 @@
 # ADR-0046: Voice clips are files keyed by dialogue line id, generated now, replaceable by recordings
 
-- **Status:** Proposed (becomes Accepted with ticket 0238, which may adjust details)
+- **Status:** Accepted (ticket 0238 built the plumbing; what it settled is under "As built")
 - **Date:** 2026-10-03
 - **Related tickets:** 0043, 0238, 0717, 0720, 0721, 0722, 0826, 0907, 0903
 - **Amends:** ADR-0026 (a third kind of audio request) and ADR-0032 rule 2
@@ -68,6 +68,38 @@ Facts:
     with `made_by: Recorded`; nothing in the game changes. The voice tool
     can print a recording script per character (line id, scene, the line
     before, the words).
+
+## As built (ticket 0238)
+
+The folder and the manifest are documented in `docs/voice.md`. Details the
+ticket settled:
+
+- **Where in the private repository** (rule 5): its top-level `voice/`,
+  beside `game/`, not inside it. Everything in `game/` is embedded in the
+  binary (ADR-0040), which rule 4 forbids for voices. `cargo xtask
+  private-assets` and the CI action copy it to `voice/` in this
+  repository's root (git-ignored), where the game and the packaging look.
+- **Gendered clips** (rule 2): the manifest entry has `variant: M` or `F`;
+  the two come as a pair. A line has either one clip or the pair.
+- **The request** (rule 6) carries the variant too: `PlayVoice { line,
+  variant }`. Screens call `Ctx::play_voice(&line)`, which picks the
+  variant from the lead's gender and asks for nothing when voices are off
+  or the line has no playable clip. The on/off flag and the volume (0–10,
+  default 8) live in `Ctx` until 0826 moves them into `Settings`.
+- **Loading** (rule 4): a screen sends `PreloadVoices` with a scene's
+  lines; `app` keeps the next 3 clips loaded and frees those passed, on
+  native as on the web. A clip not loaded within 0.3 s of being asked for
+  is skipped, not played late. A clip is freed when it ends (its length is
+  read from the OGG), is stopped, or is replaced.
+- **The manifest is read once, at start-up**, by `app`
+  (`voice/<lang>/voice.ron`; only `en` until the player can pick a
+  language, ADR-0045 §5). An invalid manifest is a logged warning and no
+  voices; a stale clip is silently left out.
+- **`cast.ron`** maps a speaker (a character id, or `>` for narration) to a
+  voice id. The game doesn't read it; the tool of rule 7 does.
+- **Memory**: a loaded clip is decoded to 44.1 kHz stereo floats, about
+  0.35 MB per second. Measured on Windows: 20 clips of 4 s take 31 MB. The
+  player holds at most 4 (the one playing or asked for, and 3 ahead).
 
 ## Consequences
 

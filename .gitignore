@@ -30,3 +30,7 @@ desktop.ini
 # Bought art (ADR-0040): its licence forbids redistribution and this repository
 # is public. `cargo xtask private-assets` checks the private repository out here.
 /assets-private/
+
+# Voice clips (ADR-0046): kept in the private repository; `cargo xtask
+# private-assets` copies them here. The test clips are in crates/app/tests/voice/.
+/voice/

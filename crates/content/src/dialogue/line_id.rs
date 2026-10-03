@@ -21,9 +21,38 @@ pub const REPLY_SPEAKER: &str = "*";
 pub struct LineId(String);
 
 impl LineId {
+    /// The id written `id`, as a file that refers to lines names one (a
+    /// voice manifest, ADR-0046). Nothing checks that a line has it.
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
     /// The id as text.
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    /// The id of the scene the line is in: the id without its hash and
+    /// repeat number (`ch1_gate_1a2b3c4d_2` → `ch1_gate`). An id that
+    /// doesn't end like a line id is returned whole.
+    pub fn scene_id(&self) -> &str {
+        /// `id` without a `_<8 hex>` ending, if it has one.
+        fn strip_hash(id: &str) -> Option<(&str, &str)> {
+            id.rsplit_once('_')
+                .filter(|(_, tail)| tail.len() == 8 && tail.bytes().all(|b| b.is_ascii_hexdigit()))
+        }
+        if let Some((scene, _)) = strip_hash(&self.0) {
+            return scene;
+        }
+        // A repeat: `<scene>_<hash>_<n>`.
+        let repeat = self
+            .0
+            .rsplit_once('_')
+            .filter(|(_, n)| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
+        match repeat.and_then(|(rest, _)| strip_hash(rest)) {
+            Some((scene, _)) => scene,
+            None => &self.0,
+        }
     }
 }
 

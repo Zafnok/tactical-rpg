@@ -12,7 +12,8 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use trpg_content::lang::TEST;
-use trpg_content::{Content, ContentErrors, LangCode};
+use trpg_content::voice::{self, SOURCE_LANG};
+use trpg_content::{Content, ContentErrors, LangCode, LineId, Playable};
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{LeadGender, LeadProfile};
 
@@ -232,6 +233,15 @@ pub struct Ctx {
     /// `Harness`) reports it each frame through
     /// [`Game::set_music_playing`](crate::Game::set_music_playing).
     pub music_clock: Option<MusicClock>,
+    /// Whether voice clips play (ADR-0046). Lives here, like
+    /// [`voice_volume`](Self::voice_volume), until the Options menu (0826)
+    /// moves both into the saved settings.
+    pub voices_on: bool,
+    /// How loud voice clips play, 0 to [`MAX_VOICE_VOLUME`].
+    pub voice_volume: u8,
+    /// The voice clips that may be played: none until `app` hands over a
+    /// manifest ([`Ctx::set_voice_manifest`]).
+    voices: Playable,
     /// Seeds random music picks (e.g. a track from a pool), kept apart
     /// from core's simulation RNG (ADR-0019). A fixed
     /// [`DEFAULT_MUSIC_SEED`] here, so tests are repeatable; `app` sets it
@@ -273,6 +283,11 @@ pub enum KeyPrompt {
     Pressed,
 }
 
+/// The loudest [`Ctx::voice_volume`].
+pub const MAX_VOICE_VOLUME: u8 = 10;
+/// [`Ctx::voice_volume`] until the player changes it (*tunable*).
+pub const DEFAULT_VOICE_VOLUME: u8 = 8;
+
 /// [`Ctx::music_seed`] until `app` sets it.
 pub const DEFAULT_MUSIC_SEED: u64 = 0;
 
@@ -299,6 +314,9 @@ impl Ctx {
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),
             music_clock: None,
+            voices_on: true,
+            voice_volume: DEFAULT_VOICE_VOLUME,
+            voices: Playable::default(),
             music_seed: DEFAULT_MUSIC_SEED,
             music_picks: 0,
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
@@ -347,6 +365,77 @@ impl Ctx {
         let seed = self.music_seed ^ self.music_picks;
         self.music_picks = self.music_picks.wrapping_add(1);
         pick_from_pool(&self.content.audio, pool, seed).map(str::to_owned)
+    }
+
+    /// Takes the text of the voice manifest `app` read
+    /// (`voice/<lang>/voice.ron`, ADR-0046), validates it against the
+    /// dialogue and keeps the clips that may be played: those that still
+    /// say what their line says with today's names. An invalid manifest
+    /// leaves no voices and a warning ([`take_warnings`]).
+    ///
+    /// [`take_warnings`]: Self::take_warnings
+    pub fn set_voice_manifest(&mut self, source: &str) {
+        let file = format!(
+            "{}/{SOURCE_LANG}/{}",
+            voice::VOICE_DIR,
+            voice::MANIFEST_FILE
+        );
+        let content = &self.content;
+        self.voices = match voice::from_source(&file, source, &content.dialogue) {
+            Ok(manifest) => manifest.playable(&content.dialogue, &content.names),
+            Err(errors) => {
+                let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+                self.warnings
+                    .push(format!("no voices: {}", errors.join("; ")));
+                Playable::default()
+            }
+        };
+    }
+
+    /// Whether `line` has a voice clip that would play now: voices are on
+    /// and the line has a clip that isn't stale.
+    pub fn has_voice(&self, line: &LineId) -> bool {
+        self.voices_on && self.voices.variant_for(line, self.lead.gender).is_some()
+    }
+
+    /// Says `line`: plays its voice clip (the one for the lead's gender,
+    /// where the words differ), stopping the voice that is playing. Does
+    /// nothing when voices are off or the line has no clip that may be
+    /// played.
+    pub fn play_voice(&mut self, line: &LineId) {
+        if !self.voices_on {
+            return;
+        }
+        if let Some(variant) = self.voices.variant_for(line, self.lead.gender) {
+            self.audio.play_voice(line, variant);
+        }
+    }
+
+    /// Stops the voice that is playing, if any.
+    pub fn stop_voice(&mut self) {
+        self.audio.stop_voice();
+    }
+
+    /// Tells `app` the lines a scene is about to say, in script order, so
+    /// it loads their clips a few ahead. Lines without a playable clip are
+    /// left out; nothing is sent when voices are off or none has one.
+    pub fn preload_voices(&mut self, lines: &[LineId]) {
+        if !self.voices_on {
+            return;
+        }
+        let gender = self.lead.gender;
+        let clips: Vec<_> = lines
+            .iter()
+            .filter_map(|line| Some((line.clone(), self.voices.variant_for(line, gender)?)))
+            .collect();
+        if !clips.is_empty() {
+            self.audio.preload_voices(clips);
+        }
+    }
+
+    /// [`voice_volume`](Self::voice_volume) as a 0–1 factor.
+    pub fn voice_gain(&self) -> f32 {
+        f32::from(self.voice_volume.min(MAX_VOICE_VOLUME)) / f32::from(MAX_VOICE_VOLUME)
     }
 
     /// What help text names keys from: the active bindings on the device
@@ -585,7 +674,180 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::glyph_buffer::Cell;
-    use crate::{Rgb, UiColor};
+    use crate::{AudioRequest, Rgb, UiColor};
+    use trpg_content::Variant;
+
+    /// A voice manifest with a clip for each of the test scene's lines
+    /// numbered `picks` (in script order), and those lines' ids.
+    pub(crate) fn test_voices(ctx: &Ctx, picks: &[usize]) -> (String, Vec<LineId>) {
+        let lines = ctx.content.dialogue.scenes[crate::debug::TEST_SCENE].lines();
+        let picked: Vec<_> = picks.iter().map(|&i| lines[i]).collect();
+        let clip = |line: &trpg_content::dialogue::Line| {
+            format!(
+                "(line: \"{}\", spoken: \"{}\", voice: \"v\", \
+                 made_by: Recorded(actor: \"a\")),\n",
+                line.id, line.text
+            )
+        };
+        let clips: String = picked.iter().map(clip).collect();
+        let ids = picked.iter().map(|line| line.id.clone()).collect();
+        (format!("(clips: [\n{clips}])"), ids)
+    }
+
+    fn play(line: &LineId, variant: Variant) -> AudioRequest {
+        AudioRequest::PlayVoice {
+            line: line.clone(),
+            variant,
+        }
+    }
+
+    /// Acceptance (0238): a line with a clip is asked for; one without,
+    /// or with voices off, is not.
+    #[test]
+    fn play_voice_asks_only_for_lines_with_a_playable_clip() {
+        let mut c = ctx();
+        let (manifest, lines) = test_voices(&c, &[0, 1]);
+        let all = c.content.dialogue.scenes[crate::debug::TEST_SCENE].lines();
+        let unvoiced = all[2].id.clone();
+        // No manifest yet: nothing has a voice.
+        c.play_voice(&lines[0]);
+        assert!(!c.has_voice(&lines[0]));
+        assert!(c.audio.pending().is_empty());
+        c.set_voice_manifest(&manifest);
+        assert!(c.take_warnings().is_empty());
+        assert!(c.has_voice(&lines[0]));
+        assert!(!c.has_voice(&unvoiced));
+        c.play_voice(&lines[0]);
+        c.play_voice(&unvoiced);
+        c.play_voice(&LineId::new("test_00000000"));
+        c.play_voice(&lines[1]);
+        assert_eq!(
+            c.audio.take(),
+            [
+                play(&lines[0], Variant::None),
+                play(&lines[1], Variant::None)
+            ]
+        );
+        c.voices_on = false;
+        assert!(!c.has_voice(&lines[0]));
+        c.play_voice(&lines[0]);
+        c.preload_voices(&lines);
+        assert!(c.audio.pending().is_empty());
+        // Stopping is always passed on: a voice may still be playing.
+        c.stop_voice();
+        assert_eq!(c.audio.take(), [AudioRequest::StopVoice]);
+    }
+
+    /// The first narration line of the test scene, as a manifest clip
+    /// that says `spoken`.
+    fn narration_clip(c: &Ctx, spoken: &str) -> (String, LineId) {
+        let (manifest, lines) = test_voices(c, &[0]);
+        let text = c.content.dialogue.scenes[crate::debug::TEST_SCENE].lines()[0].text;
+        (manifest.replace(text, spoken), lines[0].clone())
+    }
+
+    #[test]
+    fn a_stale_clip_is_never_asked_for() {
+        let mut c = ctx();
+        let (manifest, line) = narration_clip(&c, "Words the line no longer says.");
+        c.set_voice_manifest(&manifest);
+        assert!(c.take_warnings().is_empty(), "stale is not invalid");
+        assert!(!c.has_voice(&line));
+        c.play_voice(&line);
+        c.preload_voices(std::slice::from_ref(&line));
+        assert!(c.audio.pending().is_empty());
+    }
+
+    #[test]
+    fn an_invalid_voice_manifest_is_a_warning_and_no_voices() {
+        let mut c = ctx();
+        let (good, lines) = test_voices(&c, &[0]);
+        c.set_voice_manifest(&good);
+        assert!(c.has_voice(&lines[0]));
+        let bad = good.replace(lines[0].as_str(), "test_00000000");
+        c.set_voice_manifest(&bad);
+        assert_eq!(
+            c.take_warnings(),
+            ["no voices: voice/en/voice.ron:2: no dialogue line has the id \"test_00000000\""]
+        );
+        assert!(!c.has_voice(&lines[0]), "the earlier manifest is gone");
+        c.set_voice_manifest("not ron");
+        let warnings = c.take_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].starts_with("no voices: voice/en/voice.ron:1"),
+            "{warnings:?}"
+        );
+    }
+
+    #[test]
+    fn preload_lists_the_playable_clips_in_order() {
+        let mut c = ctx();
+        let (manifest, lines) = test_voices(&c, &[3, 1]);
+        c.set_voice_manifest(&manifest);
+        let all: Vec<LineId> = c.content.dialogue.scenes[crate::debug::TEST_SCENE]
+            .lines()
+            .iter()
+            .map(|l| l.id.clone())
+            .collect();
+        c.preload_voices(&all);
+        // Script order, not manifest order; unvoiced lines left out.
+        let expected = vec![
+            (lines[1].clone(), Variant::None),
+            (lines[0].clone(), Variant::None),
+        ];
+        assert_eq!(
+            c.audio.take(),
+            [AudioRequest::PreloadVoices { lines: expected }]
+        );
+        c.preload_voices(&all[..1]);
+        c.preload_voices(&[]);
+        assert!(c.audio.pending().is_empty(), "nothing playable: no request");
+    }
+
+    /// A line whose words change with the lead's gender plays the clip
+    /// for the lead the player made.
+    #[test]
+    fn a_gendered_line_plays_the_clip_for_the_leads_gender() {
+        let mut c = ctx();
+        let script = "@scene g\n> {They} left {their} sword.\n@end\n";
+        let table =
+            trpg_content::dialogue::from_sources(&[("g.dlg", script)], None, None, None, None);
+        c.content.dialogue = table.unwrap();
+        let line = c.content.dialogue.scenes["g"].lines()[0].id.clone();
+        let clip = |variant: &str, spoken: &str| {
+            format!(
+                "(line: \"{line}\", variant: {variant}, spoken: \"{spoken}\", voice: \"v\", \
+                 made_by: Recorded(actor: \"a\")),"
+            )
+        };
+        let manifest = format!(
+            "(clips: [{}{}])",
+            clip("M", "He left his sword."),
+            clip("F", "She left her sword.")
+        );
+        c.set_voice_manifest(&manifest);
+        assert_eq!(c.take_warnings(), [] as [&str; 0]);
+        c.play_voice(&line);
+        c.lead.gender = LeadGender::Female;
+        c.play_voice(&line);
+        assert_eq!(
+            c.audio.take(),
+            [play(&line, Variant::M), play(&line, Variant::F)]
+        );
+    }
+
+    #[test]
+    fn the_voice_volume_is_a_factor_of_ten_steps() {
+        let mut c = ctx();
+        assert!(c.voices_on);
+        assert_eq!(c.voice_volume, DEFAULT_VOICE_VOLUME);
+        assert!((c.voice_gain() - 0.8).abs() < f32::EPSILON);
+        for (volume, gain) in [(0, 0.0), (5, 0.5), (10, 1.0), (200, 1.0)] {
+            c.voice_volume = volume;
+            assert!((c.voice_gain() - gain).abs() < f32::EPSILON, "{volume}");
+        }
+    }
 
     /// The context for the embedded content, with the right-handed layout
     /// already chosen.

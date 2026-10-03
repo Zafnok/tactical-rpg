@@ -221,3 +221,33 @@ proptest! {
         prop_assert_eq!(rest, before);
     }
 }
+
+#[test]
+fn a_line_id_names_its_scene() {
+    let scene_of = |id: &str| LineId::new(id).scene_id().to_owned();
+    assert_eq!(scene_of("s_9e73f1df"), "s");
+    assert_eq!(scene_of("ch1_gate_9e73f1df"), "ch1_gate");
+    assert_eq!(scene_of("ch1_gate_9e73f1df_2"), "ch1_gate");
+    assert_eq!(scene_of("ch1_gate_9e73f1df_12"), "ch1_gate");
+    // A scene id that itself ends like a hash or a number.
+    assert_eq!(scene_of("turn_3_d962db86"), "turn_3");
+    assert_eq!(scene_of("deadbeef_9e73f1df_2"), "deadbeef");
+    // Not line ids: returned whole.
+    for odd in [
+        "",
+        "scene",
+        "scene_2",
+        "scene_xyz",
+        "scene_9e73f1d",
+        "scene_9e73f1df_x",
+        "_",
+    ] {
+        assert_eq!(scene_of(odd), odd);
+    }
+    // Every parsed line's id names the scene it is in.
+    let src = scene("test_lord: Hello.\ntest_lord: Hello.");
+    let (parsed, _) = parse_dlg("t.dlg", &src);
+    for line in parsed[0].scene.lines() {
+        assert_eq!(line.id.scene_id(), "s", "{}", line.id);
+    }
+}

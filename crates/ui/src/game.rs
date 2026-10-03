@@ -61,6 +61,9 @@ pub struct FrameOutput<'a> {
     pub audio: &'a [AudioRequest],
     /// What to do to the music this frame (ADR-0026).
     pub music: &'a [MusicCommand],
+    /// How loud voice clips play, 0–1 ([`Ctx::voice_volume`]). `app`
+    /// applies it to the voice that is playing too.
+    pub voice_volume: f32,
 }
 
 /// Owns the screens, input state, shared context and the console buffer.
@@ -163,6 +166,7 @@ impl Game {
             quit: self.quit,
             audio: &self.audio_out,
             music: &self.music_out,
+            voice_volume: self.ctx.voice_gain(),
         }
     }
 
@@ -315,7 +319,10 @@ fn is_known(manifest: &trpg_content::AudioManifest, request: &AudioRequest) -> b
     match request {
         AudioRequest::PlaySound { cue, .. } => manifest.sounds.contains_key(cue),
         AudioRequest::PlayMusic { cue } => manifest.music.contains_key(cue),
-        AudioRequest::StopMusic => true,
+        AudioRequest::StopMusic
+        | AudioRequest::PlayVoice { .. }
+        | AudioRequest::StopVoice
+        | AudioRequest::PreloadVoices { .. } => true,
     }
 }
 

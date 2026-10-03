@@ -1,11 +1,12 @@
-//! Plays each frame's audio (ADR-0026): the sound requests and music
-//! commands `trpg_ui::Game` returns in its `FrameOutput`.
+//! Plays each frame's audio (ADR-0026): the sound and voice requests and
+//! the music commands `trpg_ui::Game` returns in its `FrameOutput`.
 //!
 //! Sounds are embedded and decoded once at start-up. Music is loaded from
 //! the `music/` folder when a track is about to play and freed when it
 //! stops, so at most two tracks (the one fading out and the next) are in
-//! memory. The device calls sit behind [`Backend`], so everything else here
-//! is tested without a sound card.
+//! memory. Voice clips ([`voice`], ADR-0046) are loaded the same way from
+//! the `voice/` folder. The device calls sit behind [`Backend`], so
+//! everything else here is tested without a sound card.
 //!
 //! It also knows when each track really started ([`Audio::music_playing`],
 //! ADR-0037): a track asked for only sounds once its file has loaded, and
@@ -13,6 +14,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native_music;
+pub(crate) mod voice;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -21,19 +23,24 @@ use trpg_content::AudioManifest;
 use trpg_content::audio::{MUSIC_DIR, sound_path};
 use trpg_ui::{AudioRequest, MusicCommand};
 
+use self::voice::Voices;
+
 /// What playing audio needs from the platform.
 pub(crate) trait Backend {
     /// A decoded sound or track.
     type Sound;
-    /// A music track being loaded.
+    /// A music track or voice clip being loaded.
     type Loading;
 
     /// Decodes an embedded sound file.
     async fn load_sound(&mut self, bytes: &[u8]) -> Result<Self::Sound, String>;
-    /// Starts loading and decoding the music file at `path`.
+    /// Starts loading and decoding the music or voice file at `path`.
     fn load_music(&mut self, path: &str) -> Self::Loading;
     /// The track, once `loading` has finished (called once per frame).
     fn poll_music(&mut self, loading: &mut Self::Loading) -> Option<Result<Self::Sound, String>>;
+    /// How long `sound` plays, in seconds, if that is known: it is for an
+    /// OGG file loaded with [`load_music`](Self::load_music).
+    fn length(&self, sound: &Self::Sound) -> Option<f64>;
     /// Plays `sound` from the start at `volume` (0–1).
     fn play(&mut self, sound: &Self::Sound, volume: f32, looped: bool);
     /// Changes the volume of `sound` wherever it plays.
@@ -54,6 +61,8 @@ pub(crate) struct Audio<B: Backend> {
     abandoned: Vec<B::Loading>,
     /// Where music files are, e.g. `music` or `C:/Games/visions-of-shuyi/music`.
     music_dir: String,
+    /// The voice clips (ADR-0046).
+    voices: Voices<B>,
     rng: VariantRng,
     /// Problems to log (missing files, decode errors).
     warnings: Vec<String>,
@@ -82,12 +91,14 @@ enum TrackState<B: Backend> {
 impl<B: Backend> Audio<B> {
     /// Decodes every sound in `manifest` (reading files with `bytes`, e.g.
     /// `trpg_content::bundle::bytes`). A sound that fails is left out with
-    /// a warning. `seed` seeds the variant picker.
+    /// a warning. Voice clips are looked for in `voice_dir`. `seed` seeds
+    /// the variant picker.
     pub(crate) async fn load(
         backend: &mut B,
         manifest: AudioManifest,
         bytes: impl Fn(&str) -> Option<&'static [u8]>,
         music_dir: String,
+        voice_dir: String,
         seed: u64,
     ) -> Self {
         let mut warnings = Vec::new();
@@ -113,16 +124,17 @@ impl<B: Backend> Audio<B> {
             tracks: BTreeMap::new(),
             abandoned: Vec::new(),
             music_dir,
+            voices: Voices::new(voice_dir),
             rng: VariantRng::new(seed),
             warnings,
         }
     }
 
-    /// Plays one frame's sound `requests` (music requests are skipped:
-    /// `music` already holds what they mean), applies the `music` commands
-    /// and checks on tracks still loading. `now` is the time in seconds on
-    /// a clock that keeps running while the game isn't drawn (ADR-0037): a
-    /// track that starts in this call started at `now`.
+    /// Plays one frame's sound and voice `requests` (music requests are
+    /// skipped: `music` already holds what they mean), applies the `music`
+    /// commands and checks on tracks and clips still loading. `now` is the
+    /// time in seconds on a clock that keeps running while the game isn't
+    /// drawn (ADR-0037): a track that starts in this call started at `now`.
     pub(crate) fn play(
         &mut self,
         backend: &mut B,
@@ -134,6 +146,8 @@ impl<B: Backend> Audio<B> {
             if let AudioRequest::PlaySound { cue, volume } = request {
                 self.play_sound(backend, cue, *volume);
             }
+            self.voices
+                .request(backend, request, now, &mut self.abandoned);
         }
         for command in music {
             self.music(backend, command, now);
@@ -221,13 +235,20 @@ impl<B: Backend> Audio<B> {
         }
     }
 
-    /// Stops all music (the game quit, e.g. on the web page that stays
-    /// open).
+    /// Stops all music and the voice (the game quit, e.g. on the web page
+    /// that stays open).
     pub(crate) fn stop_all(&mut self, backend: &mut B) {
         let cues: Vec<String> = self.tracks.keys().cloned().collect();
         for cue in cues {
             self.stop_track(backend, &cue);
         }
+        self.voices.stop_all(backend, &mut self.abandoned);
+    }
+
+    /// Sets how loud voice clips play (0–1; `FrameOutput::voice_volume`),
+    /// the one playing included.
+    pub(crate) fn set_voice_volume(&mut self, backend: &mut B, volume: f32) {
+        self.voices.set_volume(backend, volume);
     }
 
     /// Finishes loads: a track asked to play starts now.
@@ -258,6 +279,8 @@ impl<B: Backend> Audio<B> {
                 }
             }
         }
+        self.voices
+            .poll(backend, now, &mut self.warnings, &mut self.abandoned);
         self.abandoned
             .retain_mut(|loading| backend.poll_music(loading).is_none());
     }
@@ -273,19 +296,28 @@ fn percent(volume: u8) -> f32 {
     f32::from(volume) / 100.0
 }
 
-/// Where the `music/` folder is: next to the executable when it's there
-/// (a shipped build), else relative to the working directory (`cargo run`
-/// from the repo root, or the web build, which fetches `music/…` from
-/// beside the page).
+/// Where the `music/` folder is ([`folder_beside`]).
 pub(crate) fn music_dir(exe: Option<&Path>, is_dir: impl Fn(&Path) -> bool) -> String {
+    folder_beside(MUSIC_DIR, exe, is_dir)
+}
+
+/// Where a `folder` that ships beside the game is: next to the executable
+/// when it's there (a shipped build), else relative to the working
+/// directory (`cargo run` from the repo root, or the web build, which
+/// fetches `music/…` from beside the page).
+pub(crate) fn folder_beside(
+    folder: &str,
+    exe: Option<&Path>,
+    is_dir: impl Fn(&Path) -> bool,
+) -> String {
     let beside_exe = exe
         .and_then(Path::parent)
-        .map(|dir| dir.join(MUSIC_DIR))
+        .map(|dir| dir.join(folder))
         .filter(|dir| is_dir(dir));
     beside_exe
         .as_deref()
         .and_then(Path::to_str)
-        .map_or_else(|| MUSIC_DIR.to_owned(), |dir| dir.replace('\\', "/"))
+        .map_or_else(|| folder.to_owned(), |dir| dir.replace('\\', "/"))
 }
 
 /// The `music/` folder for this platform ([`music_dir`]).
@@ -347,11 +379,13 @@ pub(crate) mod device {
         contexts: Contexts,
     }
 
-    /// A decoded sound or track.
+    /// A decoded sound, track or voice clip.
     pub(crate) enum Clip {
-        /// In macroquad's own context: every sound, and music on the web.
-        Shared(Sound),
-        /// A native music track in a context of its own.
+        /// In macroquad's own context: every sound, and (with its length
+        /// in milliseconds, if it is an OGG file) music and voices on the
+        /// web.
+        Shared(Sound, Option<u32>),
+        /// A native music track or voice clip in a context of its own.
         #[cfg(not(target_arch = "wasm32"))]
         Music(Music),
     }
@@ -359,14 +393,14 @@ pub(crate) mod device {
     impl super::Backend for Macroquad {
         type Sound = Clip;
         #[cfg(target_arch = "wasm32")]
-        type Loading = Coroutine<Result<Sound, String>>;
+        type Loading = Coroutine<Result<(Sound, Option<u32>), String>>;
         #[cfg(not(target_arch = "wasm32"))]
         type Loading = Pending<Result<Music, String>>;
 
         async fn load_sound(&mut self, bytes: &[u8]) -> Result<Clip, String> {
             load_sound_from_bytes(bytes)
                 .await
-                .map(Clip::Shared)
+                .map(|sound| Clip::Shared(sound, None))
                 .map_err(|e| e.to_string())
         }
 
@@ -375,8 +409,10 @@ pub(crate) mod device {
             let path = path.to_owned();
             start_coroutine(async move {
                 let bytes = load_file(&path).await.map_err(|e| e.to_string())?;
+                let length = trpg_content::audio::ogg_length_ms(&bytes);
                 load_sound_from_bytes(&bytes)
                     .await
+                    .map(|sound| (sound, length))
                     .map_err(|e| e.to_string())
             })
         }
@@ -390,7 +426,9 @@ pub(crate) mod device {
 
         #[cfg(target_arch = "wasm32")]
         fn poll_music(&mut self, loading: &mut Self::Loading) -> Option<Result<Clip, String>> {
-            loading.retrieve().map(|r| r.map(Clip::Shared))
+            loading
+                .retrieve()
+                .map(|r| r.map(|(sound, length)| Clip::Shared(sound, length)))
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -398,9 +436,18 @@ pub(crate) mod device {
             loading.poll().map(|r| r.flatten().map(Clip::Music))
         }
 
+        fn length(&self, sound: &Clip) -> Option<f64> {
+            let ms = match sound {
+                Clip::Shared(_, length) => *length,
+                #[cfg(not(target_arch = "wasm32"))]
+                Clip::Music(m) => m.length_ms(),
+            };
+            ms.map(|ms| f64::from(ms) / 1000.0)
+        }
+
         fn play(&mut self, sound: &Clip, volume: f32, looped: bool) {
             match sound {
-                Clip::Shared(s) => play_sound(s, PlaySoundParams { looped, volume }),
+                Clip::Shared(s, _) => play_sound(s, PlaySoundParams { looped, volume }),
                 #[cfg(not(target_arch = "wasm32"))]
                 Clip::Music(m) => m.play(volume, looped),
             }
@@ -408,7 +455,7 @@ pub(crate) mod device {
 
         fn set_volume(&mut self, sound: &Clip, volume: f32) {
             match sound {
-                Clip::Shared(s) => set_sound_volume(s, volume),
+                Clip::Shared(s, _) => set_sound_volume(s, volume),
                 #[cfg(not(target_arch = "wasm32"))]
                 Clip::Music(m) => m.set_volume(volume),
             }
@@ -416,7 +463,7 @@ pub(crate) mod device {
 
         fn stop(&mut self, sound: &Clip) {
             match sound {
-                Clip::Shared(s) => stop_sound(s),
+                Clip::Shared(s, _) => stop_sound(s),
                 #[cfg(not(target_arch = "wasm32"))]
                 Clip::Music(m) => m.stop(),
             }
@@ -438,7 +485,7 @@ mod tests {
     use super::*;
 
     /// Runs a future that never waits on anything external.
-    fn block_on<F: Future>(future: F) -> F::Output {
+    pub(crate) fn block_on<F: Future>(future: F) -> F::Output {
         let mut future = pin!(future);
         let mut cx = Context::from_waker(Waker::noop());
         loop {
@@ -490,15 +537,17 @@ mod tests {
         }
     }
 
-    type Log = Rc<RefCell<Vec<String>>>;
+    pub(crate) type Log = Rc<RefCell<Vec<String>>>;
 
-    /// Records every call. Sounds are names; music loads finish when
-    /// their path is put in `ready` (or fail if in `broken`).
+    /// Records every call. Sounds are names; music and voice loads finish
+    /// when their path is put in `ready` (or fail if in `broken`). A file
+    /// plays for `length` seconds, if set.
     #[derive(Default)]
-    struct Fake {
-        log: Log,
-        ready: Vec<String>,
-        broken: Vec<String>,
+    pub(crate) struct Fake {
+        pub(crate) log: Log,
+        pub(crate) ready: Vec<String>,
+        pub(crate) broken: Vec<String>,
+        pub(crate) length: Option<f64>,
     }
 
     impl Backend for Fake {
@@ -524,6 +573,10 @@ mod tests {
             }
         }
 
+        fn length(&self, _sound: &String) -> Option<f64> {
+            self.length
+        }
+
         fn play(&mut self, sound: &String, volume: f32, looped: bool) {
             let looped = if looped { " looped" } else { "" };
             self.log
@@ -543,7 +596,7 @@ mod tests {
     }
 
     impl Fake {
-        fn calls(&self) -> Vec<String> {
+        pub(crate) fn calls(&self) -> Vec<String> {
             std::mem::take(&mut self.log.borrow_mut())
         }
     }
@@ -594,8 +647,9 @@ mod tests {
         })
     }
 
-    fn audio(backend: &mut Fake) -> Audio<Fake> {
-        block_on(Audio::load(backend, manifest(), bytes, "music".into(), 7))
+    pub(crate) fn audio(backend: &mut Fake) -> Audio<Fake> {
+        let (music, voice) = ("music".into(), "voice/en".into());
+        block_on(Audio::load(backend, manifest(), bytes, music, voice, 7))
     }
 
     fn sound(cue: &str, volume: f32) -> AudioRequest {
@@ -659,7 +713,8 @@ mod tests {
         if let Some(beep) = m.sounds.get_mut("beep") {
             beep.files.push("sfx/gone.wav".into());
         }
-        let mut audio = block_on(Audio::load(&mut fake, m, bytes, "music".into(), 1));
+        let dirs = ("music".into(), "voice/en".into());
+        let mut audio = block_on(Audio::load(&mut fake, m, bytes, dirs.0, dirs.1, 1));
         assert_eq!(
             audio.take_warnings()[0],
             "sound \"beep\": assets/audio/sfx/gone.wav: not in the asset bundle"
@@ -961,6 +1016,19 @@ mod tests {
             platform_music_dir(),
             music_dir(exe.as_deref(), Path::is_dir)
         );
+    }
+
+    #[test]
+    fn a_folder_beside_the_game_is_found_by_its_name() {
+        let exe = Path::new("/games/trpg/visions-of-shuyi.exe");
+        assert_eq!(
+            folder_beside("voice", Some(exe), |_| true),
+            "/games/trpg/voice"
+        );
+        assert_eq!(folder_beside("voice", Some(exe), |_| false), "voice");
+        assert_eq!(folder_beside("voice", None, |_| true), "voice");
+        let only_voice = |d: &Path| d.ends_with("voice");
+        assert_eq!(folder_beside("music", Some(exe), only_voice), "music");
     }
 
     #[test]

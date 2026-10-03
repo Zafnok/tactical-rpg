@@ -59,6 +59,7 @@ Rust. Windows exe first, plus web (WASM); itch.io then Steam.
 | `assets/` | Everything embedded in the game: `data/`, `fonts/` (later: maps, dialogue, portraits) |
 | `assets-src/` | Inputs to asset tools (e.g. the font BDF for `cargo xtask font-atlas`); not embedded |
 | `assets-private/` | **Git-ignored**: the checkout of the private repository with the bought art (ADR-0040). `game/` is embedded over `assets/` by the `private-assets` feature; `library/tiny-tales/` is the bought bundle, sorted. `assets-private.rev` (tracked) names the commit to build with |
+| `voice/` | **Git-ignored**: voice clips by dialogue line id, shipped beside the game, never embedded (ADR-0046, `docs/voice.md`). Copied from the private repository's `voice/` by `cargo xtask private-assets`. Test clips: `crates/app/tests/voice/` |
 
 ## Environment
 

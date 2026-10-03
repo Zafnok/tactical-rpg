@@ -41,7 +41,7 @@ the tool from the game.
 
 ## Implementation steps
 
-1. `voice/<lang>/cast.ron` (in the private repository's `game/voice/`):
+1. `voice/<lang>/cast.ron` (in the private repository's `voice/`):
    character id → the tool's voice id and settings, from 0043's cast
    table. Narration has its own entry if 0043 voices it.
 2. `cargo xtask voice status [--lang en]`: loads the scripts, cast and

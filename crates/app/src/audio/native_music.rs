@@ -79,6 +79,8 @@ impl Contexts {
 /// its samples and returns the context to the pool.
 pub(crate) struct Music {
     sound: Sound,
+    /// How long it plays, if the file is an OGG.
+    length_ms: Option<u32>,
     /// Always `Some` until dropped.
     ctx: Option<AudioContext>,
     contexts: Contexts,
@@ -88,12 +90,14 @@ impl Music {
     /// Reads and decodes the music file at `path`. Runs on a worker thread.
     pub(crate) fn load(path: &str, contexts: Contexts) -> Result<Self, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        let length_ms = trpg_content::audio::ogg_length_ms(&bytes);
         let ctx = contexts.take();
         // quad-snd `unwrap`s the decode; a corrupt file must not cost the
         // context (its mixer thread would idle forever unused).
         if let Ok(sound) = catch_unwind(AssertUnwindSafe(|| Sound::load(&ctx, &bytes))) {
             Ok(Self {
                 sound,
+                length_ms,
                 ctx: Some(ctx),
                 contexts,
             })
@@ -101,6 +105,11 @@ impl Music {
             contexts.put(ctx);
             Err("not a readable OGG or WAV file".to_owned())
         }
+    }
+
+    /// How long it plays, in milliseconds, if the file is an OGG.
+    pub(crate) fn length_ms(&self) -> Option<u32> {
+        self.length_ms
     }
 
     pub(crate) fn play(&self, volume: f32, looped: bool) {
@@ -261,6 +270,50 @@ mod tests {
                 t.elapsed().as_secs_f64() * 1e3,
             );
         }
+    }
+
+    /// This process's memory in use, in KiB, as Windows' `tasklist` reports
+    /// it.
+    fn working_set_kib() -> Option<u64> {
+        let pid = format!("PID eq {}", std::process::id());
+        let out = std::process::Command::new("tasklist")
+            .args(["/FI", &pid, "/NH"])
+            .output()
+            .ok()?;
+        let row = String::from_utf8_lossy(&out.stdout).into_owned();
+        // The row ends `… 12,776 K`.
+        let memory = row.split_whitespace().rev().nth(1)?;
+        let digits: String = memory.chars().filter(char::is_ascii_digit).collect();
+        digits.parse().ok()
+    }
+
+    /// The measurement in ticket 0238: the memory 20 loaded voice clips
+    /// take. Loads the clip named by `VOICE_CLIP` (default: a test clip)
+    /// 20 times, as the voice player would 20 different clips. Opens the
+    /// real sound device and reads `tasklist`, so it only runs when asked,
+    /// on Windows:
+    /// `cargo test --release -p trpg-app -- --ignored --nocapture voice_memory`
+    #[test]
+    #[ignore = "needs a sound device and Windows' tasklist"]
+    fn voice_memory_with_20_clips() {
+        let default = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/voice/en/test/test_21833604.ogg"
+        );
+        let path = std::env::var("VOICE_CLIP").unwrap_or_else(|_| default.to_owned());
+        let contexts = Contexts::default();
+        // The device and one clip first, so only the clips are counted.
+        let first = Music::load(&path, contexts.clone());
+        std::thread::sleep(Duration::from_millis(500));
+        let before = working_set_kib();
+        let clips: Vec<_> = (0..20)
+            .map(|_| Music::load(&path, contexts.clone()))
+            .collect();
+        std::thread::sleep(Duration::from_millis(500));
+        let after = working_set_kib();
+        assert!(first.is_ok() && clips.iter().all(Result::is_ok));
+        let length = first.ok().and_then(|m| m.length_ms());
+        eprintln!("{path}: {length:?} ms; 20 clips: {before:?} KiB -> {after:?} KiB");
     }
 
     #[test]

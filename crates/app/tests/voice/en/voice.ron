@@ -1,0 +1,25 @@
+// Test clips for voice playback (ticket 0238, docs/voice.md): tones, not
+// speech, for three lines of assets/dialogue/test.dlg. The clips are made
+// by `cargo xtask voice-test-clips`, one per entry here.
+(
+    clips: [
+        (
+            line: "test_21833604",
+            spoken: "You're late.",
+            voice: "test_tone",
+            made_by: Generated(tool: "cargo xtask voice-test-clips", model: "tones", date: "2026-10-03"),
+        ),
+        (
+            line: "test_7de7b254",
+            spoken: "Better late than... well.",
+            voice: "test_tone",
+            made_by: Generated(tool: "cargo xtask voice-test-clips", model: "tones", date: "2026-10-03"),
+        ),
+        (
+            line: "test_01439969",
+            spoken: "Was that about me?",
+            voice: "test_tone",
+            made_by: Generated(tool: "cargo xtask voice-test-clips", model: "tones", date: "2026-10-03"),
+        ),
+    ],
+)

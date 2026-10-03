@@ -5,14 +5,17 @@
 //!
 //! - `game/`: the files embedded in the game over `assets/` when it is built
 //!   with the `private-assets` feature.
+//! - `voice/`: the voice clips (ADR-0046), which ship as files beside the
+//!   game. Copied to the git-ignored `voice/` in this repository's root
+//!   when the private repository has them.
 //! - `library/`: the bought packs as sorted, which the importers read.
 //! - the rest (the original downloads, the seller's tools): only in a full
 //!   clone.
 //!
 //! `assets-private.rev` in this repository names the commit of the private
 //! one that this checkout's code is built with. With no flag the command
-//! clones `assets-private/` if it isn't there (only `game/`, and without the
-//! history's files), fetches, and puts it at that commit. `--library` also
+//! clones `assets-private/` if it isn't there (only `game/` and `voice/`,
+//! and without the history's files), fetches, and puts it at that commit. `--library` also
 //! brings `library/`. `--pin` writes the commit `assets-private/` is at into
 //! `assets-private.rev`, after checking that it is pushed.
 
@@ -34,6 +37,11 @@ const PIN_FILE: &str = "assets-private.rev";
 
 /// The folder of the private repository that is embedded in the game.
 const GAME_DIR: &str = "game";
+/// The folder of the private repository with the voice clips (ADR-0046).
+/// Beside `game/`, not in it: everything in `game/` is embedded, and
+/// voices ship as files next to the game. Copied to `voice/` in this
+/// repository's root, where the game and the packaging look for it.
+const VOICE_DIR: &str = "voice";
 
 /// The folder of the private repository that the importers read.
 const LIBRARY_DIR: &str = "library";
@@ -126,12 +134,17 @@ fn fetch(repo_root: &Path, url: &str, library: bool) -> Result<String, String> {
             &[&clone[..], &long_paths[..], &[url, CHECKOUT]].concat(),
         )
         .map_err(|e| no_access(url, &e))?;
-        git(&checkout, &["sparse-checkout", "set", "--cone", GAME_DIR])?;
+        let folders = ["sparse-checkout", "set", "--cone", GAME_DIR, VOICE_DIR];
+        git(&checkout, &folders)?;
     }
 
     // Unset (a full clone) is an error from `git config --get`.
     let sparse =
         git(&checkout, &["config", "--get", "core.sparseCheckout"]).as_deref() == Ok("true");
+    if sparse {
+        // A clone made before voices existed holds only `game/`.
+        git(&checkout, &["sparse-checkout", "add", VOICE_DIR])?;
+    }
     if library && sparse {
         git(&checkout, &["sparse-checkout", "add", LIBRARY_DIR])?;
     }
@@ -152,7 +165,24 @@ fn fetch(repo_root: &Path, url: &str, library: bool) -> Result<String, String> {
     } else {
         "the whole repository".to_string()
     };
-    Ok(format!("{CHECKOUT}/ is at {pin} ({holds})"))
+    let voices = match copy_voices(&checkout.join(VOICE_DIR), &repo_root.join(VOICE_DIR))? {
+        Some(files) => format!("; {VOICE_DIR}/ holds its {files} voice files"),
+        None => String::new(),
+    };
+    Ok(format!("{CHECKOUT}/ is at {pin} ({holds}){voices}"))
+}
+
+/// Replaces `dst` with a copy of the private repository's voice folder
+/// `src`, returning how many files it holds. With no such folder (no
+/// voices yet), `dst` is left as it is and `None` is returned.
+fn copy_voices(src: &Path, dst: &Path) -> Result<Option<usize>, String> {
+    if !src.is_dir() {
+        return Ok(None);
+    }
+    if dst.exists() {
+        fs::remove_dir_all(dst).map_err(|e| format!("clear {}: {e}", dst.display()))?;
+    }
+    crate::web::copy_tree(src, dst, &|_| true).map(Some)
 }
 
 /// Writes the commit `assets-private/` is at into the pin file. Refuses when
@@ -234,7 +264,8 @@ mod tests {
         root: PathBuf,
         /// The private repository's first commit: `game/` says `one`.
         one: String,
-        /// Its second commit, the tip of `main`: `game/` says `two`.
+        /// Its second commit, the tip of `main`: `game/` says `two`, and
+        /// there is a `voice/` folder with a manifest and a clip.
         two: String,
     }
 
@@ -255,6 +286,9 @@ mod tests {
             fs::write(src.join("originals/pack.zip"), "zip").unwrap();
             let one = commit(&src, "one");
             fs::write(src.join("game/portraits/a.portrait"), "two").unwrap();
+            fs::create_dir_all(src.join("voice/en/scene")).unwrap();
+            fs::write(src.join("voice/en/voice.ron"), "manifest").unwrap();
+            fs::write(src.join("voice/en/scene/line.ogg"), "clip").unwrap();
             let two = commit(&src, "two");
             g(&root, &["clone", "--quiet", "--bare", "src", "remote.git"]);
             Self { root, one, two }
@@ -352,20 +386,83 @@ mod tests {
     }
 
     #[test]
-    fn a_first_fetch_clones_only_the_game_folder() {
+    fn a_first_fetch_clones_only_the_game_and_voice_folders() {
         let scratch = Scratch::new("first");
         scratch.set_pin(&scratch.two);
         // An empty folder is fine to clone into.
         fs::create_dir_all(scratch.checkout("")).unwrap();
         assert_eq!(
             scratch.fetch(false),
-            Ok(format!("assets-private/ is at {} (game)", scratch.two))
+            Ok(format!(
+                "assets-private/ is at {} (game, voice); voice/ holds its 2 voice files",
+                scratch.two
+            ))
         );
         assert_eq!(scratch.game_says(), "two");
         // Files in the private repository's root come along; nothing else.
         assert!(scratch.checkout("README.md").is_file());
         assert!(!scratch.checkout("library").exists());
         assert!(!scratch.checkout("originals").exists());
+    }
+
+    /// Ticket 0238: the private repository's `voice/` is copied to this
+    /// repository's `voice/`, replacing what was there; without one,
+    /// `voice/` is left alone.
+    #[test]
+    fn a_fetch_copies_the_voice_folder_beside_the_game() {
+        let scratch = Scratch::new("voice");
+        let voice = scratch.public().join("voice");
+        let read = |path: &str| fs::read_to_string(voice.join(path)).ok();
+        // The first commit has no voices: a folder made by hand stays.
+        scratch.set_pin(&scratch.one);
+        fs::create_dir_all(voice.join("en")).unwrap();
+        fs::write(voice.join("en/mine.ogg"), "mine").unwrap();
+        assert_eq!(
+            scratch.fetch(false),
+            Ok(format!(
+                "assets-private/ is at {} (game, voice)",
+                scratch.one
+            ))
+        );
+        assert_eq!(read("en/mine.ogg").as_deref(), Some("mine"));
+        // The second has: its files replace the folder's.
+        scratch.set_pin(&scratch.two);
+        scratch.fetch(false).unwrap();
+        assert_eq!(read("en/voice.ron").as_deref(), Some("manifest"));
+        assert_eq!(read("en/scene/line.ogg").as_deref(), Some("clip"));
+        assert_eq!(read("en/mine.ogg"), None);
+        // A clone made before voices existed (only `game/`) gets them too.
+        let old = Scratch::new("voice-old-clone");
+        old.set_pin(&old.two);
+        old.fetch(false).unwrap();
+        let checkout = old.checkout("");
+        git(&checkout, &["sparse-checkout", "set", "--cone", GAME_DIR]).unwrap();
+        assert!(!old.checkout("voice").exists());
+        fs::remove_dir_all(old.public().join("voice")).unwrap();
+        old.fetch(false).unwrap();
+        assert!(old.public().join("voice/en/voice.ron").is_file());
+    }
+
+    #[test]
+    fn copy_voices_needs_a_source_folder() {
+        let root = std::env::temp_dir().join(format!("xtask-copy-voices-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("dst")).unwrap();
+        fs::write(root.join("dst/kept.ogg"), "kept").unwrap();
+        // No source, or a file by that name: nothing happens.
+        assert_eq!(copy_voices(&root.join("src"), &root.join("dst")), Ok(None));
+        fs::write(root.join("src"), "a file").unwrap();
+        assert_eq!(copy_voices(&root.join("src"), &root.join("dst")), Ok(None));
+        assert!(root.join("dst/kept.ogg").is_file());
+        // An empty source empties the destination.
+        fs::remove_file(root.join("src")).unwrap();
+        fs::create_dir_all(root.join("src")).unwrap();
+        assert_eq!(
+            copy_voices(&root.join("src"), &root.join("dst")),
+            Ok(Some(0))
+        );
+        assert!(!root.join("dst/kept.ogg").exists());
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
@@ -406,7 +503,7 @@ mod tests {
         assert_eq!(
             scratch.fetch(true),
             Ok(format!(
-                "assets-private/ is at {} (game, library)",
+                "assets-private/ is at {} (game, library, voice); voice/ holds its 2 voice files",
                 scratch.two
             ))
         );
@@ -432,7 +529,7 @@ mod tests {
         assert_eq!(
             scratch.fetch(true),
             Ok(format!(
-                "assets-private/ is at {} (the whole repository)",
+                "assets-private/ is at {} (the whole repository); voice/ holds its 2 voice files",
                 scratch.two
             ))
         );

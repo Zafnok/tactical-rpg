@@ -9,7 +9,9 @@
 //! until the between-battle menus exist. "Map skin" switches how battle
 //! maps look between the glyph skin and the test tileset (ticket 0433);
 //! the choice isn't saved. The scene camera pans and zooms the test map
-//! as a backdrop behind a window (ticket 0228, ADR-0048).
+//! as a backdrop behind a window (ticket 0228, ADR-0048). "Voice test"
+//! says the test scene's lines that have a voice clip, one per press
+//! (ticket 0238), until the dialogue screen plays voices (0720).
 
 mod portrait_viewer;
 mod scene_camera;
@@ -46,7 +48,7 @@ pub const SCREENS: [&str; 6] = [
 
 /// The debug tools, in menu order, before "Map skin" ([`MAP_SKIN_TOOL`]),
 /// whose label names the skin in use.
-const TOOLS: [&str; 9] = [
+const TOOLS: [&str; 10] = [
     "Glyph sampler",
     "Portraits",
     "Play test scene",
@@ -55,6 +57,7 @@ const TOOLS: [&str; 9] = [
     "Sprite test",
     "Class change: promote",
     "Class change: reclass",
+    "Voice test",
     "Scene camera",
 ];
 /// Index of "Key bindings" in [`TOOLS`].
@@ -66,7 +69,9 @@ const PROMOTE_TOOL: usize = 6;
 /// Index of "Class change: reclass" in [`TOOLS`].
 const RECLASS_TOOL: usize = 7;
 /// Index of "Scene camera" in [`TOOLS`].
-const SCENE_CAMERA_TOOL: usize = 8;
+const SCENE_CAMERA_TOOL: usize = 9;
+/// Index of "Voice test" in [`TOOLS`].
+const VOICE_TEST_TOOL: usize = 8;
 /// Index of "Map skin" in the menu: after [`TOOLS`].
 const MAP_SKIN_TOOL: usize = TOOLS.len();
 /// The scene the "Play test scene" tools play.
@@ -78,6 +83,8 @@ const MENU_TITLE_ROW: i32 = 9;
 #[derive(Debug, Clone)]
 pub struct DebugMenuScreen {
     menu: Menu,
+    /// How many lines "Voice test" has said.
+    voices_said: usize,
 }
 
 impl DebugMenuScreen {
@@ -88,7 +95,28 @@ impl DebugMenuScreen {
     pub fn new(ctx: &Ctx) -> Self {
         Self {
             menu: tools_menu(ctx),
+            voices_said: 0,
         }
+    }
+
+    /// "Voice test": says the next line of the test scene that has a voice
+    /// clip, starting over after the last. Each time round it first tells
+    /// `app` the lines that are coming, as a scene would.
+    fn say_next_voice(&mut self, ctx: &mut Ctx) {
+        let Some(scene) = ctx.content.dialogue.get(TEST_SCENE) else {
+            return;
+        };
+        let lines: Vec<_> = scene.lines().iter().map(|l| l.id.clone()).collect();
+        let voiced: Vec<_> = lines.into_iter().filter(|l| ctx.has_voice(l)).collect();
+        if voiced.is_empty() {
+            return;
+        }
+        let next = self.voices_said % voiced.len();
+        if next == 0 {
+            ctx.preload_voices(&voiced);
+        }
+        ctx.play_voice(&voiced[next]);
+        self.voices_said += 1;
     }
 }
 
@@ -148,6 +176,7 @@ impl Screen for DebugMenuScreen {
                     switch_skin(ctx);
                     self.menu = tools_menu(ctx).focused(MAP_SKIN_TOOL);
                 }
+                Some(MenuEvent::Chosen(VOICE_TEST_TOOL)) => self.say_next_voice(ctx),
                 Some(MenuEvent::Chosen(tool @ (PROMOTE_TOOL | RECLASS_TOOL))) => {
                     let kind = if tool == PROMOTE_TOOL {
                         ChangeKind::Promote
@@ -504,6 +533,8 @@ mod tests {
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(class_change)"
         );
+        // "Voice test" stays on the menu.
+        assert_eq!(outcome(&mut menu, &[CursorDown, Confirm]), "None");
         assert_eq!(
             outcome(&mut menu, &[CursorDown, Confirm]),
             "Push(scene_camera)"
@@ -536,6 +567,45 @@ mod tests {
         assert_eq!(TOOLS[PROMOTE_TOOL], "Class change: promote");
         assert_eq!(TOOLS[RECLASS_TOOL], "Class change: reclass");
         assert_eq!(TOOLS[SCENE_CAMERA_TOOL], "Scene camera");
+        assert_eq!(TOOLS[VOICE_TEST_TOOL], "Voice test");
+    }
+
+    /// Ticket 0238: "Voice test" says the test scene's voiced lines in
+    /// turn, announcing them each time round.
+    #[test]
+    fn voice_test_says_the_voiced_lines_of_the_test_scene_in_turn() {
+        use crate::audio::AudioRequest;
+        use trpg_content::Variant;
+        let mut ctx = crate::screen::tests::ctx();
+        let (manifest, lines) = crate::screen::tests::test_voices(&ctx, &[0, 2]);
+        let mut menu = DebugMenuScreen::new(&ctx);
+        let choose = |ctx: &mut Ctx, menu: &mut DebugMenuScreen| {
+            menu.menu = tools_menu(ctx).focused(VOICE_TEST_TOOL);
+            let frame = FrameInput::new(vec![Action::Confirm], 0.0, vec![]);
+            assert!(matches!(menu.update(ctx, &frame), Transition::None));
+            let voice = |r: &AudioRequest| !matches!(r, AudioRequest::PlaySound { .. });
+            ctx.audio
+                .take()
+                .into_iter()
+                .filter(voice)
+                .collect::<Vec<_>>()
+        };
+        // No voices: only the menu's own sound.
+        assert_eq!(choose(&mut ctx, &mut menu), []);
+        ctx.set_voice_manifest(&manifest);
+        let play = |i: usize| AudioRequest::PlayVoice {
+            line: lines[i].clone(),
+            variant: Variant::None,
+        };
+        let preload = AudioRequest::PreloadVoices {
+            lines: lines.iter().map(|l| (l.clone(), Variant::None)).collect(),
+        };
+        assert_eq!(choose(&mut ctx, &mut menu), [preload.clone(), play(0)]);
+        assert_eq!(choose(&mut ctx, &mut menu), [play(1)]);
+        assert_eq!(choose(&mut ctx, &mut menu), [preload, play(0)]);
+        // Without the test scene it does nothing.
+        ctx.content.dialogue.scenes.clear();
+        assert_eq!(choose(&mut ctx, &mut menu), []);
     }
 
     #[test]

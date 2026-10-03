@@ -17,6 +17,7 @@ mod sfx;
 mod test_card;
 mod test_tileset;
 mod tickets;
+mod voice_test;
 mod web;
 
 use std::env;
@@ -40,6 +41,7 @@ playtest <battle-id> [options]     a bot plays a battle many times and reports (
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 portrait-import <busts> <id>       cut bought busts into portraits (portrait-import --help)\n  \
 lines [scene]                      list every dialogue line with its line id (lines --help)\n  \
+voice-test-clips                   make the tone clips that test voice playback (needs ffmpeg)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -65,6 +67,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some("portrait-import") => portrait_import(&args.collect::<Vec<_>>()),
         Some("lines") => lines(&args.collect::<Vec<_>>()),
+        Some("voice-test-clips") => voice_test_clips(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -204,6 +207,23 @@ fn font_atlas(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("font-atlas: {e}");
+            1
+        }
+    }
+}
+
+fn voice_test_clips(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask voice-test-clips");
+        return 2;
+    }
+    match voice_test::run(&repo_root()) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("voice-test-clips: {e}");
             1
         }
     }
@@ -759,6 +779,13 @@ mod tests {
         assert_eq!(parse_sfx_check(&[]), Some(false));
         assert_eq!(parse_sfx_check(&args(&["--check"])), Some(true));
         assert_eq!(parse_sfx_check(&args(&["--bogus"])), None);
+    }
+
+    #[test]
+    fn voice_test_clips_takes_no_arguments() {
+        assert_eq!(voice_test_clips(&args(&["x"])), 2);
+        let bogus = args(&["voice-test-clips", "--bogus"]);
+        assert_eq!(dispatch(bogus.into_iter()), 2);
     }
 
     #[test]

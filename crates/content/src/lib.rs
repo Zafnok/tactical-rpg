@@ -30,6 +30,7 @@ pub mod terrain;
 pub mod tileset;
 pub mod tip;
 pub mod trigger;
+pub mod voice;
 
 use std::collections::BTreeMap;
 
@@ -61,6 +62,7 @@ pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
 pub use tileset::{ImageRect, Picture, Tileset};
 pub use tip::{Tip, TipTable, TipTrigger};
 pub use trigger::check_triggers;
+pub use voice::{Playable, Variant, VoiceManifest};
 
 /// All validated game content.
 #[derive(Debug, Clone, PartialEq, Eq)]

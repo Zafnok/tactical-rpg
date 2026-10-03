@@ -332,6 +332,19 @@ impl Harness {
             .collect()
     }
 
+    /// The lines whose voice clip was asked for so far, in order, as line
+    /// ids.
+    pub fn voices(&self) -> Vec<String> {
+        self.audio
+            .iter()
+            .flatten()
+            .filter_map(|r| match r {
+                AudioRequest::PlayVoice { line, .. } => Some(line.to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// The audio requests of the last frame run (a key press runs two
     /// frames, press and release; this is the release).
     pub fn last_frame_audio(&self) -> &[AudioRequest] {
