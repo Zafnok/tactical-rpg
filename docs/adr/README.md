@@ -54,6 +54,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0043](0043-png-portraits.md) | Portraits are PNG files named by a sidecar, drawn as one sprite at a whole scale | Accepted |
 | [0045](0045-languages-text-by-key-and-line-ids.md) | Languages: text by key, dialogue lines by id, wide glyphs in two cells | Proposed (0233, 0717); amends ADR-0016 and ADR-0011 |
 | [0046](0046-voice-clips-by-line-id.md) | Voice clips are files keyed by dialogue line id, generated now, replaceable by recordings | Proposed (0238); amends ADR-0026 and ADR-0032 rule 2 |
+| [0047](0047-pr-mutation-gate-in-shards-with-nextest.md) | The PR mutation gate runs in shards, with nextest as its test runner | Accepted |
 
 Number 0044 is taken by a PR open on 2026-10-03.
 
