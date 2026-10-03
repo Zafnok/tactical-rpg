@@ -225,8 +225,9 @@ terrain changed; `>` then the terrain a spell would turn it into; `*n` =
 
 ## Writing a Harness test
 
-Integration tests live in `crates/ui/tests/` (the crate's dev-dependency on
-itself turns on the `harness` feature for them). Unit tests inside the crate
+Integration tests live in `crates/ui/tests/it/`, one module per file listed in
+`tests/it/main.rs` so they build as one test program, `it` (the crate's
+dev-dependency on itself turns on the `harness` feature for them). Unit tests inside the crate
 can use `crate::harness::Harness` directly.
 
 ```rust
@@ -257,7 +258,7 @@ fn select_opens_new_game() {
   these to check what happened on the map (*Map view* above).
 - `flow()` / `flow_mut()`: the game flow on the stack; `flow_mut()` →
   `battle_mut()` → `send(&Command)` plays its battle with scripted
-  commands (`crates/ui/tests/flow.rs`).
+  commands (`crates/ui/tests/it/flow.rs`).
 - Audio: `audio_requests()` (every request of the run), `last_frame_audio()`
   (the last frame's; a `keys` press is the frame *before* the last),
   `music_commands()`, `clear_audio()`, `sounds()` (the sound cues played,
@@ -272,7 +273,7 @@ fn select_opens_new_game() {
   top). `Harness::with_layout(layout)` is a later launch with that layout
   saved. `into_storage()` + `Harness::with_storage(..)` restart with the same
   storage. Saves live in it too (`trpg_ui::save`: keys `slot_01`…`slot_30`
-  and `suspend`; `crates/ui/tests/save.rs`).
+  and `suspend`; `crates/ui/tests/it/save.rs`).
 - `Harness::with_screen(Box::new(MyScreen::new()))` tests a screen on its
   own, with the right-handed layout.
 - Key names in scripts depend on the layout (`docs/design/controls.md`):

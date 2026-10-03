@@ -30,7 +30,7 @@ only at **keyboard** keys, and `Mode::route`
 press, whatever it came from. Neither action has a controller button
 (`controls.md`, *Default buttons*), and buttons can't be rebound until 0816.
 
-**Repro** (found while working 0220; `crates/ui/tests/controller.rs`,
+**Repro** (found while working 0220; `crates/ui/tests/it/controller.rs`,
 `an_action_with_no_button_shows_not_mapped_on_a_pad` shows the help text):
 
 1. Options → Key bindings: give Select a key (say `g`).
@@ -103,7 +103,7 @@ hasn't seen it spelled out for controllers):
       select`) in that setup; on the keyboard it reads `g select`.
 - [ ] Unit tests of `select_action` / `end_turn_accept_actions` per device,
       including a keymap where Select has a button but no key.
-- [ ] `crates/ui/tests/controller.rs`'s
+- [ ] `crates/ui/tests/it/controller.rs`'s
       `an_action_with_no_button_shows_not_mapped_on_a_pad` is rewritten
       around an action that still has no button (it used Select).
 - [ ] All gates in the `run-gates` skill pass.
@@ -111,7 +111,7 @@ hasn't seen it spelled out for controllers):
 ## Tests required
 
 - Unit: the two keymap functions per device.
-- Integration: the Harness tests above (`crates/ui/tests/split_keys.rs` or
+- Integration: the Harness tests above (`crates/ui/tests/it/split_keys.rs` or
   `controller.rs`).
 
 ## Completion notes
