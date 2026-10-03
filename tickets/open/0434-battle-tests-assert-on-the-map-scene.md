@@ -20,7 +20,7 @@ are in range", "the cursor is here") assert on the `MapScene` or the
 `BattleState`; only tests about a *look* read the frame. Today many battle
 tests learn the state from the glyph look: the two letters in a cell, a
 cell's background colour, the cursor's overlay rectangles at hard-coded
-cell coordinates (e.g. `crates/ui/tests/battle.rs`: `buf.get(36, 18)`,
+cell coordinates (e.g. `crates/ui/tests/it/battle.rs`: `buf.get(36, 18)`,
 `.overlays()`, the helper that reads "the two glyphs drawn on the tile";
 ADR-0024: "tests find the cursor from its overlays").
 

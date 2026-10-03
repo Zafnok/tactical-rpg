@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0113"]
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0114 — One integration-test program per crate
@@ -95,17 +95,17 @@ Other open tickets name these files; either order works:
 
 ## Acceptance criteria
 
-- [ ] `cargo test --workspace` runs the same number of tests as before
+- [x] `cargo test --workspace` runs the same number of tests as before
       (compare the `test result:` totals; put both in the Completion notes).
-- [ ] `crates/ui/tests/` and `crates/content/tests/` each build exactly one
+- [x] `crates/ui/tests/` and `crates/content/tests/` each build exactly one
       test program (`it`).
-- [ ] No snapshot content changed: `git diff --stat -M main -- '*.snap'`
+- [x] No snapshot content changed: `git diff --stat -M main -- '*.snap'`
       shows renames only (at most the `source:` line differs).
-- [ ] An `xtask` test fails if a second `.rs` file is added directly under
+- [x] An `xtask` test fails if a second `.rs` file is added directly under
       any crate's `tests/` folder.
-- [ ] The Completion notes give the `.exe` count and total size before and
+- [x] The Completion notes give the `.exe` count and total size before and
       after.
-- [ ] All gates in the `run-gates` skill pass, and CI's `mutants (diff)` job
+- [x] All gates in the `run-gates` skill pass, and CI's `mutants (diff)` job
       passes on the PR.
 
 ## Tests required
@@ -116,5 +116,35 @@ Other open tickets name these files; either order works:
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- `crates/ui/tests/*.rs` (13 files) and `crates/content/tests/*.rs` (6 files,
+  counting `private_assets.rs`, added by 0110 after this ticket was written)
+  moved to `tests/it/`, each crate with a `tests/it/main.rs` listing them.
+  The 45 ui snapshots moved to `crates/ui/tests/it/snapshots/` as
+  `it__<old name>.snap`; `git diff -M --stat origin/main -- '*.snap'` shows
+  45 renames with 0 lines changed (not even `source:`; insta matched them
+  as they were). `cargo insta test -p trpg-ui --unreferenced reject` finds
+  no orphans. No shared helpers moved to `common.rs`.
+- `private_assets` is now `#[cfg(feature = "private-assets")] mod
+  private_assets;` in `main.rs`; its command is `cargo test -p trpg-content
+  --features private-assets --test it private_assets::` (updated in
+  `pages.yml`, the `run-gates` skill and the file's doc comment). Ran it once
+  with the feature on: 1 passed.
+- **Programs built by `cargo test --workspace --no-run`** (fresh worktree,
+  `target/debug/deps/*.exe`): before **29, 1,181,719,940 bytes (1.18 GB)**;
+  after **12, 473,993,488 bytes (0.47 GB)**.
+- **Test totals** (`cargo test --workspace --no-fail-fast`, sum of `test
+  result:` lines): before 2440 passed, 0 failed, 3 ignored; after 2441
+  passed, 0 failed, 3 ignored. The one extra is the new `xtask` test
+  `each_crate_has_at_most_one_integration_test_program`, which fails when
+  any `crates/*/tests/` holds more than one `.rs` file at its top level (and
+  checks on a temp folder that a second file is seen).
+- The rule is in the `work-ticket` skill's *3. Implement* list (ADR-0007 is
+  accepted, so not edited), in both `main.rs` doc comments and in
+  `crates/ui/README.md`.
+- Paths updated in open tickets 0229, 0230, 0434, 0803; 0505 is already
+  done. **0821** planned a second file in `crates/core/tests/`, which the
+  new test would reject: its step 1 now says to move `replay.rs` into
+  `crates/core/tests/it/` with a `main.rs` first. Accepted ADRs 0021 and
+  0040 still name the old paths (0040's `--test private_assets` command is
+  now `--test it private_assets::`); left unedited per the ADR rule.
+- No gameplay rules decided. Nothing changes in the game.

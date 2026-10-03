@@ -360,6 +360,53 @@ mod tests {
         assert!(manifest("xtask").contains("trpg-bots"));
     }
 
+    /// The names of the `.rs` files directly in `dir` (not in its subfolders).
+    fn top_level_rs_files(dir: &std::path::Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.is_file() && path.extension().is_some_and(|e| e == "rs"))
+            .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    /// Cargo links every file directly under a crate's `tests/` as its own
+    /// program (about 100 MB each), so each crate keeps one: new integration
+    /// tests are modules of `tests/it/main.rs` (ticket 0114).
+    #[test]
+    fn each_crate_has_at_most_one_integration_test_program() {
+        let crates = std::fs::read_dir(repo_root().join("crates")).unwrap();
+        let mut checked = 0;
+        for krate in crates {
+            let tests = krate.unwrap().path().join("tests");
+            if !tests.is_dir() {
+                continue;
+            }
+            checked += 1;
+            let files = top_level_rs_files(&tests);
+            assert!(
+                files.len() <= 1,
+                "{} has {files:?}: put new integration tests in tests/it/ \
+                 as a module listed in tests/it/main.rs",
+                tests.display()
+            );
+        }
+        assert!(checked >= 4, "{checked}");
+
+        // The check sees a second file.
+        let dir = std::env::temp_dir().join(format!("xtask-tests-dir-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("it")).unwrap();
+        std::fs::write(dir.join("it/main.rs"), "").unwrap();
+        std::fs::write(dir.join("a.rs"), "").unwrap();
+        std::fs::write(dir.join("notes.md"), "").unwrap();
+        assert_eq!(top_level_rs_files(&dir), ["a.rs"]);
+        std::fs::write(dir.join("b.rs"), "").unwrap();
+        assert_eq!(top_level_rs_files(&dir), ["a.rs", "b.rs"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn playtest_help_and_bad_args() {
         assert_eq!(playtest(&args(&["--help"])), 0);

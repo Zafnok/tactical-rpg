@@ -38,4 +38,4 @@ embedded in the binary (ADR-0005). No filesystem I/O, no macroquad.
    `load_embedded()`, extending the shared error list.
 6. **Tests**: unit tests for parsing and each validation error (inline
    strings), property tests where there is a round trip, and make sure
-   `tests/all_assets_load.rs` still passes on the real assets.
+   `tests/it/all_assets_load.rs` still passes on the real assets.
