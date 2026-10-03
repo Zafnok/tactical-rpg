@@ -50,6 +50,15 @@ Like FE Path of Radiance and Triangle Strategy: real losses, hard choices and a
 corrupt or broken system, with character warmth, banter and jokes between the
 hard beats.
 
+- **Where the jokes go** (Nick, 2026-10-03, ticket 0036, on the Chapter 1
+  script's lines shown in the title cinematic mockups): "there's just too
+  many quips in general as a starting tone... quips should be during
+  downtime, not on ch1 opening not on a serious battle... I'm not against
+  quips as support ranks rise as the game reaches more high notes in terms
+  of closeness". So: the opening of the game and serious battles are played
+  straight. Banter belongs to downtime (camp, travel, quiet scenes after a
+  fight) and grows as characters get closer (support ranks). Ticket 0724
+  rewrites Chapter 1 to this.
 - **The ending is not a tragedy.** It is resolved and feels like a hard-fought
   victory. Nick fixed this.
 - **Unavoidable story losses are allowed**, including someone close to the lead

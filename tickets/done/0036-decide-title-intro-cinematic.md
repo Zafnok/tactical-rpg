@@ -5,10 +5,10 @@ type: design-decision
 milestone: Design decisions
 model: opus-5.5
 effort: medium
-status: todo
-blocked_by: ["0811"]
+status: done
+blocked_by: []
 nick_input: decision
-completed:
+completed: 2026-10-03
 ---
 
 # 0036 — Decide: the title screen's intro cinematic
@@ -54,8 +54,11 @@ So "the brief pause" is about **17 seconds** (1:57 to 2:14).
 **What exists and what doesn't yet:**
 
 - The title today: `crates/ui/src/screens/title.rs` (plain text, a menu).
-  0811 decides the logo and title art; this ticket comes after it so the
-  mockups can end on the real logo.
+  0811 decides the logo and title art. This ticket does **not** wait for it
+  (Nick, 2026-10-02: "0811 shouldn't be a blocker for 0036"): the mockups
+  end on a stand-in logo (the game's name in plain letters, as the title
+  shows it today), and the storyboard's last shot is "the logo, whatever
+  0811 makes it".
 - `docs/design/title-screen.md`: on every build the title first shows
   `Press any key or button` (0034, 0032; built by 0226). On the web the
   music **can't** start before that first press, and the cinematic follows
@@ -186,10 +189,12 @@ Yes / no / later.
 ## Implementation steps
 
 1. Read `docs/design/title-screen.md`, `look-and-feel.md`, `audio.md`,
-   `world-structure.md`, `chapter-1.md` and 0811's result. Listen to the
+   `world-structure.md`, `chapter-1.md` and, if it is done, 0811's result.
+   Listen to the
    title song with the timing table in hand.
 2. Build the mockup page (scratchpad, published as an Artifact): the font
-   atlas, a real map, the logo from 0811, and store previews for character
+   atlas, a real map, the logo (0811's if it is done, else the stand-in
+   above), and store previews for character
    art (they stay in the scratchpad, `ascii-art` skill). It plays each
    storyboard against the song and can show Q1's options and Q3's zooms.
 3. Snippets: with the `story-writing` skill, pick candidate lines that give
@@ -204,14 +209,16 @@ Yes / no / later.
 
 ## Acceptance criteria
 
-- [ ] `docs/design/title-screen.md` has an *Intro cinematic* section with
+- [x] `docs/design/title-screen.md` has an *Intro cinematic* section with
       Nick's words, the rules for Q1–Q5 and the storyboard table.
-- [ ] Every shot in the storyboard names its start time, content, movement
+- [x] Every shot in the storyboard names its start time, content, movement
       and size, and the times fit the song (logo at the pause).
-- [ ] The snippet lines and characters Nick approved are listed.
-- [ ] Tickets 0228, 0817, 0818, 0819, 0820 and 1010 match the answers; new
+- [x] The snippet lines and characters Nick approved are listed. (The
+      characters and the two scenes are; Nick approved no lines, see the
+      completion notes.)
+- [x] Tickets 0228, 0817, 0818, 0819, 0820 and 1010 match the answers; new
       tickets exist for anything the answers added.
-- [ ] `cargo xtask ticket-lint` passes.
+- [x] `cargo xtask ticket-lint` passes.
 
 ## Tests required
 
@@ -219,5 +226,71 @@ Yes / no / later.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+Done 2026-10-03, over three rounds of animated mockups (an Artifact page
+drawn with the game's font atlas and palette at 800×512, playing against
+the title song; it stays outside the repo).
+
+**Decoupled from 0811 first** (Nick: "0811 shouldn't be a blocker for
+0036"): the mockups ended on a stand-in logo, and the storyboard's last
+shot is "the logo (0811)", whatever that becomes. 0811 and the roadmap
+say so.
+
+**What Nick decided** (`docs/design/title-screen.md`, *Intro cinematic*):
+
+- Q1: first he picked A (cinematic first), then replaced it with his own
+  flow: one press reaches the logo and menu; after 15 idle seconds the
+  menu fades and the cinematic takes over, joining the song where it is;
+  a press during the cinematic plays a sword-clash sound and jumps to the
+  song's silence with the logo and menu; left alone, the menu fades at the
+  loop and the cinematic plays from the start. Back from the game: logo
+  and menu, same rules.
+- Q2: storyboard 2, "Trailer cuts": hard cuts, snippets in the real
+  dialogue screen, six faces with names, units marching and fighting. The
+  logo holds for the whole silence (no re-cut of the song). The lead
+  follows the most recent save.
+- Q3: whole-step zoom (2×, 3×, 4×), one size per shot, no gradual zoom.
+- Q4: no overworld shot for now; 1010 adds it and now says plainly that it
+  changes the cinematic and asks Nick where the shot goes.
+- Q5 (a setting to turn it off): "Later". Open sub-question; 0820's
+  sign-off asks again.
+
+**Deviations from the ticket:**
+
+- **No approved snippet lines.** Nick rejected the Chapter 1 lines shown
+  ("cheesy and cringe"; too many quips for an opening) and decided the
+  cinematic simply plays the opening lines of the real script file. So
+  the design doc lists the two scenes and the six characters, not lines,
+  and 0820 no longer has its own dialogue file. The third acceptance box
+  is ticked on that basis.
+- Step 3's spoiler rule became: only the openings of the two scenes before
+  the Chapter 1 battle, never past a reply choice.
+- The storyboard's first two shots were swapped compared with the mockup
+  (the party pan first, the first conversation second), because on launch
+  the menu hides the first 15 seconds.
+- 0805 was not changed (no Options setting yet).
+- Game comparisons: old Pokémon's intro-then-title was Nick's own
+  reference; that Fire Emblem: The Blazing Blade plays its class roll
+  when the title is left alone was only loosely checked and said so.
+
+**Tickets updated:** 0228 (whole steps 1–4 only), 0817 (hard cuts; a
+whole-frame brightness for the title's fade), 0818 (decided answers; the
+lead from the last save), 0819 (the flow as states; the skip without an
+audio seek), 0820 (the storyboard; lines from `ch01.dlg`; waits for 0827),
+1010 (changes the cinematic; Nick places the shot), 0811 (how the logo is
+used), 0706 (the lead's default face for the cinematic).
+
+**New tickets:** 0041 (decide the skip sound), 0724 (Chapter 1 script:
+fewer quips, to Nick's tone note now in `setting-and-tone.md`), 0827
+(cinematic shots where units march and fight).
+
+**Claude's starting rules** (listed in the design doc for Nick to veto):
+the menu also shows when the cinematic reaches the logo by itself; any
+press while the menu is up restarts the 15 seconds; a press in the silence
+puts the menu back on the 15-second rule; the skip press does nothing
+else; the timer runs only on the title itself; fade lengths (about 1 s
+out, 0.5 s in); the cinematic makes no sounds of its own; the skip sound
+is the sword hit until 0041; snippet length is whatever opening boxes can
+be read in the shot's time.
+
+**0724 waits until after the playtest** (Nick: "nah it can wait til
+after"), so it is blocked by 0804.

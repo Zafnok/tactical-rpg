@@ -31,7 +31,14 @@ figures, and expect several rounds.
 (ticket 0036, built by 0817–0820). It is as long as the title song and ends
 on "our logo whatever it might be", held during the song's quiet pause
 (about 17 seconds). So the art chosen here is also the cinematic's last
-shot: it must look right alone on the screen, with no menu under it. When
+shot: it must look right alone on the screen, with no menu under it. 0036
+did not wait for this ticket (it used a stand-in logo). It is decided
+(2026-10-03, *Intro cinematic* in `docs/design/title-screen.md`): the logo
+and the menu show together after the first press and during the song's
+silence; after 15 idle seconds the menu fades and the cinematic takes the
+screen; a press brings logo and menu back. So the logo is always seen
+**with** the menu under it, and the cinematic covers the whole screen in
+between. When
 offering option C below, tell Nick the cinematic already covers moving
 pictures on the title.
 
@@ -64,9 +71,9 @@ music (0807) starts at once or after a short fade in.
 - The layout must leave room for the web build's `Press any key` line
   where the menu goes (ticket 0034, `docs/design/title-screen.md`); show
   it in the mockups too.
-- Show one mockup of the art alone (no menu, no prompt), as the intro
-  cinematic's logo shot will show it (0036). Keep the drawing in one
-  function that 0817 can call.
+- Show one mockup of the art alone (no menu, no prompt): the cinematic's
+  logo shot draws it that way for a moment while the menu fades in or out
+  (0036). Keep the drawing in one function that 0817 can call.
 
 **Out (do not do):**
 - The exe icon (0902).
