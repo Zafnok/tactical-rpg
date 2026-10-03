@@ -1,25 +1,25 @@
 ---
-source: crates/ui/tests/dialogue.rs
+source: crates/ui/tests/it/dialogue.rs
 expression: h.snapshot()
 ---
                                        Village of Heth, dusk                                        
  ┌────────────────────────────────┐                              ╔════════════════════════════════╗ 
- │            ▄▄▄▄▄▄▄▄            │                              ║                                ║ 
- │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │                              ║                                ║ 
- │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                              ║                                ║ 
- │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │                              ║                                ║ 
- │          ▀▀▀▀▀▀▀▀▀▀▀▀          │                              ║                                ║ 
- │            ▀▀▀▀▀▀▀▀            │                              ║                                ║ 
- │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                              ║                                ║ 
- │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                              ║                                ║ 
- │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                              ║                                ║ 
- │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
+ │                                │                              ║                                ║ 
  └────────────────────────────────┘                              ╚════════════════════════════════╝ 
                Ellery                                                       Test Archer             
 ┌── Test Archer ───────────────────────────────────────────────────────────────────────────────────┐
@@ -37,31 +37,31 @@ expression: h.snapshot()
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadddddddddddddddddddddddddddddddddda
-aceeeeeeeeeeeeffffffffeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeeeefhhiiiijjjjhhfeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeefhjikljjjjjjjjjmhfeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeenjjkjjjjjjmjjjjjjojneeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeenjjjjppqjrppqjjpjjoneeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeenjosttttsssstttuvmoneeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeenjwssxynszssnyxvvrjneeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeenjsssssssAsssssvvvjneeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeefBBssACssCDDsssvvBBfeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeeeenssssEEEEssvvneeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeeeeefFsssGGspvHfeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeeeeeeenDIIIIIneeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeeeJKKLMNOvvvvONMLKKPeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeeeJQRRRSTTTTUUTTTTSRRRVPeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceeeJQRRRRRSTTTTWWTTTTSRRRRRVPeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
-aceJQRRRRRRRSTTTTWWTTTTSRRRRRRRVPecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadggggggggggggggggggggggggggggggggda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
 accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadddddddddddddddddddddddddddddddddda
-aggggggggggggggXXXXXXggggggggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagggggggggggggggggggggggggggggggggga
-cccYYYYYYYYYYYYYcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
-cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
-cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
-cgggYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
-cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
-cggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggc
+aeeeeeeeeeeeeeeffffffeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeea
+cccgggggggggggggcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
+ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
+ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
+ceeegggggggggggggggggggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
+ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
+ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -72,50 +72,8 @@ a = fg:text bg:black
 b = fg:text_highlight bg:black
 c = fg:panel_border bg:panel_bg
 d = fg:panel_border_focus bg:panel_bg
-e = fg:panel_bg bg:panel_bg
-f = fg:#1d130d bg:panel_bg
-g = fg:text bg:panel_bg
-h = fg:#1d130d bg:#50301c
-i = fg:#50301c bg:#6d4527
-j = fg:#50301c bg:#50301c
-k = fg:#6d4527 bg:#6d4527
-l = fg:#6d4527 bg:#50301c
-m = fg:#50301c bg:#351f13
-n = fg:#1d130d bg:#1d130d
-o = fg:#351f13 bg:#351f13
-p = fg:#8b6d54 bg:#815f48
-q = fg:#351f13 bg:#815f48
-r = fg:#50301c bg:#815f48
-s = fg:#8b6d54 bg:#8b6d54
-t = fg:#8b6d54 bg:#2d1c11
-u = fg:#815f48 bg:#2d1c11
-v = fg:#815f48 bg:#815f48
-w = fg:#351f13 bg:#8b6d54
-x = fg:#1d130d bg:#918a81
-y = fg:#1d130d bg:#2d4c65
-z = fg:#8b6d54 bg:#917860
-A = fg:#917860 bg:#917860
-B = fg:#50301c bg:#1d130d
-C = fg:#917860 bg:#8b6d54
-D = fg:#8b6d54 bg:#724d3a
-E = fg:#8b6d54 bg:#50211c
-F = fg:#8b6d54 bg:#1d130d
-G = fg:#724d3a bg:#8b6d54
-H = fg:#815f48 bg:#1d130d
-I = fg:#815f48 bg:#724d3a
-J = fg:#7f7f81 bg:panel_bg
-K = fg:#656568 bg:panel_bg
-L = fg:#7f672b bg:panel_bg
-M = fg:#692a23 bg:panel_bg
-N = fg:#1d130d bg:#692a23
-O = fg:#815f48 bg:#692a23
-P = fg:#3e3e41 bg:panel_bg
-Q = fg:#7f7f81 bg:#656568
-R = fg:#656568 bg:#656568
-S = fg:#7f672b bg:#7f672b
-T = fg:#692a23 bg:#692a23
-U = fg:#7f672b bg:#471c15
-V = fg:#3e3e41 bg:#656568
-W = fg:#471c15 bg:#471c15
-X = fg:text_dim bg:panel_bg
-Y = fg:text_highlight bg:panel_bg
+e = fg:text bg:panel_bg
+f = fg:text_dim bg:panel_bg
+g = fg:text_highlight bg:panel_bg
+--- overlays ---
+under sprite 16,32 256x256  portraits/lead_m/neutral.png 0,0 32x32 opacity=140

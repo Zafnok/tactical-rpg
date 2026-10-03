@@ -1,48 +1,63 @@
 use super::*;
+use crate::image::png_header;
 
-const HEADER: &str = "(
-    character: \"t\",
-    size: (32, 32),
-    colors: { 's': \"skin\", 'h': \"hair\" },
-)
-";
-
-/// First row of every test expression: 16 hair pixels then 16 transparent.
-fn top_row() -> String {
-    format!("{}{}", "h".repeat(16), ".".repeat(16))
+/// An image table of `files`: bundle path, width, height.
+fn table(files: &[(&'static str, u32, u32)]) -> ImageTable {
+    let pngs: Vec<_> = files
+        .iter()
+        .map(|&(path, w, h)| (path, png_header(w, h)))
+        .collect();
+    ImageTable::from_files(pngs.iter().map(|(path, png)| (*path, &png[..]))).unwrap_or_default()
 }
 
-/// An expression block: the top row, then 31 rows of skin.
-fn block(name: &str) -> String {
-    let mut s = format!("=== {name}\n{}\n", top_row());
-    for _ in 1..32 {
-        s.push_str(&"s".repeat(32));
-        s.push('\n');
-    }
-    s
+/// One 64×64 image per required expression, `portraits/t/<name>.png`, plus
+/// a 48×48 `sly`, an image as big as the frame and three that are too big.
+fn images() -> ImageTable {
+    table(&[
+        ("portraits/t/neutral.png", 64, 64),
+        ("portraits/t/happy.png", 64, 64),
+        ("portraits/t/angry.png", 64, 64),
+        ("portraits/t/sad.png", 64, 64),
+        ("portraits/t/surprised.png", 64, 64),
+        ("portraits/t/sly.png", 48, 48),
+        ("portraits/t/full.png", 256, 256),
+        ("portraits/t/wide.png", 257, 64),
+        ("portraits/t/tall.png", 64, 257),
+        ("portraits/t/huge.png", 512, 512),
+        // Not under `portraits/`: a sidecar can't name it.
+        ("images/neutral.png", 64, 64),
+    ])
 }
 
-/// A valid portrait with the required expressions. The header is lines 1–5,
-/// `=== neutral` line 6, its rows lines 7–38, `=== happy` line 39, …
-fn valid() -> String {
-    let mut s = HEADER.to_owned();
-    for name in REQUIRED_EXPRESSIONS {
-        s.push_str(&block(name));
-    }
-    s
+/// A sidecar for character `t` with `entries` (name, file) as its
+/// expressions, one per line from line 4 on.
+fn sidecar(entries: &[(&str, &str)]) -> String {
+    let lines: Vec<String> = entries
+        .iter()
+        .map(|(name, file)| format!("        \"{name}\": \"{file}\",\n"))
+        .collect();
+    let lines = lines.concat();
+    format!("(\n    character: \"t\",\n    expressions: {{\n{lines}    }},\n)\n")
 }
 
-fn palette() -> PaletteDef {
-    PaletteDef {
-        colors: [("skin", [1, 2, 3]), ("hair", [4, 5, 6])]
-            .into_iter()
-            .map(|(n, c)| (n.to_owned(), c))
-            .collect(),
-    }
+/// The required expressions, each mapped to its own image.
+const REQUIRED: [(&str, &str); 5] = [
+    ("neutral", "t/neutral.png"),
+    ("happy", "t/happy.png"),
+    ("angry", "t/angry.png"),
+    ("sad", "t/sad.png"),
+    ("surprised", "t/surprised.png"),
+];
+
+/// [`REQUIRED`] and `more`.
+fn with(more: &[(&'static str, &'static str)]) -> String {
+    let mut entries = REQUIRED.to_vec();
+    entries.extend_from_slice(more);
+    sidecar(&entries)
 }
 
 fn parse(src: &str) -> Result<Portrait, Vec<ContentError>> {
-    parse_portrait("t.portrait", src, &palette())
+    parse_portrait("t.ron", "t", src, &images())
 }
 
 fn errors(src: &str) -> Vec<String> {
@@ -56,230 +71,224 @@ fn errors(src: &str) -> Vec<String> {
 
 #[test]
 fn parses_a_valid_portrait() {
-    let p = parse(&valid()).unwrap();
+    let p = parse(&sidecar(&REQUIRED)).unwrap();
     assert_eq!(p.character, "t");
-    assert_eq!((p.width, p.height), (32, 32));
-    assert_eq!(p.colors.get(&'s').map(String::as_str), Some("skin"));
     let names: Vec<&str> = p.expressions.iter().map(|e| e.name.as_str()).collect();
     assert_eq!(names, REQUIRED_EXPRESSIONS);
     let happy = p.expression("happy").unwrap();
-    assert_eq!(happy.pixels.len(), 32 * 32);
-    assert_eq!(p.color_at(happy, 0, 0), Some("hair"));
-    assert_eq!(p.color_at(happy, 15, 0), Some("hair"));
-    assert_eq!(p.color_at(happy, 16, 0), None);
-    assert_eq!(p.color_at(happy, 16, 1), Some("skin"));
-    assert_eq!(p.color_at(happy, 31, 31), Some("skin"));
-    assert_eq!(p.color_at(happy, 32, 0), None);
-    assert_eq!(p.color_at(happy, 0, 32), None);
-    assert!(p.expression("bored").is_none());
-}
-
-#[test]
-fn color_at_ignores_keys_without_a_colour() {
-    let p = Portrait {
-        character: "t".to_owned(),
-        width: 2,
-        height: 1,
-        colors: BTreeMap::new(),
-        expressions: vec![],
-    };
-    let e = Expression {
-        name: "x".to_owned(),
-        pixels: vec![Some('z')],
-    };
-    assert_eq!(p.color_at(&e, 0, 0), None);
-    // Too few pixels for the size.
-    assert_eq!(p.color_at(&e, 1, 0), None);
-}
-
-#[test]
-fn crlf_extra_expressions_and_trailing_blank_lines_are_fine() {
-    let src = format!("{}{}\n\n", valid(), block("smug")).replace('\n', "\r\n");
-    let p = parse(&src).unwrap();
-    assert_eq!(p.expressions.len(), 6);
-    assert_eq!(p.expressions[5].name, "smug");
+    assert_eq!(happy.image.path(), "portraits/t/happy.png");
     assert_eq!(
-        p.expressions[5],
-        Expression {
-            name: "smug".to_owned(),
-            ..p.expressions[0].clone()
+        happy.size,
+        ImageInfo {
+            width: 64,
+            height: 64
         }
     );
+    assert_eq!(p.expression("bored"), None);
 }
 
 #[test]
-fn no_expressions() {
+fn an_expression_may_use_any_image_and_two_may_share_one() {
+    let src = sidecar(&[
+        ("neutral", "t/neutral.png"),
+        ("happy", "t/sly.png"),
+        ("angry", "t/neutral.png"),
+        ("sad", "t/sad.png"),
+        ("surprised", "t/surprised.png"),
+    ]);
+    let p = parse(&src).unwrap();
+    let image = |name| p.expression(name).map(|e| e.image.path());
+    assert_eq!(image("happy"), Some("portraits/t/sly.png"));
+    assert_eq!(image("angry"), image("neutral"));
     assert_eq!(
-        errors(HEADER),
-        ["t.portrait: no expressions: each starts with a \"=== <name>\" line"]
-    );
-}
-
-#[test]
-fn header_syntax_error() {
-    let src = valid().replacen("size", "size size", 1);
-    let errs = errors(&src);
-    assert_eq!(errs.len(), 1);
-    assert!(errs[0].starts_with("t.portrait:3:"), "{errs:?}");
-}
-
-#[test]
-fn size_must_be_32_by_32() {
-    let src = valid().replacen("(32, 32)", "(32, 31)", 1);
-    let errs = errors(&src);
-    assert_eq!(
-        errs[0],
-        "t.portrait:3: size is (32, 31); portraits are (32, 32) pixels"
-    );
-    // The grids are checked against the declared size too.
-    assert_eq!(
-        errs[1],
-        "t.portrait:6:1: expression has 32 rows; expected 31"
-    );
-    assert_eq!(errs.len(), 6);
-    let src = valid().replacen("(32, 32)", "(31, 32)", 1);
-    assert_eq!(
-        errors(&src)[0],
-        "t.portrait:3: size is (31, 32); portraits are (32, 32) pixels"
+        p.expression("happy").map(|e| e.size),
+        Some(ImageInfo {
+            width: 48,
+            height: 48
+        })
     );
 }
 
 #[test]
-fn size_error_names_the_size_line() {
-    let src = valid().replacen("size: (32, 32)", "size:\n(1, 1)", 1);
-    assert!(errors(&src)[0].starts_with("t.portrait:3: size is (1, 1)"));
-    let src = valid().replacen("    size: (32, 32),\n", "", 1).replacen(
-        "character: \"t\",",
-        "character: \"t\", size: (2, 2),",
-        1,
-    );
-    assert!(errors(&src)[0].starts_with("t.portrait:2: size is (2, 2)"));
-}
-
-#[test]
-fn transparent_key_is_reserved() {
-    let src = valid().replacen("'h': \"hair\"", "'h': \"hair\", '.': \"skin\"", 1);
+fn required_expressions_come_first_then_the_others_by_name() {
+    // Written in another order, with extras before and between.
+    let src = sidecar(&[
+        ("wry", "t/sly.png"),
+        ("surprised", "t/surprised.png"),
+        ("sad", "t/sad.png"),
+        ("bored", "t/sly.png"),
+        ("angry", "t/angry.png"),
+        ("happy", "t/happy.png"),
+        ("neutral", "t/neutral.png"),
+    ]);
+    let p = parse(&src).unwrap();
+    let names: Vec<&str> = p.expressions.iter().map(|e| e.name.as_str()).collect();
     assert_eq!(
-        errors(&src),
-        ["t.portrait:4:41: colour '.': '.' is reserved for transparent pixels"]
-    );
-}
-
-#[test]
-fn unknown_palette_colour() {
-    let src = valid().replacen("\"hair\"", "\"hare\"", 1);
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:4:28: colour 'h': unknown palette colour \"hare\""]
-    );
-}
-
-#[test]
-fn unknown_colour_key() {
-    let src = valid().replacen(&top_row(), &format!("hhq{}", &top_row()[3..]), 1);
-    assert_eq!(errors(&src), ["t.portrait:7:3: 'q' is not in the colours"]);
-}
-
-#[test]
-fn ragged_rows() {
-    let row = top_row();
-    let src = valid().replacen(&row, &format!("{row}s"), 1);
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:7:33: row is 33 pixels wide; expected 32"]
-    );
-    let src = valid().replacen(&row, &row[1..], 1);
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:7:32: row is 31 pixels wide; expected 32"]
-    );
-}
-
-#[test]
-fn wrong_row_count() {
-    let row = format!("{}\n", top_row());
-    let src = valid().replacen(&row, "", 1);
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:6:1: expression has 31 rows; expected 32"]
-    );
-    let src = valid().replacen(&row, &format!("{row}{row}"), 1);
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:6:1: expression has 33 rows; expected 32"]
-    );
-}
-
-#[test]
-fn blank_lines_only_are_no_rows() {
-    let src = format!(
-        "{}=== smug
-
-
-",
-        valid()
-    );
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:171:1: expression has 0 rows; expected 32"]
-    );
-}
-
-#[test]
-fn duplicate_and_unnamed_expressions() {
-    let src = format!("{}{}", valid(), block("happy"));
-    assert_eq!(
-        errors(&src),
-        ["t.portrait:171:1: expression \"happy\" appears twice (first on line 39)"]
-    );
-    let src = format!("{}{}", valid(), block("").replacen("=== ", "===", 1));
-    assert_eq!(errors(&src), ["t.portrait:171:1: expression has no name"]);
-}
-
-#[test]
-fn missing_required_expressions() {
-    let src = format!("{HEADER}{}{}", block("neutral"), block("happy"));
-    assert_eq!(
-        errors(&src),
+        names,
         [
-            "t.portrait: missing required expression \"angry\"",
-            "t.portrait: missing required expression \"sad\"",
-            "t.portrait: missing required expression \"surprised\"",
+            "neutral",
+            "happy",
+            "angry",
+            "sad",
+            "surprised",
+            "bored",
+            "wry"
         ]
     );
 }
 
 #[test]
-fn reports_every_problem_at_once() {
-    let src = valid()
-        .replacen("\"hair\"", "\"hare\"", 1)
-        .replacen(&top_row(), "q", 1);
-    assert_eq!(errors(&src).len(), 3);
+fn an_image_as_big_as_the_frame_fits() {
+    let p = parse(&with(&[("big", "t/full.png")])).unwrap();
+    let (width, height) = FRAME_PX;
+    assert_eq!(
+        p.expression("big").map(|e| e.size),
+        Some(ImageInfo { width, height })
+    );
+}
+
+#[test]
+fn syntax_error() {
+    let errs = errors("(character: \"t\", expressions: {");
+    assert_eq!(errs.len(), 1, "{errs:?}");
+    assert!(errs[0].starts_with("t.ron:1:"), "{errs:?}");
+    // An unknown field is one too.
+    let errs = errors("(character: \"t\", size: (32, 32), expressions: {})");
+    assert_eq!(errs.len(), 1, "{errs:?}");
+    assert!(errs[0].contains("size"), "{errs:?}");
 }
 
 #[test]
 fn stem_must_match_character() {
-    let p = parse(&valid()).unwrap();
-    assert_eq!(check_stem("f", "t", p.clone()), Ok(p.clone()));
-    let errs = check_stem("assets/portraits/u.portrait", "u", p).unwrap_err();
+    let errs = parse_portrait("ana.ron", "ana", &sidecar(&REQUIRED), &images());
+    let errs: Vec<String> = errs.unwrap_err().iter().map(ToString::to_string).collect();
     assert_eq!(
-        errs[0].to_string(),
-        "assets/portraits/u.portrait: character \"t\" doesn't match the file name; name the file t.portrait"
+        errs,
+        ["ana.ron: character \"t\" doesn't match the file name; name the file t.ron"]
+    );
+}
+
+#[test]
+fn missing_required_expressions() {
+    let src = sidecar(&[("neutral", "t/neutral.png"), ("angry", "t/angry.png")]);
+    assert_eq!(
+        errors(&src),
+        [
+            "t.ron: missing required expression \"happy\"",
+            "t.ron: missing required expression \"sad\"",
+            "t.ron: missing required expression \"surprised\"",
+        ]
+    );
+}
+
+#[test]
+fn an_image_must_be_a_png_under_the_portraits_directory() {
+    // No such file; a file that isn't an image; an image elsewhere.
+    let src = with(&[
+        ("a", "t/nope.png"),
+        ("b", "t.ron"),
+        ("c", "../images/neutral.png"),
+        ("d", "neutral.png"),
+    ]);
+    assert_eq!(
+        errors(&src),
+        [
+            "t.ron:9: expression \"a\": assets/portraits/t/nope.png is not a PNG image in the assets",
+            "t.ron:10: expression \"b\": assets/portraits/t.ron is not a PNG image in the assets",
+            "t.ron:11: expression \"c\": assets/portraits/../images/neutral.png is not a PNG image in the assets",
+            "t.ron:12: expression \"d\": assets/portraits/neutral.png is not a PNG image in the assets",
+        ]
+    );
+}
+
+#[test]
+fn an_image_must_fit_the_frame() {
+    let src = with(&[
+        ("a", "t/wide.png"),
+        ("b", "t/tall.png"),
+        ("c", "t/huge.png"),
+    ]);
+    assert_eq!(
+        errors(&src),
+        [
+            "t.ron:9: expression \"a\": assets/portraits/t/wide.png is 257×64 px; a portrait must fit 256×256 px",
+            "t.ron:10: expression \"b\": assets/portraits/t/tall.png is 64×257 px; a portrait must fit 256×256 px",
+            "t.ron:11: expression \"c\": assets/portraits/t/huge.png is 512×512 px; a portrait must fit 256×256 px",
+        ]
+    );
+}
+
+/// A file named `.png` that can't be read is reported by the image table,
+/// by name, and a sidecar naming it is told it is no image.
+#[test]
+fn an_unreadable_png_is_reported_by_the_image_table() {
+    let unreadable = ImageTable::from_files([("portraits/t/neutral.png", &b"not an image"[..])]);
+    let errs: Vec<String> = unreadable
+        .unwrap_err()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    assert_eq!(
+        errs,
+        ["assets/portraits/t/neutral.png: not a valid PNG file"]
+    );
+    let errs = parse_portrait(
+        "t.ron",
+        "t",
+        &sidecar(&REQUIRED[..1]),
+        &ImageTable::default(),
+    );
+    assert_eq!(
+        errs.unwrap_err()[0].to_string(),
+        "t.ron:4: expression \"neutral\": assets/portraits/t/neutral.png is not a PNG image in the assets"
+    );
+}
+
+#[test]
+fn reports_every_problem_at_once() {
+    let src = "(\n    character: \"u\",\n    expressions: {\n        \"neutral\": \"t/wide.png\",\n        \"happy\": \"t/nope.png\",\n    },\n)\n";
+    assert_eq!(
+        errors(src),
+        [
+            "t.ron: character \"u\" doesn't match the file name; name the file u.ron",
+            "t.ron:5: expression \"happy\": assets/portraits/t/nope.png is not a PNG image in the assets",
+            "t.ron:4: expression \"neutral\": assets/portraits/t/wide.png is 257×64 px; a portrait must fit 256×256 px",
+            "t.ron: missing required expression \"angry\"",
+            "t.ron: missing required expression \"sad\"",
+            "t.ron: missing required expression \"surprised\"",
+        ]
     );
 }
 
 #[test]
 fn embedded_placeholders_load() {
-    let palette = PaletteDef::load().unwrap();
-    let portraits = load_all(&palette).unwrap();
-    for id in ["test_lord", "test_knight"] {
+    let images = ImageTable::load().unwrap();
+    let portraits = load_all(&images).unwrap();
+    for id in ["lead_f", "lead_m", "test_knight", "test_lord"] {
         let p = &portraits[id];
         assert_eq!(p.character, id);
-        for e in REQUIRED_EXPRESSIONS {
-            assert!(p.expression(e).is_some(), "{id} lacks {e}");
+        let names: Vec<&str> = p.expressions.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, REQUIRED_EXPRESSIONS, "{id}");
+        for e in &p.expressions {
+            assert_eq!(e.image.path(), format!("portraits/{id}/{}.png", e.name));
+            assert_eq!((e.size.width, e.size.height), (32, 32));
         }
     }
-    // With colours missing from the palette, every file fails.
-    let errs = load_all(&PaletteDef::default()).unwrap_err();
-    assert!(errs.len() >= portraits.len());
+    // Only sidecars are portraits: not the README, not the images.
+    assert_eq!(portraits.len(), 4);
+}
+
+#[test]
+fn load_all_reports_every_file() {
+    // Without the images, every expression of every sidecar is wrong.
+    let errs = load_all(&ImageTable::default()).unwrap_err();
+    assert_eq!(errs.len(), 4 * REQUIRED_EXPRESSIONS.len());
+    assert_eq!(
+        errs[0].to_string(),
+        "assets/portraits/lead_f.ron:9: expression \"angry\": assets/portraits/lead_f/angry.png is not a PNG image in the assets"
+    );
+    assert!(
+        errs.iter()
+            .any(|e| e.file == "assets/portraits/test_lord.ron")
+    );
 }

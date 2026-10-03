@@ -2,8 +2,8 @@
 
 - **Status:** Accepted; the browsing cursor rule is superseded by ADR-0024,
   the acted-label rule by ADR-0029, and the portrait section in part by
-  ADR-0032 (portraits are bought art, not drawn by Claude; the 32×32 format
-  is replaced by ticket 0711's ADR); the map rules here are the glyph skin
+  ADR-0032 (portraits are bought art, not drawn by Claude) and ADR-0043 (PNG
+  files drawn as one sprite replace the 32×32 format); the map rules here are the glyph skin
   of ADR-0038
 - **Date:** 2026-09-25
 - **Related tickets:** 0011, 0401, 0402, 0403, 0703, 0704, 0706

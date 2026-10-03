@@ -9,22 +9,22 @@ expression: h.snapshot()
                                                                       │                            │
      ╔══════════════════════════════════════════════════════════╗     │ Brigand                    │
      ║ ┌────────────────────────────────┐                       ║     │ Brigand  Lv 1              │
-     ║ │            ▄▄▄▄▄▄▄▄            │  LEVEL UP!            ║     │ HP 3/20    ██░░░░░░░░      │
-     ║ │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │                       ║     │ Enemy                      │
-     ║ │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │  Test Lord            ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Lv 1 → 2             ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │                       ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  HP   19 → 20  +1     ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Str   6              ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Mag   1              ║     │                            │
-     ║ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │  Dex   7              ║     │                            │
-     ║ │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │  Spd   7 → 8   +1     ║     │                            │
-     ║ │          ▀▀▀▀▀▀▀▀▀▀▀▀          │  Def   4              ║     │                            │
-     ║ │            ▀▀▀▀▀▀▀▀            │  Res   3              ║     │                            │
-     ║ │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │                       ║     │                            │
-     ║ │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │                       ║     │                            │
-     ║ │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │                       ║     │                            │
-     ║ │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │                       ║     │                            │
+     ║ │                                │  LEVEL UP!            ║     │ HP 3/20    ██░░░░░░░░      │
+     ║ │                                │                       ║     │ Enemy                      │
+     ║ │                                │  Test Lord            ║     │                            │
+     ║ │                                │  Lv 1 → 2             ║     │                            │
+     ║ │                                │                       ║     │                            │
+     ║ │                                │  HP   19 → 20  +1     ║     │                            │
+     ║ │                                │  Str   6              ║     │                            │
+     ║ │                                │  Mag   1              ║     │                            │
+     ║ │                                │  Dex   7              ║     │                            │
+     ║ │                                │  Spd   7 → 8   +1     ║     │                            │
+     ║ │                                │  Def   4              ║     │                            │
+     ║ │                                │  Res   3              ║     │                            │
+     ║ │                                │                       ║     │                            │
+     ║ │                                │                       ║     │                            │
+     ║ │                                │                       ║     │                            │
+     ║ │                                │                       ║     │                            │
      ║ └────────────────────────────────┘                       ║     │                            │
      ╚══════════════════════════════════════════════════════════╝     │                            │
                                                                       │                            │
@@ -42,22 +42,22 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaabcfffffffccccccccccccccccccccb
 aaaaaecbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggggggggghhhhhhhhggggggggggggbccdddddddddcccccccccccceaaaaabcccccccccccciijjjjjjjjccccccb
-aaaaaecbggggggggghkkllllmmmmkkhgggggggggbccccccccccccccccccccccceaaaaabcjjjjjccccccccccccccccccccccb
-aaaaaecbggggggghkmlnommmmmmmmmpkhgggggggbccqqqqqqqqqcccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggrmmnmmmmmmpmmmmmmsmrggggggbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggrmmmmttumvttummtmmsrggggggbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggrmswxxxxwwwwxxxyzpsrggggggbccccccccccccccccddccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggrmAwwBCBwDwwBCBzzvmrggggggbccjjjjjjjcccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggrmwwwwwwwEwwwwwzzzmrggggggbccjjjjjjjcccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggghFFwwEGwwGHHwwwzzFFhggggggbccjjjjjjjcccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggggggrwwwIJJJJIwzzrgggggggggbccccccccccccccccddccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggggggghBwwKKKKtzLhggggggggggbccjjjjjjjcccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbggggggggggggrHMMMMMrggggggggggggbccjjjjjjjcccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggggNOOPQRSzzzzSRQPOOTgggggggbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggggNUVVVWXXXXYYXXXXWVVVZTgggggbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgggNUVVVVVWXXXX00XXXXWVVVVVZTgggbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
-aaaaaecbgNUVVVVVVVWXXXX00XXXXWVVVVVVVZTgbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccdddddddddcccccccccccceaaaaabccccccccccccgghhhhhhhhccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabchhhhhccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcciiiiiiiiicccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccddccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcchhhhhhhcccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcchhhhhhhcccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcchhhhhhhcccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccddccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcchhhhhhhcccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbcchhhhhhhcccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
+aaaaaecbccccccccccccccccccccccccccccccccbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
 aaaaaecbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccceaaaaabccccccccccccccccccccccccccccb
 aaaaaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
@@ -65,8 +65,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccc
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1111111111111111111111111111111111111111111111a
-a1111111111aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa11111111a
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaajjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjja
+ajjjjjjjjjjaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaajjjjjjjja
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg
@@ -74,51 +74,9 @@ c = fg:text bg:panel_bg
 d = fg:text_highlight bg:panel_bg
 e = fg:panel_border_focus bg:panel_bg
 f = fg:enemy bg:panel_bg
-g = fg:panel_bg bg:panel_bg
-h = fg:portrait_outline bg:panel_bg
-i = fg:hp_low bg:panel_bg
-j = fg:text_dim bg:panel_bg
-k = fg:portrait_outline bg:hair_brown
-l = fg:hair_brown bg:hair_brown_light
-m = fg:hair_brown bg:hair_brown
-n = fg:hair_brown_light bg:hair_brown_light
-o = fg:hair_brown_light bg:hair_brown
-p = fg:hair_brown bg:hair_brown_dark
-q = fg:player bg:panel_bg
-r = fg:portrait_outline bg:portrait_outline
-s = fg:hair_brown_dark bg:hair_brown_dark
-t = fg:skin_light bg:skin_light_mid
-u = fg:hair_brown_dark bg:skin_light_mid
-v = fg:hair_brown bg:skin_light_mid
-w = fg:skin_light bg:skin_light
-x = fg:brow_dark bg:skin_light
-y = fg:brow_dark bg:skin_light_mid
-z = fg:skin_light_mid bg:skin_light_mid
-A = fg:hair_brown_dark bg:skin_light
-B = fg:skin_light bg:portrait_outline
-C = fg:portrait_outline bg:skin_light
-D = fg:skin_light bg:skin_light_highlight
-E = fg:skin_light_highlight bg:skin_light_highlight
-F = fg:hair_brown bg:portrait_outline
-G = fg:skin_light_highlight bg:skin_light
-H = fg:skin_light bg:skin_light_shadow
-I = fg:mouth_dark bg:mouth_dark
-J = fg:skin_light bg:teeth
-K = fg:lip bg:skin_light
-L = fg:skin_light_mid bg:portrait_outline
-M = fg:skin_light_mid bg:skin_light_shadow
-N = fg:armor_steel_light bg:panel_bg
-O = fg:armor_steel bg:panel_bg
-P = fg:trim_gold bg:panel_bg
-Q = fg:cloth_blue bg:panel_bg
-R = fg:portrait_outline bg:cloth_blue
-S = fg:skin_light_mid bg:cloth_blue
-T = fg:armor_steel_dark bg:panel_bg
-U = fg:armor_steel_light bg:armor_steel
-V = fg:armor_steel bg:armor_steel
-W = fg:trim_gold bg:trim_gold
-X = fg:cloth_blue bg:cloth_blue
-Y = fg:trim_gold bg:cloth_blue_dark
-Z = fg:armor_steel_dark bg:armor_steel
-0 = fg:cloth_blue_dark bg:cloth_blue_dark
-1 = fg:text_dim bg:black
+g = fg:hp_low bg:panel_bg
+h = fg:text_dim bg:panel_bg
+i = fg:player bg:panel_bg
+j = fg:text_dim bg:black
+--- overlays ---
+under sprite 64,112 256x256  portraits/test_lord/happy.png 0,0 32x32

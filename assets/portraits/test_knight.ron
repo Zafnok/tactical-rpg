@@ -1,0 +1,12 @@
+// PLACEHOLDER art for tests and the portrait viewer (ticket 0703), not a
+// real character. Real portraits come with ticket 0706.
+(
+    character: "test_knight",
+    expressions: {
+        "neutral": "test_knight/neutral.png",
+        "happy": "test_knight/happy.png",
+        "angry": "test_knight/angry.png",
+        "sad": "test_knight/sad.png",
+        "surprised": "test_knight/surprised.png",
+    },
+)

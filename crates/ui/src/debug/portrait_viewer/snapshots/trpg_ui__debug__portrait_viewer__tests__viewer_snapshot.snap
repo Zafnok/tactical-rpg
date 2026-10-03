@@ -5,22 +5,22 @@ expression: "draw(&v, &ctx).to_snapshot(&ctx.palette)"
  Portraits (debug)                                                                                  
                                                                                                     
    test_knight        ╔════════════════════════════════╗      ┌────────────────────────────────┐    
- ► test_lord          ║            ▄▄▄▄▄▄▄▄            ║      │            ▄▄▄▄▄▄▄▄            │    
-                      ║         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         ║      │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │    
-                      ║       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       ║      │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║      │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    
-                      ║         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         ║      │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │    
-                      ║          ▀▀▀▀▀▀▀▀▀▀▀▀          ║      │          ▀▀▀▀▀▀▀▀▀▀▀▀          │    
-                      ║            ▀▀▀▀▀▀▀▀            ║      │            ▀▀▀▀▀▀▀▀            │    
-                      ║       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       ║      │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │    
-                      ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║      │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │    
-                      ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║      │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │    
-                      ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║      │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │    
+ ► test_lord          ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
+                      ║                                ║      │                                │    
                       ╚════════════════════════════════╝      └────────────────────────────────┘    
                        speaker                                 listener                             
                                                                                                     
@@ -38,125 +38,42 @@ expression: "draw(&v, &ctx).to_snapshot(&ctx.palette)"
 abbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaaaddddddddddddddddddddddddddddddddddaaaa
-abbbbbbbbbbbaaaaaaaaaaceeeeeeeeeeeeffffffffeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeggggggggeeeeeeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeefhhiiiijjjjhhfeeeeeeeeecaaaaaadeeeeeeeeegkkllllmmmmkkgeeeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeeefhjinojjjjjjjjjphfeeeeeeecaaaaaadeeeeeeegkqlllllllllrsmlkgeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeetjjnjjjjjjpjjjjjjujteeeeeecaaaaaadeeeeeevlwllllllqllllllsllveeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeetjjjjxxyjzxxyjjxjjuteeeeeecaaaaaadeeeeeevwllAllBAAClBAAllllveeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeetjuDEEEEDDDDEEEFGputeeeeeecaaaaaadeeeeeevwqHIJJJKKKKJJJJKwlveeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeetjLDDMNMDODDMNMGGzjteeeeeecaaaaaadeeeeeevlCHHPQPKKRKPQPKKSlveeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeetjDDDDDDDTDDDDDGGGjteeeeeecaaaaaadeeeeeevlHHHKKKKKUKKKKKKKlveeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeefVVDDTWDDWXXDDDGGVVfeeeeeecaaaaaadeeeeeegYYHHKKKZZ0KK0UKKYYgeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeetDDD122221DGGteeeeeeeeecaaaaaadeeeeeeeeevHHK344443KKKveeeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeefMDD5555xG6feeeeeeeeeecaaaaaadeeeeeeeeeeg7HA8888KKPgeeeeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeetX99999teeeeeeeeeeeecaaaaaadeeeeeeeeeeeev一一一一一Zveeeeeeeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeeeee丁丂丂七丄丅丆GGGG丆丅丄七丂丂万eeeeeeecaaaaaadeeeeeee丈三三上下丌不HHHH不丌下上三三与eeeeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceeeee丁丏丐丐丐丑丒丒丒丒专专丒丒丒丒丑丐丐丐且万eeeeecaaaaaadeeeee丈丕世世世丗丘丘丘丘丙丙丘丘丘丘丗世世世业与eeeeedaaaa
-aaaaaaaaaaaaaaaaaaaaaaceee丁丏丐丐丐丐丐丑丒丒丒丒丛丛丒丒丒丒丑丐丐丐丐丐且万eeecaaaaaadeee丈丕世世世世世丗丘丘丘丘东东丘丘丘丘丗世世世世世业与eeedaaaa
-aaaaaaaaaaaaaaaaaaaaaace丁丏丐丐丐丐丐丐丐丑丒丒丒丒丛丛丒丒丒丒丑丐丐丐丐丐丐丐且万ecaaaaaade丈丕世世世世世世世丗丘丘丘丘东东丘丘丘丘丗世世世世世世世业与edaaaa
+abbbbbbbbbbbaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
+aaaaaaaaaaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaa
 aaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaaaddddddddddddddddddddddddddddddddddaaaa
-aaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaafffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝丝aabbbbbaa丝丝丝丝丝aa丝丝丝aa丝丝丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaafffffffaabbbbbaafffffaafffaafffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-a丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+affffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:text_highlight bg:black
 c = fg:panel_border_focus bg:panel_bg
 d = fg:panel_border bg:panel_bg
-e = fg:panel_bg bg:panel_bg
-f = fg:portrait_outline bg:panel_bg
-g = fg:#1d130d bg:panel_bg
-h = fg:portrait_outline bg:hair_brown
-i = fg:hair_brown bg:hair_brown_light
-j = fg:hair_brown bg:hair_brown
-k = fg:#1d130d bg:#4b2e1b
-l = fg:#4b2e1b bg:#4b2e1b
-m = fg:#4b2e1b bg:#664125
-n = fg:hair_brown_light bg:hair_brown_light
-o = fg:hair_brown_light bg:hair_brown
-p = fg:hair_brown bg:hair_brown_dark
-q = fg:#4b2e1b bg:#331f13
-r = fg:#664125 bg:#4b2e1b
-s = fg:#664125 bg:#664125
-t = fg:portrait_outline bg:portrait_outline
-u = fg:hair_brown_dark bg:hair_brown_dark
-v = fg:#1d130d bg:#1d130d
-w = fg:#331f13 bg:#331f13
-x = fg:skin_light bg:skin_light_mid
-y = fg:hair_brown_dark bg:skin_light_mid
-z = fg:hair_brown bg:skin_light_mid
-A = fg:#81664e bg:#785943
-B = fg:#331f13 bg:#785943
-C = fg:#4b2e1b bg:#785943
-D = fg:skin_light bg:skin_light
-E = fg:brow_dark bg:skin_light
-F = fg:brow_dark bg:skin_light_mid
-G = fg:skin_light_mid bg:skin_light_mid
-H = fg:#785943 bg:#785943
-I = fg:#2b1c11 bg:#785943
-J = fg:#2b1c11 bg:#81664e
-K = fg:#81664e bg:#81664e
-L = fg:hair_brown_dark bg:skin_light
-M = fg:skin_light bg:portrait_outline
-N = fg:portrait_outline bg:skin_light
-O = fg:skin_light bg:skin_light_highlight
-P = fg:#81664e bg:#1d130d
-Q = fg:#1d130d bg:#81664e
-R = fg:#81664e bg:#867059
-S = fg:#331f13 bg:#81664e
-T = fg:skin_light_highlight bg:skin_light_highlight
-U = fg:#867059 bg:#867059
-V = fg:hair_brown bg:portrait_outline
-W = fg:skin_light_highlight bg:skin_light
-X = fg:skin_light bg:skin_light_shadow
-Y = fg:#4b2e1b bg:#1d130d
-Z = fg:#81664e bg:#6a4936
-0 = fg:#867059 bg:#81664e
-1 = fg:mouth_dark bg:mouth_dark
-2 = fg:skin_light bg:teeth
-3 = fg:#4b211b bg:#4b211b
-4 = fg:#81664e bg:#868279
-5 = fg:lip bg:skin_light
-6 = fg:skin_light_mid bg:portrait_outline
-7 = fg:#785943 bg:#1d130d
-8 = fg:#6e3c36 bg:#81664e
-9 = fg:skin_light_mid bg:skin_light_shadow
-一 = fg:#785943 bg:#6a4936
-丁 = fg:armor_steel_light bg:panel_bg
-丂 = fg:armor_steel bg:panel_bg
-七 = fg:trim_gold bg:panel_bg
-丄 = fg:cloth_blue bg:panel_bg
-丅 = fg:portrait_outline bg:cloth_blue
-丆 = fg:skin_light_mid bg:cloth_blue
-万 = fg:armor_steel_dark bg:panel_bg
-丈 = fg:#3b3b3d bg:panel_bg
-三 = fg:#5e5e60 bg:panel_bg
-上 = fg:#766029 bg:panel_bg
-下 = fg:#2b4065 bg:panel_bg
-丌 = fg:#1d130d bg:#2b4065
-不 = fg:#785943 bg:#2b4065
-与 = fg:#767677 bg:panel_bg
-丏 = fg:armor_steel_light bg:armor_steel
-丐 = fg:armor_steel bg:armor_steel
-丑 = fg:trim_gold bg:trim_gold
-丒 = fg:cloth_blue bg:cloth_blue
-专 = fg:trim_gold bg:cloth_blue_dark
-且 = fg:armor_steel_dark bg:armor_steel
-丕 = fg:#3b3b3d bg:#5e5e60
-世 = fg:#5e5e60 bg:#5e5e60
-丗 = fg:#766029 bg:#766029
-丘 = fg:#2b4065 bg:#2b4065
-丙 = fg:#766029 bg:#202e46
-业 = fg:#767677 bg:#5e5e60
-丛 = fg:cloth_blue_dark bg:cloth_blue_dark
-东 = fg:#202e46 bg:#202e46
-丝 = fg:text_dim bg:black
+e = fg:text bg:panel_bg
+f = fg:text_dim bg:black
+--- overlays ---
+under sprite 184,48 256x256  portraits/test_lord/happy.png 0,0 32x32
+under sprite 504,48 256x256  portraits/test_lord/happy.png 0,0 32x32 flip opacity=128

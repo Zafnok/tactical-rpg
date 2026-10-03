@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0021", "0110", "0116", "0231", "0232"]
 nick_input: sign-off
-completed:
+completed: 2026-10-02
 ---
 
 # 0711 — PNG portraits drawn as sprite items
@@ -151,17 +151,17 @@ repo (0110); theme recolouring of portraits.
 
 ## Acceptance criteria
 
-- [ ] A 64×64 PNG portrait loads, validates and is drawn at 4 px per pixel,
+- [x] A 64×64 PNG portrait loads, validates and is drawn at 4 px per pixel,
       filling the 32×16-cell area of a dialogue frame; a 48×48 one is drawn
       at 5 px per pixel, centred (tests check the sprite's `dest`).
-- [ ] The importer cuts an 80×80 bust to its middle 64 columns and bottom
+- [x] The importer cuts an 80×80 bust to its middle 64 columns and bottom
       64 rows, and `--shift-x` moves the cut (tests on a made-up image).
-- [ ] Dimmed and mirrored drawing tested on the sprite's `opacity` and
+- [x] Dimmed and mirrored drawing tested on the sprite's `opacity` and
       `flip_x`, and looked at in a rendered frame.
-- [ ] Every loader error has a test with its message.
-- [ ] Dialogue snapshots updated and looked at, and a rendered PNG screenshot
+- [x] Every loader error has a test with its message.
+- [x] Dialogue snapshots updated and looked at, and a rendered PNG screenshot
       sent to Nick.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -173,3 +173,72 @@ repo (0110); theme recolouring of portraits.
 
 ## Completion notes
 
+**Done.**
+
+- **Format (ADR-0043).** A portrait is `assets/portraits/<id>.ron` (character
+  + expression name → PNG file) and its images in `assets/portraits/<id>/`.
+  `content` checks each image against 0231's image table and decodes no
+  pixels. All loader errors are reported at once with the file and, for an
+  expression, its line.
+- **Drawing.** `draw_portrait` adds one `Sprite` (layer `Under`) at the
+  largest whole scale that fits the 256×256 px frame, centred; `dim` is the
+  sprite's opacity, `mirror` its `flip_x`. `fit_whole_scale` is the general
+  part for 0413.
+- **The text format is removed** (the choice the ticket left open; ADR-0038
+  already said it goes). The four placeholders were converted pixel for
+  pixel to 32×32 PNGs, drawn at 8×, so they look exactly as before. The 26
+  portrait-only palette colours and the debug sampler's rule that hid them
+  went with it.
+- **Importer.** `cargo xtask portrait-import <folder-or-sheet> <id>
+  [--shift-x N]`, as specified, writing to `assets-private/game/portraits/`.
+- **Bought files for the sign-off.** Two heroes were imported as the test
+  characters and pushed to the private repository; `assets-private.rev`
+  is moved to that commit. In a build with the bought art, the test scene
+  shows the Samurai as Test Lord and the Fighter as Test Knight. This picks
+  nobody's face: they are the debug scene's stand-ins, and 0706 picks the
+  cast.
+
+**Checked on the bought files.**
+
+- Sheet order is `neutral smile sad sly thinking stern surprise unique`
+  (the sheets of all 16 heroes compared with their single files), not the
+  order the single files are listed in above.
+- A hero's sorted folder holds the busts **and** faces, sheets and sprites,
+  so a folder gives its `bust_<expression>.png` files only (then `face_…`
+  files, then every PNG, if it has none).
+- `DragonKnight/` has an extra `bust_helmet_2x.png` (160×160), so its
+  folder is refused with that file's name. Import it from its
+  `bust_sheet.png`.
+
+**Deviations.**
+
+- `draw_portrait` lost its `palette` argument (a PNG has its own colours);
+  the five callers changed by that one argument.
+- `draw_portrait` no longer clears the cells under it: it adds the sprite
+  only, and every caller already clears its frame first.
+- The 3× RPG Maker sheet (576×288) is not read: the bought packs have the
+  1× files, so the path would have cost code and tests for nothing.
+- The importer's tests use made-up images built in memory, not a fixture
+  file.
+- The importer never overwrites a sidecar that is already there (0706 will
+  have filled it in); it does rewrite the images.
+- ADR number is 0043 (0042 was taken while this was open).
+
+**Not done here.**
+
+- Looked at in rendered frames (`cargo xtask frame-png`, with and without
+  the bought art), not in the game window or the web build.
+- `README.md`'s screenshots (`docs/img/*.svg`) still show the placeholder
+  faces, which is still what a public build shows.
+
+**Gameplay-affecting rules decided:** none. *(Claude's starting rule,
+look only:)* the importer's sidecar maps `happy` → the pack's `smile`,
+`angry` → `stern`, `surprised` → `surprise`, and lists all 8 bought
+expressions under their own names too; 0706 corrects it per character.
+
+**Follow-up tickets:** none.
+
+**For Nick (sign-off):** two pictures of the test scene were sent with the
+PR: placeholders, and the bought busts at 4× (speaker bright, listener
+dimmed and mirrored). After merge, on the Pages build: F2 → Play test
+scene, and F2 → Portraits to flip through all 8 expressions of each.
