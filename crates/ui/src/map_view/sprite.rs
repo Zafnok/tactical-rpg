@@ -592,6 +592,18 @@ mod tests {
         let black = pal.get(UiColor::Black);
         let heal = pal.get(UiColor::HealRange);
         assert_eq!(off.color, black.lerp(heal, OVERLAY_BLEND));
+        // Whatever is under it: here a colour that isn't black.
+        let base = Rgb::new(200, 100, 40);
+        let red = Rgb::new(250, 0, 0);
+        let rect = Rect::new(8, 16, 24, 24);
+        let mut buf = blank();
+        paint_tinted(&mut buf, rect, None, &[(red, 0.5)], base);
+        let over = rect_at(&buf, 0);
+        assert_eq!((over.rect, over.color), (rect, Rgb::new(225, 50, 20)));
+        assert_eq!(over.color, base.lerp(red, 0.5));
+        // No tints, no picture: nothing.
+        paint_tinted(&mut buf, rect, None, &[], base);
+        assert_eq!(buf.items().len(), 1);
     }
 
     #[test]

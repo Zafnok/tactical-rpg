@@ -160,14 +160,10 @@ impl Canvas {
                     }
                     let (px, py) = (left + i * cw + gx, top + gy);
                     let under = self.get(px, py);
-                    let mix = |a: u8, b: u8| {
-                        let v = (u32::from(a) * (255 - cover) + u32::from(b) * cover + 127) / 255;
-                        u8::try_from(v).unwrap_or(u8::MAX)
-                    };
                     let out = [
-                        mix(under[0], color[0]),
-                        mix(under[1], color[1]),
-                        mix(under[2], color[2]),
+                        blend(under[0], color[0], cover),
+                        blend(under[1], color[1], cover),
+                        blend(under[2], color[2], cover),
                         under[3],
                     ];
                     self.set(px, py, out);
@@ -175,6 +171,14 @@ impl Canvas {
             }
         }
     }
+}
+
+/// Channel `under` blended towards `over` by `cover` (0 = none of it,
+/// 255 = all of it), rounded.
+fn blend(under: u8, over: u8, cover: u32) -> u8 {
+    let cover = cover.min(255);
+    let v = (u32::from(under) * (255 - cover) + u32::from(over) * cover + 127) / 255;
+    u8::try_from(v).unwrap_or(u8::MAX)
 }
 
 /// Whether pixel `(x, y)` of a picture is on its disc: a circle 22 px
@@ -291,6 +295,45 @@ mod tests {
         assert_eq!(initials("Fire Elemental"), ['F', 'i']);
         assert_eq!(initials("I"), ['I', ' ']);
         assert_eq!(initials(" X y"), ['X', 'y']);
+    }
+
+    #[test]
+    fn a_canvas_keeps_each_pixel_where_it_was_set() {
+        let mut canvas = Canvas::new(5, 4);
+        assert_eq!(canvas.rgba.len(), 5 * 4 * 4);
+        canvas.set(3, 2, [1, 2, 3, 4]);
+        canvas.set(4, 3, [5, 6, 7, 8]);
+        assert_eq!(canvas.get(3, 2), [1, 2, 3, 4]);
+        assert_eq!(canvas.get(4, 3), [5, 6, 7, 8]);
+        assert_eq!(canvas.get(0, 0), [0; 4]);
+        // Row-major RGBA: pixel (3, 2) is the 14th.
+        assert_eq!(canvas.rgba[13 * 4..14 * 4], [1, 2, 3, 4]);
+        // Off the canvas: nothing set, nothing read.
+        canvas.set(0, 4, [9; 4]);
+        assert_eq!(canvas.get(0, 4), [0; 4]);
+    }
+
+    #[test]
+    fn glyph_pixels_blend_by_their_coverage() {
+        assert_eq!(blend(200, 100, 255), 100);
+        assert_eq!(blend(200, 100, 0), 200);
+        assert_eq!(blend(200, 100, 51), 180);
+        assert_eq!(blend(0, 255, 128), 128);
+        assert_eq!(blend(255, 0, 128), 127);
+        assert_eq!(blend(200, 100, 999), 100);
+    }
+
+    #[test]
+    fn the_fallback_picture_gets_a_row_of_its_own_when_the_classes_fill_theirs() {
+        let mut src = sources();
+        src.classes.truncate(8);
+        let terrain_rows = rows(src.terrain.len());
+        let (w, h, rgba) = image(&src);
+        assert_eq!((w, h), (192, (terrain_rows + 2) * TILE));
+        // The fallback: first in the second row of pictures.
+        let y = (terrain_rows + 1) * TILE;
+        assert_eq!(px(&rgba, w, 1, y + 12), DISC);
+        assert!(ron(&src).contains("        fallback: (0, 1),\n"));
     }
 
     #[test]

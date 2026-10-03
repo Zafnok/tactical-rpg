@@ -23,9 +23,10 @@ const fn line_mid(len: i32) -> i32 {
     len / 2
 }
 
-/// Offset of the line from the edge of a tile `len` pixels long.
+/// Offset of the line from the edge of a tile `len` pixels long: the line
+/// has as many pixels before its middle one as after.
 const fn line_offset(len: i32) -> i32 {
-    line_mid(len) - LINE_W / 2
+    line_mid(len) - (LINE_W - 1) / 2
 }
 
 /// Offset of the arrowhead's base from the edge behind it, on a tile `len`
@@ -183,7 +184,7 @@ mod tests {
         assert_eq!(base(&[p(2, 1), p(1, 1)]), (Layer::Over, 26, 19, 1, 11));
         assert_eq!(base(&[p(1, 0), p(1, 1)]), (Layer::Over, 19, 21, 11, 1));
         assert_eq!(base(&[p(1, 2), p(1, 1)]), (Layer::Over, 19, 26, 11, 1));
-        assert_eq!(line_offset(16) + LINE_W / 2, line_mid(16));
+        assert_eq!(line_offset(16) + (LINE_W - 1) / 2, line_mid(16));
         assert_eq!((line_offset(16), line_mid(16), arrow_base(16)), (7, 8, 5));
     }
 
