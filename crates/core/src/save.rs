@@ -18,6 +18,8 @@
 //! - **Versions.** Every save names the [`SAVE_VERSION`] that wrote it. A
 //!   save of another version is refused, not migrated ([`SaveHeader`] reads
 //!   the version of a save whose other fields no longer parse).
+//!   Version 2 (ticket 1002) added the supports to the campaign and the
+//!   battle state, and [`Event::SupportPoints`](crate::Event::SupportPoints).
 
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +32,7 @@ use crate::history::BattleHistory;
 /// The golden saves of `crates/core/tests/it/save_format.rs` fail when a
 /// saved type changed. Then raise `SAVE_VERSION` here, regenerate the
 /// fixtures as `save_v<N>_*.ron` and delete the old ones (ADR-0039).
-pub const SAVE_VERSION: u32 = 1;
+pub const SAVE_VERSION: u32 = 2;
 
 /// One save: a slot's chapter save, or the suspend save.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

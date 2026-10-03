@@ -115,6 +115,8 @@ fn battle(content: &Content, seed: u64) -> BattleState {
         spells: Arc::new(content.spells.clone()),
         skills: Arc::new(content.skills.clone()),
         arts: Arc::new(content.arts.clone()),
+        supports: Arc::new(content.supports.clone()),
+        bonds: trpg_core::SupportBook::default(),
         pack: BattlePack {
             items: vec![ItemId::new("potion"); 3],
             cap: items.rules.default_pack_cap,

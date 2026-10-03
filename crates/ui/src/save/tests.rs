@@ -1,5 +1,8 @@
 use trpg_content::new_campaign;
-use trpg_core::{BattleHistory, BattleState, LeadGender, LeadProfile, SAVE_VERSION};
+use trpg_core::{
+    BattleHistory, BattleState, CharacterId, LeadGender, LeadProfile, SAVE_VERSION, SupportPair,
+    SupportRank,
+};
 
 use super::*;
 use crate::screen::Ctx;
@@ -53,6 +56,43 @@ fn a_save_round_trips_through_text() {
     assert_eq!(back.campaign, save.campaign);
     assert!(matches!(back.point, SavePoint::Battle(_)));
     assert_eq!(encode(&back).unwrap(), text);
+}
+
+#[test]
+fn support_state_survives_a_save_and_a_load() {
+    let c = ctx();
+    let table = &c.content.supports;
+    let id = |s: &str| CharacterId(s.into());
+    let knight = SupportPair::new(id("test_lord"), id("test_knight"));
+    let mage = SupportPair::new(id("test_mage"), id("test_lord"));
+    // The knight's pair at rank C with 3 points more; the mage's at 7.
+    let mut game = campaign(&c);
+    game.supports.gain(&knight, 20, table);
+    game.supports.view(&knight, table).unwrap();
+    game.supports.gain(&knight, 3, table);
+    game.supports.gain(&mage, 7, table);
+    let supports = game.supports.clone();
+    let text = encode(&SaveFile::chapter_cleared(game.clone())).unwrap();
+    let back = decode(&text).unwrap().campaign;
+    assert_eq!(back.supports, supports);
+    let state = back.supports.state(&knight, table).unwrap();
+    assert_eq!(
+        (state.points(), state.rank(), state.unlocked()),
+        (23, Some(SupportRank::C), None)
+    );
+    let points = back.supports.state(&mage, table).map(|s| s.points());
+    assert_eq!(points, Some(7));
+    // A suspended battle holds them too, in the campaign and in the
+    // battle's own state.
+    let def = &c.content.battles[&c.content.chapters[&game.chapter].battle];
+    let (state, _) = BattleState::new(game.battle_setup(def, &c.content.tables()));
+    let save = SaveFile::suspended(game, BattleHistory::new(state));
+    let back = decode(&encode(&save).unwrap()).unwrap();
+    assert_eq!(back.campaign.supports, supports);
+    let SavePoint::Battle(history) = back.point else {
+        panic!("not a suspend save");
+    };
+    assert_eq!(history.state_at(0).supports(), &supports);
 }
 
 #[test]

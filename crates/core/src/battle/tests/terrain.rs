@@ -471,13 +471,14 @@ fn terrain_events_and_burning_state_round_trip_through_ron() {
     assert_eq!(ron::from_str::<Vec<Event>>(&text).unwrap(), events);
     let text = ron::to_string(&s).unwrap();
     let mut loaded: BattleState = ron::from_str(&text).unwrap();
-    loaded.restore_tables(
-        Arc::new(terrain()),
-        Arc::new(classes()),
-        s.tables.items.clone(),
-        Arc::new(spells()),
-        Arc::new(skills()),
-        Arc::new(test_arts()),
-    );
+    loaded.restore_tables(&crate::GameTables {
+        terrain: Arc::new(terrain()),
+        classes: Arc::new(classes()),
+        items: s.tables.items.clone(),
+        spells: Arc::new(spells()),
+        skills: Arc::new(skills()),
+        arts: Arc::new(test_arts()),
+        supports: Arc::default(),
+    });
     assert_eq!(loaded, s);
 }

@@ -1,0 +1,65 @@
+// Supports (ticket 1002, docs/design/supports.md). Loaded by
+// trpg_content::support; the rules that use it are in trpg_core::support.
+// Every number is *tunable*: playtests may change them all.
+//
+// rules:
+//   thresholds: the points a pair needs for each rank. Reaching one unlocks
+//     that rank's conversation; the rank is gained when the conversation is
+//     viewed at camp. Until then the pair's points wait at the threshold.
+//   points: what each event gives a pair. Both units must be player units
+//     on the map.
+//       adjacent_at_phase_end  the two are adjacent when the player phase ends
+//       fight_beside           one attacks or is attacked, the other adjacent to it
+//       heal                   one heals the other (a spell or a skill)
+//       buff                   one buffs the other with a skill
+//       item                   one uses an item on the other
+//   bonus_range: how near (in tiles) a partner must be for its bonus.
+//   bonus: Hit and Avoid from a partner of each rank. Only the best-ranked
+//     partner in range counts: bonuses never combine (Nick).
+//
+// pairs: only a pair listed here has a support. Which pairs exist and what
+// they say is the story pipeline's decision (story-writing skill).
+//   a, b            the two characters (ids in characters.ron), either order
+//   thresholds      optional: this pair's own, e.g. Some((c: 0, b: 80, a: 180))
+//                   for lifelong friends who start with C unlocked
+//   starting_points optional (default 0)
+//   conversations   the dialogue scene of each rank's conversation
+(
+    rules: (
+        thresholds: (c: 20, b: 80, a: 180),
+        points: (
+            adjacent_at_phase_end: 1,
+            fight_beside: 3,
+            heal: 3,
+            buff: 3,
+            item: 2,
+        ),
+        bonus_range: 3,
+        bonus: (
+            c: (hit: 5, avoid: 5),
+            b: (hit: 10, avoid: 10),
+            a: (hit: 15, avoid: 15),
+        ),
+    ),
+    pairs: [
+        // PLACEHOLDER pairs of the test characters (the debug Quick Battle
+        // deploys all three), so the rules can be tried before the story
+        // has real pairs. Their scenes are in dialogue/test_supports.dlg.
+        (
+            a: "test_lord", b: "test_knight",
+            conversations: (
+                c: "test_support_lord_knight_c",
+                b: "test_support_lord_knight_b",
+                a: "test_support_lord_knight_a",
+            ),
+        ),
+        (
+            a: "test_lord", b: "test_mage",
+            conversations: (
+                c: "test_support_lord_mage_c",
+                b: "test_support_lord_mage_b",
+                a: "test_support_lord_mage_a",
+            ),
+        ),
+    ],
+)

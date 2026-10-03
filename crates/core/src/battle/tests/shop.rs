@@ -513,14 +513,15 @@ fn gold_stock_and_chests_are_saved() {
     act(&mut s, 2, p(0, 1), UnitAction::Open);
     let saved = ron::to_string(&s).unwrap();
     let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-    loaded.restore_tables(
-        Arc::new(s.terrain().clone()),
-        Arc::new(s.classes().clone()),
-        Arc::new(s.items().clone()),
-        Arc::new(s.spells().clone()),
-        Arc::new(s.skills().clone()),
-        Arc::new(s.arts().clone()),
-    );
+    loaded.restore_tables(&crate::GameTables {
+        terrain: Arc::new(s.terrain().clone()),
+        classes: Arc::new(s.classes().clone()),
+        items: Arc::new(s.items().clone()),
+        spells: Arc::new(s.spells().clone()),
+        skills: Arc::new(s.skills().clone()),
+        arts: Arc::new(s.arts().clone()),
+        supports: Arc::default(),
+    });
     assert_eq!(loaded, s);
     assert_eq!(loaded.gold(), 1800);
     assert!(loaded.is_opened(p(0, 1)));

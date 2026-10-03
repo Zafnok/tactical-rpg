@@ -11,6 +11,7 @@ use crate::battle::tests::{
 use crate::battle::{Command, TriggerWhen, UnitAction};
 use crate::item::WeaponInstance;
 use crate::lead::LeadGender;
+use crate::support::{ByRank, PairDef, SupportRank, SupportRules};
 
 fn c(id: &str) -> CharacterId {
     CharacterId(id.into())
@@ -37,7 +38,31 @@ fn tables() -> GameTables {
         spells: s.spells,
         skills: s.skills,
         arts: s.arts,
+        supports: Arc::new(support_table()),
     }
+}
+
+/// The design's support rules, with two pairs: `lord`–`ann` and
+/// `ann`–`ben`. (`lord`–`ben` have no support.)
+fn support_table() -> SupportTable {
+    let def = |a: &str, b: &str| PairDef {
+        pair: pair(a, b),
+        thresholds: None,
+        starting_points: 0,
+        conversations: ByRank {
+            c: format!("{a}_{b}_c"),
+            b: format!("{a}_{b}_b"),
+            a: format!("{a}_{b}_a"),
+        },
+    };
+    SupportTable::new(
+        SupportRules::STARTING,
+        [def("lord", "ann"), def("ann", "ben")],
+    )
+}
+
+fn pair(a: &str, b: &str) -> SupportPair {
+    SupportPair::new(c(a), c(b))
 }
 
 /// The roster: the lord (might 10), `ann` wearing a vest and a charm, and
@@ -464,8 +489,175 @@ fn campaign_round_trips_through_ron() {
     let def = def();
     let s = won(&game, &def);
     game.apply_result(&def, &s, 2).unwrap();
+    game.supports
+        .gain(&pair("lord", "ann"), 20, &support_table());
+    game.view_support(&c("lord"), &c("ann"), &support_table())
+        .unwrap();
+    game.supports.gain(&pair("ann", "ben"), 7, &support_table());
     let text = ron::to_string(&game).unwrap();
     let back: Campaign = ron::from_str(&text).unwrap();
     assert_eq!(back, game);
+    assert_eq!(
+        back.supports.rank(&pair("lord", "ann")),
+        Some(SupportRank::C)
+    );
     assert_eq!(back.lead, LeadProfile::new("Mara", LeadGender::Female));
+}
+
+// ---- Supports ----------------------------------------------------------------
+
+/// The battle won with the lord and `ann` side by side: `ann` steps next
+/// to the lord, who fights beside her twice (3 points each) and they end
+/// one player phase adjacent (1 point): 7 points for the pair.
+fn won_together(campaign: &Campaign, def: &BattleDef) -> BattleState {
+    let (mut s, _) = BattleState::new(campaign.battle_setup(def, &tables()));
+    act(&mut s, 2, p(0, 1), UnitAction::Wait);
+    act(&mut s, 1, p(0, 0), attack(4));
+    end(&mut s);
+    end(&mut s);
+    act(&mut s, 1, p(1, 1), attack(5));
+    assert_eq!(s.outcome(), Some(Outcome::Victory));
+    s
+}
+
+fn support_points(game: &Campaign, a: &str, b: &str) -> u32 {
+    let state = game.supports.state(&pair(a, b), &support_table());
+    state.map_or(0, |s| s.points())
+}
+
+#[test]
+fn support_points_carry_from_battle_to_battle() {
+    let mut game = campaign(GameMode::Casual);
+    assert_eq!(game.supports, SupportBook::default());
+    game.supports
+        .gain(&pair("lord", "ann"), 5, &support_table());
+    let def = def();
+    // The battle starts with the campaign's supports and its table.
+    let (start, _) = BattleState::new(game.battle_setup(&def, &tables()));
+    assert_eq!(start.supports(), &game.supports);
+    assert_eq!(start.support_table(), &support_table());
+    let s = won_together(&game, &def);
+    game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!(support_points(&game, "lord", "ann"), 12);
+    // Every battle counts, a skirmish after the story battle too.
+    let s = won_together(&game, &def);
+    game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!(support_points(&game, "lord", "ann"), 19);
+    assert_eq!(support_points(&game, "ann", "ben"), 0);
+}
+
+#[test]
+fn a_battle_that_wasnt_won_gives_no_support_points() {
+    let mut game = campaign(GameMode::Casual);
+    let def = def();
+    let (mut s, _) = BattleState::new(game.battle_setup(&def, &tables()));
+    act(&mut s, 2, p(0, 1), UnitAction::Wait);
+    end(&mut s);
+    let in_battle = s.supports().state(&pair("lord", "ann"), &support_table());
+    assert_eq!(in_battle.map(|s| s.points()), Some(1));
+    assert_eq!(game.apply_result(&def, &s, 0), Err(ApplyError::NotWon));
+    assert_eq!(game.supports, SupportBook::default());
+}
+
+#[test]
+fn a_pair_gains_one_rank_per_camp_visit_however_many_battles_it_fights() {
+    let mut game = campaign(GameMode::Casual);
+    let table = support_table();
+    game.supports.gain(&pair("lord", "ann"), 19, &table);
+    let def = def();
+    // The points wait at C's threshold, battle after battle.
+    for _ in 0..3 {
+        let s = won_together(&game, &def);
+        game.apply_result(&def, &s, 0).unwrap();
+        assert_eq!(support_points(&game, "lord", "ann"), 20);
+        assert_eq!(game.supports.rank(&pair("lord", "ann")), None);
+        assert_eq!(
+            game.supports.unlocked(&table),
+            [(pair("lord", "ann"), SupportRank::C)]
+        );
+    }
+    // Viewing the conversation at camp gains the rank, either way round.
+    assert_eq!(
+        game.view_support(&c("ann"), &c("lord"), &table),
+        Ok(SupportViewed {
+            rank: SupportRank::C,
+            conversation: "lord_ann_c".into()
+        })
+    );
+    assert_eq!(
+        game.supports.rank(&pair("lord", "ann")),
+        Some(SupportRank::C)
+    );
+    assert_eq!(game.supports.unlocked(&table), []);
+    // Then the next battle's points count again.
+    let s = won_together(&game, &def);
+    game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!(support_points(&game, "lord", "ann"), 27);
+}
+
+#[test]
+fn a_support_conversation_needs_a_pair_in_the_army_with_one_unlocked() {
+    let mut game = campaign(GameMode::Casual);
+    let table = support_table();
+    let unchanged = game.clone();
+    let mut view = |a: &str, b: &str| game.view_support(&c(a), &c(b), &table);
+    assert_eq!(view("lord", "ann"), Err(SupportError::NothingUnlocked));
+    assert_eq!(view("lord", "ben"), Err(SupportError::NoSuchPair));
+    assert_eq!(view("rook", "ann"), Err(SupportError::NotInArmy(c("rook"))));
+    assert_eq!(view("ann", "rook"), Err(SupportError::NotInArmy(c("rook"))));
+    assert_eq!(game.roster, unchanged.roster);
+}
+
+/// A campaign where `lord`–`ann` have C unlocked, and `ann`–`ben` are at
+/// rank C with B unlocked.
+fn bonded(mode: GameMode) -> Campaign {
+    let mut game = campaign(mode);
+    let table = support_table();
+    game.supports.gain(&pair("lord", "ann"), 20, &table);
+    game.supports.gain(&pair("ann", "ben"), 20, &table);
+    game.view_support(&c("ann"), &c("ben"), &table).unwrap();
+    game.supports.gain(&pair("ann", "ben"), 60, &table);
+    game
+}
+
+#[test]
+fn a_classic_death_ends_the_units_supports() {
+    let mut game = bonded(GameMode::Classic);
+    let table = support_table();
+    assert_eq!(game.supports.unlocked(&table).len(), 2);
+    let def = def();
+    let s = won(&game, &def);
+    let rewards = game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!(rewards.lost, [c("ann")]);
+    // Her unviewed conversations are gone; the viewed one stays seen.
+    assert_eq!(game.supports.unlocked(&table), []);
+    let state = |a, b| game.supports.state(&pair(a, b), &table).unwrap();
+    assert!(state("lord", "ann").ended());
+    assert_eq!(state("lord", "ann").rank(), None);
+    assert!(state("ann", "ben").ended());
+    assert_eq!(
+        state("ann", "ben").seen().collect::<Vec<_>>(),
+        [SupportRank::C]
+    );
+    assert_eq!(
+        game.view_support(&c("lord"), &c("ann"), &table),
+        Err(SupportError::NotInArmy(c("ann")))
+    );
+}
+
+#[test]
+fn a_casual_retreat_keeps_the_units_supports() {
+    let mut game = bonded(GameMode::Casual);
+    let table = support_table();
+    let before = game.supports.clone();
+    let def = def();
+    let s = won(&game, &def);
+    game.apply_result(&def, &s, 0).unwrap();
+    assert_eq!(game.supports, before);
+    assert_eq!(game.supports.unlocked(&table).len(), 2);
+    assert_eq!(
+        game.view_support(&c("lord"), &c("ann"), &table)
+            .map(|v| v.rank),
+        Ok(SupportRank::C)
+    );
 }

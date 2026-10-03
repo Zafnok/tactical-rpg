@@ -21,6 +21,7 @@ pub mod shop;
 pub mod skill;
 pub mod spell;
 pub mod stats;
+pub mod support;
 pub mod terrain;
 pub mod unit;
 pub mod weapon;
@@ -78,6 +79,10 @@ pub use spell::{
     TerrainEffect,
 };
 pub use stats::{GrowthValue, Growths, StatKind, StatValue, Stats};
+pub use support::{
+    ByRank, PairDef, PointValues, SupportBonus, SupportBook, SupportError, SupportPair,
+    SupportRank, SupportRules, SupportState, SupportTable, SupportViewed, Thresholds,
+};
 pub use terrain::{MovementTypeId, TerrainId, TerrainRules, TerrainTable};
 pub use unit::{
     CharacterDef, CharacterId, ClassRecord, Faction, Level, MAP_LABEL_LEN, Role, Unit, UnitError,

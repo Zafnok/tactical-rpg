@@ -296,6 +296,30 @@
 //!     talking is free, like equipping (Nick): the unit doesn't move, stays
 //!     ready and still chooses its move and action. Talking never
 //!     recruits (Nick).
+//! - **Supports** ([`crate::support`] has the support rules;
+//!   `docs/design/supports.md`): two **player units** on the map whose
+//!   characters are a listed pair gain support points
+//!   ([`Event::SupportPoints`], with the points really gained: none while a
+//!   conversation waits to be viewed, so no event then):
+//!   - when the **player phase ends** ([`Command::EndPhase`]) with the two
+//!     adjacent (before the next phase starts; each pair once);
+//!   - after an **attack**, once the fallen are gone and unit EXP is given:
+//!     for each unit that fought and still stands (the attacker, the
+//!     target, then a Line Pierce's victim), each partner adjacent to it
+//!     (a unit that fell in the fight gains nothing: *Claude's starting
+//!     rule*). One attack gives a pair its points once, however many
+//!     strikes, and even if both fought (*Claude's starting rule*);
+//!   - after a **heal spell**, a healing active (each ally it healed) or a
+//!     **buff** active (each other ally it buffed), with the user;
+//!   - after an **item** used on a partner (never for using it on itself).
+//!
+//!   In a combat, each player unit gets the Hit and Avoid of its
+//!   **best-ranked** partner within the rules' range of where it stands
+//!   (the attacker: its `dest`), attacking or countering; bonuses never
+//!   combine. A rank counts once its conversation was viewed (at camp), so
+//!   ranks never change during a battle. The support state is part of the
+//!   battle ([`BattleState::supports`]), so rewinds and replays keep it;
+//!   the campaign takes it back after a victory (0801).
 //! - **Errors change nothing.** [`BattleState::apply`] validates the whole
 //!   command before touching the state, so on `Err` the state is unchanged.
 //!
@@ -317,9 +341,9 @@
 //! the EXP pool,
 //! pending reinforcements, objective, turn, triggers and which have fired,
 //! recruits, the game mode,
-//! phase, RNG position, battle pack, gold, stock, opened chests and outcome
-//! are all saved (spell uses left live on the units). The
-//! **terrain, class, item, spell, skill and art tables are not**: they are shared content, held by `Arc` and skipped. A
+//! phase, RNG position, battle pack, gold, stock, opened chests, supports
+//! and outcome are all saved (spell uses left live on the units). The
+//! **terrain, class, item, spell, skill, art and support tables are not**: they are shared content, held by `Arc` and skipped. A
 //! deserialised state has empty tables (every `Act` fails with
 //! [`CommandError::UnknownClass`]) until [`BattleState::restore_tables`] is
 //! called with the game's tables, as loaded from the same content. The map is
@@ -332,6 +356,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::art::{ArtId, ArtTable};
+use crate::campaign::GameTables;
 use crate::class::{ClassDef, ClassId, ClassLevel, ClassPoints, ClassTable};
 use crate::combat::{CombatHp, CombatOutcome, CombatantInput, Forecast, Side, forecast, resolve};
 use crate::geom::Pos;
@@ -346,6 +371,7 @@ use crate::shop::{self, Gold, Loot, Shop, ShopError};
 use crate::skill::{CostError, EffectSource, SkillId, SkillTable, heal_bonus};
 use crate::spell::{EffectDuration, SpellDef, SpellId, SpellKind, SpellTable, TerrainEffect};
 use crate::stats::StatValue;
+use crate::support::{SupportBook, SupportTable};
 use crate::terrain::{TerrainId, TerrainTable};
 use crate::unit::{Faction, Level, Role, Unit, UnitId};
 use crate::weapon::{WeaponKind, WeaponRank};
@@ -486,6 +512,10 @@ pub struct BattleSetup {
     pub skills: Arc<SkillTable>,
     /// Every Combat Art.
     pub arts: Arc<ArtTable>,
+    /// The support rules and pairs.
+    pub supports: Arc<SupportTable>,
+    /// Every pair's support so far, from the campaign.
+    pub bonds: SupportBook,
     /// The player side's consumables.
     pub pack: BattlePack,
     /// The party's gold, from the campaign.
@@ -1054,6 +1084,16 @@ pub enum Event {
         /// The item.
         item: ItemId,
     },
+    /// Two units' support grew (`a` and `b` are a support pair).
+    SupportPoints {
+        /// One of the two: the unit that acted or fought, or the one that
+        /// comes first among the battle's units when a phase ends.
+        a: UnitId,
+        /// Its partner.
+        b: UnitId,
+        /// Points gained (after the stop at an unviewed threshold).
+        amount: u32,
+    },
     /// A unit finished its action and is done until its next phase.
     UnitActed {
         /// The unit.
@@ -1394,6 +1434,7 @@ struct Tables {
     spells: Arc<SpellTable>,
     skills: Arc<SkillTable>,
     arts: Arc<ArtTable>,
+    supports: Arc<SupportTable>,
 }
 
 /// A running battle. Changed only by [`BattleState::apply`].
@@ -1435,6 +1476,9 @@ pub struct BattleState {
     /// The battle's strategy hints.
     #[serde(default)]
     battle_notes: Vec<BattleNote>,
+    /// Every pair's support, with the points this battle has given.
+    #[serde(default)]
+    bonds: SupportBook,
 }
 
 /// A validated command, ready to carry out.
@@ -1694,6 +1738,7 @@ impl BattleState {
                 spells: setup.spells,
                 skills: setup.skills,
                 arts: setup.arts,
+                supports: setup.supports,
             },
             map: setup.map,
             burning: Vec::new(),
@@ -1717,6 +1762,7 @@ impl BattleState {
             recruited: Vec::new(),
             mode: setup.mode,
             battle_notes: setup.battle_notes,
+            bonds: setup.bonds,
         };
         let mut events = Vec::new();
         if let Some(outcome) = state.judge() {
@@ -1731,22 +1777,15 @@ impl BattleState {
 
     /// Reattaches the content tables after deserialising (see the module
     /// docs). They must be the tables the battle was started with.
-    pub fn restore_tables(
-        &mut self,
-        terrain: Arc<TerrainTable>,
-        classes: Arc<ClassTable>,
-        items: Arc<ItemTable>,
-        spells: Arc<SpellTable>,
-        skills: Arc<SkillTable>,
-        arts: Arc<ArtTable>,
-    ) {
+    pub fn restore_tables(&mut self, tables: &GameTables) {
         self.tables = Tables {
-            terrain,
-            classes,
-            items,
-            spells,
-            skills,
-            arts,
+            terrain: Arc::clone(&tables.terrain),
+            classes: Arc::clone(&tables.classes),
+            items: Arc::clone(&tables.items),
+            spells: Arc::clone(&tables.spells),
+            skills: Arc::clone(&tables.skills),
+            arts: Arc::clone(&tables.arts),
+            supports: Arc::clone(&tables.supports),
         };
     }
 
@@ -2503,31 +2542,18 @@ impl BattleState {
             Step::Attack(attack) => move_after = self.attack(id, &attack, events),
             Step::Skill { active, effect } => {
                 let award = SkillAward::of(&effect);
+                let (helped, points) = self.skill_support(&effect);
                 self.use_skill(id, &active, effect, events);
                 self.award_skill(id, &award, events);
+                for other in helped {
+                    self.give_support(id, other, points, events);
+                }
             }
             Step::Heal {
                 spell,
                 target,
                 amount,
-            } => {
-                events.push(Event::SpellCast {
-                    unit: id,
-                    spell: spell.clone(),
-                    target: CastTarget::Unit(target),
-                });
-                if let Some(t) = self.unit_mut(target) {
-                    t.hp += amount;
-                    events.push(Event::Healed { target, amount });
-                }
-                self.spend_spell(id, &spell, events);
-                self.award(
-                    id,
-                    progression::exp_for_heal(),
-                    progression::ACTION_CP,
-                    events,
-                );
-            }
+            } => self.heal(id, &spell, target, amount, events),
             Step::Terrain {
                 spell,
                 pos,
@@ -2616,7 +2642,37 @@ impl BattleState {
         for clash in &clashes {
             self.award_combat(clash, events);
         }
+        // Whoever was attacked: the target, then a Line Pierce's victim.
+        let attacked = clashes.iter().map(|clash| clash.units[1]);
+        let fighters: Vec<UnitId> = std::iter::once(id).chain(attacked).collect();
+        self.support_fighters(&fighters, events);
         attack.move_after
+    }
+
+    /// Carries out unit `id`'s validated heal of `target` by `amount` with
+    /// `spell`, then its award and the pair's support points.
+    fn heal(
+        &mut self,
+        id: UnitId,
+        spell: &SpellId,
+        target: UnitId,
+        amount: StatValue,
+        events: &mut Vec<Event>,
+    ) {
+        events.push(Event::SpellCast {
+            unit: id,
+            spell: spell.clone(),
+            target: CastTarget::Unit(target),
+        });
+        if let Some(t) = self.unit_mut(target) {
+            t.hp += amount;
+            events.push(Event::Healed { target, amount });
+        }
+        self.spend_spell(id, spell, events);
+        let exp = progression::exp_for_heal();
+        self.award(id, exp, progression::ACTION_CP, events);
+        let points = self.tables.supports.rules.points.heal;
+        self.give_support(id, target, points, events);
     }
 
     /// Opens the chest at `pos` (validated) for unit `id`.
@@ -2764,6 +2820,8 @@ impl BattleState {
             t.hp = healed;
             events.push(Event::Healed { target, amount });
         }
+        let points = self.tables.supports.rules.points.item;
+        self.give_support(id, target, points, events);
     }
 
     /// Plays out `attacker`'s validated combat: the combat, spell uses, an
@@ -2921,6 +2979,9 @@ impl BattleState {
     /// the Player phase always has units (no player units is a defeat), so
     /// at most [`Phase::ALL`]`.len()` slots are visited.
     fn end_phase(&mut self, events: &mut Vec<Event>) {
+        if self.phase == Phase::Player {
+            self.support_adjacent(events);
+        }
         for _ in Phase::ALL {
             if self.phase == Phase::Other {
                 if let Some(outcome) = self.end_of_turn() {
@@ -3192,6 +3253,7 @@ impl Tally {
 
 mod arts;
 mod skills;
+mod supports;
 mod triggers;
 
 pub use arts::AttackPreview;

@@ -24,14 +24,10 @@
 //!   [`BattleHistory::restore_tables`] before replaying.
 
 use std::fmt;
-use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ArtTable, BattleState, ClassTable, Command, Event, ItemTable, SkillTable, SpellTable,
-    TerrainTable,
-};
+use crate::{BattleState, Command, Event, GameTables};
 
 /// A battle's first state, the commands applied since and the rewind
 /// charges left.
@@ -159,17 +155,8 @@ impl BattleHistory {
 
     /// Reattaches the content tables to the first state after
     /// deserialising ([`BattleState::restore_tables`]).
-    pub fn restore_tables(
-        &mut self,
-        terrain: Arc<TerrainTable>,
-        classes: Arc<ClassTable>,
-        items: Arc<ItemTable>,
-        spells: Arc<SpellTable>,
-        skills: Arc<SkillTable>,
-        arts: Arc<ArtTable>,
-    ) {
-        self.initial
-            .restore_tables(terrain, classes, items, spells, skills, arts);
+    pub fn restore_tables(&mut self, tables: &GameTables) {
+        self.initial.restore_tables(tables);
     }
 }
 

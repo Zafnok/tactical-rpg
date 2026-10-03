@@ -65,7 +65,7 @@ fn art_classes() -> ClassTable {
 }
 
 /// [`setup`] with [`art_weapons`], every kind's trait and [`art_classes`].
-fn art_setup(units: Vec<Unit>) -> BattleSetup {
+pub(super) fn art_setup(units: Vec<Unit>) -> BattleSetup {
     let mut items = items_for(&units);
     for (id, def) in art_weapons() {
         items.items.insert(item(id), ItemDef::Weapon(def));
@@ -112,7 +112,7 @@ fn ranked(mut u: Unit, rank: WeaponRank) -> Unit {
 }
 
 /// A rank-D player unit `id` at `pos` with weapon `weapon`.
-fn artist(id: u32, pos: Pos, weapon: &str) -> Unit {
+pub(super) fn artist(id: u32, pos: Pos, weapon: &str) -> Unit {
     ranked(with(unit(id, Faction::Player, pos), weapon), WeaponRank::D)
 }
 
@@ -139,7 +139,7 @@ fn set_durability(mut u: Unit, left: u32) -> Unit {
     u
 }
 
-fn art_attack(target: u32, art: &str) -> UnitAction {
+pub(super) fn art_attack(target: u32, art: &str) -> UnitAction {
     UnitAction::Attack {
         target: UnitId(target),
         slot: 0,

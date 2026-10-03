@@ -11,3 +11,4 @@ mod arts;
 mod private_assets;
 mod promotion;
 mod skills;
+mod supports;

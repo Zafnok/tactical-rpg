@@ -144,7 +144,15 @@ fn a_saved_history_needs_its_tables_back() {
     assert_eq!(loaded.charges_left(), 3);
     assert_eq!(loaded.commands(), h.commands());
     let s = setup(cast());
-    loaded.restore_tables(s.terrain, s.classes, s.items, s.spells, s.skills, s.arts);
+    loaded.restore_tables(&crate::GameTables {
+        terrain: s.terrain,
+        classes: s.classes,
+        items: s.items,
+        spells: s.spells,
+        skills: s.skills,
+        arts: s.arts,
+        supports: s.supports,
+    });
     // Only the unit's pos differs from `fought`'s setup, not the tables.
     let replayed = loaded.state_at(2);
     assert_eq!(replayed.units(), now.units());

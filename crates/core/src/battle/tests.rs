@@ -949,6 +949,8 @@ pub(crate) fn setup(units: Vec<Unit>) -> BattleSetup {
         spells: Arc::new(spells()),
         skills: Arc::new(skills()),
         arts: Arc::new(test_arts()),
+        supports: Arc::default(),
+        bonds: crate::SupportBook::default(),
         pack: BattlePack {
             items: vec![item("potion"), item("elixir")],
             cap: 3,
@@ -2558,14 +2560,15 @@ fn state_round_trips_through_ron_and_needs_its_tables_back() {
         attack(4),
         CommandError::UnknownClass(ClassId("fighter".into())),
     );
-    loaded.restore_tables(
-        Arc::new(terrain()),
-        Arc::new(classes()),
-        Arc::new(items_for(&skirmish())),
-        Arc::new(spells()),
-        Arc::new(skills()),
-        Arc::new(test_arts()),
-    );
+    loaded.restore_tables(&crate::GameTables {
+        terrain: Arc::new(terrain()),
+        classes: Arc::new(classes()),
+        items: Arc::new(items_for(&skirmish())),
+        spells: Arc::new(spells()),
+        skills: Arc::new(skills()),
+        arts: Arc::new(test_arts()),
+        supports: Arc::default(),
+    });
     assert_eq!(loaded, s);
     let cmd = Command::Act {
         unit: UnitId(2),
@@ -3198,5 +3201,6 @@ mod progression;
 mod shop;
 mod skill;
 mod spell;
+mod support;
 mod terrain;
 mod triggers;

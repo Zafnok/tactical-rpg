@@ -167,14 +167,15 @@ fn the_suspend_save_replays_to_the_same_battle() {
     let SavePoint::Battle(mut history) = save.point else {
         panic!("the suspend save holds no battle: {HELP}");
     };
-    history.restore_tables(
-        replay::terrain(),
-        replay::classes(),
-        replay::items(),
-        replay::spells(),
-        replay::skills(),
-        Arc::default(),
-    );
+    history.restore_tables(&trpg_core::GameTables {
+        terrain: replay::terrain(),
+        classes: replay::classes(),
+        items: replay::items(),
+        spells: replay::spells(),
+        skills: replay::skills(),
+        arts: Arc::default(),
+        supports: Arc::default(),
+    });
     assert_eq!(history.len(), PLAYED, "{HELP}");
     assert_eq!(history.charges_left(), 2, "{HELP}");
     let state = history.state_at(history.len());

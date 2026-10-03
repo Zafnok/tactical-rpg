@@ -154,7 +154,15 @@ proptest! {
             return Err(TestCaseError::fail("not a battle save"));
         };
         let (terrain, classes, items, spells, skills, arts) = tables;
-        loaded.restore_tables(terrain, classes, items, spells, skills, arts);
+        loaded.restore_tables(&crate::GameTables {
+            terrain,
+            classes,
+            items,
+            spells,
+            skills,
+            arts,
+            supports: std::sync::Arc::default(),
+        });
         prop_assert_eq!(loaded.charges_left(), history.charges_left());
         prop_assert_eq!(loaded.commands(), history.commands());
         let mut resumed = loaded.state_at(loaded.len());

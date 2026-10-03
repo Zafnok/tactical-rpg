@@ -1973,6 +1973,8 @@ pub(crate) mod testing {
             spells: Arc::new(c.content.spells.clone()),
             skills: Arc::new(c.content.skills.clone()),
             arts: Arc::new(c.content.arts.clone()),
+            supports: Arc::new(c.content.supports.clone()),
+            bonds: trpg_core::SupportBook::default(),
             pack: BattlePack::default(),
             gold: 0,
             stock: Stock::default(),

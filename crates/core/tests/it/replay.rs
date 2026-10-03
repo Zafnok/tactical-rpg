@@ -266,6 +266,8 @@ pub(super) fn setup(seed: u64) -> BattleSetup {
         spells: spells(),
         skills: skills(),
         arts: Arc::default(),
+        supports: Arc::default(),
+        bonds: trpg_core::SupportBook::default(),
         pack: BattlePack {
             items: vec![ItemId::new("potion")],
             cap: 1,
@@ -567,14 +569,15 @@ fn saving_and_loading_mid_battle_changes_nothing() {
         log.extend(run(&mut state, &cmds[..split]));
         let saved = ron::to_string(&state).unwrap();
         let mut loaded: BattleState = ron::from_str(&saved).unwrap();
-        loaded.restore_tables(
-            terrain(),
-            classes(),
-            items(),
-            spells(),
-            skills(),
-            Arc::default(),
-        );
+        loaded.restore_tables(&trpg_core::GameTables {
+            terrain: terrain(),
+            classes: classes(),
+            items: items(),
+            spells: spells(),
+            skills: skills(),
+            arts: Arc::default(),
+            supports: Arc::default(),
+        });
         assert_eq!(loaded, state, "split {split}");
         log.extend(run(&mut loaded, &cmds[split..]));
         assert_eq!(log, events, "split {split}");

@@ -1,0 +1,45 @@
+# PLACEHOLDER support conversations for the test pairs in
+# data/supports.ron (ticket 1002). Not story: real supports are written by
+# the story pipeline, one scene per pair and rank.
+
+@scene test_support_lord_knight_c
+@left  test_lord neutral
+@right test_knight neutral
+test_knight: Placeholder. Our rank C support conversation goes here.
+test_lord: Then we are at rank C.
+@end
+
+@scene test_support_lord_knight_b
+@left  test_lord neutral
+@right test_knight neutral
+test_knight: Placeholder. Our rank B support conversation goes here.
+test_lord: Then we are at rank B.
+@end
+
+@scene test_support_lord_knight_a
+@left  test_lord neutral
+@right test_knight neutral
+test_knight: Placeholder. Our rank A support conversation goes here.
+test_lord: Then we are at rank A.
+@end
+
+@scene test_support_lord_mage_c
+@left  test_lord neutral
+@right test_mage neutral
+test_mage: Placeholder. Our rank C support conversation goes here.
+test_lord: Then we are at rank C, you and I.
+@end
+
+@scene test_support_lord_mage_b
+@left  test_lord neutral
+@right test_mage neutral
+test_mage: Placeholder. Our rank B support conversation goes here.
+test_lord: Then we are at rank B, you and I.
+@end
+
+@scene test_support_lord_mage_a
+@left  test_lord neutral
+@right test_mage neutral
+test_mage: Placeholder. Our rank A support conversation goes here.
+test_lord: Then we are at rank A, you and I.
+@end
