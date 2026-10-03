@@ -292,5 +292,5 @@ out, 0.5 s in); the cinematic makes no sounds of its own; the skip sound
 is the sword hit until 0041; snippet length is whatever opening boxes can
 be read in the shot's time.
 
-**For Nick:** is 0717 (the quip rewrite) needed before your Chapter 1
-playtest? It is not in 0804's blockers yet.
+**0717 waits until after the playtest** (Nick: "nah it can wait til
+after"), so it is blocked by 0804.

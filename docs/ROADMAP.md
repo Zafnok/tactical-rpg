@@ -46,7 +46,7 @@ which has no open dependencies and can start any time) → **0818** character an
 where units march and fight → **0820** the real shots (after Chapter 1's
 map, faces and script) → **1010** the overworld shot (after the world map,
 1007; Nick places it). **0041** picks the skip sound (any time). **0717**
-rewrites the Chapter 1 script with fewer quips; the cinematic shows that
+rewrites the Chapter 1 script with fewer quips (after the playtest, 0804); the cinematic shows that
 script's opening lines, whatever they are. Not on the Chapter 1 critical path.
 
 **Replaceable graphics** (Nick, 2026-10-01: swapping the map's glyphs for

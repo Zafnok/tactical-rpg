@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: fable-5.1
 effort: high
 status: todo
-blocked_by: ["0707"]
+blocked_by: ["0707", "0804"]
 nick_input: sign-off
 completed:
 ---
@@ -49,11 +49,10 @@ cinematic*), so what this ticket writes is also what the title shows.
 and new, as text). Nick reads them and comments. Claude writes every line
 (Nick writes no dialogue); only tone and story decisions go to him.
 
-Whether this must land before his Chapter 1 playtest (0804) is his call.
-He was asked when this ticket was written (2026-10-03); if 0804's
-`blocked_by` doesn't list this ticket and nothing here records a "no",
-ask him once before starting, and add it to 0804 and the roadmap's
-critical path on a yes.
+It waits until after his Chapter 1 playtest (0804). Asked whether it
+should land before (2026-10-03): "nah it can wait til after". So this
+ticket is blocked by 0804, and his playtest notes on the script's tone, if
+any, are folded into the rewrite.
 
 ## Scope
 
