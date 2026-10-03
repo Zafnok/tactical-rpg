@@ -140,6 +140,13 @@ what each one does without leaving the menu?
   an art and an active.
 - Snapshot / integration: harness focus changes and the snapshots above.
 
+## Note: ticket 0442 (either order works)
+
+Ticket 0442 moves the Combat Arts out of the forecast into their own menu
+(Nick, 2026-10-03). If 0442 is done first, the list this ticket describes is
+that arts menu. If this ticket is done first, 0442 keeps its descriptions in
+the new menu.
+
 ## Completion notes
 
 *(Filled in by the session that completes the ticket: what was done, deviations,

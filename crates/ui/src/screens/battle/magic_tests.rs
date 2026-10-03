@@ -10,6 +10,7 @@ use trpg_core::{
     Phase, Pos, Reinforcement, SkillId, SpellId, StatValue, UnitAction, UnitId,
 };
 
+use super::attack::{Targeting, aimed_options, attack_tile, can_hit};
 use super::forecast::{AFFINITY_ROW, LEFT_X, NAME_ROW, STRIKE_ROW};
 use super::items::{can_equip, equip_choices, equip_menu};
 use super::magic::{
@@ -1220,4 +1221,243 @@ fn the_scene_marks_a_spells_targets_its_tile_changes_and_the_flash() {
     assert!((strengths[0] - 0.5).abs() < 1e-6, "{strengths:?}");
     wait(&mut s, &mut c, TERRAIN_FLASH_S / 2.0);
     assert!(flashing(&s, &c).is_empty());
+}
+
+// ---- Pointing at an enemy to cast at it (0430) ------------------------------------
+
+fn spell(id: &str) -> Equipped {
+    Equipped::Spell(sid(id))
+}
+
+#[test]
+fn a_spell_reaches_an_enemy_pointed_at_in_range_with_a_use_left() {
+    let c = ctx();
+    let s = quick_battle(&c.content).unwrap();
+    let sel = Selection::new(&s, MAGE).unwrap();
+    let elemental = s.unit(ELEMENTAL).unwrap().pos;
+    // The mage has no weapon: Fire and Frost, from two tiles away (the
+    // cheapest walk), never three.
+    let tile = attack_tile(&s, &sel, ELEMENTAL).unwrap();
+    assert_eq!(Pos::manhattan(tile, elemental), 2);
+    assert_eq!(
+        aimed_options(&s, MAGE, tile, ELEMENTAL),
+        [spell("fire"), spell("frost")]
+    );
+    assert!(can_hit(&s, MAGE, tile, ELEMENTAL));
+    for from in sel.reach.stoppable().iter() {
+        let near = (1..=2).contains(&Pos::manhattan(from, elemental));
+        assert_eq!(can_hit(&s, MAGE, from, ELEMENTAL), near, "{from:?}");
+    }
+    // The raider across the map is out of every spell's range.
+    assert_eq!(attack_tile(&s, &sel, UnitId(6)), None);
+    // A heal isn't an attack: the hurt knight beside the mage is no target.
+    let f = field(&c, 18);
+    assert_eq!(
+        cast_targets(
+            &f,
+            MAGE,
+            p(0, 4),
+            c.content.spells.get(&sid("heal")).unwrap()
+        ),
+        [on_unit(2)]
+    );
+    assert!(!can_hit(&f, MAGE, p(0, 4), UnitId(2)));
+    // Fire with no use left: only Frost. Frost neither: nothing to point
+    // with.
+    let mut c = ctx();
+    let mut no_uses = |id: &str| {
+        c.content.spells.spells.get_mut(&sid(id)).unwrap().uses = 0;
+        quick_battle(&c.content).unwrap()
+    };
+    let spent = no_uses("fire");
+    assert_eq!(uses(&spent, "fire"), 0);
+    assert_eq!(
+        aimed_options(&spent, MAGE, tile, ELEMENTAL),
+        [spell("frost")]
+    );
+    assert_eq!(attack_tile(&spent, &sel, ELEMENTAL), Some(tile));
+    let spent = no_uses("frost");
+    assert!(!can_hit(&spent, MAGE, tile, ELEMENTAL));
+    assert_eq!(attack_tile(&spent, &sel, ELEMENTAL), None);
+}
+
+/// [`field`] with the lord's iron sword in the mage's first slot, and
+/// `equipped` equipped.
+fn armed(c: &Ctx, equipped: Equipped) -> BattleState {
+    let f = field(c, 0);
+    let mut units = f.units().to_vec();
+    units[7].loadout.weapons[0] = units[0].loadout.weapons[0].clone();
+    units[7]
+        .weapon_ranks
+        .insert(trpg_core::WeaponKind::Sword, trpg_core::WeaponRank::E);
+    units[7].loadout.equipped = Some(equipped);
+    battle_with(
+        c,
+        f.map().clone(),
+        units,
+        Objective::Rout { turn_limit: None },
+    )
+}
+
+/// The forecast of the mage of `state`, where it stands, pointed at
+/// `target`.
+fn pointed(state: &BattleState, target: UnitId) -> Targeting {
+    let mut sel = Selection::new(state, MAGE).unwrap();
+    sel.target = Some(target);
+    Targeting::aimed(state, sel).unwrap()
+}
+
+#[test]
+fn the_pointed_forecast_opens_with_what_is_equipped_and_swaps_through_sword_and_spells() {
+    let c = ctx();
+    // The elemental beside the mage, the brigand two tiles away.
+    let s = armed(&c, spell("frost"));
+    let mut t = pointed(&s, ELEMENTAL);
+    let all = [Equipped::Weapon(0), spell("fire"), spell("frost")];
+    assert_eq!(t.options, all);
+    assert!(t.can_swap());
+    assert_eq!((&t.with, t.target()), (&spell("frost"), ELEMENTAL));
+    assert_eq!(t.targets, [ELEMENTAL, UnitId(4)]);
+    // Forward wraps to the sword, which reaches only the elemental.
+    t.swap(true, &s);
+    assert_eq!((&t.with, &t.targets), (&all[0], &vec![ELEMENTAL]));
+    assert_eq!(t.options, all);
+    let cmd = |action| Command::Act {
+        unit: MAGE,
+        dest: p(0, 4),
+        action,
+    };
+    let stab = UnitAction::Attack {
+        target: ELEMENTAL,
+        slot: 0,
+        active: None,
+        art: None,
+    };
+    assert_eq!(t.command(), cmd(stab));
+    assert_eq!(
+        Ok(&t.preview),
+        s.preview_attack(MAGE, p(0, 4), &t.technique().action(ELEMENTAL, &all[0]))
+            .as_ref()
+    );
+    t.swap(true, &s);
+    assert_eq!(t.with, all[1]);
+    assert_eq!(t.command(), cmd(cast(&sid("fire"), on_unit(7))));
+    // On the brigand, a swap keeps it while the spell reaches it...
+    t.cycle(true, &s);
+    assert_eq!(t.target(), UnitId(4));
+    t.swap(true, &s);
+    assert_eq!((&t.with, t.target()), (&all[2], UnitId(4)));
+    assert_eq!(t.targets, [UnitId(4), ELEMENTAL]);
+    // ...and goes back to the enemy pointed at when the sword doesn't.
+    t.swap(true, &s);
+    assert_eq!((&t.with, t.target()), (&all[0], ELEMENTAL));
+    // The keys: right swaps forward (Frost, then round to the sword), left
+    // back.
+    let key = |t: &Targeting, action| {
+        let mode = Mode::Targeting(Box::new(t.clone()));
+        match super::mode::step(mode, action, p(1, 4), &s) {
+            (Mode::Targeting(t), Effect::Cursor(at)) => (t.with.clone(), at),
+            other => panic!("{other:?}"),
+        }
+    };
+    let on_fire = pointed(&s, ELEMENTAL);
+    let on_fire = {
+        let mut t = on_fire;
+        t.swap(false, &s);
+        t
+    };
+    assert_eq!(on_fire.with, all[1]);
+    assert_eq!(
+        key(&on_fire, Action::CursorRight),
+        (all[2].clone(), p(1, 4))
+    );
+    assert_eq!(key(&on_fire, Action::CursorLeft), (all[0].clone(), p(1, 4)));
+    // Backward from the sword wraps to Frost.
+    t.swap(false, &s);
+    assert_eq!(t.with, all[2]);
+    t.swap(false, &s);
+    assert_eq!(t.with, all[1]);
+    // The sword equipped: it opens with the sword. Pointed at the brigand,
+    // which the equipped sword doesn't reach: the first that does, Fire.
+    let s = armed(&c, Equipped::Weapon(0));
+    assert_eq!(pointed(&s, ELEMENTAL).with, all[0]);
+    let far = pointed(&s, UnitId(4));
+    assert_eq!((&far.with, far.target()), (&all[1], UnitId(4)));
+    assert_eq!(far.options, all[1..]);
+    // With the spells out of uses only the sword reaches: nothing to swap.
+    let mut c = ctx();
+    for id in ["fire", "frost"] {
+        c.content.spells.spells.get_mut(&sid(id)).unwrap().uses = 0;
+    }
+    let dry = armed(&c, Equipped::Weapon(0));
+    let only = pointed(&dry, ELEMENTAL);
+    assert_eq!(only.options, all[..1]);
+    assert!(!only.can_swap());
+    // Nothing aimed at, or nothing that reaches: no forecast.
+    let sel = Selection::new(&s, MAGE).unwrap();
+    assert_eq!(Targeting::aimed(&s, sel.clone()), None);
+    let mut sel = sel;
+    sel.target = Some(UnitId(6));
+    assert_eq!(Targeting::aimed(&s, sel), None);
+    // A forecast opened from a menu has nothing to swap, and stays put.
+    let enemies = vec![ELEMENTAL];
+    let sel = Selection::new(&s, MAGE).unwrap();
+    let mut plain = Targeting::with(&s, sel, all[1].clone(), enemies, None).unwrap();
+    assert!(!plain.can_swap());
+    let before = plain.clone();
+    plain.swap(true, &s);
+    assert_eq!(plain, before);
+}
+
+#[test]
+fn harness_pointing_at_the_elemental_walks_there_and_opens_fires_forecast() {
+    let c = ctx();
+    let quick = quick_battle(&c.content).unwrap();
+    let elemental = quick.unit(ELEMENTAL).unwrap().pos;
+    let mut h = Harness::with_screen(Box::new(BattleScreen::new(quick.clone())));
+    // Select the mage and move the cursor round onto the elemental, over
+    // tiles from which no spell reaches it: the path jumps to the nearest
+    // one from which one does.
+    h.keys("Down f Up Right Right Right Right Right Right Down Down Left");
+    assert_eq!(h.cursor_tile(), Some(elemental));
+    let path = h.path();
+    let end = *path.last().unwrap();
+    assert_eq!(Pos::manhattan(end, elemental), 2);
+    let help = |h: &Harness| {
+        let buf = h.game().buffer();
+        text(buf, 0, super::layout::HELP_ROW, 90).trim().to_owned()
+    };
+    assert_eq!(help(&h), "arrows move · f cast · d cancel");
+    // Confirm walks there and opens the forecast of Fire, the equipped
+    // spell, on it.
+    h.keys("f").wait(0.5);
+    let with = |h: &Harness| match h.battle().unwrap().mode() {
+        Mode::Targeting(t) => (t.with.clone(), t.target(), t.sel.dest()),
+        m => panic!("{m:?}"),
+    };
+    assert_eq!(with(&h), (spell("fire"), ELEMENTAL, end));
+    assert_eq!(h.cursor_tile(), Some(elemental));
+    assert_eq!(
+        help(&h),
+        "Left/Right swap · a/s target · Up/Down art · f cast · d back"
+    );
+    // Right and left swap to Frost and back.
+    h.keys("Right");
+    assert_eq!(with(&h).0, spell("frost"));
+    h.keys("Right");
+    assert_eq!(with(&h).0, spell("fire"));
+    h.keys("Left");
+    assert_eq!(with(&h).0, spell("frost"));
+    // Cancel: the action menu on Magic, then the selection; nothing cast.
+    h.keys("d");
+    let Mode::ActionMenu { menu, entries, .. } = h.battle().unwrap().mode() else {
+        panic!("{:?}", h.battle().unwrap().mode());
+    };
+    assert_eq!(entries[menu.focus()], MenuEntry::Magic);
+    h.keys("d");
+    let Mode::Selected(sel) = h.battle().unwrap().mode() else {
+        panic!("{:?}", h.battle().unwrap().mode());
+    };
+    assert_eq!((sel.target, sel.dest()), (None, end));
+    assert_eq!(h.battle().unwrap().state(), &quick);
 }

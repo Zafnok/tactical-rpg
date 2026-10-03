@@ -5,7 +5,7 @@
 //! gets, so the UI never decides what is legal itself (ADR-0004).
 
 use trpg_core::{
-    AttackPreview, BattleState, Equipped, Pos, SpellId, UnitAction, UnitId, WEAPON_SLOTS,
+    AttackPreview, BattleState, Equipped, Pos, SpellDef, SpellId, UnitAction, UnitId, WEAPON_SLOTS,
 };
 
 use super::art_list::{ArtChoice, Technique, art_choices, art_menu, durability_text};
@@ -42,29 +42,79 @@ pub fn targets(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec
 /// changes range (Close Shot, Long Shot) reaches more (0426). In `(y, x)`
 /// order.
 pub fn reachable(state: &BattleState, unit: UnitId, dest: Pos, slot: usize) -> Vec<UnitId> {
+    reachable_with(state, unit, dest, &Equipped::Weapon(slot))
+}
+
+/// [`reachable`] with a weapon's slot or an attack spell.
+pub fn reachable_with(
+    state: &BattleState,
+    unit: UnitId,
+    dest: Pos,
+    with: &Equipped,
+) -> Vec<UnitId> {
     let mut found: Vec<(Pos, UnitId)> = state
         .units()
         .iter()
-        .filter(|u| {
-            art_choices(state, unit, dest, &Equipped::Weapon(slot), u.id)
-                .iter()
-                .any(|c| c.reason.is_none())
-        })
+        .filter(|u| hits(state, unit, dest, with, u.id))
         .map(|u| (u.pos, u.id))
         .collect();
     found.sort_by_key(|(p, _)| (p.y, p.x));
     found.into_iter().map(|(_, id)| id).collect()
 }
 
-/// Whether some weapon of `unit` can attack `target` from `from`, plainly
-/// or with a line of the arts list (0428; Close Shot reaches an adjacent
-/// enemy).
-pub fn can_hit(state: &BattleState, unit: UnitId, from: Pos, target: UnitId) -> bool {
-    (0..WEAPON_SLOTS).any(|slot| {
-        art_choices(state, unit, from, &Equipped::Weapon(slot), target)
+/// Whether `unit` can attack `target` from `from` with `with`, plainly or
+/// with a line of the arts list.
+fn hits(state: &BattleState, unit: UnitId, from: Pos, with: &Equipped, target: UnitId) -> bool {
+    art_choices(state, unit, from, with, target)
+        .iter()
+        .any(|c| c.reason.is_none())
+}
+
+/// What `unit` could attack with: its weapon slots in order, then its
+/// attack spells in id order (the order of the `Equip` list).
+fn arsenal(state: &BattleState, unit: UnitId) -> Vec<Equipped> {
+    let spells = state.unit(unit).into_iter().flat_map(|u| {
+        u.learned
             .iter()
-            .any(|c| c.reason.is_none())
-    })
+            .filter(|id| state.spells().get(id).is_some_and(SpellDef::is_attack))
+            .map(|id| Equipped::Spell(id.clone()))
+    });
+    (0..WEAPON_SLOTS)
+        .map(Equipped::Weapon)
+        .chain(spells)
+        .collect()
+}
+
+/// The weapons and attack spells of `unit` that reach `target` from `from`,
+/// weapons first (0430).
+pub fn aimed_options(
+    state: &BattleState,
+    unit: UnitId,
+    from: Pos,
+    target: UnitId,
+) -> Vec<Equipped> {
+    let mut all = arsenal(state, unit);
+    all.retain(|with| hits(state, unit, from, with, target));
+    all
+}
+
+/// What the forecast on an enemy pointed at opens with (Nick, 0430): the
+/// unit's equipped weapon or spell if it is one of `options`, else the
+/// first of them.
+pub fn aimed_first(state: &BattleState, unit: UnitId, options: &[Equipped]) -> Option<Equipped> {
+    let equipped = state.unit(unit).and_then(|u| u.loadout.equipped.as_ref());
+    options
+        .iter()
+        .find(|o| Some(*o) == equipped)
+        .or(options.first())
+        .cloned()
+}
+
+/// Whether some weapon or attack spell of `unit` can attack `target` from
+/// `from`, plainly or with a line of the arts list (0428; Close Shot
+/// reaches an adjacent enemy).
+pub fn can_hit(state: &BattleState, unit: UnitId, from: Pos, target: UnitId) -> bool {
+    !aimed_options(state, unit, from, target).is_empty()
 }
 
 /// The tile `sel`'s unit attacks `target` from when the player points at it
@@ -220,9 +270,67 @@ pub struct Targeting {
     /// The weapon list it was opened from (Cancel goes back to it), if the
     /// unit had several weapons to choose from.
     pub weapons: Option<(Menu, Vec<WeaponChoice>)>,
+    /// The weapons and attack spells that reach the enemy the unit was
+    /// pointed at (0430): left and right swap between them. Empty when the
+    /// forecast was opened from a menu.
+    pub options: Vec<Equipped>,
 }
 
 impl Targeting {
+    /// The forecast on `sel`'s aimed enemy from its path's end, with the
+    /// unit's equipped weapon or spell if that reaches it, else the first
+    /// that does. `None` if it has no aimed enemy or nothing reaches it.
+    pub fn aimed(state: &BattleState, sel: Selection) -> Option<Self> {
+        let options = aimed_options(state, sel.unit, sel.dest(), sel.target?);
+        let with = aimed_first(state, sel.unit, &options)?;
+        let mut t = Self::swapped(state, sel, with, &[])?;
+        t.options = options;
+        Some(t)
+    }
+
+    /// Targeting with `with`, on the first of `keep` it reaches, else on
+    /// `sel`'s aimed enemy; the others follow in `(y, x)` order.
+    fn swapped(
+        state: &BattleState,
+        sel: Selection,
+        with: Equipped,
+        keep: &[UnitId],
+    ) -> Option<Self> {
+        let mut targets = reachable_with(state, sel.unit, sel.dest(), &with);
+        let at = keep
+            .iter()
+            .chain(&sel.target)
+            .find_map(|t| targets.iter().position(|x| x == t));
+        targets.rotate_left(at.unwrap_or(0));
+        Self::with(state, sel, with, targets, None)
+    }
+
+    /// Whether left and right swap the weapon or spell (see
+    /// [`Self::options`]).
+    pub fn can_swap(&self) -> bool {
+        self.options.len() > 1
+    }
+
+    /// Swaps to the next weapon or spell of [`Self::options`] (or the
+    /// previous one), wrapping, as an attack without art. The target stays
+    /// if the new one reaches it, else it is the enemy pointed at.
+    pub fn swap(&mut self, forward: bool, state: &BattleState) {
+        let n = self.options.len();
+        let Some(i) = self.options.iter().position(|o| *o == self.with) else {
+            return;
+        };
+        let to = if forward {
+            (i + 1) % n
+        } else {
+            (i + n - 1) % n
+        };
+        let with = self.options[to].clone();
+        if let Some(mut next) = Self::swapped(state, self.sel.clone(), with, &[self.target()]) {
+            next.options = std::mem::take(&mut self.options);
+            *self = next;
+        }
+    }
+
     /// Targeting the first of `choice`'s targets with the first line that
     /// reaches it (a plain attack, unless only an art or active does).
     /// `None` if its forecast can't be made (the battle changed; never
@@ -264,6 +372,7 @@ impl Targeting {
             list,
             preview,
             weapons,
+            options: vec![],
         })
     }
 

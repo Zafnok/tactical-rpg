@@ -32,10 +32,10 @@ fn manifest(clips: &[(&LineId, &str)]) -> String {
     )
 }
 
-/// The debug menu with "Voice test" focused (the last tool but one).
+/// The debug menu with "Voice test" focused (the last tool but two).
 fn on_voice_test() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("F2 Up Up");
+    h.keys("F2 Up Up Up");
     assert_eq!(h.top_screen(), "debug_menu");
     h
 }

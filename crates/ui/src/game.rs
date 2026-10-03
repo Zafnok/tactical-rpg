@@ -95,9 +95,9 @@ impl Game {
             ctx.use_layout(layout);
         }
         let title = if ctx.debug_tools {
-            TitleScreen::with_quick_battle()
+            TitleScreen::with_quick_battle(&ctx)
         } else {
-            TitleScreen::new()
+            TitleScreen::new(&ctx)
         };
         // `Continue` and `Load Game` for the saves there are.
         let title = title.refreshed(&ctx);
@@ -986,7 +986,7 @@ mod tests {
         units[1].hp = 1;
         let rout = Objective::Rout { turn_limit: None };
         let battle = battle_with(&c, quick.map().clone(), units, rout);
-        let mut stack = ScreenStack::new(Box::new(TitleScreen::with_quick_battle()));
+        let mut stack = ScreenStack::new(Box::new(TitleScreen::with_quick_battle(&c)));
         stack.push(Box::new(BattleScreen::new(battle)));
         let mut game = Game::with_stack(c, stack);
         let mut music = Vec::new();

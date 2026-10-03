@@ -8,11 +8,12 @@
 //! so overlays (menus, dialogs) show the screen below them.
 
 use std::any::Any;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::rc::Rc;
 
+use trpg_content::lang::TEST;
 use trpg_content::voice::{self, SOURCE_LANG};
-use trpg_content::{Content, ContentErrors, LineId, Playable};
+use trpg_content::{Content, ContentErrors, LangCode, LineId, Playable};
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{LeadGender, LeadProfile};
 
@@ -22,6 +23,7 @@ use crate::glyph_buffer::GlyphBuffer;
 use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
 use crate::map_view::{CursorStyle, MapSkin};
 use crate::storage::{MemoryStorage, Storage, StorageError};
+use crate::tips::fill_text;
 use crate::widgets::help::HelpKeys;
 
 /// [`Storage`] key under which the chosen [`Layout`] is saved (its name,
@@ -262,6 +264,10 @@ pub struct Ctx {
     /// `app` sets [`KeyPrompt::Waiting`] for the web build, and `Game`
     /// moves it on to [`KeyPrompt::Pressed`] at the first key press.
     pub key_prompt: KeyPrompt,
+    /// The language screen text is shown in (ADR-0045): English until the
+    /// player picks another (0825). The test pack counts only with
+    /// [`debug_tools`](Self::debug_tools) on; anywhere else it is English.
+    pub lang: LangCode,
 }
 
 /// The web build's "press any key" title prompt ([`Ctx::key_prompt`]):
@@ -316,7 +322,33 @@ impl Ctx {
             lead: LeadProfile::new(DEFAULT_NAME, LeadGender::Male),
             clock_s: 0.0,
             key_prompt: KeyPrompt::Off,
+            lang: LangCode::english(),
         })
+    }
+
+    /// The screen text for `key` (`title.new_game`) in the player's
+    /// language, as written in `assets/lang/`, placeholders and all: the
+    /// pack's text if it has one made from today's English, else English.
+    ///
+    /// A key English lacks is a bug in the screen: it panics in debug
+    /// builds, and shows as the key itself in release builds.
+    pub fn text<'a>(&'a self, key: &'a str) -> &'a str {
+        let lang = &self.content.lang;
+        debug_assert!(
+            lang.has(key),
+            "text key not in assets/lang/en/ui.ron: {key:?}"
+        );
+        if self.lang.as_str() == TEST && !self.debug_tools {
+            return lang.text(&LangCode::english(), key);
+        }
+        lang.text(&self.lang, key)
+    }
+
+    /// [`text`](Self::text) with its placeholders filled in: each `{name}`
+    /// that `args` names by its value, and each `{Action}` (and `{Cursor}`)
+    /// by the key the player has for it ([`help_keys`](Self::help_keys)).
+    pub fn text_with(&self, key: &str, args: &[(&str, &dyn Display)]) -> String {
+        fill_text(self.text(key), self.help_keys(), args)
     }
 
     /// The context for the content embedded in the binary.
@@ -1044,6 +1076,51 @@ pub(crate) mod tests {
         );
         assert_eq!(c.layout(), Some(Layout::RightHanded));
         assert_eq!(c.palette.get(UiColor::Black), Rgb::new(0, 0, 0));
+    }
+
+    #[test]
+    fn text_comes_from_the_language_in_use() {
+        let mut c = ctx();
+        assert_eq!(c.lang, LangCode::english());
+        assert_eq!(c.text("title.new_game"), "New Game");
+        c.lang = LangCode::new(TEST).unwrap();
+        assert_eq!(c.text("title.new_game"), "NEW GAME");
+        // Stale and missing entries are English.
+        assert_eq!(c.text("title.subtitle"), "an ASCII tactics game");
+        assert_eq!(c.text("title.credits"), "Credits");
+        // The test pack is only for builds with debug tools.
+        c.debug_tools = false;
+        assert_eq!(c.text("title.new_game"), "New Game");
+        // A language with no pack is English.
+        c.lang = LangCode::new("zz").unwrap();
+        assert_eq!(c.text("title.new_game"), "New Game");
+    }
+
+    #[test]
+    fn text_with_fills_values_and_key_names() {
+        let mut c = ctx();
+        assert_eq!(
+            c.text_with("title.help", &[]),
+            "arrows move · f select · d back"
+        );
+        c.lang = LangCode::new(TEST).unwrap();
+        assert_eq!(
+            c.text_with("title.help", &[]),
+            "arrows MOVE · f SELECT · d BACK"
+        );
+        // A value named like a placeholder in the text fills it.
+        assert_eq!(
+            c.text_with("title.help", &[("Cursor", &7)]),
+            "7 MOVE · f SELECT · d BACK"
+        );
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "text key not in assets/lang/en/ui.ron: \"title.nope\"")]
+    fn an_unknown_text_key_panics_in_debug_builds() {
+        let c = ctx();
+        let _ = c.text("title.nope");
     }
 
     #[test]
