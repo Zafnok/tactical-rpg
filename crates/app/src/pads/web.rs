@@ -8,7 +8,7 @@ use trpg_ui::input::{PadId, PadKind, PadState};
 /// The plugin's version, which the JS loader compares with the `version`
 /// in `web/gamepad.js` (an xtask test keeps them equal). Bump both when the
 /// functions below change.
-const PLUGIN_VERSION: u32 = 1;
+const PLUGIN_VERSION: u32 = 2;
 
 // The game's only `unsafe` (ADR-0034): declaring the functions
 // `web/gamepad.js` provides, and exporting the version the loader asks for.
@@ -23,6 +23,8 @@ unsafe extern "C" {
     safe fn trpg_pad_index(pad: u32) -> u32;
     /// The pad's USB vendor id, or 0 if the browser doesn't tell.
     safe fn trpg_pad_vendor(pad: u32) -> u32;
+    /// The pad's USB product id, or 0 if the browser doesn't tell.
+    safe fn trpg_pad_product(pad: u32) -> u32;
     /// Bit `i` is set while the pad's `buttons[i]` is pressed, `i < 16`.
     safe fn trpg_pad_buttons(pad: u32) -> u32;
     /// The pad's `axes[axis]`: 0–3 are the left stick's x and y, then the
@@ -45,9 +47,10 @@ pub fn read() -> Vec<(PadId, PadKind, PadState)> {
         .map(|pad| {
             let id = usize::try_from(trpg_pad_index(pad)).unwrap_or(0);
             let vendor = u16::try_from(trpg_pad_vendor(pad)).unwrap_or(0);
+            let product = u16::try_from(trpg_pad_product(pad)).unwrap_or(0);
             let axes = [0, 1, 2, 3].map(|axis| trpg_pad_axis(pad, axis));
             let state = PadState::from_standard(trpg_pad_buttons(pad), axes);
-            (id, PadKind::from_vendor(vendor), state)
+            (id, PadKind::from_ids(vendor, product), state)
         })
         .collect()
 }

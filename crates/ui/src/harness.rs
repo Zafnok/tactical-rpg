@@ -20,10 +20,11 @@ use crate::audio::{AudioRequest, MusicClock, MusicCommand};
 use crate::flow::FlowScreen;
 use crate::game::{Game, RawInputEvent};
 use crate::input::{Button, Chord, Device, Layout, PadKind};
-use crate::map_view::MapScene;
+use crate::map_view::{MapScene, RangeKind, UnitView, skin_named};
 use crate::screen::{Ctx, KeyPrompt, LAYOUT_KEY, Screen};
 use crate::screens::BattleScreen;
 use crate::storage::{MemoryStorage, Storage};
+use trpg_core::Pos;
 
 /// Simulated length of one frame, in seconds (60 fps).
 pub const FRAME_DT: f32 = 1.0 / 60.0;
@@ -388,14 +389,32 @@ impl Harness {
         self.game.screen_mut()
     }
 
-    /// What the battle on the stack shows on its map (ADR-0038): the game
-    /// flow's battle, else a battle screen put on the stack itself. `None`
-    /// with no battle. Assert on this (or on the battle's state), not on
-    /// cells and colours, to check what happened.
-    pub fn map_scene(&self) -> Option<MapScene> {
+    /// The battle on the stack: the game flow's, else a battle screen put
+    /// on the stack itself. `None` with no battle.
+    pub fn battle(&self) -> Option<&BattleScreen> {
         let in_flow = self.flow().and_then(FlowScreen::battle);
-        let battle = in_flow.or_else(|| self.game.screen::<BattleScreen>())?;
-        Some(battle.scene(self.game.ctx()))
+        in_flow.or_else(|| self.game.screen::<BattleScreen>())
+    }
+
+    /// What the battle on the stack shows on its map (ADR-0038), as
+    /// [`battle`](Self::battle) finds it. Assert on this (or on the
+    /// battle's state), not on cells and colours, to check what happened.
+    pub fn map_scene(&self) -> Option<MapScene> {
+        Some(self.battle()?.scene(self.game.ctx()))
+    }
+
+    /// Paints battle maps with the skin called `name` from the next frame
+    /// on (`"glyph"`, or `"sprite"` for the test tileset; ADR-0038), as
+    /// the debug menu's "Map skin" does.
+    ///
+    /// # Panics
+    ///
+    /// If there is no such skin.
+    pub fn with_map_skin(&mut self, name: &str) -> &mut Self {
+        let ctx = self.game.ctx_mut();
+        let skin = skin_named(&ctx.content, name);
+        ctx.map_skin = skin.unwrap_or_else(|| panic!("no map skin {name:?}"));
+        self
     }
 
     /// [`map_scene`](Self::map_scene) as text ([`MapScene::to_text`]);
@@ -404,6 +423,30 @@ impl Harness {
         let content = &self.game.ctx().content;
         self.map_scene()
             .map_or_else(String::new, |scene| scene.to_text(content))
+    }
+
+    /// The tile under the battle map's cursor, if one is shown
+    /// ([`MapScene::cursor_tile`]).
+    pub fn cursor_tile(&self) -> Option<Pos> {
+        self.map_scene()?.cursor_tile()
+    }
+
+    /// The unit the battle map shows on `pos` ([`MapScene::unit_at`]).
+    pub fn unit_at(&self, pos: Pos) -> Option<UnitView> {
+        self.map_scene()?.unit_at(pos).cloned()
+    }
+
+    /// The ranges the battle map shows on `pos` ([`MapScene::tints_at`]).
+    pub fn tints_at(&self, pos: Pos) -> Vec<RangeKind> {
+        self.map_scene()
+            .map(|s| s.tints_at(pos))
+            .unwrap_or_default()
+    }
+
+    /// The selected unit's path on the battle map, its own tile first;
+    /// empty with none.
+    pub fn path(&self) -> Vec<Pos> {
+        self.map_scene().map(|s| s.path).unwrap_or_default()
     }
 
     /// Whether the game has asked to quit.
@@ -700,6 +743,54 @@ mod tests {
         // The same map; only the cursor's pulse is a frame behind.
         assert_eq!((bare.tiles, bare.units), (scene.tiles, scene.units));
         assert_eq!(bare.cursor.map(|c| c.pos), scene.cursor.map(|c| c.pos));
+        assert!(h.battle().is_some());
+    }
+
+    #[test]
+    fn the_map_skin_can_be_switched_by_name() {
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        assert!(h.battle().is_none());
+        h.keys("Down f Left f");
+        assert_eq!(h.battle().map(|b| b.state().units().len()), Some(8));
+        h.with_map_skin("sprite").wait(FRAME_DT);
+        assert_eq!(h.game().ctx().map_skin.name(), "sprite");
+        // The test tileset's 24 px tiles: 23 × 20 of them.
+        assert!(h.map_text().contains(" size 23x20\n"), "{}", h.map_text());
+        h.with_map_skin("glyph");
+        assert_eq!(h.game().ctx().map_skin.name(), "glyph");
+    }
+
+    #[test]
+    #[should_panic(expected = "no map skin \"ascii\"")]
+    fn an_unknown_map_skin_panics() {
+        Harness::with_layout(Layout::RightHanded).with_map_skin("ascii");
+    }
+
+    #[test]
+    fn scene_helpers_read_the_battle_map() {
+        // No battle: nothing.
+        let mut h = Harness::with_layout(Layout::RightHanded);
+        assert_eq!(h.cursor_tile(), None);
+        assert_eq!(h.unit_at(Pos::new(3, 5)), None);
+        assert!(h.tints_at(Pos::new(3, 5)).is_empty());
+        assert!(h.path().is_empty());
+        // The Quick Battle: the cursor on the lord, nothing selected.
+        h.keys("Down f Left f f");
+        let (lord, plain, fort) = (Pos::new(3, 5), Pos::new(4, 5), Pos::new(5, 5));
+        assert_eq!(h.cursor_tile(), Some(lord));
+        let unit = h.unit_at(lord).unwrap();
+        assert_eq!((unit.label.as_str(), unit.pos), ("Lo", lord));
+        assert_eq!(h.unit_at(plain), None);
+        assert!(h.tints_at(plain).is_empty());
+        assert!(h.path().len() <= 1, "{:?}", h.path());
+        // The lord selected and steered to the fort: its ranges and path.
+        h.keys("f Right Right");
+        assert_eq!(h.tints_at(plain), [RangeKind::Move]);
+        assert_eq!(h.path(), [lord, plain, fort]);
+        assert_eq!(h.cursor_tile(), None, "no cursor on the path's end");
+        // Back on its own tile: the cursor shows again.
+        h.keys("Left Left");
+        assert_eq!(h.cursor_tile(), Some(lord));
     }
 
     #[test]

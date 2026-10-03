@@ -3,9 +3,11 @@
 
 use insta::assert_snapshot;
 use trpg_content::FontAtlasDef;
+use trpg_core::{Faction, Pos};
 use trpg_ui::audio::AudioRequest;
 use trpg_ui::harness::{FRAME_DT, Harness};
 use trpg_ui::input::Layout;
+use trpg_ui::map_view::RangeKind;
 
 /// At the title with the right-handed layout, then Quick Battle, still
 /// under turn 1's `PLAYER PHASE` banner.
@@ -35,7 +37,7 @@ fn quick_battle_opens_on_the_player_phase_banner() {
     assert!(shows(&h, "Turn 1"));
     assert_eq!(help(&h), "f skip");
     // Other keys do nothing: no menu opens, and the cursor stays on the
-    // lord (cells 26..28, row 16).
+    // lord at (3, 5).
     h.keys("Right d Space");
     assert!(shows(&h, "PLAYER PHASE"));
     let browsing = "f select · e info · s next unit · r rewind · d menu · Space end turn";
@@ -43,7 +45,7 @@ fn quick_battle_opens_on_the_player_phase_banner() {
     h.keys("f");
     assert!(!shows(&h, "PHASE"));
     assert_eq!(help(&h), browsing);
-    assert_eq!(cursor_x(&h, 16), Some(26));
+    assert_eq!(h.cursor_tile(), Some(LORD));
     // Left alone, it is gone after a second.
     let mut h = quick_battle_banner();
     h.wait(0.5);
@@ -51,7 +53,7 @@ fn quick_battle_opens_on_the_player_phase_banner() {
     h.wait(0.6);
     assert!(!shows(&h, "PHASE"));
     assert_eq!(help(&h), browsing);
-    assert_eq!(cursor_x(&h, 16), Some(26));
+    assert_eq!(h.cursor_tile(), Some(LORD));
 }
 
 /// The Quick Battle screen at the start of the battle, its `PLAYER PHASE`
@@ -169,8 +171,13 @@ fn a_full_turn_of_waits_ends_with_auto_end_and_starts_turn_two() {
     assert!(shows(&h, "Turn 2"));
     h.wait(1.1);
     assert!(!shows(&h, "PHASE"));
-    // Everyone is ready again: uppercase labels, the lord selectable.
-    assert_eq!(tile(&h, 26, 16), "Lo");
+    // Everyone is ready again, the lord selectable.
+    let units = h.map_scene().unwrap().units;
+    let ready = units
+        .iter()
+        .filter(|u| u.faction == Faction::Player && !u.acted);
+    assert_eq!(ready.count(), 4);
+    assert_eq!(unit(&h, 3, 5), Some(shown("Lo", false)));
     assert_eq!(
         help(&h),
         "f select · e info · s next unit · r rewind · d menu · Space end turn"
@@ -194,7 +201,7 @@ fn a_full_turn_of_waits_then_space_ends_the_turn() {
     assert!(shows(&h, "Turn 2"));
     h.keys("f");
     assert!(!shows(&h, "PHASE"));
-    assert_eq!(tile(&h, 26, 16), "Lo");
+    assert_eq!(unit(&h, 3, 5), Some(shown("Lo", false)));
 }
 
 #[test]
@@ -279,33 +286,33 @@ fn panel(h: &Harness) -> Vec<String> {
         .collect()
 }
 
-/// The left cell of the tile under the cursor on row `y`, found from the
-/// corner marks' right-hand vertical arms (the only 1 × 3 px overlays), which
-/// sit in the tile's last pixel column.
-fn cursor_x(h: &Harness, y: i32) -> Option<i32> {
-    h.game()
-        .buffer()
-        .overlays()
-        .iter()
-        .map(|o| o.rect)
-        .filter(|r| (r.w, r.h) == (1, 3) && r.y / 16 == y)
-        .map(|r| (r.x + 1) / 8 - 2)
-        .max()
+/// The lord's starting tile.
+const LORD: Pos = Pos::new(3, 5);
+
+/// The label of the unit the map shows on `(x, y)`, and whether it has
+/// acted; `None` for an empty tile.
+fn unit(h: &Harness, x: i32, y: i32) -> Option<(String, bool)> {
+    h.unit_at(Pos::new(x, y)).map(|u| (u.label, u.acted))
+}
+
+/// A unit shown with `label`, acted or not, for comparing with [`unit`].
+fn shown(label: &str, acted: bool) -> (String, bool) {
+    (label.to_owned(), acted)
 }
 
 #[test]
 fn arrows_move_the_cursor_and_the_panel_follows() {
     let mut h = quick_battle();
-    // The lord at (3, 5), drawn from cell 26 on row 16.
-    assert_eq!(cursor_x(&h, 16), Some(26));
+    // The cursor on the lord at (3, 5).
+    assert_eq!(h.cursor_tile(), Some(LORD));
     assert_eq!(panel(&h)[4], "Test Lord");
     h.keys("Right Right Right");
-    assert_eq!(cursor_x(&h, 16), Some(32));
+    assert_eq!(h.cursor_tile(), Some(Pos::new(6, 5)));
     assert_eq!(panel(&h)[0], "Plain");
     assert_eq!(panel(&h)[4], "");
-    // Held: stops at the map's right edge (x = 13, cell 46).
+    // Held: stops at the map's right edge (x = 13).
     h.hold("Right", 1.0);
-    assert_eq!(cursor_x(&h, 16), Some(46));
+    assert_eq!(h.cursor_tile(), Some(Pos::new(13, 5)));
     assert_eq!(panel(&h)[0], "Plain");
     // Two tiles left is a fort.
     h.keys("Left Left");
@@ -329,14 +336,6 @@ fn next_unit_jumps_between_ready_units() {
     assert_eq!(panel(&h)[4], "Test Archer");
 }
 
-/// The two glyphs drawn on the tile whose left cell is `(x, y)`.
-fn tile(h: &Harness, x: i32, y: i32) -> String {
-    let buf = h.game().buffer();
-    (x..x + 2)
-        .map(|x| buf.get(x, y).map_or(' ', |c| c.glyph))
-        .collect()
-}
-
 /// The key-help line, left of the right-aligned debug hint.
 fn help(h: &Harness) -> String {
     let buf = h.game().buffer();
@@ -347,8 +346,8 @@ fn help(h: &Harness) -> String {
         .to_owned()
 }
 
-/// The lord (at (3, 5), cells 26..28 of row 16) selected, the path steered
-/// two tiles right onto the fort at (5, 5) (cells 30..32).
+/// The lord (at (3, 5)) selected, the path steered two tiles right onto
+/// the fort at (5, 5).
 fn lord_path() -> Harness {
     let mut h = quick_battle();
     h.keys("f Right Right");
@@ -377,13 +376,12 @@ fn action_menu_snapshot() {
 #[test]
 fn select_move_and_wait_dims_the_unit_and_keeps_its_label_case() {
     let mut h = lord_path();
-    let bright = h.game().buffer().get(26, 16).map(|c| c.fg).expect("cell");
+    assert_eq!(unit(&h, 3, 5), Some(shown("Lo", false)));
     h.keys("f").wait(0.5).keys("f");
-    // The lord stands on the fort, x + 2, dimmed: it has acted.
-    assert_eq!(tile(&h, 30, 16), "Lo");
-    let cell = h.game().buffer().get(30, 16).copied().expect("cell");
-    assert_eq!(cell.fg, bright.lerp(cell.bg, 0.5));
-    assert_eq!(tile(&h, 26, 16), "..");
+    // The lord stands on the fort, x + 2, marked as acted (each map skin
+    // shows that its own way: the glyph skin dims it), its label as it was.
+    assert_eq!(unit(&h, 5, 5), Some(shown("Lo", true)));
+    assert_eq!(unit(&h, 3, 5), None);
     assert_eq!(panel(&h)[4], "Test Lord");
     // Browsing again, on a unit that can't act.
     assert_eq!(
@@ -406,16 +404,17 @@ fn cancelling_the_menu_then_the_selection_restores_the_unit() {
     h.keys("f d");
     let before = h.snapshot();
     h.keys("f Right Right f").wait(0.5);
-    assert_eq!(tile(&h, 30, 16), "Lo");
+    assert_eq!(unit(&h, 5, 5), Some(shown("Lo", false)));
+    assert_eq!(unit(&h, 3, 5), None);
     // Back to the steered path: the lord back on its tile.
     h.keys("d");
-    assert_eq!(tile(&h, 26, 16), "Lo");
-    assert_eq!(tile(&h, 30, 16), "╦╦");
+    assert_eq!(unit(&h, 3, 5), Some(shown("Lo", false)));
+    assert_eq!(unit(&h, 5, 5), None);
     assert_eq!(help(&h), "arrows move · f move here · d cancel");
     // Back to browsing, the cursor on the lord (its pulse restarted, as
     // when the battle opened): the screen exactly as it was.
     h.keys("d");
-    assert_eq!(cursor_x(&h, 16), Some(26));
+    assert_eq!(h.cursor_tile(), Some(LORD));
     assert_eq!(
         help(&h),
         "f select · e info · s next unit · r rewind · d menu · Space end turn"
@@ -426,22 +425,26 @@ fn cancelling_the_menu_then_the_selection_restores_the_unit() {
 #[test]
 fn confirm_on_an_enemy_toggles_its_range() {
     let mut h = quick_battle();
-    // To the brigand at (8, 2): cells 36..38, row 13.
+    // To the brigand at (8, 2).
     h.keys("Right Right Right Right Right Up Up Up");
     assert_eq!(panel(&h)[4], "Brigand");
-    let bg = |h: &Harness| h.game().buffer().get(36, 18).map(|c| c.bg);
-    let plain = bg(&h);
+    let reach = Pos::new(8, 7);
+    assert!(h.tints_at(reach).is_empty());
     h.keys("f");
-    assert_ne!(bg(&h), plain, "(8, 7) is in its range");
+    assert_eq!(
+        h.tints_at(reach),
+        [RangeKind::Attack],
+        "(8, 7) is in its range"
+    );
     assert!(
         help(&h).ends_with("d hide range · Space end turn"),
         "{}",
         help(&h)
     );
     h.keys("f");
-    assert_eq!(bg(&h), plain);
+    assert!(h.tints_at(reach).is_empty());
     h.keys("f d");
-    assert_eq!(bg(&h), plain);
+    assert!(h.tints_at(reach).is_empty());
     assert_eq!(h.top_screen(), "battle");
 }
 
@@ -467,8 +470,8 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
     assert_eq!(help(&h), "f skip · hold f fast");
     assert!(shows(&h, "EXP"));
     h.keys("f");
-    // The lord has acted, dimmed at (6, 4) (cells 32..34, row 15).
-    assert_eq!(tile(&h, 32, 15), "Lo");
+    // The lord has acted, at (6, 4).
+    assert_eq!(unit(&h, 6, 4), Some(shown("Lo", true)));
     assert!(
         help(&h).ends_with("s next unit · r rewind · d menu · Space end turn"),
         "{}",
@@ -497,7 +500,7 @@ fn tips_show_when_switched_on() {
 fn the_rogue_arrives_and_turn_three_opens_with_a_scene() {
     let mut h = quick_battle();
     // The fort at (12, 3), empty.
-    assert_eq!(tile(&h, 44, 14), "╦╦");
+    assert_eq!(unit(&h, 12, 3), None);
     // Turn 1 ends with everyone ready; both banners skipped.
     h.keys("Space Space f");
     wait_for(&mut h, "PLAYER PHASE", 30.0);
@@ -524,7 +527,10 @@ fn the_rogue_arrives_and_turn_three_opens_with_a_scene() {
         help(&h),
         "f select · e info · s next unit · r rewind · d menu · Space end turn"
     );
-    assert_eq!(tile(&h, 44, 14), "Ro");
+    assert_eq!(
+        unit(&h, 12, 3).map(|(label, _)| label).as_deref(),
+        Some("Ro")
+    );
 }
 
 /// The music cues the run asked for, in order.

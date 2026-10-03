@@ -499,8 +499,9 @@ letter, drawn with thin lines: `✕ ○ □ △`.
 - **The D-pad's directions are shown as arrows** where a single direction
   is named. Example: choosing an attack's target and Combat Art reads
   `←/→ target · ↑/↓ art`.
-- **PlayStation 4 pads show `Create`** like PlayStation 5 ones, not
-  `Share`, for now: the game can't yet tell the two apart (ticket 0229).
+- **PlayStation 4 pads show `Share`** for the left centre button, and
+  PlayStation 5 pads `Create` (ticket 0229); every other name is the same
+  on both.
 - **The developer debug hint** still names its key on a controller (it has
   no button).
 - **The "Pick your layout" key list** always shows keys, since it is about

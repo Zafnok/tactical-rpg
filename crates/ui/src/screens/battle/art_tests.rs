@@ -405,14 +405,16 @@ fn a_pin_shows_on_the_info_screen_with_when_it_ends() {
         assert!(all.contains(part), "{part}: {all}");
     }
     assert!(all.contains("Mov 2"), "{all}");
-    // On the map, the effect colour behind the brigand's label (its tile
-    // (8, 2) starts at cell (36, 13): the small map is centred).
-    let label_bg = |state: &BattleState, c: &Ctx| {
-        let buf = render(&BattleScreen::new(state.clone()), c);
-        assert_eq!(text(&buf, 36, 13, 2), "Br");
-        buf.get(36, 13).unwrap().bg
+    // On the map, the brigand at (8, 2) is shown under an effect (the glyph
+    // skin puts the effect colour behind its label).
+    let under_effect = |state: &BattleState, c: &Ctx| {
+        let scene = BattleScreen::new(state.clone()).scene(c);
+        let brigand = scene.unit_at(p(8, 2)).unwrap();
+        assert_eq!((brigand.id, brigand.label.as_str()), (UnitId(4), "Br"));
+        brigand.has_effect
     };
-    assert_ne!(label_bg(&pinned, &c), label_bg(&plain, &c));
+    assert!(under_effect(&pinned, &c));
+    assert!(!under_effect(&plain, &c));
 }
 
 #[test]

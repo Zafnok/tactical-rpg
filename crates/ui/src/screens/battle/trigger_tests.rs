@@ -21,10 +21,6 @@ const ROGUE: &str = "test_rogue";
 /// Where the rogue stands in these tests: right of the lord at (3, 5).
 const ROGUE_AT: Pos = Pos::new(4, 5);
 
-/// The rogue's tile's left cell (`test_small` is centred: tile `(x, y)`
-/// starts at cell `(2 × (x + 10), y + 11)`).
-const ROGUE_CELL: (i32, i32) = (28, 16);
-
 /// The Quick Battle's first six units (without its elemental and its mage,
 /// which stand where these tests put the rogue and its like), with the
 /// rogue (unit 7, an enemy with `rogue_hp` HP) next to the lord, and the
@@ -369,14 +365,13 @@ fn a_fallen_rogue_says_its_last_words_before_it_fades() {
     assert_snapshot!(h.snapshot());
     close_line(&mut h);
     assert_eq!(h.screens(), ["battle"]);
-    assert_eq!(
-        text(&h, ROGUE_CELL.0, ROGUE_CELL.1, 2),
-        "Ro",
-        "not faded yet"
-    );
+    let rogue = h.unit_at(ROGUE_AT).expect("still on the map");
+    assert_eq!(rogue.label, "Ro");
+    // Its fall only just begun: not faded yet.
+    assert!(rogue.fade < 0.25, "{}", rogue.fade);
     // Then it fades and the battle goes on.
     h.wait(3.0);
-    assert_eq!(text(&h, ROGUE_CELL.0, ROGUE_CELL.1, 2), "..");
+    assert_eq!(h.unit_at(ROGUE_AT), None);
     assert!(shows(&h, "d menu · Space end turn"));
 }
 

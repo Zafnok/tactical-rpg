@@ -227,7 +227,7 @@ impl Game {
                 .top_name()
                 .is_some_and(|n| debug::SCREENS.contains(&n));
         if opens_debug_menu {
-            self.stack.push(Box::new(DebugMenuScreen::new()));
+            self.stack.push(Box::new(DebugMenuScreen::new(&self.ctx)));
         } else {
             let input = FrameInput::new(actions, dt, held)
                 .with_typing(pressed, text)
