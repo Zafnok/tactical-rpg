@@ -6,6 +6,9 @@ use trpg_core::CharacterId;
 
 use super::*;
 use crate::audio::AudioRequest;
+use crate::console::{CELL_H_PX, CELL_W_PX};
+use crate::glyph_buffer::Sprite;
+use crate::portrait::dim_opacity;
 use crate::screen::tests::ctx;
 
 /// One frame of `dt` seconds with `actions`, Confirm held if `held`.
@@ -250,32 +253,33 @@ fn speaker_frame_is_double_and_bright() {
     assert!(row(&buf, TEXT_BOX.y).starts_with("┌── Test Knight ─"));
 }
 
+/// The sprite of the portrait in the frame at column `x`.
+fn portrait_sprite(buf: &GlyphBuffer, x: i32) -> Option<Sprite> {
+    let left = (x + 1) * i32::from(CELL_W_PX);
+    let inside = |s: &Sprite| (left..left + 256).contains(&s.dest.x);
+    buf.sprites().into_iter().find(inside)
+}
+
 #[test]
-fn portraits_are_dimmed_and_mirrored_like_the_renderer() {
+fn the_speaker_is_bright_and_the_listener_dimmed_and_mirrored() {
     let c = ctx();
     let s = full(two_speakers("Hi."));
     let buf = draw(&s, &c);
-    let bg = c.palette.get(UiColor::PanelBg);
-    let mut expected = GlyphBuffer::new(34, 18, Cell::new(' ', bg, bg));
-    let knight = &c.content.portraits["test_knight"];
-    draw_portrait(
-        &mut expected,
-        &c.palette,
-        (1, 1),
-        knight,
-        "neutral",
-        LISTENER_DIM,
-        true,
-    );
-    for y in 1..17 {
-        for x in 1..33 {
-            assert_eq!(
-                buf.get(RIGHT_X + x, FRAME_Y + y),
-                expected.get(x, y),
-                "({x}, {y})"
-            );
-        }
-    }
+    assert_eq!(buf.sprites().len(), 2);
+    // The placeholders are 32×32: 8× fills the 256×256 px inside the frame.
+    let top = (FRAME_Y + 1) * i32::from(CELL_H_PX);
+    let listener = portrait_sprite(&buf, RIGHT_X).unwrap();
+    assert_eq!(listener.image.path(), "portraits/test_knight/neutral.png");
+    assert_eq!(listener.dest, Rect::new((RIGHT_X + 1) * 8, top, 256, 256));
+    assert_eq!(listener.clip, listener.dest);
+    assert!(listener.flip_x);
+    assert_eq!(listener.opacity, dim_opacity(LISTENER_DIM));
+    assert!(listener.opacity < 255);
+    let speaker = portrait_sprite(&buf, LEFT_X).unwrap();
+    assert_eq!(speaker.image.path(), "portraits/test_lord/neutral.png");
+    assert_eq!(speaker.dest, Rect::new((LEFT_X + 1) * 8, top, 256, 256));
+    assert!(!speaker.flip_x);
+    assert_eq!(speaker.opacity, 255);
 }
 
 #[test]
@@ -601,27 +605,9 @@ fn the_lead_shows_the_players_name_and_gendered_portrait() {
         let buf = draw(&s, &c);
         assert!(row(&buf, PLATE_Y).contains("Isolde"));
         assert!(row(&buf, TEXT_BOX.y).starts_with("┌── Isolde ─"));
-        let bg = c.palette.get(UiColor::PanelBg);
-        let mut expected = GlyphBuffer::new(34, 18, Cell::new(' ', bg, bg));
-        let portrait = &c.content.portraits[art];
-        draw_portrait(
-            &mut expected,
-            &c.palette,
-            (1, 1),
-            portrait,
-            "neutral",
-            0.0,
-            false,
-        );
-        for y in 1..17 {
-            for x in 1..33 {
-                assert_eq!(
-                    buf.get(LEFT_X + x, FRAME_Y + y),
-                    expected.get(x, y),
-                    "{art} ({x}, {y})"
-                );
-            }
-        }
+        let sprite = portrait_sprite(&buf, LEFT_X).unwrap();
+        assert_eq!(sprite.image.path(), format!("portraits/{art}/neutral.png"));
+        assert_eq!((sprite.opacity, sprite.flip_x), (255, false));
     }
 }
 

@@ -28,7 +28,6 @@ use crate::screens::{
 };
 use crate::widgets::help::{cursor_keys_name, help_line, key_name};
 use crate::widgets::{Menu, MenuEvent, MenuItem};
-use trpg_content::palette::REQUIRED_COLORS;
 
 /// Names of every screen the debug key does nothing on: the debug screens,
 /// and the Key bindings screen (the Debug key is a key like any other while
@@ -207,32 +206,13 @@ impl GlyphSamplerScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "glyph_sampler";
 
-    /// The sampler for the font and palette in `ctx`, without the portrait
-    /// colours ([`sampler_palette`]).
+    /// The sampler for the font and palette in `ctx`.
     pub fn new(ctx: &Ctx) -> Self {
         let glyphs: Vec<char> = ctx.content.font.glyphs.keys().copied().collect();
         Self {
-            sampler: glyph_sampler(&sampler_palette(ctx), &glyphs),
+            sampler: glyph_sampler(&ctx.palette, &glyphs),
         }
     }
-}
-
-/// The palette the sampler shows: every colour except those portraits use
-/// (there are too many to fit, and the portrait viewer shows them in
-/// context). UI colours always stay.
-pub fn sampler_palette(ctx: &Ctx) -> Palette {
-    let content = &ctx.content;
-    let portrait_only = |name: &str| {
-        !REQUIRED_COLORS.contains(&name)
-            && content
-                .portraits
-                .values()
-                .any(|p| p.colors.values().any(|c| c == name))
-    };
-    let mut def = content.palette.clone();
-    def.colors.retain(|name, _| !portrait_only(name));
-    // The UI colours are kept, so this can't fail.
-    Palette::new(&def).unwrap_or_else(|_| ctx.palette.clone())
 }
 
 impl Screen for GlyphSamplerScreen {
@@ -398,34 +378,9 @@ mod tests {
         FontAtlasDef::load().unwrap().glyphs.into_keys().collect()
     }
 
-    /// The palette the sampler screen shows.
-    fn sampler_colours() -> Palette {
-        sampler_palette(&crate::screen::tests::ctx())
-    }
-
-    #[test]
-    fn sampler_leaves_out_portrait_colours_only() {
-        let all = game_palette();
-        let shown = sampler_colours();
-        assert_eq!(shown.lookup("skin_light"), None);
-        assert_eq!(shown.lookup("grass"), all.lookup("grass"));
-        for c in UiColor::ALL {
-            assert_eq!(shown.get(*c), all.get(*c));
-        }
-        // A UI colour a portrait uses stays.
-        let mut ctx = crate::screen::tests::ctx();
-        if let Some(p) = ctx.content.portraits.values_mut().next() {
-            p.colors.insert('Z', "cursor".to_owned());
-        }
-        assert!(sampler_palette(&ctx).lookup("cursor").is_some());
-        // Without portraits, nothing is left out.
-        ctx.content.portraits.clear();
-        assert_eq!(sampler_palette(&ctx), all);
-    }
-
     #[test]
     fn sampler_shows_every_glyph_and_colour() {
-        let p = sampler_colours();
+        let p = game_palette();
         let glyphs = atlas_glyphs();
         let b = glyph_sampler(&p, &glyphs);
         assert_eq!((b.width(), b.height()), (CONSOLE_W, CONSOLE_H));
@@ -462,14 +417,14 @@ mod tests {
 
     #[test]
     fn demo_panels_fit_below_the_embedded_palette() {
-        let p = sampler_colours();
+        let p = game_palette();
         let glyphs = atlas_glyphs();
         assert!(panels_top(&p, &glyphs) <= i32::from(CONSOLE_H) - 4);
     }
 
     #[test]
     fn demo_panels_keep_margin_for_a_larger_palette() {
-        let p = sampler_colours();
+        let p = game_palette();
         let glyphs = atlas_glyphs();
         assert!(p.iter().count() <= PALETTE_HEADROOM);
         assert!(panels_top_for(PALETTE_HEADROOM, &glyphs) <= i32::from(CONSOLE_H) - 4);
@@ -489,7 +444,7 @@ mod tests {
             Cell::new('x', p.get(UiColor::Text), p.get(UiColor::Black)),
         );
         screen.draw(&ctx, &mut buf);
-        assert_eq!(buf, glyph_sampler(&sampler_palette(&ctx), &atlas_glyphs()));
+        assert_eq!(buf, glyph_sampler(&ctx.palette, &atlas_glyphs()));
         let frame = |a: &[Action]| FrameInput::new(a.to_vec(), 0.0, vec![]);
         let stay = screen.update(&mut ctx, &frame(&[Action::Confirm]));
         assert!(matches!(stay, Transition::None));
@@ -615,7 +570,7 @@ mod tests {
 
     #[test]
     fn sampler_snapshot() {
-        let p = sampler_colours();
+        let p = game_palette();
         let snap = glyph_sampler(&p, &atlas_glyphs()).to_snapshot(&p);
         assert_snapshot!(snap);
     }
