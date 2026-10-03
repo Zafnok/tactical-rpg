@@ -126,16 +126,46 @@ impl TerrainFlash {
     }
 }
 
-/// A `+10` shown over a unit that was healed, for
-/// [`Timings::heal_popup`](playback::Timings::heal_popup) seconds.
+/// What a [`HealPopup`] tells of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PopupKind {
+    /// HP restored: `+10`, in `hp_high`.
+    Heal,
+    /// HP lost to a fire burning out under the unit: `-5`, in `hp_low`.
+    Burn,
+}
+
+/// A `+10` shown over a unit that was healed, or a `-5` over one a fire
+/// burnt, for [`Timings::heal_popup`](playback::Timings::heal_popup)
+/// seconds (a burn's start once no banner is on screen).
 #[derive(Debug, Clone, PartialEq)]
 pub struct HealPopup {
     /// The tile it floats over.
     pub pos: Pos,
-    /// HP restored.
+    /// HP restored or lost.
     pub amount: StatValue,
+    /// Whether the HP was restored or lost.
+    pub kind: PopupKind,
     /// Seconds it has been up.
     pub t: f32,
+}
+
+impl HealPopup {
+    /// What it reads: `+10` for a heal, `-5` for a burn.
+    pub fn text(&self) -> String {
+        match self.kind {
+            PopupKind::Heal => format!("+{}", self.amount),
+            PopupKind::Burn => format!("-{}", self.amount),
+        }
+    }
+
+    /// Its colour: `hp_high` for a heal, `hp_low` for a burn.
+    pub fn color(&self) -> UiColor {
+        match self.kind {
+            PopupKind::Heal => UiColor::HpHigh,
+            PopupKind::Burn => UiColor::HpLow,
+        }
+    }
 }
 
 /// The tiles units hostile to the player could attack this turn
@@ -830,9 +860,16 @@ impl BattleScreen {
                     Some(HealPopup {
                         pos,
                         amount,
+                        kind: PopupKind::Heal,
                         t: 0.0,
                     })
                 }
+                Event::BurnDamage { pos, amount, .. } if amount > 0 => Some(HealPopup {
+                    pos,
+                    amount,
+                    kind: PopupKind::Burn,
+                    t: 0.0,
+                }),
                 _ => None,
             }));
             self.flashes.extend(events.iter().filter_map(|e| match *e {
@@ -1453,11 +1490,16 @@ impl BattleScreen {
         }
     }
 
-    /// Ages the heal numbers, the terrain flashes and the message by `dt`
-    /// seconds, dropping those whose time is up.
+    /// Ages the heal and burn numbers, the terrain flashes and the message
+    /// by `dt` seconds, dropping those whose time is up. A burn number
+    /// waits while a banner is on screen: the fire burns out as the phase
+    /// banner comes up, which would cover it for longer than it lasts.
     fn tick_popups(&mut self, dt: f32) {
+        let banner = self.banner().is_some();
         for p in &mut self.popups {
-            p.t += dt;
+            if !(banner && p.kind == PopupKind::Burn) {
+                p.t += dt;
+            }
         }
         self.popups.retain(|p| p.t < TIMINGS.heal_popup);
         for f in &mut self.flashes {
@@ -1472,17 +1514,17 @@ impl BattleScreen {
         }
     }
 
-    /// Draws the heal numbers floating up over the units they healed: over
-    /// where the map skin has their tiles of `scene`.
+    /// Draws the heal and burn numbers floating up over the units they
+    /// tell of: over where the map skin has their tiles of `scene`.
     fn draw_popups(&self, ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene) {
-        let fg = ctx.palette.get(UiColor::HpHigh);
         for p in &self.popups {
+            let fg = ctx.palette.get(p.color());
             let Some(tile) = ctx.map_skin.tile_cells(scene, MAP_VIEW, p.pos) else {
                 continue;
             };
             let y = (tile.y - 1).max(MAP_VIEW.y);
             let bg = ctx.palette.get(UiColor::Black);
-            buf.print(tile.x, y, &format!("+{}", p.amount), fg, bg);
+            buf.print(tile.x, y, &p.text(), fg, bg);
         }
     }
 
