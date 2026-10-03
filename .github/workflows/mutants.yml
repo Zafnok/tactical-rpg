@@ -100,13 +100,16 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: git diff "origin/$BASE_REF...HEAD" -- '*.rs' > git.diff
       # Round-robin: mutant i runs on shard i % n, so one slow crate is
-      # spread over every shard.
+      # spread over every shard. nextest stops at the first failing test, so
+      # a caught mutant does not pay for the whole suite. Two mutants at a
+      # time (never more: cargo-mutants warns of timeouts), each in its own
+      # copy of the tree (ADR-0043).
       - name: Run cargo mutants on this shard of the diff
         env:
           SHARD: ${{ matrix.shard }}
           OF: ${{ needs.plan.outputs.of }}
         run: >
-          cargo mutants --in-diff git.diff --in-place
+          cargo mutants --in-diff git.diff --jobs 2
           --shard "$SHARD/$OF" --sharding round-robin
           --test-tool=nextest -vV
       - name: Upload mutants.out

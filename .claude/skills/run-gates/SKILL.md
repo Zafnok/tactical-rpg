@@ -40,8 +40,12 @@ cargo test -p trpg-content --features private-assets --test it private_assets::
 cargo run -p trpg-app --features private-assets
 ```
 
-**Mutation testing is not a local gate.** CI's `mutants (diff)` job
-(`.github/workflows/mutants.yml`) runs `cargo mutants` on every PR's diff.
+**Mutation testing is not a local gate.** CI's `mutants (diff)` check
+(`.github/workflows/mutants.yml`, ADR-0043) runs `cargo mutants` on every
+PR's diff, split over up to 8 `mutants (diff, shard N)` jobs; the `MISSED`
+lines are in the log of each red shard. CI runs the tests with
+`cargo-nextest`, which does not run doc tests: a mutant only a doc test
+would catch counts as missed, so cover it with a unit test.
 Running it locally too means waiting for it twice. So: run the gates above,
 push, open the PR and watch CI. If CI reports `MISSED` mutants, fix them on
 the branch (see *Mutation testing results* below). Run it locally only to
