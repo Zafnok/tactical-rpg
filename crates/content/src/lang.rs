@@ -498,6 +498,19 @@ mod tests {
         assert_eq!(errors.len(), 1);
     }
 
+    /// What a wrong value is told the file should be.
+    #[test]
+    fn english_that_is_not_a_map_says_what_was_expected() {
+        use serde::de::IntoDeserializer;
+        use serde::de::value::{BoolDeserializer, Error};
+        let wrong: BoolDeserializer<Error> = true.into_deserializer();
+        let error = Pairs::deserialize(wrong).err().unwrap();
+        assert_eq!(
+            error.to_string(),
+            "invalid type: boolean `true`, expected a map of key to text"
+        );
+    }
+
     #[test]
     fn a_pack_loads_its_info_and_entries() {
         let p = pack(r#"[(key: "a.one", source: "One", text: "Un")]"#).unwrap();

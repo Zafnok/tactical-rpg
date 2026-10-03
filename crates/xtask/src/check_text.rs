@@ -288,6 +288,25 @@ fn draw(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         assert_eq!(hits[0].line, 2);
     }
 
+    /// Square brackets and blocks inside a call don't end it, and those
+    /// after it don't reopen it.
+    #[test]
+    fn brackets_and_blocks_are_matched() {
+        let source = "\
+fn draw(&self, buf: &mut GlyphBuffer) {
+    buf.print(xs[0], rows[1], \"After an index\", fg, bg);
+    draw_rows(buf, |b| { b.height() }, \"After a block\");
+    let label = [other(\"Not shown\")];
+    if wide { buf.print(0, 0, \"In a block\", fg, bg); }
+    let after = other(\"Not shown either\");
+}
+";
+        assert_eq!(
+            found(source),
+            ["2: After an index", "3: After a block", "5: In a block"]
+        );
+    }
+
     #[test]
     fn text_by_key_and_other_calls_do_not_count() {
         let source = "\
