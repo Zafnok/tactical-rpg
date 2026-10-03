@@ -22,11 +22,67 @@ jobs:
     name: changes
     uses: ./.github/workflows/changes.yml
 
-  pr:
+  # Counts the mutants in the PR's diff and picks how many shards to run
+  # them on. Nothing is built here: `--list` only reads the sources.
+  plan:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    name: mutants (diff)
+    name: mutants (diff, plan)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      mutants: ${{ steps.count.outputs.mutants }}
+      shards: ${{ steps.count.outputs.shards }}
+      of: ${{ steps.count.outputs.of }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: rustup show
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        with:
+          tool: cargo-mutants
+      - name: Compute diff against base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: git diff "origin/$BASE_REF...HEAD" -- '*.rs' > git.diff
+      # 1 shard up to 40 mutants, 4 up to 160, otherwise 8: every shard pays
+      # for its own build and unmutated test run, so a small diff gets one.
+      - name: Count mutants and pick shards
+        id: count
+        run: |
+          set -euo pipefail
+          mutants=0
+          if [ -s git.diff ]; then
+            cargo mutants --in-diff git.diff --list > mutants.txt
+            mutants=$(wc -l < mutants.txt)
+          fi
+          if [ "$mutants" -le 40 ]; then
+            of=1
+          elif [ "$mutants" -le 160 ]; then
+            of=4
+          else
+            of=8
+          fi
+          shards=$(seq -s, 0 $((of - 1)))
+          echo "$mutants mutants in the diff: $of shard(s)"
+          {
+            echo "mutants=$mutants"
+            echo "of=$of"
+            echo "shards=[$shards]"
+          } >> "$GITHUB_OUTPUT"
+
+  pr:
+    needs: [changes, plan]
+    if: needs.plan.outputs.mutants != '0'
+    name: mutants (diff, shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,29 +94,47 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev libudev-dev
       - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants,cargo-nextest
       - name: Compute diff against base
         env:
           BASE_REF: ${{ github.base_ref }}
         run: git diff "origin/$BASE_REF...HEAD" -- '*.rs' > git.diff
-      - name: Check for Rust changes
-        id: diffcheck
-        run: |
-          if [ -s git.diff ]; then
-            echo "has_diff=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_diff=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Run cargo mutants on diff
-        if: steps.diffcheck.outputs.has_diff == 'true'
-        run: cargo mutants --in-diff git.diff --in-place -vV
+      # Round-robin: mutant i runs on shard i % n, so one slow crate is
+      # spread over every shard.
+      - name: Run cargo mutants on this shard of the diff
+        env:
+          SHARD: ${{ matrix.shard }}
+          OF: ${{ needs.plan.outputs.of }}
+        run: >
+          cargo mutants --in-diff git.diff --in-place
+          --shard "$SHARD/$OF" --sharding round-robin
+          --test-tool=nextest -vV
       - name: Upload mutants.out
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mutants-pr-${{ github.run_id }}
+          name: mutants-pr-${{ matrix.shard }}-${{ github.run_id }}
           path: mutants.out
           if-no-files-found: ignore
+
+  # Single required check for the PR run (ADR-0014): the shards are matrix
+  # legs, so branch protection requires this job. It keeps the name the
+  # one-job gate had, so the ruleset needs no change.
+  mutants-result:
+    name: mutants (diff)
+    if: always() && github.event_name == 'pull_request'
+    needs: [changes, plan, pr]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$NEEDS" | jq -e '[.[].result] | any(. == "failure" or . == "cancelled")' > /dev/null; then
+            echo "::error::A mutation job failed or was cancelled."
+            exit 1
+          fi
 
   weekly-baseline:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
