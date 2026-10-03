@@ -119,6 +119,27 @@ test_lord: {N:retainer.first}, wait. {N:god.mother.title} keep you, {n:family.ve
 }
 
 #[test]
+fn surnames_written_out_are_errors() {
+    let src = scene(
+        "test_lord: Sergeant Rook, with me.
+> Master Crane said nothing.
+test_knight: Ask Vosse.
+test_lord: {N:sergeant.last}, fetch {n:envoy.last}.",
+    );
+    assert_eq!(
+        errors(&src),
+        [
+            "t.dlg:4: \"Rook\" is written out; write {n:sergeant.last} (\"Rook\") so a \
+             rename reaches this line",
+            "t.dlg:5: \"Crane\" is written out; write {n:vowmaster.last} (\"Crane\") so a \
+             rename reaches this line",
+            "t.dlg:6: \"Vosse\" is written out; write {n:vosse.last} (\"Vosse\") so a \
+             rename reaches this line",
+        ]
+    );
+}
+
+#[test]
 fn the_lead_default_name_written_out() {
     assert_eq!(
         errors(&scene("test_knight: Ellery, wait.")),
