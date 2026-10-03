@@ -13,6 +13,7 @@ fn say(speaker: &str, expression: Option<&str>, text: &str) -> Step {
         speaker: id(speaker),
         expression: expression.map(Into::into),
         text: text.into(),
+        line: LineId::default(),
     }
 }
 
@@ -25,7 +26,28 @@ fn place(side: Side, character: &str, expression: &str) -> Step {
 }
 
 fn narrate(text: &str) -> Step {
-    Step::Narrate { text: text.into() }
+    Step::Narrate {
+        text: text.into(),
+        line: LineId::default(),
+    }
+}
+
+/// `steps` without their line ids, to compare with steps built by hand.
+fn bare(steps: &[Step]) -> Vec<Step> {
+    let mut steps = steps.to_vec();
+    for step in &mut steps {
+        match step {
+            Step::Say { line, .. } | Step::Narrate { line, .. } => *line = LineId::default(),
+            Step::Choice { options } => {
+                for o in options {
+                    o.line = LineId::default();
+                    o.steps = bare(&o.steps);
+                }
+            }
+            _ => {}
+        }
+    }
+    steps
 }
 
 fn music(cue: &str) -> Step {
@@ -57,11 +79,16 @@ fn errors(src: &str) -> Vec<String> {
     .collect()
 }
 
-/// The scenes of `src`, parsed without checks.
+/// The scenes of `src`, parsed without checks, and without their line
+/// ids (to compare with scenes built by hand).
 fn scenes(src: &str) -> Vec<Scene> {
     let (parsed, errors) = parse_dlg("t.dlg", src);
     assert_eq!(errors, []);
-    parsed.into_iter().map(|p| p.scene).collect()
+    let bare = |s: Scene| Scene {
+        steps: bare(&s.steps),
+        ..s
+    };
+    parsed.into_iter().map(|p| bare(p.scene)).collect()
 }
 
 /// A valid scene around `body`: the lord on the left, the knight on the
@@ -549,6 +576,7 @@ fn files_that_are_not_utf8() {
 }
 
 mod choice;
+mod line_ids;
 mod names;
 
 // --- Embedded files ---------------------------------------------------------
@@ -559,7 +587,7 @@ fn embedded_test_scene_loads() {
     assert!(table.is_ok(), "{table:?}");
     let steps = table
         .ok()
-        .and_then(|t| t.get("test").map(|s| s.steps.clone()));
+        .and_then(|t| t.get("test").map(|s| bare(&s.steps)));
     assert_eq!(
         steps.as_ref().map(|s| s[..4].to_vec()),
         Some(vec![
@@ -654,7 +682,7 @@ fn music_lines_parse_anywhere_in_a_scene() {
     let (parsed, errors) = parse_dlg("t.dlg", src);
     assert_eq!(errors, []);
     assert_eq!(
-        parsed[0].scene.steps,
+        bare(&parsed[0].scene.steps),
         [
             music("talk_calm"),
             narrate("One."),
@@ -664,11 +692,13 @@ fn music_lines_parse_anywhere_in_a_scene() {
                     ChoiceOption {
                         tone: "wry".into(),
                         text: "Hm.".into(),
+                        line: LineId::default(),
                         steps: vec![music("scene_sad"), narrate("Two.")],
                     },
                     ChoiceOption {
                         tone: "blunt".into(),
                         text: "No.".into(),
+                        line: LineId::default(),
                         steps: vec![],
                     },
                 ],
@@ -814,9 +844,13 @@ fn arb_simple_step() -> impl Strategy<Value = Step> {
                 speaker: CharacterId(s),
                 expression,
                 text,
+                line: LineId::default(),
             }
         }),
-        arb_text().prop_map(|text| Step::Narrate { text }),
+        arb_text().prop_map(|text| Step::Narrate {
+            text,
+            line: LineId::default(),
+        }),
         // A cue named "stop" would print as `@music stop`.
         arb_id()
             .prop_filter("reserved", |s| s != MusicLine::STOP)
@@ -832,7 +866,12 @@ fn arb_step() -> impl Strategy<Value = Step> {
         arb_text(),
         proptest::collection::vec(arb_simple_step(), 0..4),
     )
-        .prop_map(|(tone, text, steps)| ChoiceOption { tone, text, steps });
+        .prop_map(|(tone, text, steps)| ChoiceOption {
+            tone,
+            text,
+            line: LineId::default(),
+            steps,
+        });
     prop_oneof![
         4 => arb_simple_step(),
         1 => proptest::collection::vec(option, 0..4).prop_map(|options| Step::Choice { options }),
@@ -840,8 +879,11 @@ fn arb_step() -> impl Strategy<Value = Step> {
 }
 
 fn arb_scene() -> impl Strategy<Value = Scene> {
-    (arb_id(), proptest::collection::vec(arb_step(), 0..12))
-        .prop_map(|(id, steps)| Scene { id, steps })
+    (arb_id(), proptest::collection::vec(arb_step(), 0..12)).prop_map(|(id, steps)| {
+        let mut scene = Scene { id, steps };
+        scene.assign_line_ids();
+        scene
+    })
 }
 
 proptest! {

@@ -221,6 +221,7 @@ fn every_two_word_name_has_short_forms() {
     };
     let mut people = 0;
     let mut gods = 0;
+    let mut lasts = 0;
     for (id, name) in story() {
         if let Some((god, title)) = name.split_once(", ") {
             // A god: "Ama, the Mother".
@@ -230,11 +231,16 @@ fn every_two_word_name_has_short_forms() {
         } else if !id.contains('.') && name.contains(' ') {
             // A person: "Hollis Marr".
             people += 1;
-            let first = name.split(' ').next();
-            assert_eq!(names.get(&format!("{id}.first")), first, "{id}");
+            let (first, last) = name.split_once(' ').unwrap_or_default();
+            assert_eq!(names.get(&format!("{id}.first")), Some(first), "{id}");
+            // The surname is the character's own, or a family's.
+            let shared = story().any(|(i, n)| i.starts_with("family.") && n == last);
+            let own = names.get(&format!("{id}.last"));
+            assert_eq!(own, (!shared).then_some(last), "{id}");
+            lasts += usize::from(own.is_some());
         }
     }
-    assert_eq!((people, gods), (12, 5));
+    assert_eq!((people, gods, lasts), (12, 5, 9));
     assert_eq!(names.get("family.marr"), Some("Marr"));
     assert_eq!(names.get("family.veyne"), Some("Veyne"));
     assert_eq!(names.get("red_captain.nickname"), Some("Red Harl"));

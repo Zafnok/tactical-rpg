@@ -1,6 +1,6 @@
 # ADR-0045: Languages: text by key, dialogue lines by id, wide glyphs in two cells
 
-- **Status:** Accepted (§1–2 built by ticket 0233, with the details it settled marked *0233*; §3 is built by 0717, which may still adjust it)
+- **Status:** Accepted (§1–2 built by ticket 0233, §3 by ticket 0717; the details each settled are marked *0233* and *As built (ticket 0717)*)
 - **Date:** 2026-10-03
 - **Related tickets:** 0042, 0233, 0234, 0235, 0236, 0237, 0717, 0718, 0719, 0723, 0825, 0907
 - **Amends:** ADR-0016 (the atlas gains 16×16 glyphs from a second font) and
@@ -85,6 +85,15 @@ Every speech line, narration line and reply gets an id computed by
 text as written (tokens unexpanded, continuation lines joined). A second
 identical line in the same scene gets `_2`, and so on. The hash is a fixed
 algorithm written in the crate (FNV-1a 64, truncated), never `std`'s hasher.
+
+As built (ticket 0717): the hash is over the speaker, a newline and the
+text, where the speaker is the character id, `>` for narration or `*` for a
+reply, and continuation lines are joined with one space; the id keeps the
+low 32 bits. The lines of a reply's reaction get ids like any other. The
+speaker's expression and a reply's tone are not hashed. Two *different*
+lines of one scene with the same hash are a validation error (reword one):
+numbering them would make their ids depend on their order.
+`cargo xtask lines [scene]` lists every line with its id.
 
 This is how Ren'Py keys translations and automatic voice. It keeps scripts
 free of id clutter, moving or inserting lines changes nothing, and changing

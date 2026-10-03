@@ -8,7 +8,7 @@ use trpg_core::{BattlePack, BattleState, Equipped, ItemId, Objective, Pos, StatV
 use super::items::{ItemTargeting, item_targets, pack_groups};
 use super::mode::{MenuEntry, Mode};
 use super::testing::{battle_packed, quick_units};
-use super::{BattleScreen, HealPopup, TIMINGS};
+use super::{BattleScreen, HealPopup, PopupKind, TIMINGS};
 use crate::FrameInput;
 use crate::color::UiColor;
 use crate::console::{CONSOLE_H, CONSOLE_W};
@@ -164,6 +164,7 @@ fn select_move_item_potion_ally_heals_the_ally_and_ends_the_action() {
         [HealPopup {
             pos: p(4, 5),
             amount: 10,
+            kind: PopupKind::Heal,
             t: 0.0
         }]
     );
