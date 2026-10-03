@@ -6,8 +6,8 @@
 
 use insta::assert_snapshot;
 use trpg_core::{
-    Affinity, BattleState, CastTarget, ClassId, Command, Element, Equipped, Objective, Phase, Pos,
-    SkillId, SpellId, StatValue, UnitAction, UnitId,
+    Affinity, BattleSetup, BattleState, CastTarget, ClassId, Command, Element, Equipped, Objective,
+    Phase, Pos, Reinforcement, SkillId, SpellId, StatValue, UnitAction, UnitId,
 };
 
 use super::forecast::{AFFINITY_ROW, LEFT_X, NAME_ROW, STRIKE_ROW};
@@ -17,12 +17,13 @@ use super::magic::{
     spell_label, spell_menu, target_pos,
 };
 use super::mode::{Effect, MenuEntry, Mode, Selection, menu_entries, open_menu};
+use super::playback::TIMINGS;
 use super::sounds::step_sound;
-use super::testing::{battle_with, quick_units, through_ai_phases};
-use super::{BattleScreen, HealPopup, TERRAIN_FLASH_S, TerrainFlash, quick_battle};
+use super::testing::{battle_with, quick_units, setup, through_ai_phases, tile_cell};
+use super::{BattleScreen, HealPopup, PopupKind, TERRAIN_FLASH_S, TerrainFlash, quick_battle};
 use crate::FrameInput;
 use crate::audio::MenuSound;
-use crate::color::Rgb;
+use crate::color::{Rgb, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::harness::Harness;
@@ -732,6 +733,102 @@ fn a_fire_burning_out_flashes_too() {
     assert_eq!(flashing, [p(1, 5)]);
 }
 
+/// The field with a brigand (unit 99, `hp` HP) due on turn 1 on the forest
+/// at (1, 5), which the mage set burning that turn: the battle just before
+/// the enemy's phase ends, when the fire burns out under it.
+fn burning_arrival(c: &Ctx, hp: StatValue) -> BattleState {
+    let (map, mut units) = quick_units(c);
+    units[7].pos = p(0, 4);
+    let mut late = units[3].clone();
+    late.id = UnitId(99);
+    late.pos = p(1, 5);
+    late.hp = hp;
+    let (mut state, _) = BattleState::new(BattleSetup {
+        reinforcements: vec![Reinforcement {
+            turn: 1,
+            unit: late,
+        }],
+        ..setup(c, map, units, Objective::Rout { turn_limit: None })
+    });
+    let burn = Command::Act {
+        unit: MAGE,
+        dest: p(0, 4),
+        action: cast(&sid("fire"), on_tile(1, 5)),
+    };
+    state.apply(&burn).unwrap();
+    // It arrives on the fire anyway.
+    state.apply(&Command::EndPhase).unwrap();
+    assert_eq!(state.phase(), Phase::Enemy);
+    assert_eq!(state.unit(UnitId(99)).unwrap().pos, p(1, 5));
+    state
+}
+
+#[test]
+fn a_fire_burning_out_under_a_unit_shows_the_damage() {
+    let mut c = ctx();
+    let mut s = BattleScreen::new(burning_arrival(&c, 12));
+    assert!(s.popups().is_empty());
+    // Nobody acts: the fire burns out as the player's phase starts.
+    s.apply(&Command::EndPhase);
+    assert_eq!(s.state().phase(), Phase::Player);
+    assert_eq!(terrain(&c, s.state(), 1, 5), "burnt");
+    assert_eq!(s.state().unit(UnitId(99)).unwrap().hp, 7);
+    let [popup] = s.popups() else {
+        panic!("{:?}", s.popups());
+    };
+    assert_eq!((popup.pos, popup.amount), (p(1, 5), 5));
+    assert_eq!((popup.kind, popup.t), (PopupKind::Burn, 0.0));
+    assert_eq!(popup.text(), "-5");
+    assert_eq!(popup.color(), UiColor::HpLow);
+    // It waits while the phase banner is up (which covers it here).
+    assert!(s.banner().is_some());
+    wait(&mut s, &mut c, TIMINGS.heal_popup);
+    assert!(s.banner().is_some());
+    let waiting = HealPopup {
+        pos: p(1, 5),
+        amount: 5,
+        kind: PopupKind::Burn,
+        t: 0.0,
+    };
+    assert_eq!(s.popups(), [waiting]);
+    step(&mut s, &mut c, &[Action::Confirm]);
+    assert!(s.banner().is_none());
+    // A `-5` in the low-HP colour, over the unit.
+    let (x, y) = tile_cell(&s, &c, p(1, 5)).expect("in view");
+    let buf = render(&s, &c);
+    assert_eq!(text(&buf, x, y - 1, 2), "-5");
+    assert_eq!(buf.get(x, y - 1).unwrap().fg, c.palette.get(UiColor::HpLow));
+    // It goes after the same time as a heal's.
+    wait(&mut s, &mut c, TIMINGS.heal_popup / 2.0);
+    assert_eq!(s.popups().len(), 1, "still up after half its time");
+    wait(&mut s, &mut c, TIMINGS.heal_popup / 2.0);
+    assert!(s.popups().is_empty(), "gone once its time is up");
+    assert_ne!(text(&render(&s, &c), x, y - 1, 2), "-5");
+}
+
+#[test]
+fn a_fire_that_burns_nothing_off_shows_no_popup() {
+    // At 1 HP the fire takes nothing (never below 1).
+    let c = ctx();
+    let mut s = BattleScreen::new(burning_arrival(&c, 1));
+    s.apply(&Command::EndPhase);
+    assert_eq!(terrain(&c, s.state(), 1, 5), "burnt");
+    assert_eq!(s.state().unit(UnitId(99)).unwrap().hp, 1);
+    assert!(s.popups().is_empty());
+}
+
+#[test]
+fn a_heal_popup_reads_plus_in_the_high_hp_colour() {
+    let heal = HealPopup {
+        pos: p(0, 0),
+        amount: 10,
+        kind: PopupKind::Heal,
+        t: 0.0,
+    };
+    assert_eq!(heal.text(), "+10");
+    assert_eq!(heal.color(), UiColor::HpHigh);
+}
+
 // ---- Healing ---------------------------------------------------------------------
 
 #[test]
@@ -764,6 +861,7 @@ fn heal_previews_the_hp_and_restores_it_with_a_popup() {
         [HealPopup {
             pos: p(0, 5),
             amount: 16,
+            kind: PopupKind::Heal,
             t: 0.0
         }]
     );
