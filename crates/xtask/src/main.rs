@@ -5,15 +5,18 @@
 
 mod check_keys;
 mod clean_targets;
+mod effect_marks;
 mod font_atlas;
 mod frame_png;
 mod lines;
+mod map_sprite_import;
 mod playtest;
 mod portrait_import;
 mod private_assets;
 mod sfx;
 mod test_card;
 mod test_tileset;
+mod test_units;
 mod tickets;
 mod web;
 
@@ -31,7 +34,9 @@ font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 frame-png <out.png> [steps]        render a scripted game frame to a PNG (frame-png --help)\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
-test-tileset                       write the sprite map skin's test tileset, assets/tilesets/test.*\n  \
+test-tileset                       write the sprite map skins' test tilesets, assets/tilesets/test*\n  \
+effect-marks                       write the effect arrows, assets/images/effect_marks.png\n  \
+map-sprite-import [--list]         copy the bought map sprites the game uses into assets-private/game/\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 portrait-import <busts> <id>       cut bought busts into portraits (portrait-import --help)\n  \
@@ -55,6 +60,8 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("frame-png") => frame_png(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some("test-tileset") => test_tileset(&args.collect::<Vec<_>>()),
+        Some("effect-marks") => effect_marks(&args.collect::<Vec<_>>()),
+        Some("map-sprite-import") => map_sprite_import(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some("portrait-import") => portrait_import(&args.collect::<Vec<_>>()),
@@ -200,13 +207,60 @@ fn test_tileset(args: &[String]) -> u8 {
         eprintln!("usage: cargo xtask test-tileset");
         return 2;
     }
-    match test_tileset::run(&repo_root()) {
+    let root = repo_root();
+    let written = test_tileset::run(&root).and_then(|tiles| Ok([tiles, test_units::run(&root)?]));
+    match written {
+        Ok(summaries) => {
+            println!("{}", summaries.join("\n"));
+            0
+        }
+        Err(e) => {
+            eprintln!("test-tileset: {e}");
+            1
+        }
+    }
+}
+
+fn map_sprite_import(args: &[String]) -> u8 {
+    use map_sprite_import::{SPRITES, USAGE, list, run};
+    match args {
+        [] => match run(&repo_root(), &SPRITES) {
+            Ok(summary) => {
+                println!("{summary}");
+                0
+            }
+            Err(e) => {
+                eprintln!("map-sprite-import: {e}");
+                1
+            }
+        },
+        [flag] if flag == "--list" => {
+            print!("{}", list(&SPRITES));
+            0
+        }
+        [flag] if flag == "--help" => {
+            println!("{USAGE}");
+            0
+        }
+        _ => {
+            eprintln!("{USAGE}");
+            2
+        }
+    }
+}
+
+fn effect_marks(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask effect-marks");
+        return 2;
+    }
+    match effect_marks::run(&repo_root()) {
         Ok(summary) => {
             println!("{summary}");
             0
         }
         Err(e) => {
-            eprintln!("test-tileset: {e}");
+            eprintln!("effect-marks: {e}");
             1
         }
     }
@@ -719,6 +773,24 @@ mod tests {
     fn test_card_rejects_args() {
         assert_eq!(test_card(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["test-card", "x"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn map_sprite_import_help_list_and_bad_args() {
+        // Only the argument check: a real run writes into `assets-private/`.
+        assert_eq!(map_sprite_import(&args(&["--help"])), 0);
+        assert_eq!(map_sprite_import(&args(&["--list"])), 0);
+        assert_eq!(map_sprite_import(&args(&["--bogus"])), 2);
+        assert_eq!(
+            dispatch(args(&["map-sprite-import", "--list", "x"]).into_iter()),
+            2
+        );
+    }
+
+    #[test]
+    fn effect_marks_rejects_args() {
+        assert_eq!(effect_marks(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["effect-marks", "x"]).into_iter()), 2);
     }
 
     #[test]

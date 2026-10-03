@@ -71,7 +71,7 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i
         let fg = fg.lerp(cell.bg, k);
         // Under a timed effect (a buff or a debuff) the glyphs sit on the
         // effect colour, so it shows on the map (0412).
-        let bg = if unit.has_effect {
+        let bg = if unit.has_effect() {
             cell.bg.lerp(effect, EFFECT_BLEND)
         } else {
             cell.bg
@@ -88,6 +88,33 @@ pub fn draw_unit(buf: &mut GlyphBuffer, palette: &Palette, unit: &UnitView, x: i
     // An empty part (full or zero HP) is dropped by `add_overlay`.
     buf.add_overlay(bar(px, width, color));
     buf.add_overlay(bar(px + width, HP_BAR_W - width, UiColor::Black));
+}
+
+/// Takes the terrain's glyphs off the tile whose left cell is `(x, y)`,
+/// for a unit drawn there as a picture (ADR-0049): the tile keeps its
+/// background. A `highlight`ed unit (one a battle note is about) stands on
+/// the terrain's glyph colour instead. Over the second half of a unit's
+/// fall (`fade` from `0.5` to `1`) the glyphs fade back in, as under
+/// [`draw_unit`].
+pub fn clear_glyphs(buf: &mut GlyphBuffer, x: i32, y: i32, fade: f32, highlight: bool) {
+    let back = if fade.is_finite() {
+        (fade.clamp(0.0, 1.0) - 0.5).max(0.0) * 2.0
+    } else {
+        0.0
+    };
+    for i in 0..TILE_W_CELLS {
+        let Some(&cell) = buf.get(x + i, y) else {
+            continue;
+        };
+        let bg = if highlight { cell.fg } else { cell.bg };
+        let cleared = if back > 0.0 {
+            let fg = bg.lerp(cell.fg, back);
+            Cell { fg, bg, ..cell }
+        } else {
+            Cell::new(' ', cell.fg, bg)
+        };
+        buf.set(x + i, y, cleared);
+    }
 }
 
 /// Swaps the text and background colours of the tile whose left cell is
@@ -245,8 +272,16 @@ mod tests {
         let p = game_palette();
         let bg = Rgb::new(0, 0, 100);
         let mut u = unit("Br", 30, 30, false);
-        u.has_effect = true;
+        u.effects.penalty = true;
         let b = drawn(&u);
+        // A bonus, or both, looks the same here.
+        for (bonus, penalty) in [(true, false), (true, true)] {
+            let other = UnitView {
+                effects: crate::map_view::UnitEffects { bonus, penalty },
+                ..u.clone()
+            };
+            assert_eq!(drawn(&other), b);
+        }
         let (enemy, effect) = (p.get(UiColor::Enemy), p.get(UiColor::Effect));
         let behind = bg.lerp(effect, EFFECT_BLEND);
         assert_ne!(behind, bg);
@@ -254,6 +289,35 @@ mod tests {
         assert_eq!(b.get(2, 1), Some(&Cell::new('r', enemy, behind)));
         // The terrain beside it keeps its own.
         assert_eq!(b.get(3, 1).map(|c| c.bg), Some(bg));
+    }
+
+    #[test]
+    fn clearing_a_tile_takes_its_glyphs_and_keeps_its_background() {
+        let (fg, bg) = (Rgb::new(200, 100, 0), Rgb::new(0, 0, 100));
+        let cleared = |fade, highlight| {
+            let mut b = GlyphBuffer::new(4, 2, Cell::new('.', fg, bg));
+            clear_glyphs(&mut b, 1, 1, fade, highlight);
+            // Only the tile's two cells change.
+            assert_eq!(b.get(0, 1), Some(&Cell::new('.', fg, bg)));
+            assert_eq!(b.get(3, 1), Some(&Cell::new('.', fg, bg)));
+            assert_eq!(b.get(1, 0), Some(&Cell::new('.', fg, bg)));
+            assert_eq!(b.get(1, 1), b.get(2, 1));
+            *b.get(1, 1).unwrap()
+        };
+        assert_eq!(cleared(0.0, false), Cell::new(' ', fg, bg));
+        assert_eq!(cleared(0.5, false), Cell::new(' ', fg, bg));
+        assert_eq!(cleared(f32::NAN, false), Cell::new(' ', fg, bg));
+        assert_eq!(cleared(-1.0, false), Cell::new(' ', fg, bg));
+        // Picked out: on the terrain's glyph colour.
+        assert_eq!(cleared(0.0, true), Cell::new(' ', fg, fg));
+        // Falling: the glyphs come back over the second half.
+        assert_eq!(cleared(0.75, false), Cell::new('.', bg.lerp(fg, 0.5), bg));
+        assert_eq!(cleared(1.0, false), Cell::new('.', fg, bg));
+        assert_eq!(cleared(7.0, false), Cell::new('.', fg, bg));
+        // At the buffer's edge: the cell that exists.
+        let mut b = GlyphBuffer::new(1, 1, Cell::new('.', fg, bg));
+        clear_glyphs(&mut b, 0, 0, 0.0, false);
+        assert_eq!(b.get(0, 0), Some(&Cell::new(' ', fg, bg)));
     }
 
     #[test]

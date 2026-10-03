@@ -1,40 +1,31 @@
-//! The sprite skin (ADR-0038): the battle map painted from a tileset
-//! (`assets/tilesets/<id>.ron` and its image, `trpg_content::tileset`).
-//! A tile is the tileset's `tile_px`; that size is known only here, behind
-//! [`SpriteSkin::tile_size`].
+//! The sprite skin (ADR-0038, ADR-0049): the battle map painted from a
+//! tileset (`assets/tilesets/<id>.ron`, `trpg_content::tileset`).
 //!
-//! Only the debug menu switches to it, with the generated test tileset
-//! (ticket 0433). What the art alone doesn't show is drawn with
-//! **placeholders**, Claude's and not decided (ticket 0039 decides them,
-//! 0436 builds them): a bar in the unit's side's colour along the top of
-//! its tile (its two-letter label isn't drawn); the HP bar along the
-//! bottom, as on the glyph skin; a small mark in the effect colour in the
-//! top-right corner for a unit under a timed effect; a light square behind
-//! a unit a battle note picks out; and the cursor's corner marks just
-//! inside the tile.
+//! - A tileset **with terrain tiles** paints the whole map: a tile is the
+//!   tileset's `tile_px`, a size known only here, behind
+//!   [`SpriteSkin::tile_size`]. The cursor's corner marks sit just inside
+//!   its tile, and a unit a battle note picks out stands on a light square
+//!   (both Claude's placeholders until ticket 0437).
+//! - A tileset **without** them paints only the units: terrain, ranges,
+//!   the path and the cursor are the glyph skin's, on its tiles, and each
+//!   unit's tile loses its terrain glyphs under the picture.
+//!
+//! Units look the same either way: see [`units`].
+
+pub mod units;
 
 use trpg_content::{ImageRect, Picture, Tileset};
 use trpg_core::Pos;
 
 use super::glyph::cursor::GLOW_MAX;
-use super::glyph::units::{ACTED_DIM, HP_BAR_H};
-use super::glyph::{OVERLAY_BLEND, named, range_color};
+use super::glyph::{self, GlyphSkin, OVERLAY_BLEND, named, range_color};
 use super::grid::{Grid, px_rect};
 use super::path;
-use super::scene::{CursorStyle, CursorView, MapScene, TileView, UnitView};
+use super::scene::{CursorStyle, CursorView, MapScene, TileView};
 use super::skin::MapSkin;
 use crate::color::{Rgb, UiColor, to_channel};
 use crate::glyph_buffer::{GlyphBuffer, Layer, Overlay, PxRect, Rect, Sprite};
 use crate::screen::Ctx;
-use crate::screens::battle::units::{faction_color, hp_fill};
-
-/// The faction bar's thickness, in pixels, along the top of a unit's tile
-/// (a placeholder). *Tunable.*
-pub const FACTION_BAR_H: i32 = 2;
-
-/// The side of the effect mark's square, in pixels, in the top-right
-/// corner of a unit's tile (a placeholder). *Tunable.*
-pub const EFFECT_MARK: i32 = 3;
 
 /// The battle map painted from a tileset.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,16 +44,23 @@ impl SpriteSkin {
         &self.tileset
     }
 
-    /// A map tile's size on screen, across × down, in console pixels:
-    /// everything that depends on the tile size goes through this.
+    /// A map tile's size on screen, across × down, in console pixels: the
+    /// tileset's, or the glyph skin's when it has no terrain tiles.
+    /// Everything that depends on the tile size goes through this.
     pub fn tile_size(&self) -> (i32, i32) {
-        let (w, h) = self.tileset.tile_px;
-        (side(w), side(h))
+        match &self.tileset.terrain {
+            Some(terrain) => (side(terrain.tile_px.0), side(terrain.tile_px.1)),
+            None => glyph::tile_px(),
+        }
     }
 
     /// Where `scene`'s tiles go in `area`: as many as fit, the pixels left
-    /// over split evenly around them.
+    /// over split evenly around them; with no terrain tiles, where the
+    /// glyph skin puts them.
     pub fn grid(&self, scene: &MapScene, area: Rect) -> Grid {
+        if self.tileset.terrain.is_none() {
+            return glyph::Layout::new(scene, area).grid();
+        }
         let px = px_rect(area);
         let tile = self.tile_size();
         let fit = self.view_tiles(area);
@@ -91,106 +89,31 @@ impl SpriteSkin {
                 let pos = Pos::new(scene.origin.x + dx, scene.origin.y + dy);
                 let rect = grid.rect_at(dx, dy);
                 let tints = tints(ctx, tile, scene.cursor.filter(|c| c.pos == pos));
-                let src = tile.terrain.and_then(|id| self.tileset.tile(id));
-                paint_tinted(
-                    buf,
-                    rect,
-                    src.map(|s| (self.tileset.image, s)),
-                    &tints,
-                    black,
-                );
-                if let Some(src) = tile.becomes.and_then(|id| self.tileset.tile(id)) {
-                    buf.add_sprite(tile_sprite(self.tileset.image, src, rect));
+                let picture = tile.terrain.and_then(|id| self.tileset.tile(id));
+                paint_tinted(buf, rect, picture, &tints, black);
+                if let Some(picture) = tile.becomes.and_then(|id| self.tileset.tile(id)) {
+                    buf.add_sprite(tile_sprite(picture, rect));
                 }
             }
         }
     }
 
-    /// Paints `unit` on the pixels `tile`, nothing outside `view`: a light
-    /// square if it is picked out, its picture, and the placeholders for
-    /// what the picture doesn't show.
-    fn paint_unit(
-        &self,
-        ctx: &Ctx,
-        unit: &UnitView,
-        tile: PxRect,
-        view: PxRect,
-        buf: &mut GlyphBuffer,
-    ) {
-        let color = |c| ctx.palette.get(c);
-        if unit.highlight {
-            buf.add_overlay(Overlay::new(tile, color(UiColor::Text), Layer::Under));
-        }
-        let picture = self
-            .tileset
-            .unit_picture(unit.character.as_ref(), &unit.class);
-        let mut sprite = Sprite::new(
-            picture.image,
-            src_rect(picture.rect),
-            unit_dest(picture, tile),
-            Layer::Under,
-        );
-        sprite.opacity = unit_opacity(unit);
-        if let Some(clip) = sprite.dest.intersect(&view) {
-            sprite.clip = clip;
-            buf.add_sprite(sprite);
-        }
-        if fade(unit) >= 0.5 {
-            // Its marks go with the first half of its fall, as the glyph
-            // skin's label and HP bar do.
-            return;
-        }
-        let bar = Rect::new(tile.x, tile.y, tile.w, FACTION_BAR_H);
-        let faction = color(faction_color(unit.faction));
-        buf.add_overlay(Overlay::new(bar, faction, Layer::Over));
-        if unit.has_effect {
-            let x = tile.x + tile.w - EFFECT_MARK;
-            let mark = Rect::new(x, tile.y, EFFECT_MARK, EFFECT_MARK);
-            buf.add_overlay(Overlay::new(mark, color(UiColor::Effect), Layer::Over));
-        }
-        let (filled, hp) = hp_fill(unit.hp.0, unit.hp.1, tile.w);
-        let y = tile.y + tile.h - HP_BAR_H;
-        let full = Rect::new(tile.x, y, filled, HP_BAR_H);
-        let empty = Rect::new(tile.x + filled, y, tile.w - filled, HP_BAR_H);
-        // An empty part (full or zero HP) is dropped by `add_overlay`.
-        buf.add_overlay(Overlay::new(full, color(hp), Layer::Over));
-        buf.add_overlay(Overlay::new(empty, color(UiColor::Black), Layer::Over));
-    }
-}
-
-impl MapSkin for SpriteSkin {
-    fn name(&self) -> &'static str {
-        "sprite"
-    }
-
-    /// The area's pixels divided by the tile size, rounded down.
-    fn view_tiles(&self, area: Rect) -> (i32, i32) {
-        let px = px_rect(area);
-        let (w, h) = self.tile_size();
-        (px.w.max(0) / w, px.h.max(0) / h)
-    }
-
-    /// Terrain (tinted by flashes, ranges and the cursor's glow), the path
-    /// line, the units, the path's arrowhead, then the cursor's corners.
-    fn paint(&self, ctx: &Ctx, scene: &MapScene, area: Rect, buf: &mut GlyphBuffer) {
-        let grid = self.grid(scene, area);
-        self.paint_tiles(ctx, scene, &grid, buf);
-        let color = ctx.palette.get(UiColor::Path);
-        let (line, arrowhead): (Vec<Overlay>, Vec<Overlay>) =
-            path::path_overlays(&scene.path, &grid, color)
-                .into_iter()
-                .partition(|o| o.layer == Layer::Under);
-        for overlay in line {
-            buf.add_overlay(overlay);
-        }
-        for unit in &scene.units {
+    /// Paints the ground under the units with the tileset's own tiles:
+    /// the tiles, then a light square under each unit a battle note picks
+    /// out.
+    fn paint_own_ground(&self, ctx: &Ctx, scene: &MapScene, grid: &Grid, buf: &mut GlyphBuffer) {
+        self.paint_tiles(ctx, scene, grid, buf);
+        let light = ctx.palette.get(UiColor::Text);
+        for unit in scene.units.iter().filter(|u| u.highlight) {
             if let Some(tile) = grid.rect(unit.pos) {
-                self.paint_unit(ctx, unit, tile, grid.bounds(), buf);
+                buf.add_overlay(Overlay::new(tile, light, Layer::Under));
             }
         }
-        for overlay in arrowhead {
-            buf.add_overlay(overlay);
-        }
+    }
+
+    /// The cursor's corner marks just inside its tile (the glow style
+    /// tints the tile instead, in [`paint_tiles`](Self::paint_tiles)).
+    fn paint_own_cursor(ctx: &Ctx, scene: &MapScene, grid: &Grid, buf: &mut GlyphBuffer) {
         if let Some(c) = &scene.cursor
             && let Some(tile) = grid.rect(c.pos)
         {
@@ -204,6 +127,75 @@ impl MapSkin for SpriteSkin {
             for r in corner_arms(tile, arm) {
                 buf.add_overlay(Overlay::new(r, color, Layer::Over));
             }
+        }
+    }
+}
+
+/// Paints the ground under the units as the glyph skin does: its tiles,
+/// each unit's tile without its terrain glyphs.
+fn paint_glyph_ground(ctx: &Ctx, scene: &MapScene, layout: &glyph::Layout, buf: &mut GlyphBuffer) {
+    glyph::draw_tiles(ctx, buf, scene, layout);
+    for unit in &scene.units {
+        if let Some((x, y)) = glyph::tile_to_cell(unit.pos, layout) {
+            glyph::units::clear_glyphs(buf, x, y, unit.fade, unit.highlight);
+        }
+    }
+}
+
+impl MapSkin for SpriteSkin {
+    /// `"sprite"` when the tileset paints the whole map, `"sprite_units"`
+    /// when only the units.
+    fn name(&self) -> &'static str {
+        match self.tileset.terrain {
+            Some(_) => "sprite",
+            None => "sprite_units",
+        }
+    }
+
+    fn tileset_id(&self) -> Option<&str> {
+        Some(&self.tileset.id)
+    }
+
+    /// The area's pixels divided by the tile size, rounded down; with no
+    /// terrain tiles, what the glyph skin fits.
+    fn view_tiles(&self, area: Rect) -> (i32, i32) {
+        if self.tileset.terrain.is_none() {
+            return GlyphSkin.view_tiles(area);
+        }
+        let px = px_rect(area);
+        let (w, h) = self.tile_size();
+        (px.w.max(0) / w, px.h.max(0) / h)
+    }
+
+    /// The ground (terrain tinted by flashes, ranges and the cursor's
+    /// glow), the path line, the units' outlines and pictures, their HP
+    /// bars and marks, the path's arrowhead, then the cursor.
+    fn paint(&self, ctx: &Ctx, scene: &MapScene, area: Rect, buf: &mut GlyphBuffer) {
+        let grid = self.grid(scene, area);
+        let layout = glyph::Layout::new(scene, area);
+        let own = self.tileset.terrain.is_some();
+        if own {
+            self.paint_own_ground(ctx, scene, &grid, buf);
+        } else {
+            paint_glyph_ground(ctx, scene, &layout, buf);
+        }
+        let color = ctx.palette.get(UiColor::Path);
+        let (line, arrowhead): (Vec<Overlay>, Vec<Overlay>) =
+            path::path_overlays(&scene.path, &grid, color)
+                .into_iter()
+                .partition(|o| o.layer == Layer::Under);
+        for overlay in line {
+            buf.add_overlay(overlay);
+        }
+        units::paint_pictures(ctx, &self.tileset, scene, &grid, buf);
+        units::paint_marks(ctx, scene, &grid, buf);
+        for overlay in arrowhead {
+            buf.add_overlay(overlay);
+        }
+        if own {
+            Self::paint_own_cursor(ctx, scene, &grid, buf);
+        } else {
+            glyph::draw_cursor(ctx, buf, scene, &layout);
         }
     }
 
@@ -222,34 +214,9 @@ fn src_rect(rect: ImageRect) -> PxRect {
     Rect::new(side(rect.x), side(rect.y), side(rect.w), side(rect.h))
 }
 
-/// A solid sprite of tile `src` of `image` on the pixels `dest`.
-fn tile_sprite(image: trpg_content::ImageId, src: ImageRect, dest: PxRect) -> Sprite {
-    Sprite::new(image, src_rect(src), dest, Layer::Under)
-}
-
-/// Where a unit's `picture` goes on the pixels `tile`, at its own size:
-/// centred across, its bottom on the tile's (a taller picture reaches into
-/// the tile above).
-fn unit_dest(picture: Picture, tile: PxRect) -> PxRect {
-    let (w, h) = (side(picture.rect.w), side(picture.rect.h));
-    Rect::new(tile.x + (tile.w - w) / 2, tile.y + tile.h - h, w, h)
-}
-
-/// How far `unit` has fallen, in `0..=1` (`0` if not a number).
-fn fade(unit: &UnitView) -> f32 {
-    if unit.fade.is_finite() {
-        unit.fade.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-/// The opacity of `unit`'s picture: solid when standing, dimmed by the
-/// glyph skin's [`ACTED_DIM`] once it has acted, and fading out as it
-/// falls.
-pub fn unit_opacity(unit: &UnitView) -> u8 {
-    let acted = if unit.acted { 1.0 - ACTED_DIM } else { 1.0 };
-    to_channel(255.0 * acted * (1.0 - fade(unit)))
+/// A solid sprite of the tile `picture` on the pixels `dest`.
+fn tile_sprite(picture: Picture, dest: PxRect) -> Sprite {
+    Sprite::new(picture.image, src_rect(picture.rect), dest, Layer::Under)
 }
 
 /// What tints `tile`, in order, as colours and strengths: its flashes
@@ -294,26 +261,26 @@ fn mix(tints: &[(Rgb, f32)]) -> (f32, [f32; 3]) {
     (kept, added)
 }
 
-/// Paints a tile on the pixels `rect`, tinted by `tints`: its picture
-/// (`image` and `src`) at reduced opacity over a rectangle of the colours
-/// it is tinted towards, so it reads as tinted; with no picture (off the
-/// map), the tints over `base`.
+/// Paints a tile on the pixels `rect`, tinted by `tints`: its `picture` at
+/// reduced opacity over a rectangle of the colours it is tinted towards,
+/// so it reads as tinted; with no picture (off the map), the tints over
+/// `base`.
 fn paint_tinted(
     buf: &mut GlyphBuffer,
     rect: PxRect,
-    picture: Option<(trpg_content::ImageId, ImageRect)>,
+    picture: Option<Picture>,
     tints: &[(Rgb, f32)],
     base: Rgb,
 ) {
     let (kept, added) = mix(tints);
     let rgb = |[r, g, b]: [f32; 3]| Rgb::new(to_channel(r), to_channel(g), to_channel(b));
     match picture {
-        Some((image, src)) => {
+        Some(picture) => {
             if kept < 1.0 {
                 let under = added.map(|a| a / (1.0 - kept));
                 buf.add_overlay(Overlay::new(rect, rgb(under), Layer::Under));
             }
-            let mut sprite = tile_sprite(image, src, rect);
+            let mut sprite = tile_sprite(picture, rect);
             sprite.opacity = to_channel(255.0 * kept);
             buf.add_sprite(sprite);
         }
@@ -352,7 +319,7 @@ fn corner_arms(tile: PxRect, arm: i32) -> Vec<Rect> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use insta::assert_snapshot;
     use proptest::prelude::*;
     use trpg_core::{CharacterId, ClassId, Faction, TerrainId, UnitId};
@@ -360,29 +327,37 @@ mod tests {
     use super::*;
     use crate::glyph_buffer::{Cell, Item};
     use crate::map_view::glyph::tests::any_scene;
-    use crate::map_view::scene::RangeKind;
+    use crate::map_view::scene::{RangeKind, UnitEffects, UnitView};
     use crate::screen::tests::ctx;
     use crate::screens::battle::layout::MAP_VIEW;
 
-    fn p(x: i32, y: i32) -> Pos {
+    pub(crate) fn p(x: i32, y: i32) -> Pos {
         Pos::new(x, y)
     }
 
     /// The skin of the test tileset (24 × 24 tiles).
-    fn skin(c: &Ctx) -> SpriteSkin {
+    pub(crate) fn skin(c: &Ctx) -> SpriteSkin {
         SpriteSkin::new(c.content.tilesets["test"].clone())
+    }
+
+    /// The skin of the test unit sheets: 16 × 20 units on glyph terrain.
+    pub(crate) fn sheets(c: &Ctx) -> SpriteSkin {
+        SpriteSkin::new(c.content.tilesets["test_units"].clone())
     }
 
     /// [`skin`] with `w × h` tiles.
     fn sized(c: &Ctx, w: u32, h: u32) -> SpriteSkin {
         let mut tileset = c.content.tilesets["test"].clone();
-        tileset.tile_px = (w, h);
+        if let Some(terrain) = &mut tileset.terrain {
+            terrain.tile_px = (w, h);
+        }
         SpriteSkin::new(tileset)
     }
 
-    /// [`skin`] with a picture for the test lord: the top-left class's.
-    fn with_lord(c: &Ctx) -> SpriteSkin {
-        let mut tileset = c.content.tilesets["test"].clone();
+    /// `skin` with a picture for the test lord: the fallback's, moved to
+    /// the left edge of its image.
+    pub(crate) fn with_lord(skin: &SpriteSkin) -> SpriteSkin {
+        let mut tileset = skin.tileset.clone();
         let mut lord = tileset.fallback;
         lord.rect.x = 0;
         tileset
@@ -392,15 +367,15 @@ mod tests {
     }
 
     /// A buffer the size of the console, every cell `fill()`.
-    fn blank() -> GlyphBuffer {
+    pub(crate) fn blank() -> GlyphBuffer {
         GlyphBuffer::new(100, 32, fill())
     }
 
-    fn fill() -> Cell {
+    pub(crate) fn fill() -> Cell {
         Cell::new('x', Rgb::new(1, 2, 3), Rgb::new(4, 5, 6))
     }
 
-    fn brigand(pos: Pos) -> UnitView {
+    pub(crate) fn brigand(pos: Pos) -> UnitView {
         UnitView {
             id: UnitId(4),
             pos,
@@ -410,14 +385,14 @@ mod tests {
             character: None,
             acted: false,
             hp: (30, 30),
-            has_effect: false,
+            effects: UnitEffects::default(),
             fade: 0.0,
             highlight: false,
         }
     }
 
     /// A 3 × 2 view from (0, 0): plains, but a forest at (1, 0).
-    fn plains(c: &Ctx) -> MapScene {
+    pub(crate) fn plains(c: &Ctx) -> MapScene {
         let display = &c.content.terrain.display;
         let mut scene = MapScene::new(p(0, 0), (3, 2));
         for tile in &mut scene.tiles {
@@ -430,14 +405,14 @@ mod tests {
     /// `scene` painted by `skin` into a blank console, in the 6 × 4 cells
     /// from (2, 1): 48 × 64 px from (16, 16), so 2 × 2 tiles of 24 px with
     /// 8 px to spare above and below.
-    fn painted(c: &Ctx, skin: &SpriteSkin, scene: &MapScene) -> GlyphBuffer {
+    pub(crate) fn painted(c: &Ctx, skin: &SpriteSkin, scene: &MapScene) -> GlyphBuffer {
         let mut buf = blank();
         skin.paint(c, scene, Rect::new(2, 1, 6, 4), &mut buf);
         buf
     }
 
     /// The item at `i` as a rectangle.
-    fn rect_at(buf: &GlyphBuffer, i: usize) -> Overlay {
+    pub(crate) fn rect_at(buf: &GlyphBuffer, i: usize) -> Overlay {
         match buf.items()[i] {
             Item::Rect(o) => o,
             Item::Sprite(s) => panic!("item {i} is a sprite: {s:?}"),
@@ -445,7 +420,7 @@ mod tests {
     }
 
     /// The item at `i` as a sprite.
-    fn sprite_at(buf: &GlyphBuffer, i: usize) -> Sprite {
+    pub(crate) fn sprite_at(buf: &GlyphBuffer, i: usize) -> Sprite {
         match buf.items()[i] {
             Item::Sprite(s) => s,
             Item::Rect(o) => panic!("item {i} is a rectangle: {o:?}"),
@@ -498,7 +473,7 @@ mod tests {
         let s = skin(&c);
         let buf = painted(&c, &s, &plains(&c));
         let display = &c.content.terrain.display;
-        let tile = |name| src_rect(s.tileset.tile(display.id_of(name).unwrap()).unwrap());
+        let tile = |name| src_rect(s.tileset.tile(display.id_of(name).unwrap()).unwrap().rect);
         let sprites = buf.sprites();
         // 2 × 2 tiles fit, from (16, 24).
         assert_eq!(sprites.len(), 4);
@@ -631,151 +606,16 @@ mod tests {
         assert_eq!([under.color.r, under.color.g, under.color.b], expect);
         assert_ne!(under.color, attack);
         // Then the tile, then the forest it would become, solid, over it.
-        let forest = s.tileset.tile(display.id_of("forest").unwrap()).unwrap();
+        let forest = s
+            .tileset
+            .tile(display.id_of("forest").unwrap())
+            .unwrap()
+            .rect;
         let becomes = sprite_at(&buf, 2);
         assert_eq!((becomes.src, becomes.opacity), (src_rect(forest), 255));
         assert_eq!(becomes.dest, under.rect);
         // Then (1, 0), the forest, and (1, 1): (0, 1) is off the map.
         assert_eq!(buf.items().len(), 3 + 2);
-    }
-
-    #[test]
-    fn a_unit_is_its_picture_and_the_placeholders() {
-        let c = ctx();
-        let s = skin(&c);
-        let pal = &c.palette;
-        let mut scene = plains(&c);
-        let mut unit = brigand(p(1, 1));
-        unit.hp = (20, 30);
-        unit.has_effect = true;
-        scene.push_unit(unit);
-        let buf = painted(&c, &s, &scene);
-        let tile = Rect::new(40, 48, 24, 24);
-        let class = s.tileset.unit_picture(None, &ClassId("brigand".into()));
-        let picture = sprite_at(&buf, 4);
-        assert_eq!(picture.src, src_rect(class.rect));
-        let look = (picture.dest, picture.layer, picture.opacity);
-        assert_eq!(look, (tile, Layer::Under, 255));
-        let rects: Vec<(Rect, Rgb, Layer)> = (5..buf.items().len())
-            .map(|i| rect_at(&buf, i))
-            .map(|o| (o.rect, o.color, o.layer))
-            .collect();
-        let over = Layer::Over;
-        assert_eq!(
-            rects,
-            [
-                // Its side along the top.
-                (Rect::new(40, 48, 24, 2), pal.get(UiColor::Enemy), over),
-                // The effect mark in the top-right corner.
-                (Rect::new(61, 48, 3, 3), pal.get(UiColor::Effect), over),
-                // 20 / 30 HP: 16 of 24 px, along the bottom.
-                (Rect::new(40, 70, 16, 2), pal.get(UiColor::HpMid), over),
-                (Rect::new(56, 70, 8, 2), pal.get(UiColor::Black), over),
-            ]
-        );
-        // A unit off the view: nothing.
-        let mut scene = plains(&c);
-        scene.units.push(brigand(p(2, 0)));
-        assert_eq!(painted(&c, &s, &scene).items().len(), 4);
-    }
-
-    #[test]
-    fn a_picture_is_the_characters_else_its_class_else_the_fallback() {
-        let c = ctx();
-        let s = with_lord(&c);
-        let src = |unit: UnitView| {
-            let mut scene = plains(&c);
-            scene.push_unit(unit);
-            sprite_at(&painted(&c, &s, &scene), 4).src
-        };
-        let lord = CharacterId("test_lord".into());
-        let mut named = brigand(p(0, 0));
-        named.character = Some(lord.clone());
-        assert_eq!(
-            src(named.clone()),
-            src_rect(s.tileset.characters[&lord].rect)
-        );
-        named.character = Some(CharacterId("nobody".into()));
-        let class = s.tileset.classes[&ClassId("brigand".into())];
-        assert_eq!(src(named.clone()), src_rect(class.rect));
-        named.class = ClassId("no_such_class".into());
-        assert_eq!(src(named), src_rect(s.tileset.fallback.rect));
-        assert_ne!(class.rect, s.tileset.fallback.rect);
-    }
-
-    #[test]
-    fn a_picture_stands_on_the_bottom_of_its_tile_centred_and_clipped_to_the_view() {
-        let c = ctx();
-        let image = c.content.tilesets["test"].image;
-        let picture = |w, h| Picture {
-            image,
-            rect: ImageRect { x: 0, y: 0, w, h },
-        };
-        let tile = Rect::new(40, 48, 24, 24);
-        assert_eq!(unit_dest(picture(24, 24), tile), tile);
-        // Taller: into the tile above; narrower: centred.
-        assert_eq!(unit_dest(picture(16, 30), tile), Rect::new(44, 42, 16, 30));
-        assert_eq!(unit_dest(picture(17, 24), tile), Rect::new(43, 48, 17, 24));
-        // A tall picture on the top row is cut at the view's edge.
-        let mut tileset = c.content.tilesets["test"].clone();
-        tileset.classes.clear();
-        tileset.fallback.rect.h = 30;
-        tileset.fallback.rect.y -= 6;
-        let s = SpriteSkin::new(tileset);
-        let mut scene = plains(&c);
-        scene.push_unit(brigand(p(0, 0)));
-        let unit = sprite_at(&painted(&c, &s, &scene), 4);
-        assert_eq!(unit.dest, Rect::new(16, 18, 24, 30));
-        assert_eq!(unit.clip, Rect::new(16, 24, 24, 24));
-    }
-
-    #[test]
-    fn acted_and_falling_units_fade() {
-        let standing = brigand(p(0, 0));
-        assert_eq!(unit_opacity(&standing), 255);
-        let acted = UnitView {
-            acted: true,
-            ..standing.clone()
-        };
-        assert_eq!(unit_opacity(&acted), 128);
-        let fading = |u: &UnitView, fade| unit_opacity(&u.clone().fading(fade));
-        assert_eq!(fading(&standing, 0.25), 191);
-        assert_eq!(fading(&acted, 0.5), 64);
-        assert_eq!(fading(&standing, 1.0), 0);
-        assert_eq!(fading(&standing, 7.0), 0);
-        // Not a number, or below 0: standing.
-        assert_eq!(fading(&standing, f32::NAN), 255);
-        assert_eq!(fading(&standing, f32::INFINITY), 255);
-        assert_eq!(fading(&standing, -1.0), 255);
-        // The marks go at half way.
-        let c = ctx();
-        let s = skin(&c);
-        let marks = |fade| {
-            let mut scene = plains(&c);
-            scene.push_unit(brigand(p(0, 0)).fading(fade));
-            painted(&c, &s, &scene).overlays().len()
-        };
-        assert_eq!(
-            (marks(0.0), marks(0.49), marks(0.5), marks(1.0)),
-            (2, 2, 0, 0)
-        );
-        let mut scene = plains(&c);
-        scene.push_unit(acted.fading(0.25));
-        assert_eq!(sprite_at(&painted(&c, &s, &scene), 4).opacity, 96);
-    }
-
-    #[test]
-    fn a_picked_out_unit_stands_on_a_light_square() {
-        let c = ctx();
-        let s = skin(&c);
-        let mut scene = plains(&c);
-        scene.push_unit(brigand(p(0, 0)).highlighted(true));
-        let buf = painted(&c, &s, &scene);
-        let square = rect_at(&buf, 4);
-        assert_eq!(square.rect, Rect::new(16, 24, 24, 24));
-        let text = c.palette.get(UiColor::Text);
-        assert_eq!((square.color, square.layer), (text, Layer::Under));
-        assert_eq!(sprite_at(&buf, 5).dest, square.rect);
     }
 
     #[test]
@@ -857,8 +697,12 @@ mod tests {
                 Item::Rect(_) => "mark",
             })
             .collect();
+        // Four tiles; the line; the unit's outline (four) and picture;
+        // its HP bar (full: one rectangle); the arrowhead.
         let mut expect = vec!["sprite"; 4];
-        expect.extend(["path", "sprite", "mark", "mark"]);
+        expect.push("path");
+        expect.extend(["sprite"; 5]);
+        expect.push("mark");
         expect.extend(["path"; 6]);
         assert_eq!(kinds, expect);
         // Through the centres of 24 px tiles: pixels 11..=13 of each.
@@ -884,7 +728,7 @@ mod tests {
         scene.push_unit(lord);
         let mut enemy = brigand(p(1, 1));
         enemy.acted = true;
-        enemy.has_effect = true;
+        enemy.effects.penalty = true;
         scene.push_unit(enemy);
         scene.path = vec![p(0, 0), p(0, 1)];
         scene.cursor = Some(CursorView {
@@ -904,14 +748,10 @@ mod tests {
         with: MapScene,
     }
 
-    /// Every feature of a [`MapScene`], each as a scene without it and the
-    /// same scene with it. Every field of the scene is listed below, so a
-    /// new one doesn't compile until it is listed here too, with a feature
-    /// or the reason it has none.
-    fn features(c: &Ctx) -> Vec<Feature> {
-        let display = &c.content.terrain.display;
-        let mut base = plains(c);
-        base.push_unit(brigand(p(1, 1)));
+    /// Names every field of a scene, its tiles, its units and its cursor,
+    /// so a new one doesn't compile until it is listed here and given a
+    /// feature in [`features`], or the reason it has none.
+    fn every_field_is_listed(scene: &MapScene) {
         let MapScene {
             origin: _, // where the tiles are: every feature moves with it
             size: _,   // how many tiles: likewise
@@ -919,13 +759,14 @@ mod tests {
             units: _,
             cursor: _,
             path: _,
-        } = &base;
+            clock_ms: _,
+        } = scene;
         let TileView {
             terrain: _,
             flashes: _,
             tints: _,
             becomes: _,
-        } = &base.tiles[0];
+        } = &scene.tiles[0];
         let UnitView {
             id: _,    // which unit it is: not shown
             label: _, // the glyph skin's; this skin shows the picture instead
@@ -935,10 +776,14 @@ mod tests {
             character: _,
             acted: _,
             hp: _,
-            has_effect: _,
+            effects:
+                UnitEffects {
+                    bonus: _,
+                    penalty: _,
+                },
             fade: _,
             highlight: _,
-        } = &base.units[0];
+        } = &scene.units[0];
         let CursorView {
             pos: _,
             brightness: _,
@@ -948,6 +793,17 @@ mod tests {
             brightness: 1.0,
             style: CursorStyle::Corners,
         };
+    }
+
+    /// Every feature of a [`MapScene`], each as a scene without it and the
+    /// same scene with it. Every field of the scene is listed below, so a
+    /// new one doesn't compile until it is listed here too, with a feature
+    /// or the reason it has none.
+    fn features(c: &Ctx) -> Vec<Feature> {
+        let display = &c.content.terrain.display;
+        let mut base = plains(c);
+        base.push_unit(brigand(p(1, 1)));
+        every_field_is_listed(&base);
         let feature = |name, change: &dyn Fn(&mut MapScene)| {
             let mut with = base.clone();
             change(&mut with);
@@ -971,11 +827,17 @@ mod tests {
             ),
             feature("acted", &unit(|u| u.acted = true)),
             feature("hp", &unit(|u| u.hp.0 = 10)),
-            feature("effect", &unit(|u| u.has_effect = true)),
+            feature("bonus", &unit(|u| u.effects.bonus = true)),
+            feature("penalty", &unit(|u| u.effects.penalty = true)),
             feature("fade", &unit(|u| u.fade = 0.25)),
             feature("highlight", &unit(|u| u.highlight = true)),
             feature("path", &|s| s.path = vec![p(0, 0), p(1, 0)]),
         ];
+        // The clock moves the marks: an arrow rests, then is bounced.
+        let mut clock = feature("clock", &|s| s.clock_ms = units::BOUNCE_MS);
+        clock.without.units[0].effects.bonus = true;
+        clock.with.units[0].effects.bonus = true;
+        out.push(clock);
         let ranges = [
             RangeKind::Danger,
             RangeKind::Move,
@@ -1013,17 +875,137 @@ mod tests {
 
     /// For each feature of a scene, the skin's frame with it differs from
     /// the frame without it: nothing in a scene goes unpainted (ADR-0038).
+    /// Under the skin of a tileset with terrain tiles, and under the mixed
+    /// skin of one without (units as sprites on glyph terrain).
     #[test]
     fn every_scene_feature_is_painted() {
         let c = ctx();
-        let s = with_lord(&c);
-        let features = features(&c);
-        assert_eq!(features.len(), 13 + 4 + 6);
-        for f in features {
-            assert_ne!(f.without, f.with, "{}: no change", f.name);
-            let (without, with) = (painted(&c, &s, &f.without), painted(&c, &s, &f.with));
-            assert_ne!(without, with, "{}: not painted", f.name);
+        for s in [with_lord(&skin(&c)), with_lord(&sheets(&c))] {
+            let features = features(&c);
+            assert_eq!(features.len(), 15 + 4 + 6);
+            for f in features {
+                assert_ne!(f.without, f.with, "{}: no change", f.name);
+                let (without, with) = (painted(&c, &s, &f.without), painted(&c, &s, &f.with));
+                assert_ne!(without, with, "{} under {}: not painted", f.name, s.name());
+            }
         }
+    }
+
+    #[test]
+    fn a_tileset_without_terrain_paints_units_on_the_glyph_skins_ground() {
+        let c = ctx();
+        let s = sheets(&c);
+        assert_eq!(
+            (s.name(), s.tileset_id()),
+            ("sprite_units", Some("test_units"))
+        );
+        assert_eq!(skin(&c).tileset_id(), Some("test"));
+        // The glyph skin's tiles: 16 × 16 px, 35 × 30 in the map area.
+        assert_eq!(s.tile_size(), (16, 16));
+        assert_eq!(s.view_tiles(MAP_VIEW), GlyphSkin.view_tiles(MAP_VIEW));
+        let area = Rect::new(2, 1, 6, 2);
+        let mut scene = plains(&c);
+        scene.tint([p(1, 0)], RangeKind::Move);
+        scene.path = vec![p(0, 0), p(1, 0)];
+        scene.cursor = Some(CursorView {
+            pos: p(2, 1),
+            brightness: 1.0,
+            style: CursorStyle::Corners,
+        });
+        assert_eq!(
+            s.tile_px(&scene, area, p(1, 1)),
+            GlyphSkin.tile_px(&scene, area, p(1, 1))
+        );
+        assert_eq!(
+            s.tile_px(&scene, area, p(1, 1)),
+            Some(Rect::new(32, 32, 16, 16))
+        );
+        // With no unit, the frame is the glyph skin's.
+        let paint = |skin: &dyn MapSkin, scene: &MapScene| {
+            let mut buf = blank();
+            skin.paint(&c, scene, area, &mut buf);
+            buf
+        };
+        assert_eq!(paint(&s, &scene), paint(&GlyphSkin, &scene));
+        // With one: its tile keeps its background and loses its glyphs,
+        // and nothing else of the ground changes.
+        let ground = paint(&GlyphSkin, &scene);
+        scene.push_unit(brigand(p(1, 0)));
+        let buf = paint(&s, &scene);
+        for y in 0..32 {
+            for x in 0..100 {
+                let (ours, theirs) = (buf.get(x, y).unwrap(), ground.get(x, y).unwrap());
+                if y == 1 && (4..6).contains(&x) {
+                    assert_eq!((ours.glyph, ours.bg), (' ', theirs.bg), "({x}, {y})");
+                    assert_ne!(theirs.glyph, ' ');
+                } else {
+                    assert_eq!(ours, theirs, "({x}, {y})");
+                }
+            }
+        }
+        // The unit's sprites and bar go between the path's line and its
+        // arrowhead; the cursor's marks stay last.
+        let path = c.palette.get(UiColor::Path);
+        let cursor = c.palette.get(UiColor::Cursor);
+        let kinds: Vec<&str> = buf
+            .items()
+            .iter()
+            .map(|i| match i {
+                Item::Sprite(s) if s.layer == Layer::Over => "sprite",
+                Item::Sprite(_) => "under",
+                Item::Rect(o) if o.color == path => "path",
+                Item::Rect(o) if o.color == cursor => "cursor",
+                Item::Rect(_) => "bar",
+            })
+            .collect();
+        let mut expect = vec!["path"];
+        expect.extend(["sprite"; 5]);
+        expect.push("bar");
+        expect.extend(["path"; 6]);
+        expect.extend(["cursor"; 8]);
+        assert_eq!(kinds, expect);
+        // A unit picked out stands on the terrain's glyph colour; one
+        // falling fades out as the glyphs come back.
+        let display = &c.content.terrain.display;
+        let forest = display.get(display.id_of("forest").unwrap()).unwrap();
+        let fg = c.palette.lookup(&forest.fg).unwrap();
+        scene.units[0].highlight = true;
+        assert_eq!(paint(&s, &scene).get(4, 1).map(|c| c.bg), Some(fg));
+        scene.units[0] = brigand(p(1, 0)).fading(0.75);
+        let falling = paint(&s, &scene);
+        assert_eq!(falling.get(4, 1).map(|c| c.glyph), Some(forest.glyphs[0]));
+        assert_eq!(falling.sprites().len(), 1);
+        assert_eq!(falling.sprites()[0].opacity, 64);
+    }
+
+    /// The same small scene under the mixed skin: glyph cells and the
+    /// units' sprites.
+    #[test]
+    fn sprite_units_skin_snapshot() {
+        let c = ctx();
+        let s = sheets(&c);
+        let mut scene = plains(&c);
+        scene.tint([p(0, 0)], RangeKind::Move);
+        let mut lord = brigand(p(0, 0));
+        lord.faction = Faction::Player;
+        lord.class = ClassId("exile".into());
+        lord.hp = (5, 30);
+        lord.effects.bonus = true;
+        scene.push_unit(lord);
+        // Below the lord: shaved at its tile's top edge, its mark lowered.
+        let mut enemy = brigand(p(0, 1));
+        enemy.acted = true;
+        enemy.effects.penalty = true;
+        scene.push_unit(enemy);
+        scene.push_unit(brigand(p(2, 1)).highlighted(true));
+        scene.cursor = Some(CursorView {
+            pos: p(1, 1),
+            brightness: 1.0,
+            style: CursorStyle::Corners,
+        });
+        let mut buf = GlyphBuffer::new(10, 4, fill());
+        s.paint(&c, &scene, Rect::new(2, 1, 6, 2), &mut buf);
+        assert_snapshot!(buf.to_snapshot(&c.palette));
     }
 
     prop_compose! {
@@ -1048,6 +1030,28 @@ mod tests {
             for y in 0..32 {
                 for x in 0..100 {
                     prop_assert_eq!(buf.get(x, y), Some(&fill()), "cell ({}, {})", x, y);
+                }
+            }
+            let px = px_rect(area);
+            for item in buf.items() {
+                let seen = item.visible();
+                prop_assert_eq!(seen.intersect(&px), Some(seen), "{:?} in {:?}", item, area);
+            }
+        }
+
+        /// Whatever the scene and the area, the mixed skin (units as
+        /// sprites on glyph terrain) changes no cell outside the area and
+        /// adds no item outside its pixels.
+        #[test]
+        fn sprite_units_skin_paints_only_the_area(scene in any_scene(), area in any_area()) {
+            let c = ctx();
+            let mut buf = blank();
+            sheets(&c).paint(&c, &scene, area, &mut buf);
+            for y in 0..32 {
+                for x in 0..100 {
+                    if !area.contains(x, y) {
+                        prop_assert_eq!(buf.get(x, y), Some(&fill()), "cell ({}, {})", x, y);
+                    }
                 }
             }
             let px = px_rect(area);

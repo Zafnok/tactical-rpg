@@ -277,6 +277,7 @@ impl Ctx {
     pub fn new(content: Content) -> Result<Self, LoadError> {
         let palette = Palette::new(&content.palette).map_err(LoadError::Palette)?;
         let keymap = Keymap::layout_picker(&content.keymap);
+        let map_skin = crate::map_view::default_skin(&content);
         Ok(Self {
             content,
             palette,
@@ -288,7 +289,7 @@ impl Ctx {
             storage: Box::new(MemoryStorage::new()),
             debug_tools: DEBUG_TOOLS,
             cursor_style: CursorStyle::default(),
-            map_skin: crate::map_view::default_skin(),
+            map_skin,
             tips_enabled: false,
             text_speed: DEFAULT_TEXT_SPEED,
             audio: AudioQueue::default(),

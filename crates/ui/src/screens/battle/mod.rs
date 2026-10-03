@@ -78,7 +78,7 @@ use crate::color::Rgb;
 use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
-use crate::map_view::{CursorView, MapScene, RangeKind, UnitView, default_skin};
+use crate::map_view::{CursorView, GlyphSkin, MapScene, MapSkin, RangeKind, UnitView};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::tips::{draw_tip, fill_placeholders};
 use crate::widgets::help::{HelpKeys, SEPARATOR, cursor_keys_name, help_line, key_name};
@@ -285,7 +285,8 @@ impl BattleScreen {
             .find(|u| u.is_lord)
             .or_else(|| units.iter().find(player))
             .map_or_else(|| Pos::new(i32::from(w) / 2, i32::from(h) / 2), |u| u.pos);
-        let view = default_skin().view_tiles(MAP_VIEW);
+        // Refitted on the first frame if the game's skin shows another.
+        let view = GlyphSkin.view_tiles(MAP_VIEW);
         Self {
             camera: Camera::centred_on(start, w, h, view),
             view,
@@ -1306,15 +1307,20 @@ impl BattleScreen {
     pub fn scene(&self, ctx: &Ctx) -> MapScene {
         let size = ctx.map_skin.view_tiles(MAP_VIEW);
         let origin = self.camera_in(size).origin;
+        // Whole milliseconds of a clock that only goes forward.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let clock_ms = (ctx.clock_s.max(0.0) * 1000.0) as u64;
         if let Some(r) = &self.rewind {
             let shown = r.focused().map_or(&self.state, |e| &e.before);
             let mut scene = terrain_scene(shown, origin, size);
+            scene.clock_ms = clock_ms;
             for unit in shown.units() {
                 scene.push_unit(UnitView::of(unit));
             }
             return scene;
         }
         let mut scene = terrain_scene(&self.state, origin, size);
+        scene.clock_ms = clock_ms;
         for flash in &self.flashes {
             if let Some(tile) = scene.tile_mut(flash.pos) {
                 tile.flashes.push(flash.strength());

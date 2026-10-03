@@ -155,6 +155,43 @@ fn an_unflipped_solid_sprite_shows_the_card_as_is() {
 }
 
 #[test]
+fn a_painted_sprite_is_one_colour_or_dimmed_where_the_image_is_solid() {
+    use trpg_ui::Paint;
+    let (painter, table) = painter(true);
+    let card = table.id(TEST_CARD_PATH).unwrap();
+    let full = Rect::new(0, 0, 16, 16);
+    let render = |paint, opacity| {
+        let mut buf = GlyphBuffer::new(2, 1, Cell::new(' ', CLEAR, CLEAR));
+        let mut sprite = Sprite::new(card, full, full, Layer::Over).painted(paint);
+        sprite.opacity = opacity;
+        buf.add_sprite(sprite);
+        painter.render(&buf, 1)
+    };
+    // The card: a white border, then a red quadrant from (1, 1).
+    let [red, ..] = crate::test_card::QUADRANTS;
+    let red = Rgb::new(red[0], red[1], red[2]);
+    let white = Rgb::new(255, 255, 255);
+    let rgba = |c: Rgb| Some([c.r, c.g, c.b, 255]);
+    // One colour everywhere, whatever the image's.
+    let blue = Rgb::new(10, 20, 200);
+    let solid = render(Paint::Solid(blue), 255);
+    assert_eq!(solid.pixel(0, 0), rgba(blue));
+    assert_eq!(solid.pixel(1, 1), rgba(blue));
+    assert_eq!(solid.pixel(14, 14), rgba(blue));
+    // Half see-through: half way from the clear colour (16) to it.
+    let half = render(Paint::Solid(blue), 128);
+    assert_eq!(half.pixel(1, 1), Some([13, 18, 108, 255]));
+    // Dimmed: each pixel grey and darker, by its own colour.
+    let dimmed = render(Paint::Dimmed, 255);
+    assert_eq!(dimmed.pixel(0, 0), rgba(white.dimmed()));
+    assert_eq!(dimmed.pixel(1, 1), rgba(red.dimmed()));
+    assert_ne!(red.dimmed(), red);
+    // The image's own colours, as before.
+    let plain = render(Paint::Image, 255);
+    assert_eq!(plain.pixel(1, 1), rgba(red));
+}
+
+#[test]
 fn a_missing_image_draws_magenta_where_the_sprite_shows() {
     let (painter, table) = painter(false);
     let image = painter.render(&hand_checked_frame(&table), 1);

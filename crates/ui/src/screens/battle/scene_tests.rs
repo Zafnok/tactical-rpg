@@ -17,7 +17,7 @@ use crate::color::{Rgb, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer, PxRect, Rect};
 use crate::input::Action;
-use crate::map_view::{CursorStyle, GlyphSkin, MapScene, MapSkin, RangeKind, default_skin};
+use crate::map_view::{CursorStyle, GlyphSkin, MapScene, MapSkin, RangeKind};
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, FrameInput, Screen};
 
@@ -99,7 +99,7 @@ fn browsing_shows_the_terrain_the_units_and_the_cursor() {
     assert_eq!(shown, units);
     assert_eq!(shown.len(), 8);
     for u in &scene.units {
-        assert!(!u.acted && !u.has_effect && u.fade.abs() < f32::EPSILON);
+        assert!(!u.acted && !u.has_effect() && u.fade.abs() < f32::EPSILON);
     }
     // The cursor on the lord, at the start of its pulse.
     let cursor = scene.cursor.unwrap();
@@ -417,7 +417,7 @@ fn the_view_is_as_big_as_the_skin_says() {
     assert_eq!(scene.origin, p(28, 16));
     assert_eq!(scene.units.len(), 3);
     // Back to the default skin: fitted again, around the cursor.
-    c.map_skin = default_skin();
+    c.map_skin = Rc::new(GlyphSkin);
     let scene = s.scene(&c);
     assert_eq!((scene.origin, scene.size), (p(17, 5), (35, 30)));
     assert_eq!(s.camera().origin, p(28, 16));

@@ -222,13 +222,39 @@ so they aren't in this repository (ADR-0032).
   later").
 - **A sprite unit's side** (decided 2026-10-02): a **1-pixel outline in
   its side's colour** (player blue, enemy red, ally green, neutral yellow)
-  around the sprite, as in renders B, C, C2 and C3. **Perhaps also a
-  small corner mark** in the same colour on its tile ("A, and potentially
-  A with C"): ticket 0436 renders the outline alone and with the corner
-  mark, and Nick picks.
+  around the sprite, as in renders B, C, C2 and C3. **The outline alone,
+  no corner mark** (decided 2026-10-03, ticket 0436: Nick was shown the
+  game's own frames with the outline alone and with a 3×3 corner mark in
+  the tile's top-left, and picked "Outline alone").
 - **An acted sprite unit** is drawn grey and darker, as in the renders;
   its outline dims with it. A change of brightness, not of hue, like the
-  glyph look's rule.
+  glyph look's rule. Each pixel goes 75% of the way to its own grey and is
+  then three quarters as bright (*tunable*). The renders used 0.6 as
+  bright; seeing it in the game on the dark glyph ground, Nick chose
+  "Lighten a bit now" (2026-10-03, ticket 0436).
+- **Which sprite each unit is** (ticket 0436; Claude's starting picks from
+  the spike, *for Nick to change*: say which and they are swapped in
+  `cargo xtask map-sprite-import`'s table). All are Tiny Tales map
+  sprites:
+
+  | Unit | Sprite |
+  | ---- | ------ |
+  | The lead | Heroes: Fighter (male) or Fighter (female), by the gender picked |
+  | Exile (the placeholder lord's class) | Heroes: Fighter (male) |
+  | Mage | Heroes: Witch |
+  | Archer (ours and the enemy's) | Heroes: Archer |
+  | Guard | *Faith and Evil*: Church Knight |
+  | Cleric | *Faith and Evil*: Church Cleric |
+  | Rider | Human Knights: Knight M1, **on foot**: nothing mounted exists in the bundle (ticket 0040 looks for mounted art) |
+  | Brigand | Human NPC Advanced: Warrior M1 |
+  | Raider | Human NPC Advanced: Fighter M1 |
+  | Fire Elemental, Frost Elemental | *Elemental Forces*: Fire Elemental, Ice Elemental |
+  | Any other class | Human NPC Advanced: Adventurer M1 |
+
+  A sprite hangs off a class or a named character, not a side: the
+  outline says whose a unit is. So an enemy Archer looks like ours (the
+  spike gave enemy archers a Rogue sprite; that needs a sprite per side,
+  which the tileset file doesn't have).
 - **The Chapter 1 playtest waits for the bought-art map** (decided
   2026-10-02): units (0436) and terrain (0437) are in before Nick plays,
   and so is the walking below (0440; Nick, ticket 0039: "B").
@@ -283,7 +309,13 @@ so they aren't in this repository (ADR-0032).
     saw them stacked and as a turning swirl too: "B looks best".
   - **When another unit stands in the tile above**, the mark sits 4 pixels
     lower, inside its own tile, so it doesn't touch that unit
-    *(Claude's starting rule, shown in mockup M)*.
+    *(Claude's starting rule, shown in mockup M)*. The same on the top row
+    of the map view, where the arrow would otherwise be cut by the view's
+    edge *(Claude's starting rule, ticket 0436)*.
+  - **Which arrow**: an effect that lowers any of the unit's numbers is a
+    penalty; any other is a bonus *(Claude's starting rule, ticket 0436:
+    the rules don't label effects, and none today both raises and
+    lowers)*.
   - *(Claude's starting rule: marks on an acted unit keep moving, dimmed,
     as in mockup K4.)*
   - The game has no poison or other lasting ailment today. If one is

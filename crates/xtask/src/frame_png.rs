@@ -17,7 +17,7 @@ use trpg_content::{FontAtlasDef, ImageId, ImageTable};
 use trpg_ui::console::{CELL_H_PX, CELL_W_PX};
 use trpg_ui::harness::Harness;
 use trpg_ui::input::{Button, Chord, Layout};
-use trpg_ui::{GlyphBuffer, Item, Layer, PxRect, Rgb, Sprite, UiColor};
+use trpg_ui::{GlyphBuffer, Item, Layer, Paint, PxRect, Rgb, Sprite, UiColor};
 
 use crate::font_atlas::{decode_png, encode_png};
 
@@ -353,6 +353,7 @@ impl Painter {
                 src,
                 (x, y, cell_w, cell_h),
                 false,
+                Paint::Image,
                 [fg[0], fg[1], fg[2], 1.0],
             );
         }
@@ -393,6 +394,7 @@ impl Painter {
             src,
             dest,
             sprite.flip_x,
+            sprite.paint,
             [1.0, 1.0, 1.0, opacity],
         );
     }
@@ -408,9 +410,10 @@ impl Painter {
 }
 
 /// Stretches the `src` part of `image` (`[x, y, w, h]` in image pixels)
-/// over `dest` in `out`, mirrored if `flip_x`, each texel multiplied by
-/// `tint` (RGBA, 0 to 1) and blended with the result's alpha. Each pixel
-/// takes the texel under its centre, as nearest sampling does.
+/// over `dest` in `out`, mirrored if `flip_x`, each texel coloured as
+/// `paint`, multiplied by `tint` (RGBA, 0 to 1) and blended with the
+/// result's alpha. Each pixel takes the texel under its centre, as nearest
+/// sampling does.
 #[allow(clippy::cast_precision_loss)] // pixel counts are small
 fn blit(
     out: &mut Image,
@@ -418,6 +421,7 @@ fn blit(
     src: [f32; 4],
     (left, top, width, height): (i64, i64, i64, i64),
     flip_x: bool,
+    paint: Paint,
     tint: [f32; 4],
 ) {
     let [src_x, src_y, src_w, src_h] = src;
@@ -432,8 +436,9 @@ fn blit(
             };
             #[allow(clippy::cast_possible_truncation)] // floored image coordinates
             let texel = image.texel(tex_x.floor() as i64, tex_y.floor() as i64);
-            let [red, green, blue, alpha] = texel.map(|c| f32::from(c) / 255.0);
+            let [red, green, blue] = unit(paint.apply(Rgb::new(texel[0], texel[1], texel[2])));
             let color = [red * tint[0], green * tint[1], blue * tint[2]];
+            let alpha = f32::from(texel[3]) / 255.0;
             out.blend(left + dx, top + dy, color, alpha * tint[3]);
         }
     }

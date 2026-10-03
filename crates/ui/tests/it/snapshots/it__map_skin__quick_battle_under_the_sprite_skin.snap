@@ -189,30 +189,54 @@ under sprite 340,312 24x24  tilesets/test.png 168,24 24x24
 under sprite 364,312 24x24  tilesets/test.png 72,24 24x24
 under sprite 388,312 24x24  tilesets/test.png 168,24 24x24
 under sprite 412,312 24x24  tilesets/test.png 0,0 24x24
-under sprite 172,264 24x24  tilesets/test.png 168,72 24x24
-over  172,264 24x2  player
-over  172,286 24x2  hp_high
-under sprite 196,288 24x24  tilesets/test.png 120,96 24x24
-over  196,288 24x2  player
-over  196,310 24x2  hp_high
-under sprite 148,240 24x24  tilesets/test.png 24,48 24x24
-over  148,240 24x2  player
-over  148,262 24x2  hp_high
-under sprite 292,192 24x24  tilesets/test.png 0,72 24x24
-over  292,192 24x2  enemy
-over  292,214 24x2  hp_high
-under sprite 268,240 24x24  tilesets/test.png 0,72 24x24
-over  268,240 24x2  enemy
-over  268,262 24x2  hp_high
-under sprite 268,168 24x24  tilesets/test.png 24,144 24x24
-over  268,168 24x2  enemy
-over  268,190 24x2  hp_high
-under sprite 292,312 24x24  tilesets/test.png 48,96 24x24
-over  292,312 24x2  enemy
-over  292,334 24x2  hp_high
-under sprite 172,288 24x24  tilesets/test.png 48,120 24x24
-over  172,288 24x2  player
-over  172,310 24x2  hp_high
+over  sprite 268,165 24x24  tilesets/test.png 24,144 24x24 solid=enemy
+over  sprite 268,167 24x24  tilesets/test.png 24,144 24x24 solid=enemy
+over  sprite 267,166 24x24  tilesets/test.png 24,144 24x24 solid=enemy
+over  sprite 269,166 24x24  tilesets/test.png 24,144 24x24 solid=enemy
+over  sprite 268,166 24x24  tilesets/test.png 24,144 24x24
+over  sprite 292,189 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 292,191 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 291,190 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 293,190 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 292,190 24x24  tilesets/test.png 0,72 24x24
+over  sprite 148,237 24x24  tilesets/test.png 24,48 24x24 solid=player
+over  sprite 148,239 24x24  tilesets/test.png 24,48 24x24 solid=player
+over  sprite 147,238 24x24  tilesets/test.png 24,48 24x24 solid=player
+over  sprite 149,238 24x24  tilesets/test.png 24,48 24x24 solid=player
+over  sprite 148,238 24x24  tilesets/test.png 24,48 24x24
+over  sprite 268,237 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 268,239 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 267,238 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 269,238 24x24  tilesets/test.png 0,72 24x24 solid=enemy
+over  sprite 268,238 24x24  tilesets/test.png 0,72 24x24
+over  sprite 172,261 24x24  tilesets/test.png 168,72 24x24 solid=player
+over  sprite 172,263 24x24  tilesets/test.png 168,72 24x24 solid=player
+over  sprite 171,262 24x24  tilesets/test.png 168,72 24x24 solid=player
+over  sprite 173,262 24x24  tilesets/test.png 168,72 24x24 solid=player
+over  sprite 172,262 24x24  tilesets/test.png 168,72 24x24
+over  sprite 196,285 24x24  tilesets/test.png 120,96 24x24 solid=player
+over  sprite 196,287 24x24  tilesets/test.png 120,96 24x24 solid=player
+over  sprite 195,286 24x24  tilesets/test.png 120,96 24x24 solid=player
+over  sprite 197,286 24x24  tilesets/test.png 120,96 24x24 solid=player
+over  sprite 196,286 24x24  tilesets/test.png 120,96 24x24
+over  sprite 172,285 24x24  tilesets/test.png 48,120 24x24 solid=player clip=172,288 24x21
+over  sprite 172,287 24x24  tilesets/test.png 48,120 24x24 solid=player clip=172,288 24x23
+over  sprite 171,286 24x24  tilesets/test.png 48,120 24x24 solid=player clip=171,288 24x22
+over  sprite 173,286 24x24  tilesets/test.png 48,120 24x24 solid=player clip=173,288 24x22
+over  sprite 172,286 24x24  tilesets/test.png 48,120 24x24 clip=172,288 24x22
+over  sprite 292,309 24x24  tilesets/test.png 48,96 24x24 solid=enemy
+over  sprite 292,311 24x24  tilesets/test.png 48,96 24x24 solid=enemy
+over  sprite 291,310 24x24  tilesets/test.png 48,96 24x24 solid=enemy
+over  sprite 293,310 24x24  tilesets/test.png 48,96 24x24 solid=enemy
+over  sprite 292,310 24x24  tilesets/test.png 48,96 24x24
+over  173,286 22x2  hp_high
+over  197,310 22x2  hp_high
+over  149,262 22x2  hp_high
+over  293,214 22x2  hp_high
+over  269,262 22x2  hp_high
+over  269,190 22x2  hp_high
+over  293,334 22x2  hp_high
+over  173,310 22x2  hp_high
 over  172,264 3x1  #edd99e
 over  172,264 1x3  #edd99e
 over  193,264 3x1  #edd99e

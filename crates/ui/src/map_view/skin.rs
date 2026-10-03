@@ -11,8 +11,13 @@ use crate::screen::Ctx;
 /// tiles fit and where a tile is. A skin never changes the game: only the
 /// frame, and how many tiles are on screen.
 pub trait MapSkin: std::fmt::Debug {
-    /// A stable `snake_case` name, e.g. `"glyph"`.
+    /// A stable `snake_case` name for the kind of skin, e.g. `"glyph"`.
     fn name(&self) -> &'static str;
+
+    /// The id of the tileset it paints from, if it paints from one.
+    fn tileset_id(&self) -> Option<&str> {
+        None
+    }
 
     /// How many tiles, across × down, fit in a map area of `area` cells.
     fn view_tiles(&self, area: Rect) -> (i32, i32);
@@ -75,5 +80,6 @@ mod tests {
         assert_eq!(cells(Some(r(-16, -16, 16, 16))), Some(r(-2, -1, 2, 1)));
         assert_eq!(cells(Some(r(-1, -1, 2, 2))), Some(r(-1, -1, 2, 2)));
         assert_eq!(cells(None), None);
+        assert_eq!(Fixed(None).tileset_id(), None);
     }
 }

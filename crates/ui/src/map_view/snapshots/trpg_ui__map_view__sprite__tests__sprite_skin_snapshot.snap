@@ -9,14 +9,20 @@ under sprite 40,24 24x24  tilesets/test.png 96,0 24x24 opacity=159
 under sprite 16,48 24x24  tilesets/test.png 0,0 24x24
 under sprite 40,48 24x24  tilesets/test.png 0,0 24x24
 under 27,48 3x14  path
-under sprite 16,24 24x24  tilesets/test.png 168,72 24x24
-over  16,24 24x2  player
-over  16,46 4x2  hp_low
-over  20,46 20x2  black
-under sprite 40,48 24x24  tilesets/test.png 0,72 24x24 opacity=128
-over  40,48 24x2  enemy
-over  61,48 3x3  effect
-over  40,70 24x2  hp_high
+over  sprite 16,21 24x24  tilesets/test.png 168,72 24x24 solid=player clip=16,24 24x21
+over  sprite 16,23 24x24  tilesets/test.png 168,72 24x24 solid=player clip=16,24 24x23
+over  sprite 15,22 24x24  tilesets/test.png 168,72 24x24 solid=player clip=16,24 23x22
+over  sprite 17,22 24x24  tilesets/test.png 168,72 24x24 solid=player clip=17,24 24x22
+over  sprite 16,22 24x24  tilesets/test.png 168,72 24x24 clip=16,24 24x22
+over  sprite 40,45 24x24  tilesets/test.png 0,72 24x24 solid=#74605b
+over  sprite 40,47 24x24  tilesets/test.png 0,72 24x24 solid=#74605b
+over  sprite 39,46 24x24  tilesets/test.png 0,72 24x24 solid=#74605b
+over  sprite 41,46 24x24  tilesets/test.png 0,72 24x24 solid=#74605b clip=41,46 23x24
+over  sprite 40,46 24x24  tilesets/test.png 0,72 24x24 dimmed
+over  17,46 4x2  hp_low
+over  21,46 18x2  black
+over  41,70 22x2  hp_high
+over  sprite 58,45 7x7  images/effect_marks.png 7,0 7x7 dimmed clip=58,45 6x7
 over  23,57 11x1  path
 over  24,58 9x1  path
 over  25,59 7x1  path

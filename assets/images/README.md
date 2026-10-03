@@ -18,14 +18,17 @@ with its own directory and sidecar files (portraits, 0711; combat pictures,
 | File | What |
 | ---- | ---- |
 | `test_card.png` | 16×16 test image: a one-pixel white border around four coloured quadrants (red and green above blue and yellow), so a flip, a crop and a scale each show. Used by tests and the "Sprite test" debug tool |
+| `effect_marks.png` | 14×7: the arrows a sprite map skin puts on a unit under a timed effect (ADR-0049, `docs/design/look-and-feel.md`): an **up arrow** for a bonus, then a **down arrow** for a penalty, each 5×5 with a 1-pixel dark edge. Our own picture, in the palette's `effect_bonus`, `effect_penalty` and `black` |
 
-`test_card.png` is **generated**; never edit it by hand. To regenerate:
+Both are **generated**; never edit them by hand. To regenerate (the arrows
+after changing their palette colours):
 
 ```bash
 cargo xtask test-card
+cargo xtask effect-marks
 ```
 
-A test in `xtask` fails if the committed file differs from what the tool
+A test in `xtask` fails if a committed file differs from what the tool
 makes.
 
 ## Rules for images

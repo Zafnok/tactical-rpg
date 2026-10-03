@@ -56,7 +56,7 @@ pub use names::Names;
 pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
-pub use tileset::{ImageRect, Picture, Tileset};
+pub use tileset::{ImageRect, Picture, TerrainTiles, Tileset};
 pub use tip::{Tip, TipTable, TipTrigger};
 pub use trigger::check_triggers;
 

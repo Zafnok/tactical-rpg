@@ -40,3 +40,28 @@ fn bought_portraits_are_cut_busts_or_faces() {
         }
     }
 }
+
+/// The bought map sprites (`cargo xtask map-sprite-import`, ADR-0049): the
+/// game's tileset is there, paints only units (terrain is ticket 0437's),
+/// and each of its pictures is the standing frame of a 48×80 sheet.
+#[test]
+fn the_bought_map_sprites_are_standing_frames_of_whole_sheets() {
+    let content = match trpg_content::load_embedded() {
+        Ok(content) => content,
+        Err(errors) => panic!("{errors}"),
+    };
+    let tileset = &content.tilesets["tiny_tales"];
+    assert!(tileset.terrain.is_none());
+    let pictures = tileset.classes.values().chain(tileset.characters.values());
+    for picture in pictures.chain([&tileset.fallback]) {
+        let path = picture.image.path();
+        let size = content
+            .images
+            .info(picture.image)
+            .map(|i| (i.width, i.height));
+        assert_eq!(size, Some((48, 80)), "{path}");
+        let rect = picture.rect;
+        assert_eq!((rect.x, rect.y, rect.w, rect.h), (16, 0, 16, 20), "{path}");
+    }
+    assert!(tileset.classes.len() >= 10);
+}
