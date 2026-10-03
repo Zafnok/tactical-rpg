@@ -122,10 +122,11 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
 - Wait for CI. If a check fails, fix it on the same branch. Never disable a
   gate, lower a threshold, or add `#[mutants::skip]`/`#[allow]` just to pass —
   if a gate is genuinely wrong, write a ticket about it and explain in the PR.
-- PRs merge only when green on the **latest `main`** (ADR-0041). If `main`
-  moves while the PR is open, merge it into the branch (`git fetch origin &&
-  git merge origin/main`, or the ccd_host `sync_with_base_branch` tool in an
-  app worktree), push, and wait for CI again before saying it can merge.
+- A PR can merge when its checks are green and GitHub reports no conflict; it
+  need not contain the latest `main` (ADR-0042). Merge `main` into the branch
+  (`git fetch origin && git merge origin/main`, or the ccd_host
+  `sync_with_base_branch` tool in an app worktree) only for a conflict or when
+  the PR needs something that landed on `main`.
 
 ## Don'ts
 
