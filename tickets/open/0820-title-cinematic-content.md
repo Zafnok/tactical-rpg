@@ -6,7 +6,7 @@ milestone: M7 Chapter 1 & game flow
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0036", "0706", "0707", "0803", "0818", "0819", "0825"]
+blocked_by: ["0036", "0706", "0707", "0803", "0818", "0819", "0827"]
 nick_input: sign-off
 completed:
 ---
@@ -37,16 +37,16 @@ The title song (`title`, New Sunrise V1) is 133.7 s:
 
 Real content it draws on: the Chapter 1 battle and map (0803), the cast's
 bought faces (0706), the Chapter 1 script (0707) and the marching and
-fighting shots (0825).
+fighting shots (0827).
 
 **The snippets are the script itself** (Nick, 0036: "we'll load the same
 script file anyway and just play whatever is there for first few lines").
 The `Talk` shots point at `ch01_intro` and `ch01_prebattle` in
 `assets/dialogue/ch01.dlg`; there is no separate cinematic script and no
 list of approved lines. Nick finds the current script too full of quips;
-ticket 0717 rewrites it. Either order works: the cinematic shows whatever
-the file says. If 0717 lands after this ticket and changes how many boxes
-those scenes open with, 0717's session re-checks the counts here.
+ticket 0724 rewrites it. Either order works: the cinematic shows whatever
+the file says. If 0724 lands after this ticket and changes how many boxes
+those scenes open with, 0724's session re-checks the counts here.
 
 **No overworld shot yet** (0036, Q4: leave it out). 1010 adds it once the
 world map exists.
@@ -69,7 +69,7 @@ there (a yes becomes a ticket that adds the row to the Options menu).
 - Its two `Talk` shots read `ch01_intro` and `ch01_prebattle` from
   `assets/dialogue/ch01.dlg`, from each scene's first box. No new
   dialogue file.
-- The march and the fights as 0825 actions on the Chapter 1 battle.
+- The march and the fights as 0827 actions on the Chapter 1 battle.
 - Small timing changes so cuts land on the music (keep within a second or
   two of the storyboard; anything bigger goes back to Nick).
 
@@ -97,7 +97,7 @@ there (a yes becomes a ticket that adds the row to the Options menu).
    and zoom on the Chapter 1 battle (`assets/battles/ch01.ron`), the six
    characters in the storyboard's order, the snippets, and `Logo` at the
    song's last note (about 117 s; set it by ear). For the march and the
-   fights, write one 0825 action list shared by the four shots: choose
+   fights, write one 0827 action list shared by the four shots: choose
    units and paths that fit the real map and each unit's movement type,
    and fights whose weapons make sense (an archer strikes from two tiles
    away). Nobody in the party falls. Sizes as the storyboard says (3×, 4×,

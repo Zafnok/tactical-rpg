@@ -275,12 +275,12 @@ say so.
 **Tickets updated:** 0228 (whole steps 1–4 only), 0817 (hard cuts; a
 whole-frame brightness for the title's fade), 0818 (decided answers; the
 lead from the last save), 0819 (the flow as states; the skip without an
-audio seek), 0820 (the storyboard; lines from `ch01.dlg`; waits for 0825),
+audio seek), 0820 (the storyboard; lines from `ch01.dlg`; waits for 0827),
 1010 (changes the cinematic; Nick places the shot), 0811 (how the logo is
 used), 0706 (the lead's default face for the cinematic).
 
-**New tickets:** 0041 (decide the skip sound), 0717 (Chapter 1 script:
-fewer quips, to Nick's tone note now in `setting-and-tone.md`), 0825
+**New tickets:** 0041 (decide the skip sound), 0724 (Chapter 1 script:
+fewer quips, to Nick's tone note now in `setting-and-tone.md`), 0827
 (cinematic shots where units march and fight).
 
 **Claude's starting rules** (listed in the design doc for Nick to veto):
@@ -292,5 +292,5 @@ out, 0.5 s in); the cinematic makes no sounds of its own; the skip sound
 is the sword hit until 0041; snippet length is whatever opening boxes can
 be read in the shot's time.
 
-**0717 waits until after the playtest** (Nick: "nah it can wait til
+**0724 waits until after the playtest** (Nick: "nah it can wait til
 after"), so it is blocked by 0804.

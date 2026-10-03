@@ -57,7 +57,7 @@ hard beats.
   quips as support ranks rise as the game reaches more high notes in terms
   of closeness". So: the opening of the game and serious battles are played
   straight. Banter belongs to downtime (camp, travel, quiet scenes after a
-  fight) and grows as characters get closer (support ranks). Ticket 0717
+  fight) and grows as characters get closer (support ranks). Ticket 0724
   rewrites Chapter 1 to this.
 - **The ending is not a tragedy.** It is resolved and feels like a hard-fought
   victory. Nick fixed this.

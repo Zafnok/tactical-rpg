@@ -1,5 +1,5 @@
 ---
-id: "0825"
+id: "0827"
 title: "Cinematic shots where units march and fight"
 type: feature
 milestone: M7 Chapter 1 & game flow
@@ -11,7 +11,7 @@ nick_input: none
 completed:
 ---
 
-# 0825 — Cinematic shots where units march and fight
+# 0827 — Cinematic shots where units march and fight
 
 ## Context
 

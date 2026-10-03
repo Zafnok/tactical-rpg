@@ -1,5 +1,5 @@
 ---
-id: "0717"
+id: "0724"
 title: "Chapter 1 script: play the opening and the battle straight (fewer quips)"
 type: content
 milestone: M6 Story & dialogue
@@ -11,7 +11,7 @@ nick_input: sign-off
 completed:
 ---
 
-# 0717 — Chapter 1 script: play the opening and the battle straight
+# 0724 — Chapter 1 script: play the opening and the battle straight
 
 ## Context
 

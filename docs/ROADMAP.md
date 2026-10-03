@@ -42,10 +42,10 @@ the logo; "Trailer cuts" storyboard; whole-step zoom; it did not wait for
 **0228** pan and zoom over a glyph scene → **0817**
 cinematic file format and player (also needs **0227**, the music clock,
 which has no open dependencies and can start any time) → **0818** character and conversation shots and
-**0819** the title plays it in time with the music, and **0825** shots
+**0819** the title plays it in time with the music, and **0827** shots
 where units march and fight → **0820** the real shots (after Chapter 1's
 map, faces and script) → **1010** the overworld shot (after the world map,
-1007; Nick places it). **0041** picks the skip sound (any time). **0717**
+1007; Nick places it). **0041** picks the skip sound (any time). **0724**
 rewrites the Chapter 1 script with fewer quips (after the playtest, 0804); the cinematic shows that
 script's opening lines, whatever they are. Not on the Chapter 1 critical path.
 

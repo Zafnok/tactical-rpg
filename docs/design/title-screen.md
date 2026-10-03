@@ -216,7 +216,7 @@ loop, about 17 seconds.
   no separate list of cinematic lines, so when the script is rewritten the
   cinematic changes with it. The lines shown in the mockups were **not
   approved**: Nick finds the script's opening too full of quips
-  (`setting-and-tone.md`, *Where the jokes go*; rewrite: ticket 0717).
+  (`setting-and-tone.md`, *Where the jokes go*; rewrite: ticket 0724).
 - **No spoilers:** only the opening lines of scenes that play **before**
   the Chapter 1 battle (`ch01_intro`, `ch01_prebattle`), and never past a
   reply choice.
@@ -224,7 +224,7 @@ loop, about 17 seconds.
   Aske, Piers, Rue (the bought faces, 0706; names from the names table).
 - **The lead follows the most recent save:** the name and face the player
   chose there. With no save, the default lead.
-- **Units march and fight** in the loud part of the song (ticket 0825).
+- **Units march and fight** in the loud part of the song (ticket 0827).
 - **No overworld shot for now.** Ticket 1010 adds it once the world map
   (1007) exists, asks Nick where it goes, and updates this storyboard.
 

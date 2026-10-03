@@ -56,7 +56,7 @@ no fades between shots.
 - Anything on the title screen, or following the music (0819). The debug
   tool runs on its own frame clock.
 - The real title cinematic (0820).
-- Units moving or fighting inside a shot: ticket 0825 (0036 chose it).
+- Units moving or fighting inside a shot: ticket 0827 (0036 chose it).
 
 ## Implementation steps
 
