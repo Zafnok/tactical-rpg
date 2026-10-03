@@ -52,5 +52,9 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0041](0041-prs-up-to-date-before-merging.md) | PRs must be up to date with `main` and green before they merge (no merge queue) | Superseded by ADR-0042 |
 | [0042](0042-prs-merge-on-green-without-updating.md) | PRs merge when their checks are green; they need not be up to date with `main` | Accepted |
 | [0043](0043-png-portraits.md) | Portraits are PNG files named by a sidecar, drawn as one sprite at a whole scale | Accepted |
+| [0045](0045-languages-text-by-key-and-line-ids.md) | Languages: text by key, dialogue lines by id, wide glyphs in two cells | Proposed (0233, 0717); amends ADR-0016 and ADR-0011 |
+| [0046](0046-voice-clips-by-line-id.md) | Voice clips are files keyed by dialogue line id, generated now, replaceable by recordings | Proposed (0238); amends ADR-0026 and ADR-0032 rule 2 |
+
+Number 0044 is taken by a PR open on 2026-10-03.
 
 Template: [`0000-template.md`](0000-template.md).
