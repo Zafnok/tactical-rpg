@@ -11,6 +11,7 @@ mod playtest;
 mod private_assets;
 mod sfx;
 mod test_card;
+mod test_tileset;
 mod tickets;
 mod web;
 
@@ -28,6 +29,7 @@ font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 frame-png <out.png> [steps]        render a scripted game frame to a PNG (frame-png --help)\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
+test-tileset                       write the sprite map skin's test tileset, assets/tilesets/test.*\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
@@ -48,6 +50,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
         Some("frame-png") => frame_png(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
+        Some("test-tileset") => test_tileset(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some(command) => {
@@ -181,6 +184,23 @@ fn test_card(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("test-card: {e}");
+            1
+        }
+    }
+}
+
+fn test_tileset(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask test-tileset");
+        return 2;
+    }
+    match test_tileset::run(&repo_root()) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("test-tileset: {e}");
             1
         }
     }
@@ -384,6 +404,47 @@ mod tests {
         names
     }
 
+    /// The workflow and action files under `.github`.
+    fn workflow_files() -> Vec<PathBuf> {
+        let github = repo_root().join(".github");
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(github.join("workflows")).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "yml" || e == "yaml") {
+                files.push(path);
+            }
+        }
+        for entry in std::fs::read_dir(github.join("actions")).unwrap() {
+            let action = entry.unwrap().path().join("action.yml");
+            if action.is_file() {
+                files.push(action);
+            }
+        }
+        files.sort();
+        files
+    }
+
+    /// GitHub runs no job of a workflow file that is not valid YAML, and only
+    /// says so after the merge: an unquoted `run:` line ending in `::`
+    /// stopped every Pages deploy (ticket 0118).
+    #[test]
+    fn every_workflow_file_parses() {
+        let files = workflow_files();
+        assert!(files.len() >= 9, "{files:?}");
+        for file in files {
+            let text = std::fs::read_to_string(&file).unwrap();
+            if let Err(e) = serde_norway::from_str::<serde_norway::Value>(&text) {
+                panic!("{} is not valid YAML: {e}", file.display());
+            }
+        }
+
+        // The check sees the mistake.
+        let broken = "steps:
+  - run: cargo test private_assets::
+";
+        assert!(serde_norway::from_str::<serde_norway::Value>(broken).is_err());
+    }
+
     /// Cargo links every file directly under a crate's `tests/` as its own
     /// program (about 100 MB each), so each crate keeps one: new integration
     /// tests are modules of `tests/it/main.rs` (ticket 0114).
@@ -575,6 +636,12 @@ mod tests {
     fn test_card_rejects_args() {
         assert_eq!(test_card(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["test-card", "x"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn test_tileset_rejects_args() {
+        assert_eq!(test_tileset(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["test-tileset", "x"]).into_iter()), 2);
     }
 
     #[test]

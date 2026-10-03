@@ -48,6 +48,9 @@ pub struct AiAction {
     before: Vec<Unit>,
     /// The camera's origin when the action starts, and once panned.
     pan: (Pos, Pos),
+    /// How long the pan lasts, in seconds: none if the camera doesn't
+    /// move.
+    pan_len: f32,
     /// The unit's move, its start tile first (just that tile if it stays).
     path: Vec<Pos>,
     /// Seconds played.
@@ -78,10 +81,12 @@ impl AiAction {
         } else {
             path
         };
+        let pan_len = if from == to { 0.0 } else { pacing.pan };
         Self {
             unit,
             before,
             pan: (from, to),
+            pan_len,
             path,
             t: 0.0,
             then,
@@ -101,11 +106,14 @@ impl AiAction {
 
     /// How long the pan lasts: none if the camera doesn't move.
     fn pan_len(&self) -> f32 {
-        if self.pan.0 == self.pan.1 {
-            0.0
-        } else {
-            self.pacing.pan
-        }
+        self.pan_len
+    }
+
+    /// Pans from origin `from` to `to` instead (the viewport changed size),
+    /// in the same time as before, so the action plays out as it would
+    /// have.
+    pub fn repan(&mut self, (from, to): (Pos, Pos)) {
+        self.pan = (from, to);
     }
 
     /// When the walk starts.
@@ -300,6 +308,25 @@ mod tests {
         fast.tick(f32::NAN, true);
         fast.tick(-1.0, false);
         assert!((slow.time() - fast.time()).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_new_pan_takes_as_long_as_the_old_one() {
+        let mut a = action((Pos::new(0, 0), Pos::new(4, 0)), line(2));
+        let (start, total) = (a.walk_start(), a.total());
+        a.tick(PACING.pan / 2.0, false);
+        assert_eq!(a.camera(), Pos::new(2, 0));
+        // Halfway through: from (0, 6) to (0, 2).
+        a.repan((Pos::new(0, 6), Pos::new(0, 2)));
+        assert_eq!(a.camera(), Pos::new(0, 4));
+        assert!((a.walk_start() - start).abs() < 1e-6);
+        assert!((a.total() - total).abs() < 1e-6);
+        // A pan to where it is already: the camera stays, the time too.
+        a.repan((Pos::new(1, 1), Pos::new(1, 1)));
+        assert_eq!(a.camera(), Pos::new(1, 1));
+        assert!((a.walk_start() - start).abs() < 1e-6);
+        a.tick(10.0, false);
+        assert_eq!(a.camera(), Pos::new(1, 1));
     }
 
     #[test]

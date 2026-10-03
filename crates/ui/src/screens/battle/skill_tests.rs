@@ -11,12 +11,11 @@ use super::BattleScreen;
 use super::mode::{MenuEntry, Mode};
 use super::testing::{battle_with, quick_units};
 use crate::FrameInput;
-use crate::color::{Rgb, UiColor};
+use crate::color::Rgb;
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{Cell, GlyphBuffer};
 use crate::input::Action;
-use crate::map_view::RangeKind;
-use crate::map_view::glyph::units::EFFECT_BLEND;
+use crate::map_view::{RangeKind, UnitView};
 use crate::screen::tests::ctx;
 use crate::screen::{Ctx, Screen};
 
@@ -89,11 +88,13 @@ fn lord_menu(c: &mut Ctx, state: BattleState) -> BattleScreen {
 }
 
 /// The left cell of the two-letter label `label` (any case) on the map.
-fn label_cell(buf: &GlyphBuffer, label: &str) -> (i32, i32) {
-    (0..30)
-        .flat_map(|y| (0..70).map(move |x| (x, y)))
-        .find(|&(x, y)| text(buf, x, y, 2).eq_ignore_ascii_case(label))
-        .expect("the label is drawn")
+fn shown_unit(s: &BattleScreen, c: &Ctx, label: &str) -> UnitView {
+    let scene = s.scene(c);
+    let unit = scene
+        .units
+        .iter()
+        .find(|u| u.label.eq_ignore_ascii_case(label));
+    unit.expect("the unit is on the map").clone()
 }
 
 /// The action menu's focus moved to `entry`.
@@ -275,31 +276,13 @@ fn cancelling_out_of_the_skill_menu_leaves_the_battle_unchanged() {
 fn a_unit_under_an_effect_shows_the_effect_colour_behind_its_glyphs() {
     let mut c = ctx();
     let mut s = knight_menu(&mut c, 20);
-    // Knight at (4, 6): without an effect its glyphs sit on the terrain.
-    let cell_of = |buf: &GlyphBuffer| {
-        let mut found = None;
-        for y in 0..30 {
-            for x in 0..70 {
-                if text(buf, x, y, 2).eq_ignore_ascii_case("Kn") {
-                    found = Some((x, y));
-                }
-            }
-        }
-        found.expect("the knight is drawn")
-    };
-    let plain = render(&s, &c);
-    let (x, y) = cell_of(&plain);
-    let terrain_bg = plain.get(x, y).unwrap().bg;
+    // Knight at (4, 6): without an effect the map shows none (each skin
+    // marks one its own way: the glyph skin with the effect colour behind
+    // its letters).
+    assert!(!shown_unit(&s, &c, "Kn").has_effect);
     focus_entry(&mut s, &mut c, MenuEntry::Skill);
     step(&mut s, &mut c, &[Action::Confirm, Action::Confirm]);
-    let buf = render(&s, &c);
-    let (x, y) = cell_of(&buf);
-    let effect = c.palette.get(UiColor::Effect);
-    assert_eq!(
-        buf.get(x, y).unwrap().bg,
-        terrain_bg.lerp(effect, EFFECT_BLEND)
-    );
-    assert_ne!(buf.get(x, y).unwrap().bg, terrain_bg);
+    assert!(shown_unit(&s, &c, "Kn").has_effect);
 }
 
 #[test]
@@ -460,12 +443,11 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     assert!(shove.needs_target && shove.usable);
     assert_eq!(shove.targets, [UnitId(6), UnitId(4)]);
     // Choose it: the cursor starts on the raider, and the message names it.
-    let raider_bg = |s: &BattleScreen, c: &Ctx| {
-        let buf = render(s, c);
-        let (x, y) = label_cell(&buf, "Ra");
-        buf.get(x, y).unwrap().bg
+    let raider_tints = |s: &BattleScreen, c: &Ctx| {
+        let raider = shown_unit(s, c, "Ra");
+        s.scene(c).tints_at(raider.pos)
     };
-    let plain_bg = raider_bg(&s, &c);
+    assert!(raider_tints(&s, &c).is_empty());
     let i = choices.iter().position(|c| c.skill.0 == "shove").unwrap();
     for _ in 0..i {
         step(&mut s, &mut c, &[Action::CursorDown]);
@@ -478,7 +460,7 @@ fn shove_picks_an_adjacent_enemy_and_pushes_it() {
     assert_eq!(s.mode().drawn_pos(UnitId(1)), Some(p(7, 2)));
     assert_eq!(s.mode().drawn_pos(UnitId(4)), None);
     // Whoever can be shoved is tinted as in an attack.
-    assert_ne!(raider_bg(&s, &c), plain_bg);
+    assert_eq!(raider_tints(&s, &c), [RangeKind::Attack]);
     // Left goes back around to the brigand, and right to the raider.
     step(&mut s, &mut c, &[Action::CursorLeft]);
     let Mode::SkillTarget(t) = s.mode() else {
