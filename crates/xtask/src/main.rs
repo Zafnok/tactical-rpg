@@ -6,6 +6,7 @@
 mod check_keys;
 mod clean_targets;
 mod font_atlas;
+mod frame_png;
 mod playtest;
 mod private_assets;
 mod sfx;
@@ -26,6 +27,7 @@ check-keys                         fail on keys hard-coded in game code or text\
 clean-merged-targets [--dry-run]   delete target/ in worktrees whose PR has merged\n  \
 font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
+frame-png <out.png> [steps]        render a scripted game frame to a PNG (frame-png --help)\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
 test-tileset                       write the sprite map skin's test tileset, assets/tilesets/test.*\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
@@ -46,6 +48,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("font-atlas") => font_atlas(&args.collect::<Vec<_>>()),
         Some("web") => web(&args.collect::<Vec<_>>()),
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
+        Some("frame-png") => frame_png(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
         Some("test-tileset") => test_tileset(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
@@ -198,6 +201,35 @@ fn test_tileset(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("test-tileset: {e}");
+            1
+        }
+    }
+}
+
+fn frame_png(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", frame_png::USAGE);
+        return 0;
+    }
+    let options = match frame_png::parse_args(args) {
+        Ok(options) => options,
+        Err(e) => {
+            eprintln!(
+                "{e}
+
+{}",
+                frame_png::USAGE
+            );
+            return 2;
+        }
+    };
+    match frame_png::run(&repo_root(), &options) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("frame-png: {e}");
             1
         }
     }
@@ -428,6 +460,21 @@ mod tests {
         assert!(history.join("quick-classic-baseline.jsonl").is_file());
         assert_eq!(run("no_such_battle"), 1);
         std::fs::remove_dir_all(&history).unwrap();
+    }
+
+    #[test]
+    fn frame_png_help_bad_args_and_a_run() {
+        assert_eq!(frame_png(&args(&["--help"])), 0);
+        assert_eq!(frame_png(&[]), 2);
+        assert_eq!(
+            dispatch(args(&["frame-png", "a.png", "--bogus"]).into_iter()),
+            2
+        );
+        let out = std::env::temp_dir().join(format!("xtask-frame-png-{}.png", std::process::id()));
+        let out_arg = out.to_string_lossy().into_owned();
+        assert_eq!(frame_png(&args(&[&out_arg, "--scale", "1"])), 0);
+        assert!(out.is_file());
+        std::fs::remove_file(&out).unwrap();
     }
 
     #[test]

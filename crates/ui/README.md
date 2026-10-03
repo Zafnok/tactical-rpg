@@ -317,5 +317,19 @@ fn select_opens_new_game() {
 - Key names in scripts depend on the layout (`docs/design/controls.md`):
   right-handed arrows move, `f` confirms, `d` cancels; left-handed `wasd`
   move, `j` confirms, `k` cancels.
+
+### Seeing a frame
+
+A snapshot is text, so a sprite is one line. To look at a frame, run a
+script and render it to a PNG, exactly as `app` draws it (ticket 0232):
+
+```bash
+cargo xtask frame-png target/battle.png --keys "Down f" --wait 1.5
+```
+
+Steps (`--keys`, `--pad`, `--wait`) run in the order given, from a later
+launch with `--layout right|left` (`--web`: as the web build starts).
+`--scale` defaults to 2; `--help` has the rest. It is for looking, never a
+test: tests read the scene, the state or the snapshot.
 - Debug screens are always on in the Harness, so `F2` works in any build.
 - Snapshots: read every `.snap.new` before `cargo insta accept`.
