@@ -13,6 +13,9 @@ use crate::glyph_buffer::{Layer, Overlay, PxRect, Rect};
 /// The path line's thickness, in pixels.
 pub const LINE_W: i32 = 3;
 
+/// Pixels of the line on each side of its middle one.
+const LINE_HALF: i32 = 1;
+
 /// The arrowhead's columns (or rows), from its base (11 px across) to its
 /// tip (1 px).
 const ARROW_LEN: i32 = 6;
@@ -23,10 +26,9 @@ const fn line_mid(len: i32) -> i32 {
     len / 2
 }
 
-/// Offset of the line from the edge of a tile `len` pixels long: the line
-/// has as many pixels before its middle one as after.
+/// Offset of the line from the edge of a tile `len` pixels long.
 const fn line_offset(len: i32) -> i32 {
-    line_mid(len) - (LINE_W - 1) / 2
+    line_mid(len) - LINE_HALF
 }
 
 /// Offset of the arrowhead's base from the edge behind it, on a tile `len`
@@ -184,7 +186,8 @@ mod tests {
         assert_eq!(base(&[p(2, 1), p(1, 1)]), (Layer::Over, 26, 19, 1, 11));
         assert_eq!(base(&[p(1, 0), p(1, 1)]), (Layer::Over, 19, 21, 11, 1));
         assert_eq!(base(&[p(1, 2), p(1, 1)]), (Layer::Over, 19, 26, 11, 1));
-        assert_eq!(line_offset(16) + (LINE_W - 1) / 2, line_mid(16));
+        assert_eq!(2 * LINE_HALF + 1, LINE_W);
+        assert_eq!(line_offset(16) + LINE_HALF, line_mid(16));
         assert_eq!((line_offset(16), line_mid(16), arrow_base(16)), (7, 8, 5));
     }
 
