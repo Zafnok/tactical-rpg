@@ -5,6 +5,7 @@
 
 use std::fmt::Write as _;
 
+use serde::{Deserialize, Serialize};
 use trpg_content::Content;
 use trpg_core::{CharacterId, ClassId, Faction, Pos, StatValue, TerrainId, Unit, UnitId};
 
@@ -135,7 +136,7 @@ impl UnitView {
 
 /// How the cursor is drawn (`docs/design/look-and-feel.md`): corner marks by
 /// default; bigger corners and the tile glow are accessibility options.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CursorStyle {
     /// 3 px corner marks.
     #[default]

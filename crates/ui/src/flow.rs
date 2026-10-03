@@ -271,6 +271,7 @@ impl FlowScreen {
     /// and its playtime counts on from what it had.
     fn adopt(&mut self, ctx: &mut Ctx, campaign: Campaign) {
         ctx.lead = campaign.lead.clone();
+        ctx.campaign_mode = Some(campaign.mode);
         #[expect(clippy::cast_precision_loss, reason = "exact below 2^53 s")]
         let played = campaign.playtime_s as f64;
         self.started_at = ctx.clock_s - played;
@@ -492,6 +493,25 @@ impl FlowScreen {
         false
     }
 
+    /// Keeps the campaign's mode and [`Ctx::campaign_mode`] in step: a
+    /// switch to Casual made on the Options screen (0805) goes into the
+    /// campaign, and into the battle's setup, so `Restart Battle` and
+    /// `Retry` start it in Casual too. The battle under way keeps the
+    /// trigger lines of the mode it started in.
+    fn sync_mode(&mut self, ctx: &mut Ctx) {
+        let Some(campaign) = &mut self.campaign else {
+            ctx.campaign_mode = None;
+            return;
+        };
+        if ctx.campaign_mode == Some(GameMode::Casual)
+            && campaign.downgrade_mode()
+            && let Some(fight) = &mut self.fight
+        {
+            fight.setup.mode = GameMode::Casual;
+        }
+        ctx.campaign_mode = Some(campaign.mode);
+    }
+
     /// Brings the campaign's playtime up to date.
     fn count_playtime(&mut self, ctx: &Ctx) {
         if let Some(campaign) = &mut self.campaign {
@@ -517,14 +537,18 @@ impl Screen for FlowScreen {
 
     fn update(&mut self, ctx: &mut Ctx, input: &FrameInput) -> Transition {
         self.count_playtime(ctx);
+        self.sync_mode(ctx);
         match self.screen_mut().update(ctx, input) {
             Transition::Pop => {
                 if self.advance(ctx) {
+                    // Back to the title: no campaign.
+                    ctx.campaign_mode = None;
                     return Transition::Pop;
                 }
                 Transition::None
             }
-            // The flow's screens only push overlays (a battle's scenes).
+            // The flow's screens only push screens over themselves (a
+            // battle's scenes, the map menu's Options).
             other => other,
         }
     }

@@ -400,6 +400,9 @@ pub enum Effect {
     /// Save the battle and go back to the title (the map menu's `Suspend`,
     /// confirmed).
     Suspend,
+    /// Open the Options screen (the map menu's `Options`); the map menu
+    /// stays open under it.
+    Options,
 }
 
 impl Mode {
@@ -988,9 +991,8 @@ fn step_map_menu(
             Some(MapEntry::Restart) => (Mode::RestartPrompt, Effect::None),
             Some(MapEntry::Suspend) => (Mode::SuspendPrompt, Effect::None),
             Some(MapEntry::EndTurn) => end_turn(state),
-
-            // Disabled: the menu never chooses it.
-            Some(MapEntry::Options) | None => (Mode::MapMenu { menu, entries }, Effect::None),
+            Some(MapEntry::Options) => (Mode::MapMenu { menu, entries }, Effect::Options),
+            None => (Mode::MapMenu { menu, entries }, Effect::None),
         },
         Some(MenuEvent::Cancelled) => (Mode::default(), Effect::None),
         None => (Mode::MapMenu { menu, entries }, Effect::None),

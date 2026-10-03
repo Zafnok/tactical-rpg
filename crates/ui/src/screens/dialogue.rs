@@ -276,7 +276,11 @@ impl DialogueScreen {
                     1.0
                 };
                 let len = page_len(self.page_lines());
-                self.shown = (self.shown + input.dt * ctx.text_speed * fast).min(len);
+                self.shown = match ctx.settings().text_speed.chars_per_s() {
+                    Some(speed) => (self.shown + input.dt * speed * fast).min(len),
+                    // Instant: the whole page at once.
+                    None => len,
+                };
             }
         }
         Transition::None

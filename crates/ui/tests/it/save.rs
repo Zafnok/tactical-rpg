@@ -166,10 +166,10 @@ fn shows(h: &Harness, text: &str) -> bool {
     })
 }
 
-/// The map menu's `Suspend` (Units, Objective, (Options), Suspend), and
+/// The map menu's `Suspend` (Units, Objective, Options, Suspend), and
 /// Confirm on "Suspend the battle and return to the title?".
 fn suspend(h: &mut Harness) {
-    h.keys("d Down Down f");
+    h.keys("d Down Down Down f");
     assert!(shows(h, "Suspend the battle and return to the title?"));
     assert_eq!(h.screens(), ["title", "battle"], "not before the answer");
     h.keys("f");
@@ -265,8 +265,8 @@ fn a_continued_battle_restarts_from_its_first_turn() {
     let (mut h, _) = suspended_battle();
     h.keys("f");
     assert_ne!(battle(&h), start);
-    // The map menu: Units, Objective, (Options), Suspend, Restart Battle.
-    h.keys("d Down Down Down f f");
+    // The map menu: Units, Objective, Options, Suspend, Restart Battle.
+    h.keys("d Down Down Down Down f f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert_eq!(battle(&h), start);
     assert_eq!(charges(&h), 3);

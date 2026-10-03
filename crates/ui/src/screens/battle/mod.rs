@@ -70,6 +70,7 @@ use self::playback::{Playback, TIMINGS};
 use self::progress::{PROGRESS_TIMINGS, Progress};
 use self::rewind::{RewindEffect, RewindScreen};
 use self::tips::TipState;
+use super::OptionsScreen;
 use super::dialogue::DialogueScreen;
 use super::draw_debug_hint;
 use crate::audio::{CURSOR_MOVE, MenuSound};
@@ -197,9 +198,16 @@ pub struct BattleScreen {
     /// The danger zone, while shown (recomputed after every command).
     danger: Option<TileSet>,
     /// Auto-end: end the player phase when its last unit has acted. Off by
-    /// default (`docs/design/turn-structure.md`, ticket 0420). Kept
-    /// here until the Options menu (0805) saves it.
+    /// default (`docs/design/turn-structure.md`, ticket 0420). The
+    /// player's setting ([`Settings::auto_end_turn`]), read at the start
+    /// of every frame.
+    ///
+    /// [`Settings::auto_end_turn`]: crate::settings::Settings::auto_end_turn
     auto_end: bool,
+    /// Whether a fight's playback is shown, or skipped as the Cancel key
+    /// skips one: the player's Combat animations setting, read at the
+    /// start of every frame.
+    show_fights: bool,
     /// A command was applied: auto-end is checked once the screen is back
     /// to browsing.
     end_armed: bool,
@@ -266,6 +274,7 @@ impl BattleScreen {
             state,
             danger: None,
             auto_end: false,
+            show_fights: true,
             end_armed: false,
             toast: None,
             queue: VecDeque::new(),
@@ -469,9 +478,12 @@ impl BattleScreen {
         };
     }
 
-    /// Flips auto-end and says so.
-    fn toggle_auto_end(&mut self) {
+    /// Flips auto-end, saves it with the other options and says so.
+    fn toggle_auto_end(&mut self, ctx: &mut Ctx) {
         self.auto_end = !self.auto_end;
+        let on = self.auto_end;
+        // If saving fails it still holds for this session.
+        let _ = ctx.change_settings(|s| s.auto_end_turn = on);
         let text = format!("Auto-end: {}", on_off(self.auto_end));
         self.toast = Some((text, TOAST_S));
     }
@@ -756,9 +768,12 @@ impl BattleScreen {
     }
 
     /// Starts a frame of `dt` seconds: keeps the cameras for as many tiles
-    /// as the map skin shows ([`refit`](Self::refit)), and advances the
-    /// cursor's pulse.
+    /// as the map skin shows ([`refit`](Self::refit)), takes the player's
+    /// settings as they are now (the Options screen may have changed
+    /// them), and advances the cursor's pulse.
     fn begin_frame(&mut self, ctx: &Ctx, dt: f32) {
+        self.auto_end = ctx.settings().auto_end_turn;
+        self.show_fights = ctx.settings().combat_animations;
         let view = ctx.map_skin.view_tiles(MAP_VIEW);
         if view != self.view {
             self.refit(view);
@@ -865,22 +880,27 @@ impl BattleScreen {
             playback.map(|p| p.with_sounds(&attacks, event_sounds::heals(&events)))
         });
         self.mode = match playback {
-            Some(p) => Mode::Combat(Box::new(p)),
+            Some(mut p) => {
+                if !self.show_fights {
+                    // Combat animations are off.
+                    p.skip();
+                }
+                Mode::Combat(Box::new(p))
+            }
             None => Mode::after_command(&self.state),
         };
         played
     }
 
     /// Plays this frame's sounds (0424): the combat playback's and the
-    /// walk's that the coming tick reaches, and the queued events' that
-    /// are due.
-    fn play_sounds(&mut self, ctx: &mut Ctx, input: &FrameInput) {
-        let held = input.is_held(Action::Confirm);
+    /// walk's that the coming tick of `dt` seconds reaches (`held`:
+    /// Confirm is down), and the queued events' that are due.
+    fn play_sounds(&mut self, ctx: &mut Ctx, dt: f32, held: bool) {
         let mut due = match &self.mode {
-            Mode::Combat(playback) => playback.sounds(input.dt, held),
+            Mode::Combat(playback) => playback.sounds(dt, held),
             _ => Vec::new(),
         };
-        if let Some((id, tiles)) = self.mode.tiles_entered(input.dt, held) {
+        if let Some((id, tiles)) = self.mode.tiles_entered(dt, held) {
             self.walked = Some(id);
             let step = self
                 .state
@@ -888,7 +908,7 @@ impl BattleScreen {
                 .and_then(|u| event_sounds::unit_step_sound(&self.state, u));
             due.extend(step.into_iter().cycle().take(tiles));
         }
-        due.extend(self.cues.tick(input.dt));
+        due.extend(self.cues.tick(dt));
         for cue in due {
             ctx.audio.play_sound(cue);
         }
@@ -1000,10 +1020,11 @@ impl BattleScreen {
 
     /// Gives `action` to the mode ([`mode::step`], after [`Mode::route`]
     /// applies the optional split keys), plays its menu sound and carries
-    /// out its effect.
-    fn step_mode(&mut self, ctx: &mut Ctx, action: Action) {
+    /// out its effect. Returns whether the map menu's `Options` was chosen:
+    /// the frame then opens the Options screen.
+    fn step_mode(&mut self, ctx: &mut Ctx, action: Action) -> bool {
         let Some(action) = self.mode.route(action, &ctx.keymap) else {
-            return;
+            return false;
         };
         let before = self.mode.clone();
         let mode = std::mem::take(&mut self.mode);
@@ -1024,7 +1045,30 @@ impl BattleScreen {
             }
             Effect::Restart => self.leaving = Some(Leaving::Restart),
             Effect::Suspend => self.leaving = Some(Leaving::Suspend),
+            Effect::Options => return true,
         }
+        false
+    }
+
+    /// Plays the frame's sounds and advances what is animated by `dt`
+    /// seconds at the player's speeds (0805; `held`: Confirm is down): a
+    /// walk, a fight's playback, an AI action, the EXP bar.
+    fn animate(&mut self, ctx: &mut Ctx, dt: f32, held: bool) {
+        let dt = dt * ctx.settings().battle_speed(self.ai_phase());
+        self.play_sounds(ctx, dt, held);
+        let mode = std::mem::take(&mut self.mode);
+        self.mode = mode.tick(dt, held, &self.state);
+        self.follow_ai_action();
+        // A walk aimed at an enemy (0428) ends in its forecast: the cursor
+        // goes onto the target.
+        if let Mode::Targeting(t) = &self.mode
+            && let Some(at) = self.state.unit(t.target()).map(|u| u.pos)
+            && self.cursor.pos != at
+        {
+            self.cursor.jump(at);
+            self.follow(at);
+        }
+        self.tick_progress(dt, held);
     }
 
     /// Moves the cursor one tile for a cursor key; the camera and a
@@ -1410,7 +1454,7 @@ impl BattleScreen {
         Some(CursorView {
             pos,
             brightness: self.cursor.brightness(),
-            style: ctx.cursor_style,
+            style: ctx.settings().cursor_style,
         })
     }
 
@@ -1703,7 +1747,7 @@ impl Screen for BattleScreen {
                 continue;
             }
             if action == Action::ToggleAutoEnd {
-                self.toggle_auto_end();
+                self.toggle_auto_end(ctx);
                 continue;
             }
             if self.progress_key(action) {
@@ -1746,7 +1790,11 @@ impl Screen for BattleScreen {
                         ctx.audio.play_sound(CURSOR_MOVE);
                     }
                 }
-                _ => self.step_mode(ctx, action),
+                // The map menu's Options: over the battle.
+                _ if self.step_mode(ctx, action) => {
+                    return Transition::Push(Box::new(OptionsScreen::new()));
+                }
+                _ => {}
             }
             if self.leaving.is_some() {
                 return Transition::Pop;
@@ -1754,20 +1802,7 @@ impl Screen for BattleScreen {
         }
 
         self.tick_notes(dt);
-        self.play_sounds(ctx, input);
-        let mode = std::mem::take(&mut self.mode);
-        self.mode = mode.tick(input.dt, input.is_held(Action::Confirm), &self.state);
-        self.follow_ai_action();
-        // A walk aimed at an enemy (0428) ends in its forecast: the cursor
-        // goes onto the target.
-        if let Mode::Targeting(t) = &self.mode
-            && let Some(at) = self.state.unit(t.target()).map(|u| u.pos)
-            && self.cursor.pos != at
-        {
-            self.cursor.jump(at);
-            self.follow(at);
-        }
-        self.tick_progress(dt, input.is_held(Action::Confirm));
+        self.animate(ctx, dt, input.is_held(Action::Confirm));
         let waiting = self.shown_tip().is_some() || self.playing();
         if let Some(Queued::Banner(banner)) = self.queue.front_mut()
             && !waiting
@@ -2038,6 +2073,8 @@ mod rewind_tests;
 
 #[cfg(test)]
 mod scene_tests;
+#[cfg(test)]
+mod settings_tests;
 
 #[cfg(test)]
 mod skill_tests;

@@ -68,6 +68,8 @@ async fn main() {
     let mut pads = PadInput::new(ctx.content.keymap.stick);
     let mut game = Game::start(ctx);
     let mut running = true;
+    // The window starts windowed; the Fullscreen option switches it.
+    let mut fullscreen = false;
     loop {
         let mut events = keys::poll();
         events.extend(pads.poll());
@@ -77,6 +79,11 @@ async fn main() {
             let now = miniquad::date::now();
             game.set_music_playing(audio.music_playing(now));
             let out = game.frame(&events, get_frame_time());
+            if out.fullscreen != fullscreen {
+                fullscreen = out.fullscreen;
+                set_fullscreen(fullscreen);
+            }
+            audio.set_volumes(&mut speaker, out.music_volume, out.sound_volume);
             audio.play(&mut speaker, out.audio, out.music, now);
             for warning in audio.take_warnings() {
                 warn!("audio: {}", warning);
