@@ -75,6 +75,11 @@ Set `status: in-progress` in the ticket frontmatter.
   happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
+- A test that checks what happened reads the scene or the state. Only a
+  test of a look reads cells, colours or items, and it lives with the
+  skin (`crates/ui/src/map_view/glyph*`). Harness shortcuts:
+  `cursor_tile()`, `unit_at(pos)`, `tints_at(pos)`, `path()`
+  (`crates/ui/README.md`).
 - New integration tests go in the crate's `tests/it/` as a module listed in
   `main.rs`; never add a file directly under `tests/` (each one is a
   separate ~100 MB test program; an `xtask` test fails on a second one).
