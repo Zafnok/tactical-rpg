@@ -5,10 +5,10 @@ type: infra
 milestone: M1 Engine
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: ["0231"]
 nick_input: none
-completed:
+completed: 2026-10-02
 ---
 
 # 0232 — Render a frame to a PNG without a window
@@ -80,19 +80,19 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `cargo xtask frame-png target/title.png` writes an 800×512 × scale
+- [x] `cargo xtask frame-png target/title.png` writes an 800×512 × scale
       PNG of the title screen; `--keys` reaches Quick Battle and writes the
       battle map.
-- [ ] Unit test `matches_a_hand_checked_frame`: a 3×2-cell buffer with a
+- [x] Unit test `matches_a_hand_checked_frame`: a 3×2-cell buffer with a
       glyph, an `Under` rectangle, an `Over` rectangle and a flipped,
       half-opacity, clipped sprite of `images/test_card.png` renders to the
       exact pixels listed in the test (at scale 1 and 2).
-- [ ] The same frame drawn by `app` (the "Sprite test" debug tool from
+- [x] The same frame drawn by `app` (the "Sprite test" debug tool from
       0231, in the web build) and by this tool look the same; Completion
       notes say what was compared.
-- [ ] Same arguments twice give byte-identical files.
-- [ ] The `ascii-art` skill points at the command.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Same arguments twice give byte-identical files.
+- [x] The `ascii-art` skill points at the command.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -104,5 +104,36 @@ None.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- `crates/xtask/src/frame_png.rs`: `Painter`, a software copy of `app`'s
+  `Renderer::draw` (clear colour, cell backgrounds, `Under` items, glyphs
+  tinted with fg, `Over` items; nearest sampling, `flip_x`, opacity as
+  alpha, `clip`; magenta for a missing glyph or image), and the
+  `cargo xtask frame-png` command with `--keys`/`--pad`/`--wait` steps in
+  order, `--layout`, `--scale` (1–8, default 2) and `--web`. It prints the
+  top screen and the path, and a warning when built with
+  `--features private-assets` (a new `xtask` feature forwarding to
+  `trpg-content`). Key and button names are checked before the run, so a
+  typo is an error, not a Harness panic.
+- `xtask` now depends on `trpg-ui` (`harness` feature); `cargo deny` and
+  `cargo machete` pass.
+- **Deviation:** step 1's free function `render(buf, atlas, atlas_png,
+  images, scale)` became `Painter::new(atlas, atlas_png, images, read,
+  clear)` + `painter.render(buf, scale)`, so each image is decoded once per
+  run and tests can leave an image out. `clear` (the palette's `black`) is
+  an argument because `app` skips cells whose bg equals it.
+- `decode_png` (from `font_atlas`) is no longer test-only and also strips
+  16-bit channels, for 16-bit PNGs.
+- **Compared with `app`:** the web build (`--release --debug-tools`), "Sprite
+  test" debug tool, read back from the WebGL canvas at scale 2
+  (1792×1344 canvas, console at (96, 160)), against
+  `frame-png --keys "F2 Up Up Up f" --scale 2`. Every pixel was
+  byte-identical except inside the "half opacity" sprite. There the canvas
+  holds premultiplied colour with alpha 191: macroquad blends the alpha
+  channel too. Shown over the page's black background, those pixels are
+  the tool's to within 0.4 of a level, so on screen the two match.
+- Also checked by eye: the title at 2× (1600×1024) and the Quick Battle map
+  (`--keys "Down f" --wait 1.5`).
+- The ascii-art skill (*Mockups for Nick*) and `crates/ui/README.md`
+  (*Seeing a frame*) point at the command. ADR-0038 already names
+  `cargo xtask frame-png`, so it is unchanged.
+- No gameplay rules decided; no follow-up tickets.
