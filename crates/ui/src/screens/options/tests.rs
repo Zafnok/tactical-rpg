@@ -351,3 +351,26 @@ fn stepping_helpers_stop_or_wrap() {
     assert_eq!(stepped_volume(0, false, true), 0);
     assert_eq!(stepped_volume(5, false, false), 4);
 }
+
+/// Row `y` of the screen as drawn, trimmed.
+fn drawn_row(s: &OptionsScreen, c: &Ctx, y: i32) -> String {
+    use crate::console::{CONSOLE_H, CONSOLE_W};
+    let black = c.palette.get(UiColor::Black);
+    let mut buf = GlyphBuffer::new(CONSOLE_W, CONSOLE_H, Cell::new(' ', black, black));
+    s.draw(c, &mut buf);
+    let glyphs = (0..i32::from(CONSOLE_W)).map(|x| buf.get(x, y).map_or(' ', |c| c.glyph));
+    glyphs.collect::<String>().trim().to_owned()
+}
+
+/// The message sits one blank row under the panel's bottom border.
+#[test]
+fn the_message_is_drawn_under_the_panel() {
+    let mut c = ctx();
+    let mut s = on(Row::ResetTips);
+    press(&mut s, &mut c, &[Action::Confirm]);
+    let bottom = PANEL.y + PANEL.h - 1;
+    assert!(drawn_row(&s, &c, bottom).starts_with('└'));
+    assert_eq!(drawn_row(&s, &c, bottom + 1), "");
+    assert_eq!(drawn_row(&s, &c, bottom + 2), "Tips will show again");
+    assert_eq!(drawn_row(&s, &c, bottom + 3), "");
+}

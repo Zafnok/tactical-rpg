@@ -98,6 +98,9 @@ screen reachable from title and map menu, a "Key bindings" row that opens 0815's
 - The layout moved into `Settings`. The old `layout` storage key is still
   read for a player who picked one before, and never written.
 - The debug menu's temporary "Key bindings" entry is gone.
+- The screen's text is in `assets/lang/en/ui.ron` under `options.*` and
+  `title.options` (ADR-0045, which landed on `main` while this PR was
+  open), with the test pack's entries.
 
 **Deviations from the plan.**
 

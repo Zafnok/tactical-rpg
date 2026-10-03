@@ -177,7 +177,8 @@ fn stepped<T: Copy + PartialEq>(all: &[T], current: T, forward: bool, wrap: bool
     let i = all.iter().position(|&v| v == current).unwrap_or(0);
     let to = match (forward, wrap) {
         (true, true) => (i + 1) % n,
-        (true, false) => (i + 1).min(n - 1),
+        // Past the last value there is none: it stays (below).
+        (true, false) => i + 1,
         (false, true) => (i + n - 1) % n,
         (false, false) => i.saturating_sub(1),
     };
