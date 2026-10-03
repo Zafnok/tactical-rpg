@@ -1,6 +1,6 @@
 # ADR-0041: PRs must be up to date with `main` and green before they merge
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0042
 - **Date:** 2026-10-02
 - **Related tickets:** 0115, 0106
 - **Related ADRs:** ADR-0014
