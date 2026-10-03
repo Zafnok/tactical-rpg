@@ -11,6 +11,7 @@ mod playtest;
 mod private_assets;
 mod sfx;
 mod test_card;
+mod test_tileset;
 mod tickets;
 mod web;
 
@@ -28,6 +29,7 @@ font-atlas <font.bdf>... <out-dir> build the font atlas from BDF fonts\n  \
 sfx [--check]                      render our own sounds into assets/audio/sfx/\n  \
 frame-png <out.png> [steps]        render a scripted game frame to a PNG (frame-png --help)\n  \
 test-card                          write the sprite test image, assets/images/test_card.png\n  \
+test-tileset                       write the sprite map skin's test tileset, assets/tilesets/test.*\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
@@ -48,6 +50,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("sfx") => sfx(&args.collect::<Vec<_>>()),
         Some("frame-png") => frame_png(&args.collect::<Vec<_>>()),
         Some("test-card") => test_card(&args.collect::<Vec<_>>()),
+        Some("test-tileset") => test_tileset(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some(command) => {
@@ -181,6 +184,23 @@ fn test_card(args: &[String]) -> u8 {
         }
         Err(e) => {
             eprintln!("test-card: {e}");
+            1
+        }
+    }
+}
+
+fn test_tileset(args: &[String]) -> u8 {
+    if !args.is_empty() {
+        eprintln!("usage: cargo xtask test-tileset");
+        return 2;
+    }
+    match test_tileset::run(&repo_root()) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("test-tileset: {e}");
             1
         }
     }
@@ -575,6 +595,12 @@ mod tests {
     fn test_card_rejects_args() {
         assert_eq!(test_card(&args(&["--bogus"])), 2);
         assert_eq!(dispatch(args(&["test-card", "x"]).into_iter()), 2);
+    }
+
+    #[test]
+    fn test_tileset_rejects_args() {
+        assert_eq!(test_tileset(&args(&["--bogus"])), 2);
+        assert_eq!(dispatch(args(&["test-tileset", "x"]).into_iter()), 2);
     }
 
     #[test]

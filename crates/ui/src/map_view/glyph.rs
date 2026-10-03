@@ -3,11 +3,12 @@
 //! cells: a 16 × 16 pixel square. That size is known only here.
 
 pub mod cursor;
-pub mod path;
 pub mod units;
 
 use trpg_core::{Pos, TerrainId};
 
+use super::grid::{Grid, px_rect};
+use super::path;
 use super::scene::{MapScene, RangeKind};
 use super::skin::MapSkin;
 use crate::color::{Palette, Rgb, UiColor};
@@ -49,7 +50,7 @@ impl MapSkin for GlyphSkin {
             }
         }
         let color = ctx.palette.get(UiColor::Path);
-        for overlay in path::path_overlays(&scene.path, &layout, color) {
+        for overlay in path::path_overlays(&scene.path, &layout.grid(), color) {
             buf.add_overlay(overlay);
         }
         if let Some(c) = &scene.cursor
@@ -93,12 +94,15 @@ impl Layout {
         Rect::new(x, y, TILE_W_CELLS * self.tiles.0, self.tiles.1)
     }
 
-    /// The top-left pixel of `tile` on the console (it may lie outside the
-    /// area).
-    fn tile_px(&self, tile: Pos) -> (i32, i32) {
-        let cx = self.cell.0 + TILE_W_CELLS * (tile.x - self.origin.x);
-        let cy = self.cell.1 + (tile.y - self.origin.y);
-        (cx * i32::from(CELL_W_PX), cy * i32::from(CELL_H_PX))
+    /// The tiles in console pixels: 16 × 16 each.
+    pub fn grid(&self) -> Grid {
+        let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
+        Grid {
+            origin: self.origin,
+            corner: (self.cell.0 * cw, self.cell.1 * ch),
+            tile: (TILE_W_CELLS * cw, ch),
+            tiles: self.tiles,
+        }
     }
 }
 
@@ -112,14 +116,8 @@ pub fn tile_to_cell(tile: Pos, layout: &Layout) -> Option<(i32, i32)> {
     inside.then(|| (layout.cell.0 + TILE_W_CELLS * dx, layout.cell.1 + dy))
 }
 
-/// `cells` in console pixels.
-fn px_rect(cells: Rect) -> PxRect {
-    let (cw, ch) = (i32::from(CELL_W_PX), i32::from(CELL_H_PX));
-    Rect::new(cells.x * cw, cells.y * ch, cells.w * cw, cells.h * ch)
-}
-
 /// The palette colour of a range.
-const fn range_color(kind: RangeKind) -> UiColor {
+pub(super) const fn range_color(kind: RangeKind) -> UiColor {
     match kind {
         RangeKind::Danger => UiColor::DangerZone,
         RangeKind::Move => UiColor::MoveRange,
@@ -175,7 +173,7 @@ fn draw_tiles(ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene, layout: &Layou
 
 /// The palette colour called `name`, or `fallback` (content validation
 /// makes sure terrain colours exist, so this only guards against a bug).
-fn named(palette: &Palette, name: &str, fallback: UiColor) -> Rgb {
+pub(super) fn named(palette: &Palette, name: &str, fallback: UiColor) -> Rgb {
     palette
         .lookup(name)
         .unwrap_or_else(|| palette.get(fallback))
@@ -236,8 +234,10 @@ pub(crate) mod tests {
         assert_eq!(tile_to_cell(p(3, 2), &big), Some((8, 4)));
         assert_eq!(tile_to_cell(p(4, 2), &big), None);
         assert_eq!(tile_to_cell(p(3, 3), &big), None);
-        assert_eq!(big.tile_px(p(1, 1)), (32, 48));
-        assert_eq!(big.tile_px(p(0, 3)), (16, 80));
+        assert_eq!(big.grid().tile_px(p(1, 1)), (32, 48));
+        assert_eq!(big.grid().tile_px(p(0, 3)), (16, 80));
+        assert_eq!(big.grid().bounds(), px_rect(big.cells()));
+        assert_eq!(big.grid().tile, (16, 16));
         // The scene is smaller: only its tiles.
         let small = Layout::new(&MapScene::new(p(1, 1), (2, 1)), area);
         assert_eq!(small.cells(), Rect::new(4, 3, 4, 1));
@@ -447,13 +447,13 @@ pub(crate) mod tests {
     }
 
     prop_compose! {
-        fn any_pos()(x in -25..60i32, y in -25..60i32) -> Pos {
+        pub(crate) fn any_pos()(x in -25..60i32, y in -25..60i32) -> Pos {
             Pos::new(x, y)
         }
     }
 
     prop_compose! {
-        fn any_tile()(
+        pub(crate) fn any_tile()(
             terrain in prop::option::of(0u16..24),
             flashes in prop::collection::vec(0.0f32..1.0, 0..2),
             tints in prop::collection::vec(0usize..4, 0..3),
@@ -470,7 +470,7 @@ pub(crate) mod tests {
     }
 
     prop_compose! {
-        fn any_unit()(
+        pub(crate) fn any_unit()(
             pos in any_pos(),
             label in "[A-Za-z]{0,4}",
             hp in -5..40i32,
@@ -490,7 +490,7 @@ pub(crate) mod tests {
     }
 
     prop_compose! {
-        fn any_cursor()(
+        pub(crate) fn any_cursor()(
             pos in any_pos(),
             brightness in 0.5f32..1.0,
             style in prop::sample::select(vec![
@@ -504,7 +504,7 @@ pub(crate) mod tests {
     }
 
     prop_compose! {
-        fn any_scene()(
+        pub(crate) fn any_scene()(
             origin in any_pos(),
             size in (-2..45i32, -2..40i32),
             tiles in prop::collection::vec(any_tile(), 0..200),
