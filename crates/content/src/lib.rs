@@ -18,6 +18,7 @@ pub mod font;
 pub mod image;
 pub mod item;
 pub mod keymap;
+pub mod lang;
 pub mod map;
 pub mod names;
 pub mod palette;
@@ -53,6 +54,7 @@ pub use keymap::{
     Action, Bindings, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS,
     StickDef,
 };
+pub use lang::{Lang, LangCode, LangInfo, LangPack, LangStatus, MadeBy};
 pub use map::{MapDef, MapLegend};
 pub use names::Names;
 pub use palette::PaletteDef;
@@ -113,6 +115,8 @@ pub struct Content {
     pub new_game: NewGameDef,
     /// Support rules and pairs (ticket 1002).
     pub supports: SupportTable,
+    /// English screen text and the language packs (ADR-0045).
+    pub lang: Lang,
 }
 
 impl Content {
@@ -217,6 +221,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             chapters,
             new_game,
             supports,
+            lang: lang::load(),
         },
     )
 }
@@ -422,6 +427,7 @@ struct Loaded {
     chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
     new_game: Result<NewGameDef, Vec<ContentError>>,
     supports: Result<SupportTable, Vec<ContentError>>,
+    lang: Result<Lang, Vec<ContentError>>,
 }
 
 /// Takes a loader's value, or moves its errors into `errors` and returns a
@@ -469,6 +475,7 @@ fn assemble(
         chapters: take(units.chapters, &mut errors),
         new_game: take(units.new_game, &mut errors),
         supports: take(units.supports, &mut errors),
+        lang: take(units.lang, &mut errors),
     };
     if errors.is_empty() {
         Ok(content)
@@ -574,6 +581,7 @@ mod tests {
             chapters,
             new_game,
             supports: ok_supports(),
+            lang: lang::load(),
         }
     }
 
@@ -659,6 +667,10 @@ mod tests {
             content.as_ref().map(|c| &c.supports),
             ok_supports().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.lang),
+            lang::load().ok().as_ref()
+        );
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -671,9 +683,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 24] = [
+    const NAMES: [&str; 25] = [
         "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "r",
-        "j", "z", "b", "h", "g", "q",
+        "j", "z", "b", "h", "g", "q", "l",
     ];
 
     #[test]
@@ -706,6 +718,7 @@ mod tests {
                     chapters: Err(e("h")),
                     new_game: Err(e("g")),
                     supports: Err(e("q")),
+                    lang: Err(e("l")),
                 },
             ),
             Err(ContentErrors(NAMES.iter().flat_map(|f| e(f)).collect()))
@@ -757,6 +770,7 @@ mod tests {
                     chapters: if i == 21 { Err(e("h")) } else { ok_story().1 },
                     new_game: if i == 22 { Err(e("g")) } else { ok_story().2 },
                     supports: if i == 23 { Err(e("q")) } else { ok_supports() },
+                    lang: if i == 24 { Err(e("l")) } else { lang::load() },
                 },
             )
         };

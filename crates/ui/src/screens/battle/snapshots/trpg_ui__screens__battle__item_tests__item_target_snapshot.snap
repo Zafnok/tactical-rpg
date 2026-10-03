@@ -95,16 +95,16 @@ x = fg:player bg:grass_bg
 y = fg:wood bg:stone_bg
 z = fg:text_dim bg:black
 --- overlays ---
-over  208,270 13x2  hp_high
-over  221,270 3x2  black
-over  224,270 6x2  hp_mid
-over  230,270 10x2  black
-over  192,254 16x2  hp_high
-over  288,222 16x2  hp_high
-over  272,254 16x2  hp_high
-over  272,206 16x2  hp_high
-over  288,302 16x2  hp_high
-over  208,286 16x2  hp_high
+over  209,270 12x2  hp_high
+over  221,270 2x2  black
+over  225,270 6x2  hp_mid
+over  231,270 8x2  black
+over  193,254 14x2  hp_high
+over  289,222 14x2  hp_high
+over  273,254 14x2  hp_high
+over  273,206 14x2  hp_high
+over  289,302 14x2  hp_high
+over  209,286 14x2  hp_high
 over  223,256 3x1  cursor
 over  223,256 1x3  cursor
 over  237,256 3x1  cursor

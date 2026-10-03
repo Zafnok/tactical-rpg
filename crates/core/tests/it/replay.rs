@@ -28,7 +28,7 @@ const WATER: TerrainId = TerrainId(4);
 const ICE: TerrainId = TerrainId(5);
 
 /// Plain, forest, burning, burnt, water and ice.
-fn terrain() -> Arc<TerrainTable> {
+pub(super) fn terrain() -> Arc<TerrainTable> {
     let rules = |name: &str, cost| TerrainRules {
         name: name.into(),
         move_cost: vec![cost],
@@ -49,7 +49,7 @@ fn terrain() -> Arc<TerrainTable> {
     })
 }
 
-fn classes() -> Arc<ClassTable> {
+pub(super) fn classes() -> Arc<ClassTable> {
     let fighter = ClassDef {
         id: ClassId("fighter".into()),
         name: "Fighter".into(),
@@ -105,7 +105,7 @@ fn blade(might: i32) -> ItemDef {
 }
 
 /// `blade` (60 hit, 5 might), `dull_blade` (might 3) and `potion`.
-fn items() -> Arc<ItemTable> {
+pub(super) fn items() -> Arc<ItemTable> {
     let potion = ItemDef::Consumable(ConsumableDef {
         name: "Potion".into(),
         effect: ConsumableEffect::Heal(10),
@@ -123,7 +123,7 @@ fn items() -> Arc<ItemTable> {
 
 /// A sturdy unit (40 HP) with a 60-hit, 5-damage weapon (and a 3-damage
 /// spare): nobody falls in the script, and every strike's roll matters.
-fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
+pub(super) fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
     let loadout = LoadoutDef {
         weapons: vec![ItemId::new("blade"), ItemId::new("dull_blade")],
         ..LoadoutDef::default()
@@ -166,7 +166,7 @@ fn unit(id: u32, faction: Faction, x: i32, y: i32) -> Unit {
 
 /// `guard_strike`: a combat active (2 durability) with hit +10 and a stance
 /// rider, Def +2 until the user's next phase.
-fn skills() -> Arc<SkillTable> {
+pub(super) fn skills() -> Arc<SkillTable> {
     let def = SkillDef {
         id: SkillId::new("guard_strike"),
         name: "Guard Strike".into(),
@@ -201,7 +201,7 @@ fn skills() -> Arc<SkillTable> {
 /// `bolt`: an attack spell with the blade's numbers (60 hit, 5 might), range
 /// 1–2, 3 uses; `fire` (forest → burning, then burnt) and `frost` (water →
 /// ice), for tile casts.
-fn spells() -> Arc<SpellTable> {
+pub(super) fn spells() -> Arc<SpellTable> {
     let bolt = SpellDef {
         id: SpellId::new("bolt"),
         name: "Bolt".into(),
@@ -251,7 +251,7 @@ fn spells() -> Arc<SpellTable> {
 }
 
 /// Plain, with a forest at (1,4) and water at (2,4).
-fn setup(seed: u64) -> BattleSetup {
+pub(super) fn setup(seed: u64) -> BattleSetup {
     let mut tiles = Grid::filled(8, 5, TerrainId(0));
     for (x, t) in [(1, FOREST), (2, WATER)] {
         if let Some(tile) = tiles.get_mut(Pos::new(x, 4)) {
@@ -370,7 +370,7 @@ fn attack(unit: u32, x: i32, y: i32, target: u32) -> Command {
 /// spell), a player spell out of the target's reach, then a forest burnt
 /// (it burns out a round later), water frozen, and an attack with a combat
 /// active whose stance lasts through the enemy phase.
-fn script() -> Vec<Command> {
+pub(super) fn script() -> Vec<Command> {
     let mut cmds = Vec::new();
     for _ in 0..3 {
         cmds.extend([

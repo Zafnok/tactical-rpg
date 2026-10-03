@@ -88,9 +88,9 @@ q = fg:wood bg:stone_bg
 r = fg:text_dim bg:panel_bg
 s = fg:text_highlight bg:panel_bg
 --- overlays ---
-over  288,222 16x2  hp_high
-over  280,254 8x2  hp_high
-over  280,206 8x2  hp_high
-over  288,302 16x2  hp_high
+over  289,222 14x2  hp_high
+over  280,254 7x2  hp_high
+over  280,206 7x2  hp_high
+over  289,302 14x2  hp_high
 under sprite 16,32 256x256  portraits/test_lord/happy.png 0,0 32x32
 under sprite 528,32 256x256  portraits/test_knight/angry.png 0,0 32x32 flip opacity=140

@@ -109,10 +109,48 @@ instead of going through the action menu.
   the unit can attack the enemy from; otherwise the arrow jumps to the closest
   such tile (cheapest move; *Claude's tie-break:* shortest path, then topmost,
   then leftmost).
-- **What opens:** after Confirm the unit walks there, then the weapon list
-  (only weapons that reach that enemy; skipped if just one), then the attack
-  forecast on that enemy. Cancel goes back to the normal action menu at that
-  tile, and Cancel again to the path.
+- **What opens** (Nick, 2026-10-03, ticket 0430; before that a weapon list
+  came first): after Confirm the unit walks there and the **attack forecast
+  on that enemy opens at once**, with what the unit has **equipped**. No list.
+
+  > "straight to forecast, for weapons too, with keys to quickly go thru
+  > potential weapons/spells without backing out of forecast screen."
+  >
+  > A unit with a sword and a spell that both reach: "Whatever is equipped,
+  > no list"
+  >
+  > Which keys swap: "like three houses, but up/down should not pick an art.
+  > the arts should not be in the same menu. we should have an arts menu.
+  > that was something i didnt like about the current quick battle setup
+  > anyway"
+
+  - **Spells count too.** A unit whose attack spell reaches the enemy can
+    point at it the same way. Example: the Test Mage (Fire equipped, also
+    knows Frost) points at the Frost Elemental: it walks to two tiles away
+    and the forecast of Fire opens.
+  - **Left / right swap** the weapon or spell, like Fire Emblem: Three
+    Houses, through everything that reaches that enemy from that tile:
+    weapons first (slot order), then attack spells, wrapping round. Example:
+    `Iron Sword → Steel Sword → Fire → Frost → Iron Sword`.
+  - **Previous / next unit keys change the target** in this forecast.
+  - **A separate Combat Arts menu** is ticket 0442. Until it is built, up /
+    down still move the arts list in the forecast, as before.
+  - *Claude's starting rules (Nick can veto):*
+    - If the equipped weapon or spell can't reach the enemy from that tile,
+      the forecast opens with the first one that does (weapons before
+      spells). Example: a mage with a sword equipped points at an enemy two
+      tiles away: the forecast opens with Fire.
+    - With only one weapon or spell that reaches, left / right change the
+      target, as in the forecast opened from `Attack`.
+    - After changing target, a swap keeps that target if the new weapon
+      reaches it; if not, the cursor goes back to the enemy pointed at.
+    - A swap goes back to a plain attack (a chosen art or active is dropped).
+    - Cancel goes back to the action menu at that tile, on `Attack` (on
+      `Magic` if the forecast showed a spell), and Cancel again to the path.
+    - The help bar says `cast` instead of `attack` when a spell would open.
+    - The forecast opened from the action menu (`Attack`, then the weapon
+      list; `Magic`, then the spell list) is unchanged: no swapping there
+      yet (ticket 0442 asks).
 
 **Skill-granted movement.** Specific combat skills may give a unit movement
 *after* its action, like Fire Emblem's bow skill that steps the archer 1 tile

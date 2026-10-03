@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0036"]
 nick_input: answer-first
-completed:
+completed: 2026-10-03
 ---
 
 # 0228 — Cinematic camera: pan and zoom over a glyph scene
@@ -102,19 +102,19 @@ cinematic*, the zoom rule). Answered 2026-10-03: whole steps.
 
 ## Acceptance criteria
 
-- [ ] Unit: `cinema::view` centres, clamps at every edge, and centres a
+- [x] Unit: `cinema::view` centres, clamps at every edge, and centres a
       scene smaller than the window.
-- [ ] Snapshot: the debug tool at 1×, 2×, 3× and 4× (header line and scene).
-- [ ] A screen with a backdrop and a text box over it draws the box's cells
+- [x] Snapshot: the debug tool at 1×, 2×, 3× and 4× (header line and scene).
+- [x] A screen with a backdrop and a text box over it draws the box's cells
       and shows the scene only through see-through cells (unit test on the
       draw plan or snapshot).
-- [ ] Existing snapshots are unchanged (no backdrop means no header line).
-- [ ] Checked by eye on native and web: the completion notes say what was
+- [x] Existing snapshots are unchanged (no backdrop means no header line).
+- [x] Checked by eye on native and web: the completion notes say what was
       looked at.
-- [ ] The zooms offered match 0036's answer: whole numbers 1–4, nothing
+- [x] The zooms offered match 0036's answer: whole numbers 1–4, nothing
       in between.
-- [ ] The ADR is written and listed in `docs/adr/README.md`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] The ADR is written and listed in `docs/adr/README.md`.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -125,5 +125,74 @@ cinematic*, the zoom rule). Answered 2026-10-03: whole steps.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done.** ADR-0048 records the design.
+
+- **`GlyphBuffer` backdrop** (`crates/ui/src/glyph_buffer/backdrop.rs`):
+  `set_backdrop(scene: Rc<GlyphBuffer>, clip, origin_px, zoom)`,
+  `backdrop()`, `clear_backdrop()`. Zoom is clamped to 1..=4
+  (`MAX_ZOOM`); nothing takes a fractional zoom. A solid fill of the whole
+  buffer (how `Game` clears a frame) removes the backdrop.
+- **See-through cells**: `Cell::see_through(glyph, fg)`, a flag on `Cell`.
+  The scene shows only behind them; a see-through cell may still hold a
+  glyph (text straight on the scene, for captions and the logo), and
+  `print_fg` keeps it see-through.
+- **`trpg_ui::cinema::view`**: centres, clamps at every edge, centres a
+  smaller scene. Unit and property tests.
+- **Snapshots**: `bg:see-through` legend key; a
+  `--- backdrop: clip … origin … zoom N ---` line and the scene's own
+  snapshot after the console's. No backdrop, no change: every existing
+  snapshot is byte-for-byte the same except the debug menu's (one more
+  tool).
+- **`app`** (`render.rs`): clear colour → the scene in its window → the
+  console. The scene's sprites and rectangles scale, shift and clip with
+  its cells (0231's sprite items; checked with the test tileset skin).
+- **`cargo xtask frame-png`** (0232) draws backdrops too, with hand-checked
+  pixel tests.
+- **Debug tool "Scene camera"** (F2 menu, before "Map skin"): the whole
+  `test_small.map`, painted by the map skin in use, with a path and the
+  cursor on it; held cursor keys pan at 60 scene pixels a second, Confirm
+  steps 1× → 2× → 3× → 4× → 1×, Cancel closes. A caption sits on the scene
+  and a text box covers the window's corner. Harness snapshots at each
+  zoom.
+
+**Deviations from the plan.**
+
+- *Draw order.* The ticket had console backgrounds, then the scene. It is
+  the scene first, then every solid console background: the same picture,
+  with no per-cell clipping of the scene.
+- *No scissor.* macroquad's scissor needs `unsafe`, which the workspace
+  forbids. The window is clipped by a camera whose viewport is the window
+  (physical pixels, so it holds with `high_dpi`).
+- *See-through marker.* It is in the snapshot's colour rows and legend
+  (`bg:see-through`), not the glyph rows: a see-through cell may hold a
+  real glyph, so no glyph could stand for "hole".
+- `GlyphBuffer` lost `Eq` (kept `PartialEq`): the origin is a float.
+
+**Checked by eye.**
+
+- *Web* (debug build in the browser pane, display scale 1.75): the Scene
+  camera at 1×, 2×, 3× and 4×, at window scale 2 (1792×1344 canvas) and
+  window scale 1 (1540×1050 canvas, console at an odd offset). At every
+  zoom and both scales the canvas was **pixel-identical** to
+  `frame-png`'s render of the same frame (0 pixels differing). Then
+  panned at 4× right, down and left: fractional origins (107.6, 89.4),
+  stopping at the bottom edge, no seams.
+- *Native* (Windows, debug build, 1640×1064 window = window scale 2): 3×,
+  4×, and 4× panned to origin 106.0,57.3. Glyphs sharp (each font pixel a
+  6×6 or 8×8 block), the path and cursor rectangles scaled with the
+  tiles, the scene cut exactly at the window's frame, the caption over the
+  scene, the text box hiding it. Native at window scale 1 was not looked
+  at (the window opens at scale 2 here); the web build covered scale 1
+  with the same drawing code.
+- Sprite skin: `frame-png` of the Scene camera with the test tileset at 2×.
+
+**Gameplay rules decided:** none. The pan speed and layout are the debug
+tool's own.
+
+**Follow-ups:** none created. If a very large scene (the overworld, 1010)
+turns out slow, skip the cells outside the window in `draw_layers`
+(ADR-0048, *Consequences*).
+
+**For Nick:** nothing to decide. To see it: F2 → "Scene camera" on the
+Pages build after the merge; hold the cursor keys to pan, Confirm to step
+the zoom.
