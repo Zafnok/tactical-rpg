@@ -6,7 +6,7 @@ milestone: M6 Story & dialogue
 model: opus-5.5
 effort: high
 status: todo
-blocked_by: ["0021", "0110", "0116", "0231"]
+blocked_by: ["0021", "0110", "0116", "0231", "0232"]
 nick_input: sign-off
 completed:
 ---
@@ -114,11 +114,16 @@ bought portraits, speaker and dimmed listener, next to one with the old art.
 - Keep the text `.portrait` format working for the placeholders until 0706
   replaces them, or convert the two placeholders to PNG and remove the text
   format. Choose one and record it in the ADR.
-- `cargo xtask portrait-import <zip-or-dir> <faceset-file> <character-id>`:
-  slices the chosen 4×2 face set into its 8 faces, reduces each 3×-drawn
-  144×144 cell to its 48×48 pixels (error if a cell isn't made of exact 3×3
-  blocks), writes them into `assets-private/game/portraits/<id>/`, and writes a
-  sidecar stub to fill in.
+- `cargo xtask portrait-import <bust-folder-or-sheet> <character-id>
+  [--shift-x <pixels>]`: takes a folder of single 80×80 bust files or a
+  320×160 bust sheet (4×2) at 1×, cuts each bust to its middle 64 columns
+  and bottom 64 rows (x 8..72, y 16..80; `--shift-x`, −8..=8, moves the
+  cut sideways), writes the 64×64 files into
+  `assets-private/game/portraits/<id>/`, and writes a sidecar stub to fill
+  in. 48×48 faces are accepted and written as they are; the 3× sheet path
+  only if it costs nothing (see *Context*). Error, with the file name, on
+  any other size.
+- The sign-off screenshot is made with `cargo xtask frame-png` (0232).
 - Validation in the loader (all errors at once, with file names): size must
   fit 256×256 console px at a scale of at least 1; missing required expression; unreadable PNG; sidecar
   `character` ≠ file stem.

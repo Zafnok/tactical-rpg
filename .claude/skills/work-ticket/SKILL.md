@@ -75,6 +75,9 @@ Set `status: in-progress` in the ticket frontmatter.
   happened reads the scene or the state, not cells or colours.
 - Write the tests the ticket lists (ADR-0007): unit + property for `core`,
   snapshot + scripted integration for screens.
+- New integration tests go in the crate's `tests/it/` as a module listed in
+  `main.rs`; never add a file directly under `tests/` (each one is a
+  separate ~100 MB test program; an `xtask` test fails on a second one).
 - **Scope creep rule:** if you notice something else worth doing (a bug,
   refactor, missing feature), do NOT do it. Create a new ticket with the
   `write-ticket` skill and mention it in the PR description.
@@ -119,6 +122,10 @@ cannot be met, say so in the Completion notes and in the PR; don't hide it.
 - Wait for CI. If a check fails, fix it on the same branch. Never disable a
   gate, lower a threshold, or add `#[mutants::skip]`/`#[allow]` just to pass —
   if a gate is genuinely wrong, write a ticket about it and explain in the PR.
+- PRs merge only when green on the **latest `main`** (ADR-0041). If `main`
+  moves while the PR is open, merge it into the branch (`git fetch origin &&
+  git merge origin/main`, or the ccd_host `sync_with_base_branch` tool in an
+  app worktree), push, and wait for CI again before saying it can merge.
 
 ## Don'ts
 

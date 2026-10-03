@@ -96,7 +96,7 @@ Nintendo's `A` on the right). You get this for free by following rule 2:
   glyphs*; a test checks every name can be drawn.
 - Width: button names are longer than keys (`Options`, `D-pad/stick`).
   A help line must still fit the row on every pad; test the longest one
-  (`the_longest_help_bar_fits_on_every_pad` in `tests/controller.rs`).
+  (`the_longest_help_bar_fits_on_every_pad` in `tests/it/controller.rs`).
 - Tests that compare a controller run with a keyboard run compare
   `h.snapshot_as(Device::Keyboard)`.
 
