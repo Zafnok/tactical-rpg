@@ -1253,6 +1253,27 @@ fn the_pointed_forecast_opens_with_what_is_equipped_and_swaps_through_sword_and_
     // ...and goes back to the enemy pointed at when the sword doesn't.
     t.swap(true, &s);
     assert_eq!((&t.with, t.target()), (&all[0], ELEMENTAL));
+    // The keys: right swaps forward (Frost, then round to the sword), left
+    // back.
+    let key = |t: &Targeting, action| {
+        let mode = Mode::Targeting(Box::new(t.clone()));
+        match super::mode::step(mode, action, p(1, 4), &s) {
+            (Mode::Targeting(t), Effect::Cursor(at)) => (t.with.clone(), at),
+            other => panic!("{other:?}"),
+        }
+    };
+    let on_fire = pointed(&s, ELEMENTAL);
+    let on_fire = {
+        let mut t = on_fire;
+        t.swap(false, &s);
+        t
+    };
+    assert_eq!(on_fire.with, all[1]);
+    assert_eq!(
+        key(&on_fire, Action::CursorRight),
+        (all[2].clone(), p(1, 4))
+    );
+    assert_eq!(key(&on_fire, Action::CursorLeft), (all[0].clone(), p(1, 4)));
     // Backward from the sword wraps to Frost.
     t.swap(false, &s);
     assert_eq!(t.with, all[2]);
@@ -1265,6 +1286,15 @@ fn the_pointed_forecast_opens_with_what_is_equipped_and_swaps_through_sword_and_
     let far = pointed(&s, UnitId(4));
     assert_eq!((&far.with, far.target()), (&all[1], UnitId(4)));
     assert_eq!(far.options, all[1..]);
+    // With the spells out of uses only the sword reaches: nothing to swap.
+    let mut c = ctx();
+    for id in ["fire", "frost"] {
+        c.content.spells.spells.get_mut(&sid(id)).unwrap().uses = 0;
+    }
+    let dry = armed(&c, Equipped::Weapon(0));
+    let only = pointed(&dry, ELEMENTAL);
+    assert_eq!(only.options, all[..1]);
+    assert!(!only.can_swap());
     // Nothing aimed at, or nothing that reaches: no forecast.
     let sel = Selection::new(&s, MAGE).unwrap();
     assert_eq!(Targeting::aimed(&s, sel.clone()), None);

@@ -1215,23 +1215,28 @@ impl BattleScreen {
         };
         let confirm = (Some(key_name(km, Action::Confirm)), verb);
         let cancel = (Some(key_name(km, Action::Cancel)), "back");
-        if !t.has_list() && !t.can_swap() {
+        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
+        if t.can_swap() {
+            // Left and right swap the weapon or spell of a forecast opened
+            // by pointing (0430); the unit keys then change the target.
+            let mut entries = vec![
+                (pair(Action::CursorLeft, Action::CursorRight), "swap"),
+                (pair(Action::PrevUnit, Action::NextUnit), "target"),
+            ];
+            if t.has_list() {
+                entries.push((pair(Action::CursorUp, Action::CursorDown), "art"));
+            }
+            return help_line(&[entries, vec![confirm, cancel]].concat());
+        }
+        if !t.has_list() {
             return help_line(&[(Some(cursor_keys_name(km)), "next target"), confirm, cancel]);
         }
-        let pair = |a, b| Some(format!("{}/{}", key_name(km, a), key_name(km, b)));
-        let sides = pair(Action::CursorLeft, Action::CursorRight);
-        // Left and right swap the weapon or spell of a forecast opened by
-        // pointing (0430); the unit keys then change the target.
-        let mut entries = if t.can_swap() {
-            let units = pair(Action::PrevUnit, Action::NextUnit);
-            vec![(sides, "swap"), (units, "target")]
-        } else {
-            vec![(sides, "target")]
-        };
-        if t.has_list() {
-            entries.push((pair(Action::CursorUp, Action::CursorDown), "art"));
-        }
-        help_line(&[entries, vec![confirm, cancel]].concat())
+        help_line(&[
+            (pair(Action::CursorLeft, Action::CursorRight), "target"),
+            (pair(Action::CursorUp, Action::CursorDown), "art"),
+            confirm,
+            cancel,
+        ])
     }
 
     /// The help line while browsing, over what is under the cursor.
