@@ -25,12 +25,23 @@
 //! (`src`). After that come, only when they aren't the default, ` flip`,
 //! ` opacity=N` (below 255) and ` clip=x,y wxh` (not all of `dest` is
 //! drawn).
+//!
+//! A see-through cell (ADR-0048) gets a key of its own, whose legend line
+//! says `bg:see-through`: in the colour rows a hole can't be taken for a
+//! blank cell. When the buffer has a backdrop, a line
+//! `--- backdrop: clip x,y wxh  origin x,y  zoom N ---` follows (the window
+//! in console cells, the scene pixel at its top-left to a tenth of a pixel,
+//! the zoom) and then the scene's own snapshot, in this same format.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use crate::color::{Palette, Rgb};
-use crate::glyph_buffer::{GlyphBuffer, Item, PxRect, Sprite};
+use crate::glyph_buffer::Cell;
+use crate::glyph_buffer::{Backdrop, GlyphBuffer, Item, PxRect, Sprite};
+
+/// What a see-through cell's background is called in the legend.
+const SEE_THROUGH: &str = "see-through";
 
 /// Shown instead of control characters, which would break the row layout.
 const CONTROL_GLYPH: char = '\u{fffd}';
@@ -40,12 +51,15 @@ impl GlyphBuffer {
     pub fn to_snapshot(&self, palette: &Palette) -> String {
         let (w, h) = (i32::from(self.width()), i32::from(self.height()));
         let cells = || (0..h).flat_map(move |y| (0..w).filter_map(move |x| self.get(x, y)));
-        let mut keys: HashMap<(Rgb, Rgb), char> = HashMap::new();
-        let mut legend: Vec<(char, Rgb, Rgb)> = Vec::new();
+        // A see-through cell's `bg` isn't shown, so it isn't part of its key.
+        let pair = |c: &Cell| (c.fg, (!c.see_through).then_some(c.bg));
+        let mut keys: HashMap<(Rgb, Option<Rgb>), char> = HashMap::new();
+        let mut legend: Vec<(char, Rgb, Option<Rgb>)> = Vec::new();
         for c in cells() {
-            keys.entry((c.fg, c.bg)).or_insert_with(|| {
+            let (fg, bg) = pair(c);
+            keys.entry((fg, bg)).or_insert_with(|| {
                 let k = key(legend.len());
-                legend.push((k, c.fg, c.bg));
+                legend.push((k, fg, bg));
                 k
             });
         }
@@ -63,7 +77,7 @@ impl GlyphBuffer {
         }
         out.push_str("--- colours ---\n");
         for (i, c) in cells().enumerate() {
-            out.push(keys[&(c.fg, c.bg)]);
+            out.push(keys[&pair(c)]);
             if (i + 1) % per_row == 0 {
                 out.push('\n');
             }
@@ -75,7 +89,8 @@ impl GlyphBuffer {
                 .map_or_else(|| rgb.to_hex(), str::to_owned)
         };
         for (k, fg, bg) in legend {
-            let _ = writeln!(out, "{k} = fg:{} bg:{}", name(fg), name(bg));
+            let bg = bg.map_or_else(|| SEE_THROUGH.to_owned(), name);
+            let _ = writeln!(out, "{k} = fg:{} bg:{bg}", name(fg));
         }
         if !self.items().is_empty() {
             out.push_str("--- overlays ---\n");
@@ -91,8 +106,31 @@ impl GlyphBuffer {
                 }
             }
         }
+        if let Some(backdrop) = self.backdrop() {
+            let _ = writeln!(out, "--- backdrop: {} ---", backdrop_line(backdrop));
+            out.push_str(&backdrop.scene().to_snapshot(palette));
+        }
         out
     }
+}
+
+/// A backdrop's header: its window, origin and zoom.
+fn backdrop_line(backdrop: &Backdrop) -> String {
+    let (x, y) = backdrop.origin_px();
+    format!(
+        "clip {}  origin {},{}  zoom {}",
+        px(backdrop.clip()),
+        tenths(x),
+        tenths(y),
+        backdrop.zoom()
+    )
+}
+
+/// `v` to a tenth, never `-0.0`.
+fn tenths(v: f32) -> String {
+    let rounded = (v * 10.0).round() / 10.0;
+    // Adding zero turns a negative zero into a positive one.
+    format!("{:.1}", rounded + 0.0)
 }
 
 /// `x,y wxh`.
@@ -254,6 +292,68 @@ mod tests {
              over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 clip=8,8 40x80\n\
              over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 flip opacity=0 clip=48,40 40x48\n"
         );
+    }
+
+    #[test]
+    fn see_through_cells_get_their_own_key() {
+        let p = game_palette();
+        let text = p.get(UiColor::Text);
+        let black = p.get(UiColor::Black);
+        let mut b = GlyphBuffer::new(4, 1, Cell::new(' ', text, black));
+        b.set(1, 0, Cell::see_through(' ', text));
+        b.set(2, 0, Cell::see_through('x', text));
+        // The hidden background isn't part of the key.
+        let mut dimmed = Cell::see_through(' ', text);
+        dimmed.bg = text;
+        b.set(3, 0, dimmed);
+        assert_eq!(
+            b.to_snapshot(&p),
+            "  x \n\
+             --- colours ---\n\
+             abbb\n\
+             --- legend ---\n\
+             a = fg:text bg:black\n\
+             b = fg:text bg:see-through\n"
+        );
+    }
+
+    #[test]
+    fn a_backdrop_is_a_header_line_and_the_scenes_own_snapshot() {
+        use std::rc::Rc;
+        let p = game_palette();
+        let text = p.get(UiColor::Text);
+        let black = p.get(UiColor::Black);
+        let mut scene = GlyphBuffer::new(2, 1, Cell::new('s', text, black));
+        scene.add_overlay(crate::glyph_buffer::Overlay::new(
+            Rect::new(0, 0, 3, 2),
+            text,
+            crate::glyph_buffer::Layer::Over,
+        ));
+        let scene = Rc::new(scene);
+        let mut b = GlyphBuffer::new(3, 2, Cell::new(' ', text, black));
+        b.set_backdrop(Rc::clone(&scene), Rect::new(1, 0, 5, 2), (12.34, -0.04), 3);
+        let snapshot = b.to_snapshot(&p);
+        let plain = GlyphBuffer::new(3, 2, Cell::new(' ', text, black)).to_snapshot(&p);
+        assert_eq!(
+            snapshot,
+            format!(
+                "{plain}--- backdrop: clip 1,0 2x2  origin 12.3,0.0  zoom 3 ---\n{}",
+                scene.to_snapshot(&p)
+            )
+        );
+        assert!(snapshot.ends_with("--- overlays ---\nover  0,0 3x2  text\n"));
+        assert!(!plain.contains("backdrop"));
+    }
+
+    #[test]
+    fn tenths_round_and_never_print_a_negative_zero() {
+        assert_eq!(tenths(0.0), "0.0");
+        assert_eq!(tenths(-0.0), "0.0");
+        assert_eq!(tenths(-0.04), "0.0");
+        assert_eq!(tenths(-0.06), "-0.1");
+        assert_eq!(tenths(12.34), "12.3");
+        assert_eq!(tenths(12.36), "12.4");
+        assert_eq!(tenths(-80.0), "-80.0");
     }
 
     #[test]
