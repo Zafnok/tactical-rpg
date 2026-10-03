@@ -87,7 +87,7 @@ tile's left edge and is 14 pixels wide; its fill is worked out over those
   16-pixel bar until 0436.
 - The fill keeps its rule (round to the nearest pixel, half up) over 14
   pixels: full HP fills 14, half fills 7.
-- 75 snapshot files changed. Checked with a script, not by eye: every
+- 43 snapshot files changed. Checked with a script, not by eye: every
   changed line is an HP-bar overlay (1 pixel right, 2 narrower, or the
   matching change for a part-filled or clipped bar), plus stale
   `source:` / `expression:` header lines insta rewrote.
