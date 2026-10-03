@@ -26,13 +26,15 @@ and, later, the overworld. The renderer can't do that today:
   A 24×16-tile map (Chapter 1) is only 384×256 px of the 800×512 px
   console, so close-ups need 2× or 3×.
 
-How zoom should *look* (crisp whole steps, a smooth change, or pan only) is
-Nick's choice in 0036 (Q3). This ticket builds what he picked.
+How zoom should *look* was Nick's choice in 0036: **whole steps only (2×,
+3×, 4×), always crisp, and a shot keeps one size while it is on screen**;
+no gradual zoom (`docs/design/title-screen.md`, *Intro cinematic*). So
+`zoom` here is a whole number, and nothing in this ticket animates it.
 
 ## Nick input
 
 **Answer first:** ticket 0036 (`docs/design/title-screen.md`, *Intro
-cinematic*, the zoom rule).
+cinematic*, the zoom rule). Answered 2026-10-03: whole steps.
 
 ## Scope
 
@@ -42,8 +44,8 @@ cinematic*, the zoom rule).
   the console, at a pixel offset and a zoom, with ordinary console cells
   (text, menus, the logo) drawn on top of it.
 - Pixel-smooth panning: the offset is in scene pixels, not cells.
-- Zoom as 0036 decided: at least whole steps 1×, 2×, 3×; in-between sizes
-  only if Nick chose smooth zoom.
+- Zoom as 0036 decided: whole steps 1×, 2×, 3× and 4× only. No in-between
+  sizes (Nick ruled out smooth zoom).
 - Snapshots and the `Harness` stay deterministic.
 - An ADR (`write-adr`): it extends ADR-0016/ADR-0018's drawing model.
 
@@ -51,6 +53,7 @@ cinematic*, the zoom rule).
 - The cinematic's file format, shots or timing (0817).
 - Using it in the battle screen. The battle camera stays as it is.
 - Rotation, blur, or any effect beyond offset and zoom.
+- Fractional or animated zoom.
 
 ## Implementation steps
 
@@ -58,7 +61,7 @@ cinematic*, the zoom rule).
    and say why in the ADR):
    - `trpg_ui::glyph_buffer::Backdrop { scene: Rc<GlyphBuffer>, clip: Rect
      /* console cells */, origin_px: (f32, f32) /* scene pixel at the clip's
-     top-left */, zoom: f32 }` and `GlyphBuffer::set_backdrop(Backdrop)` /
+     top-left */, zoom: u8 /* 1..=4 */ }` and `GlyphBuffer::set_backdrop(Backdrop)` /
      `backdrop()`. At most one per frame; `clear`/refill removes it.
    - Console cells inside `clip` that should let the scene show are marked
      see-through (e.g. `Cell::see_through()`, a flag on `Cell`). Every
@@ -78,7 +81,7 @@ cinematic*, the zoom rule).
      line to 0231's steps saying the backdrop must draw them; if 0232 is
      done, its PNG renderer draws backdrops as well.
 2. A pure helper for shots, `trpg_ui::cinema::view(scene_px: (u32, u32),
-   clip_px: (u32, u32), centre: (f32, f32), zoom: f32) -> (f32, f32)`: the
+   clip_px: (u32, u32), centre: (f32, f32), zoom: u8) -> (f32, f32)`: the
    `origin_px` that puts `centre` in the middle of the window, clamped so
    the window never leaves the scene (centred on an axis where the scaled
    scene is smaller than the window).
@@ -91,24 +94,25 @@ cinematic*, the zoom rule).
    uses physical pixels with `high_dpi`, as `Renderer::draw` does).
 5. A debug tool (F2 menu, `crates/ui/src/debug.rs`, `TOOLS`): "Scene
    camera", showing `test_small.map` as a backdrop that the cursor actions
-   pan and Confirm steps through the zooms. Follow the `keyboard-input`
+   pan and Confirm steps through the zooms 1× to 4×. Follow the `keyboard-input`
    skill for its help line. It is how the result is checked by eye on
    native and on the web.
 6. Look at it on native and in the web build at window scales 1 and 2:
-   glyphs crisp at 2× and 3×, no seams between cells while panning.
+   glyphs crisp at 2×, 3× and 4×, no seams between cells while panning.
 
 ## Acceptance criteria
 
 - [ ] Unit: `cinema::view` centres, clamps at every edge, and centres a
       scene smaller than the window.
-- [ ] Snapshot: the debug tool at 1×, 2× and 3× (header line and scene).
+- [ ] Snapshot: the debug tool at 1×, 2×, 3× and 4× (header line and scene).
 - [ ] A screen with a backdrop and a text box over it draws the box's cells
       and shows the scene only through see-through cells (unit test on the
       draw plan or snapshot).
 - [ ] Existing snapshots are unchanged (no backdrop means no header line).
 - [ ] Checked by eye on native and web: the completion notes say what was
       looked at.
-- [ ] The zooms offered match 0036's answer.
+- [ ] The zooms offered match 0036's answer: whole numbers 1–4, nothing
+      in between.
 - [ ] The ADR is written and listed in `docs/adr/README.md`.
 - [ ] All gates in the `run-gates` skill pass.
 

@@ -143,6 +143,12 @@ a missing `surprised` made from a neutral face, a spectacle rim). Not new
 hairstyles, removing beards, or new clothes: that's redrawing, and Nick
 doesn't want Claude's art.
 
+**Added 2026-10-03 (ticket 0036):** the title cinematic shows the lead's
+face. With a save it uses that save's lead; with no save it needs a
+default look (`docs/design/title-screen.md`, *Intro cinematic*, *Open
+sub-questions*). When assigning the lead's two faces, record there which
+one is the default for the cinematic and tell Nick in the PR.
+
 ## Nick input
 
 **Sign-off:** for each Chapter 1 speaker, Claude proposes two or three
