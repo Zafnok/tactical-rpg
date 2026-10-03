@@ -44,8 +44,14 @@ ADR-0032). Claude **never draws** a portrait, a face or a battle image.
 - After any edit, render it in the dialogue screen and **look at it**.
   Don't commit art you haven't seen rendered.
 
-The old 32×32 text portraits (`assets/portraits/*.portrait`) are
-placeholders only, until 0711 and 0706 replace them.
+A portrait is a sidecar (`assets/portraits/<id>.ron`) naming PNG files,
+drawn as one sprite at the largest whole scale that fits the 256×256 px
+frame (ADR-0043, `assets/portraits/README.md`). Bought busts come in with
+`cargo xtask portrait-import <hero-folder> <id> [--shift-x N]`, which cuts
+each 80×80 bust to 64×64 into `assets-private/game/portraits/`; use
+`--shift-x` when a head sits off-centre. The 32×32 PNGs in
+`assets/portraits/` are public placeholders only: never edit them into
+"real" art.
 
 ## Map terrain
 

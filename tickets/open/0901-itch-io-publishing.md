@@ -18,6 +18,12 @@ completed:
 [ADR-0009](../../docs/adr/0009-distribution.md): itch.io gets Windows/Linux/
 macOS downloads and a browser-playable build, pushed automatically on release.
 
+**Machine-made content (added 2026-10-03, either order with 0907):** if the
+published build has AI-generated voices or a machine-translated language
+(`docs/design/voices-languages-and-script.md`), the itch page says so. If
+0907 is done, use its `docs/release/store-disclosure.md`; if not, leave a
+line in 0907 to add the paragraph to the page.
+
 ## Nick input
 
 **Setup (≈10 minutes):**

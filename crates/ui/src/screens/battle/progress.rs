@@ -754,7 +754,7 @@ fn draw_gains(
             .or_else(|| art.expressions.first().map(|e| e.name.as_str()));
         expr.is_some_and(|expr| {
             let at = (PORTRAIT_FRAME.x + 1, PORTRAIT_FRAME.y + 1);
-            draw_portrait(buf, palette, at, art, expr, 0.0, false)
+            draw_portrait(buf, at, art, expr, 0.0, false)
         })
     });
     if !drawn {

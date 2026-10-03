@@ -1,28 +1,27 @@
 ---
 source: crates/ui/src/screens/lead_select/tests.rs
-assertion_line: 217
 expression: h.snapshot()
 ---
                                                                                                     
                                           Choose your lead                                          
                                                                                                     
               ┌────────────────────────────────┐    ┌────────────────────────────────┐              
-              │            ▄▄▄▄▄▄▄▄            │    │            ▄▄▄▄▄▄▄▄            │              
-              │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │    │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │              
-              │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │    │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │              
-              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              │      ▀▀▀▀▀▀╔═ First name ═══════════════════════════════╗▀▀▀▀▀▀      │              
-              │      ▀▀▀▀▀▀║                                            ║▀▀▀▀▀▀      │              
-              │      ▀▀▀▀▀▀║                   Mara_                    ║▀▀▀▀▀▀      │              
-              │         ▀▀▀║                                            ║▀▀▀         │              
-              │          ▀▀║       Type a name on your keyboard.        ║▀▀          │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │            ╔═ First name ═══════════════════════════════╗            │              
               │            ║                                            ║            │              
-              │       ▄▄▄▄▄╚════════════════════════════════════════════╝▄▄▄▄▄       │              
-              │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │    │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │              
-              │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │    │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │              
-              │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │    │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │              
+              │            ║                   Mara_                    ║            │              
+              │            ║                                            ║            │              
+              │            ║       Type a name on your keyboard.        ║            │              
+              │            ║                                            ║            │              
+              │            ╚════════════════════════════════════════════╝            │              
+              │                                │    │                                │              
+              │                                │    │                                │              
+              │                                │    │                                │              
               └────────────────────────────────┘    └────────────────────────────────┘              
                              Male                                 Female                            
                                                                                                     
@@ -40,105 +39,47 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeeeeffffffffeeeeeeeeeeeecaaaadeeeeeeeeeeeeggggggggeeeeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeefhhiiiijjjjhhfeeeeeeeeecaaaadeeeeeeeeegkkllllmmmmkkgeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeefhjinojjjjjjjjjphfeeeeeeecaaaadeeeeeeegkmlqrmmmmmmmmmskgeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjjnjjjjjjpjjjjjjujteeeeeecaaaadeeeeeevmmqmmmmmmsmmmmmmwmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjjjjxxyjzxxyjjxjjuteeeeeecaaaadeeeeeevmmmmAABmCAABmmAmmwveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjuDEEEEDDDDEEEFGputeeeeeecaaaadeeeeeevmwHIIIIHHHHIIIJKswveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjLDDMddNNNNNNNNNNNNddddddddddddddddddddddddddddddddOKKCmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjDDDDdPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPdHKKKmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeefQQDDRdPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPdHKKSSgeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeetDDdPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPdKKveeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeefTdPPPPPPPUUUUUUUUUUUUUUUUUUUUUUUUUUUUUPPPPPPPPdVgeeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeeeedPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPdeeeeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeWXXYZdddddddddddddddddddddddddddddddddddddddddddddd01223eeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeW45556777788777765559一eeeeecaaaadeeeee丁丂七七七丄丅丅丅丅丆丆丅丅丅丅丄七七七万3eeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeW45555567777丈丈77776555559一eeecaaaadeee丁丂七七七七七丄丅丅丅丅三三丅丅丅丅丄七七七七七万3eeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceW4555555567777丈丈7777655555559一ecaaaade丁丂七七七七七七七丄丅丅丅丅三三丅丅丅丅丄七七七七七七七万3edaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeddffffffffffffddddddddddddddddddddddddddddddddeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeedeeeeeeegggggggggggggggggggggggggggggeeeeeeeedeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeedeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa上上上上上上aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa上上上上aaaaaaaa上上上上上aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhaaaaaaaahhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaa上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上上aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:text_highlight bg:black
 c = fg:panel_border_focus bg:panel_bg
 d = fg:panel_border bg:panel_bg
-e = fg:panel_bg bg:panel_bg
-f = fg:portrait_outline bg:panel_bg
-g = fg:#1d130d bg:panel_bg
-h = fg:portrait_outline bg:hair_brown
-i = fg:hair_brown bg:hair_brown_light
-j = fg:hair_brown bg:hair_brown
-k = fg:#1d130d bg:#351f13
-l = fg:#351f13 bg:#50301c
-m = fg:#351f13 bg:#351f13
-n = fg:hair_brown_light bg:hair_brown_light
-o = fg:hair_brown_light bg:hair_brown
-p = fg:hair_brown bg:hair_brown_dark
-q = fg:#50301c bg:#50301c
-r = fg:#50301c bg:#351f13
-s = fg:#351f13 bg:#2d1c11
-t = fg:portrait_outline bg:portrait_outline
-u = fg:hair_brown_dark bg:hair_brown_dark
-v = fg:#1d130d bg:#1d130d
-w = fg:#2d1c11 bg:#2d1c11
-x = fg:skin_light bg:skin_light_mid
-y = fg:hair_brown_dark bg:skin_light_mid
-z = fg:hair_brown bg:skin_light_mid
-A = fg:#8b6d54 bg:#815f48
-B = fg:#2d1c11 bg:#815f48
-C = fg:#351f13 bg:#815f48
-D = fg:skin_light bg:skin_light
-E = fg:skin_light bg:brow_dark
-F = fg:skin_light_mid bg:brow_dark
-G = fg:skin_light_mid bg:skin_light_mid
-H = fg:#8b6d54 bg:#8b6d54
-I = fg:#8b6d54 bg:#2d1c11
-J = fg:#815f48 bg:#2d1c11
-K = fg:#815f48 bg:#815f48
-L = fg:hair_brown_dark bg:skin_light
-M = fg:portrait_outline bg:eye_white
-N = fg:text_highlight bg:panel_bg
-O = fg:#1d130d bg:#918a81
-P = fg:text bg:panel_bg
-Q = fg:hair_brown bg:portrait_outline
-R = fg:skin_light_highlight bg:skin_light_highlight
-S = fg:#351f13 bg:#1d130d
-T = fg:skin_light bg:portrait_outline
-U = fg:text_dim bg:panel_bg
-V = fg:#815f48 bg:#1d130d
-W = fg:armor_steel_light bg:panel_bg
-X = fg:armor_steel bg:panel_bg
-Y = fg:trim_gold bg:panel_bg
-Z = fg:cloth_red bg:panel_bg
-0 = fg:#692a23 bg:panel_bg
-1 = fg:#7f672b bg:panel_bg
-2 = fg:#656568 bg:panel_bg
-3 = fg:#3e3e41 bg:panel_bg
-4 = fg:armor_steel_light bg:armor_steel
-5 = fg:armor_steel bg:armor_steel
-6 = fg:trim_gold bg:trim_gold
-7 = fg:cloth_red bg:cloth_red
-8 = fg:trim_gold bg:cloth_red_dark
-9 = fg:armor_steel_dark bg:armor_steel
-一 = fg:armor_steel_dark bg:panel_bg
-丁 = fg:#7f7f81 bg:panel_bg
-丂 = fg:#7f7f81 bg:#656568
-七 = fg:#656568 bg:#656568
-丄 = fg:#7f672b bg:#7f672b
-丅 = fg:#692a23 bg:#692a23
-丆 = fg:#7f672b bg:#471c15
-万 = fg:#3e3e41 bg:#656568
-丈 = fg:cloth_red_dark bg:cloth_red_dark
-三 = fg:#471c15 bg:#471c15
-上 = fg:text_dim bg:black
+e = fg:text bg:panel_bg
+f = fg:text_highlight bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:text_dim bg:black
+--- overlays ---
+under sprite 120,64 256x256  portraits/lead_m/neutral.png 0,0 32x32 clip=120,64 256x96
+under sprite 120,64 256x256  portraits/lead_m/neutral.png 0,0 32x32 clip=120,272 256x48
+under sprite 120,64 256x256  portraits/lead_m/neutral.png 0,0 32x32 clip=120,160 96x112
+under sprite 424,64 256x256  portraits/lead_f/neutral.png 0,0 32x32 opacity=140 clip=424,64 256x96
+under sprite 424,64 256x256  portraits/lead_f/neutral.png 0,0 32x32 opacity=140 clip=424,272 256x48
+under sprite 424,64 256x256  portraits/lead_f/neutral.png 0,0 32x32 opacity=140 clip=584,160 96x112

@@ -398,17 +398,20 @@ fn errors_with(src: &str, portraits: &PortraitTable) -> Vec<String> {
 
 #[test]
 fn expressions_come_from_the_portrait() {
-    let palette = crate::palette::PaletteDef::load().unwrap_or_default();
-    let mut portraits = crate::portrait::load_all(&palette).unwrap_or_default();
+    let images = crate::ImageTable::load().unwrap_or_default();
+    let mut portraits = crate::portrait::load_all(&images).unwrap_or_default();
     // The lord's portrait gains a "smug" expression and loses "sad".
     let lord = portraits.get_mut("test_lord").map(|p| &mut p.expressions);
     if let Some(expressions) = lord {
         expressions.retain(|e| e.name != "sad");
-        let smug = crate::portrait::Expression {
-            name: "smug".into(),
-            pixels: vec![],
-        };
-        expressions.push(smug);
+        let smug = expressions
+            .first()
+            .cloned()
+            .map(|e| crate::portrait::Expression {
+                name: "smug".into(),
+                ..e
+            });
+        expressions.extend(smug);
     }
     let src = scene(
         "@left test_lord smug

@@ -75,6 +75,26 @@ effect (0436), dialogue shows the busts at 4× (0711), and players may
 pick the glyph look in Options (**0824**, after 0436 and 0805; not on the
 critical path).
 
+**Machine-made now, replaceable by people later** (Nick, 2026-10-03,
+[`docs/design/voices-languages-and-script.md`](design/voices-languages-and-script.md):
+AI voices with an off switch, a machine-translated Japanese option, and a
+script a hired writer can take over; **not** a blocker for Chapter 1 or
+Act 1). Shared first step: **0717** every dialogue line gets an id (no
+open dependencies).
+*Japanese* (ADR-0045): **0042** Nick picks the font and how a language is
+chosen → **0233** screen text by key (no open dependencies) → **0234** the
+rest of the screens and **0235** data names, tips and dialogue (also needs
+0717); **0236** wide glyphs (after 0042) → **0237** Japanese line
+breaking; **0825** the Options row (after 0805); **0718** the translation
+pipeline → **0719** Chapter 1 and the screens in Japanese (after 0716).
+*Voices* (ADR-0046): **0043** Nick picks the tool, what is voiced and each
+voice by ear; **0238** playback plumbing (after 0717) → **0720** the
+dialogue screen plays them, **0721** the generation tool, **0826** the
+Options rows (after 0805) → **0722** Chapter 1's voices.
+*Script:* **0723** a scriptwriter's kit (after 0715).
+*Disclosure:* **0907** credits and store text say what is machine-made
+(0901 and 0903 use it).
+
 ## Nick's queue (answer these first; any order within a row)
 
 Design answers unblock most of the rules work. Suggested order:
@@ -84,6 +104,7 @@ Design answers unblock most of the rules work. Suggested order:
 3. **0011** look & feel sign-off (after the font ticket 0203 shows real pixels)
 4. Before the Chapter 1 playtest: **0021** bought portraits and battle sprites (done: Tiny Tales) · **0035** Harl's combat picture · **0040** more packs for fighters with no fitting art (Claude searches, Nick buys) · **0436** outline alone or with a corner mark (a sign-off) · **0413** how the combat scene looks · **0022** victory sting · **0023** defeat sting · **0024** Game Over music · **0810** how battle rewards are shown
 5. Anytime, low priority: **0039** sprite units: walking, the effect mark, the glyph look as an option, face or bust · **0012** title (then **0811** title art) · **0041** the sound when a press skips the title cinematic · **0025**–**0028** world map / capital / camp / shop music · **0029** dialogue backgrounds · **0812** chapter card · **0813** transitions
+   · **0042** Japanese: font, picking a language, the machine-translation label · **0043** AI voices: the tool, what is voiced, each voice by ear
 6. After the Chapter 1 playtest: **0013** number scale · **0018** higher-rank Combat Arts & special weapons · **0037** more building tiles (village, gate, throne), capturing, healing tiles
 
 Sign-offs come later as screens land (0402 cursor feel, 0404 combat, 0408
