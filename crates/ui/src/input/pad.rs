@@ -25,14 +25,22 @@ const MICROSOFT: u16 = 0x045e;
 const SONY: u16 = 0x054c;
 const NINTENDO: u16 = 0x057e;
 
+/// USB product ids of Sony's PS4 pad (the `DualShock` 4): its two models
+/// and its wireless adaptor. Every other Sony pad counts as a PS5 one
+/// (ticket 0229).
+const DUALSHOCK_4: [u16; 3] = [0x05c4, 0x09cc, 0x0ba0];
+
 /// Who made a pad, which decides the Confirm / Cancel swap here and the
 /// button names shown on screen (ticket 0220).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum PadKind {
     /// A Microsoft pad.
     Xbox,
-    /// A Sony pad.
+    /// A Sony pad other than a PS4 one (a PS5 pad).
     PlayStation,
+    /// A Sony PS4 pad: named as a [`PlayStation`](Self::PlayStation) pad,
+    /// except its left centre button is `Share`.
+    PlayStation4,
     /// A Nintendo pad (Switch Pro controller, Joy-Cons).
     Nintendo,
     /// Anything else, or a pad that doesn't say. Treated like an Xbox pad.
@@ -41,11 +49,13 @@ pub enum PadKind {
 }
 
 impl PadKind {
-    /// The kind of a pad from its USB vendor id; unknown vendors (and 0,
-    /// "not reported") are [`Generic`](Self::Generic).
-    pub fn from_vendor(vendor: u16) -> Self {
+    /// The kind of a pad from its USB vendor and product ids; unknown
+    /// vendors (and 0, "not reported") are [`Generic`](Self::Generic). The
+    /// product only matters for Sony, to tell a PS4 pad apart.
+    pub fn from_ids(vendor: u16, product: u16) -> Self {
         match vendor {
             MICROSOFT => Self::Xbox,
+            SONY if DUALSHOCK_4.contains(&product) => Self::PlayStation4,
             SONY => Self::PlayStation,
             NINTENDO => Self::Nintendo,
             _ => Self::Generic,
@@ -67,12 +77,14 @@ impl PadKind {
     /// What help text calls the button at binding position `button` on
     /// this kind of pad (`docs/design/controls.md`, *Button names on
     /// screen*): Xbox letters (also on generic pads), Sony's shapes,
-    /// or Nintendo's letters. The only place buttons get their names.
+    /// or Nintendo's letters (a PS4 pad says `Share` where later Sony pads
+    /// say `Create`). The only place buttons get their names.
     pub fn button_name(self, button: Button) -> &'static str {
         let [xbox, playstation, nintendo] = names(button);
         match self {
             Self::Xbox | Self::Generic => xbox,
-            Self::PlayStation => playstation,
+            Self::PlayStation4 if button == Button::Select => "Share",
+            Self::PlayStation | Self::PlayStation4 => playstation,
             Self::Nintendo => nintendo,
         }
     }

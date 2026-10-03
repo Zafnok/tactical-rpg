@@ -146,10 +146,11 @@ Rules:
   on screen. It must paint nothing outside the area it is given.
 - **Tests of what happened read the scene** (or the `BattleState`), not
   cells and colours: `screen.scene(&ctx)` in unit tests, `h.map_scene()` /
-  `h.map_text()` in Harness tests. Only tests of a skin's look read the
-  buffer. `h.with_map_skin("sprite")` runs any Harness script under the
-  sprite skin; `crates/ui/tests/it/map_skin.rs` plays one under both and
-  checks nothing in the game changes.
+  `h.map_text()` and the helpers below in Harness tests. Only tests of a
+  skin's look read the buffer (see *Writing a Harness test*).
+  `h.with_map_skin("sprite")` runs any Harness script under the sprite
+  skin; `crates/ui/tests/it/map_skin.rs` plays one under both and checks
+  nothing in the game changes.
 
 ### Adding a skin
 
@@ -289,11 +290,21 @@ fn select_opens_new_game() {
   call runs at most `MAX_FRAMES` (2 000, ~33 s); longer ones panic.
 - `top_screen()`, `screens()`, `quit_requested()`, `snapshot()`, `game()`.
 - `map_scene()`: what the battle on the stack shows on its map, as a
-  `MapScene` (`None` with no battle); `map_text()`: the same as text. Use
-  these to check what happened on the map (*Map view* above). `battle()`:
-  the battle screen itself (its `state()`, `cursor()`).
+  `MapScene` (`None` with no battle); `map_text()`: the same as text.
+  Shortcuts: `cursor_tile()`, `unit_at(pos)`, `tints_at(pos)`, `path()`
+  (and on a `MapScene`: `cursor_tile()`, `unit_at(pos)`, `tints_at(pos)`,
+  `terrain_at(pos)`). Use these to check what happened on the map (*Map
+  view* above).
+- `battle()`: the battle screen itself (its `state()`, `cursor()`).
 - `with_map_skin("sprite")` / `with_map_skin("glyph")`: paint battle maps
   with that skin from the next frame on.
+- **A test that checks what happened reads the scene or the state. Only a
+  test of a look reads cells, colours or items, and it lives with the
+  skin** (`map_view/glyph*`, `map_view/sprite.rs`). "The lord moved to (5, 5)" is
+  `h.unit_at(Pos::new(5, 5))`, not the letters `Lo` at cell (30, 16);
+  "(8, 7) is in the brigand's range" is `h.tints_at(..)`, not a cell's
+  background. Panel, menu and help-bar text is the same in every skin, so
+  reading it from the buffer is fine.
 - `flow()` / `flow_mut()`: the game flow on the stack; `flow_mut()` →
   `battle_mut()` → `send(&Command)` plays its battle with scripted
   commands (`crates/ui/tests/it/flow.rs`).

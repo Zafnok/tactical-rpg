@@ -41,9 +41,10 @@ fn pads() -> Pads {
     Pads::new(stick())
 }
 
-const KINDS: [PadKind; 4] = [
+const KINDS: [PadKind; 5] = [
     PadKind::Xbox,
     PadKind::PlayStation,
+    PadKind::PlayStation4,
     PadKind::Nintendo,
     PadKind::Generic,
 ];
@@ -91,6 +92,20 @@ fn buttons_are_named_as_the_pad_in_use_labels_them() {
         );
         assert_eq!(PadKind::Nintendo.button_name(button), nintendo, "{button}");
     }
+}
+
+/// `controls.md`, *Button names on screen*: a PS4 pad's left centre
+/// button is `Share`; every other name is a PS5 pad's.
+#[test]
+fn a_dualshock_4_says_share_and_otherwise_names_as_a_playstation_pad() {
+    for &button in Button::ALL {
+        let expected = match button {
+            Button::Select => "Share",
+            other => PadKind::PlayStation.button_name(other),
+        };
+        assert_eq!(PadKind::PlayStation4.button_name(button), expected);
+    }
+    assert_eq!(PadKind::PlayStation.button_name(Button::Select), "Create");
 }
 
 /// On a Nintendo pad the physical right button is the binding position
@@ -191,16 +206,34 @@ fn the_pad_holding_a_button_is_the_first_connected_that_does() {
 }
 
 #[test]
-fn vendor_ids_give_the_pad_kind() {
-    assert_eq!(PadKind::from_vendor(0x045e), PadKind::Xbox);
-    assert_eq!(PadKind::from_vendor(0x054c), PadKind::PlayStation);
-    assert_eq!(PadKind::from_vendor(0x057e), PadKind::Nintendo);
-    // Unknown makers (8BitDo, Valve) and "not reported".
-    for vendor in [0x2dc8, 0x28de, 0, 0xffff, 0x045f, 0x057d] {
+fn usb_ids_give_the_pad_kind() {
+    // Other makers: the product doesn't matter (DualShock 4 ids included).
+    for product in [0, 0x05c4, 0x09cc, 0x0ba0, 0x0ce6, 0x02e0, 0x2009] {
+        assert_eq!(PadKind::from_ids(0x045e, product), PadKind::Xbox);
+        assert_eq!(PadKind::from_ids(0x057e, product), PadKind::Nintendo);
+        // Unknown makers (8BitDo, Valve) and "not reported".
+        for vendor in [0x2dc8, 0x28de, 0, 0xffff, 0x045f, 0x057d] {
+            assert_eq!(
+                PadKind::from_ids(vendor, product),
+                PadKind::Generic,
+                "{vendor:#06x} {product:#06x}"
+            );
+        }
+    }
+    // Sony: the DualShock 4's two models and its wireless adaptor...
+    for product in [0x05c4, 0x09cc, 0x0ba0] {
         assert_eq!(
-            PadKind::from_vendor(vendor),
-            PadKind::Generic,
-            "{vendor:#06x}"
+            PadKind::from_ids(0x054c, product),
+            PadKind::PlayStation4,
+            "{product:#06x}"
+        );
+    }
+    // ...and everything else (a DualSense, "not reported", near misses).
+    for product in [0x0ce6, 0, 0x05c5, 0x09cb, 0x0ba1, 0xffff] {
+        assert_eq!(
+            PadKind::from_ids(0x054c, product),
+            PadKind::PlayStation,
+            "{product:#06x}"
         );
     }
     assert_eq!(PadKind::default(), PadKind::Generic);
@@ -209,7 +242,12 @@ fn vendor_ids_give_the_pad_kind() {
 #[test]
 fn only_nintendo_pads_swap_and_only_the_bottom_and_right_buttons() {
     for &button in Button::ALL {
-        for kind in [PadKind::Xbox, PadKind::PlayStation, PadKind::Generic] {
+        for kind in [
+            PadKind::Xbox,
+            PadKind::PlayStation,
+            PadKind::PlayStation4,
+            PadKind::Generic,
+        ] {
             assert_eq!(kind.position(button), button, "{kind:?} {button}");
         }
         let expected = match button {
@@ -603,7 +641,12 @@ fn on_a_nintendo_pad_east_confirms_and_south_cancels() {
         vec![Action::EndTurn],
         vec![Action::CursorUp],
     ];
-    for kind in [PadKind::Xbox, PadKind::PlayStation, PadKind::Generic] {
+    for kind in [
+        PadKind::Xbox,
+        PadKind::PlayStation,
+        PadKind::PlayStation4,
+        PadKind::Generic,
+    ] {
         let seen = actions_of(kind, &buttons);
         assert_eq!(
             seen[..2],
@@ -654,6 +697,7 @@ fn arb_kind() -> impl Strategy<Value = PadKind> {
     prop::sample::select(vec![
         PadKind::Xbox,
         PadKind::PlayStation,
+        PadKind::PlayStation4,
         PadKind::Nintendo,
         PadKind::Generic,
     ])

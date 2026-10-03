@@ -16,7 +16,7 @@
     "use strict";
 
     // Keep equal to PLUGIN_VERSION in crates/app/src/pads/web.rs.
-    var VERSION = 1;
+    var VERSION = 2;
 
     // The standard mapping's buttons before its optional extras: face
     // buttons, shoulders, triggers, the two centre buttons, stick presses,
@@ -32,6 +32,12 @@
     // no id (they count as generic pads).
     function vendor_of(id) {
         var match = /Vendor:\s*([0-9a-f]{4})/i.exec(id) || /^([0-9a-f]{4})-[0-9a-f]{4}-/i.exec(id);
+        return match ? parseInt(match[1], 16) : 0;
+    }
+
+    // The USB product id in a Gamepad.id, or 0, read like vendor_of.
+    function product_of(id) {
+        var match = /Product:\s*([0-9a-f]{4})/i.exec(id) || /^[0-9a-f]{4}-([0-9a-f]{4})-/i.exec(id);
         return match ? parseInt(match[1], 16) : 0;
     }
 
@@ -64,6 +70,10 @@
         // The pad's USB vendor id, or 0 if the browser doesn't tell.
         importObject.env.trpg_pad_vendor = function (pad) {
             return pads[pad] ? vendor_of(pads[pad].id) : 0;
+        };
+        // The pad's USB product id, or 0 if the browser doesn't tell.
+        importObject.env.trpg_pad_product = function (pad) {
+            return pads[pad] ? product_of(pads[pad].id) : 0;
         };
         // Bit i is set while the pad's buttons[i] is pressed, i < 16.
         importObject.env.trpg_pad_buttons = function (pad) {

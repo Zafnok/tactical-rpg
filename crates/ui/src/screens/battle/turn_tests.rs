@@ -7,10 +7,10 @@ use trpg_content::FontAtlasDef;
 use trpg_core::{ItemId, Objective, Outcome, UnitAction};
 
 use super::banner::{BannerKind, PHASE_BANNER_S};
-use super::testing::{battle_with, skirmish, through_ai_phases, tile_cell, wait};
+use super::testing::{battle_with, skirmish, through_ai_phases, wait};
 use super::*;
 use crate::console::{CONSOLE_H, CONSOLE_W};
-use crate::map_view::glyph::OVERLAY_BLEND;
+use crate::map_view::RangeKind;
 use crate::screen::tests::ctx;
 
 fn quick() -> BattleScreen {
@@ -90,8 +90,8 @@ fn phase_banner(s: &BattleScreen) -> Option<(Phase, u32)> {
 fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
     let mut c = ctx();
     let mut s = quick();
-    let plain = render(&s, &c);
     assert_eq!(s.danger(), None);
+    assert!(s.scene(&c).tinted(RangeKind::Danger).is_empty());
     press(&mut s, &mut c, &[Action::DangerZone]);
     let state = s.state();
     let expected = danger_zone(
@@ -105,21 +105,20 @@ fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
     .unwrap();
     assert!(!expected.is_empty());
     assert_eq!(s.danger(), Some(&expected));
-    // Every map tile is tinted `danger_zone` exactly if it is in the zone.
-    let buf = render(&s, &c);
-    let danger = c.palette.get(UiColor::DangerZone);
+    // Every map tile is in the danger zone range exactly if it is in the
+    // zone.
+    let scene = s.scene(&c);
     let tiles = &s.state().map().tiles;
     for y in 0..i32::from(tiles.height()) {
         for x in 0..i32::from(tiles.width()) {
             let pos = Pos::new(x, y);
-            let (cx, cy) = tile_cell(&s, &c, pos).unwrap();
-            let was = plain.get(cx, cy).unwrap().bg;
-            let want = if expected.contains(pos) {
-                was.lerp(danger, OVERLAY_BLEND)
+            assert!(scene.contains(pos), "{pos:?}");
+            let want: &[RangeKind] = if expected.contains(pos) {
+                &[RangeKind::Danger]
             } else {
-                was
+                &[]
             };
-            assert_eq!(buf.get(cx, cy).unwrap().bg, want, "{pos:?}");
+            assert_eq!(scene.tints_at(pos), want, "{pos:?}");
         }
     }
     assert!(
@@ -129,15 +128,12 @@ fn the_danger_zone_is_the_cores_danger_zone_tinted_under_the_ranges() {
     );
     // A selected unit's ranges go over it.
     press(&mut s, &mut c, &[Action::Confirm]);
-    let buf = render(&s, &c);
     let Mode::Selected(sel) = s.mode() else {
         panic!("{:?}", s.mode());
     };
     let both = sel.moves.iter().find(|&p| expected.contains(p)).unwrap();
-    let (cx, cy) = tile_cell(&s, &c, both).unwrap();
-    let under = plain.get(cx, cy).unwrap().bg.lerp(danger, OVERLAY_BLEND);
-    let blue = c.palette.get(UiColor::MoveRange);
-    assert_eq!(buf.get(cx, cy).unwrap().bg, under.lerp(blue, OVERLAY_BLEND));
+    let laid = [RangeKind::Danger, RangeKind::Move];
+    assert_eq!(s.scene(&c).tints_at(both), laid);
     // Not in a menu.
     let mut menu = quick();
     press(&mut menu, &mut c, &[Action::Cancel, Action::DangerZone]);

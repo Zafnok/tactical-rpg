@@ -66,7 +66,8 @@ impl Source {
                     left_stick: (pad.value(Axis::LeftStickX), -pad.value(Axis::LeftStickY)),
                     right_stick: (pad.value(Axis::RightStickX), -pad.value(Axis::RightStickY)),
                 };
-                let kind = PadKind::from_vendor(pad.vendor_id().unwrap_or(0));
+                let kind =
+                    PadKind::from_ids(pad.vendor_id().unwrap_or(0), pad.product_id().unwrap_or(0));
                 (id.into(), kind, state)
             })
             .collect()
