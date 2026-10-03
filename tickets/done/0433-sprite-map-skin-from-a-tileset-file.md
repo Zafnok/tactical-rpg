@@ -227,7 +227,7 @@ decided with Nick in ticket 0039 and built in 0436.
   units; `sprite_skin_paints_only_the_area` and
   `tiles_lie_inside_the_area_edge_to_edge` (any tile size 8..=64);
   `every_scene_feature_is_painted`; a snapshot of a small scene;
-  `crates/ui/tests/map_skin.rs` with `the_skin_never_changes_the_game` and
+  `crates/ui/tests/it/map_skin.rs` with `the_skin_never_changes_the_game` and
   the two Quick Battle snapshots. No glyph-skin snapshot changed (the
   debug menu's did: its new item).
 

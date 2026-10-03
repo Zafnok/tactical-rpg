@@ -1,5 +1,5 @@
 ---
-source: crates/ui/tests/map_skin.rs
+source: crates/ui/tests/it/map_skin.rs
 expression: h.snapshot()
 ---
                                                                       ┌────────────────────────────┐

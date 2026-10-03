@@ -148,7 +148,7 @@ Rules:
   cells and colours: `screen.scene(&ctx)` in unit tests, `h.map_scene()` /
   `h.map_text()` in Harness tests. Only tests of a skin's look read the
   buffer. `h.with_map_skin("sprite")` runs any Harness script under the
-  sprite skin; `crates/ui/tests/map_skin.rs` plays one under both and
+  sprite skin; `crates/ui/tests/it/map_skin.rs` plays one under both and
   checks nothing in the game changes.
 
 ### Adding a skin
