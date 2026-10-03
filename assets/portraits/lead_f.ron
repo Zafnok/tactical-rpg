@@ -1,0 +1,13 @@
+// PLACEHOLDER art (ticket 0708): the female lead, a recoloured copy of
+// test_lord so dialogue tests and the New Game screen (0801) have
+// something to show. The real lead portraits come with ticket 0706.
+(
+    character: "lead_f",
+    expressions: {
+        "neutral": "lead_f/neutral.png",
+        "happy": "lead_f/happy.png",
+        "angry": "lead_f/angry.png",
+        "sad": "lead_f/sad.png",
+        "surprised": "lead_f/surprised.png",
+    },
+)

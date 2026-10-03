@@ -1,28 +1,27 @@
 ---
 source: crates/ui/src/screens/lead_select/tests.rs
-assertion_line: 225
 expression: h.snapshot()
 ---
                                                                                                     
                                           Choose your lead                                          
                                                                                                     
               ╔════════════════════════════════╗    ┌────────────────────────────────┐              
-              ║            ▄▄▄▄▄▄▄▄            ║    │            ▄▄▄▄▄▄▄▄            │              
-              ║         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         ║    │         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         │              
-              ║       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       ║    │       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║    │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │              
-              ║         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         ║    │         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         │              
-              ║          ▀▀▀▀▀▀▀▀▀▀▀▀          ║    │          ▀▀▀▀▀▀▀▀▀▀▀▀          │              
-              ║            ▀▀▀▀▀▀▀▀            ║    │            ▀▀▀▀▀▀▀▀            │              
-              ║       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       ║    │       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       │              
-              ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║    │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │              
-              ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║    │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │              
-              ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║    │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
+              ║                                ║    │                                │              
               ╚════════════════════════════════╝    └────────────────────────────────┘              
                              Male                                 Female                            
                                                                                                     
@@ -40,124 +39,41 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeeeeffffffffeeeeeeeeeeeecaaaadeeeeeeeeeeeeggggggggeeeeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeefhhiiiijjjjhhfeeeeeeeeecaaaadeeeeeeeeegkkllllmmmmkkgeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeefhjinojjjjjjjjjphfeeeeeeecaaaadeeeeeeegkmlqrmmmmmmmmmskgeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjjnjjjjjjpjjjjjjujteeeeeecaaaadeeeeeevmmqmmmmmmsmmmmmmwmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjjjjxxyjzxxyjjxjjuteeeeeecaaaadeeeeeevmmmmAABmCAABmmAmmwveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjuDEEEEDDDDEEEFGputeeeeeecaaaadeeeeeevmwHIIIIHHHHIIIJKswveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjLDDMNtDODDtNMGGzjteeeeeecaaaadeeeeeevmPHHQRvHSHHvRQKKCmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeetjDDDDDDDTDDDDDGGGjteeeeeecaaaadeeeeeevmHHHHHHHUHHHHHKKKmveeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeefVVDDTWDDWXXDDDGGVVfeeeeeecaaaadeeeeeegYYHHUZHHZ00HHHKKYYgeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeetDDDD1111DDGGteeeeeeeeecaaaadeeeeeeeeevHHHH2222HHKKveeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeef3DDD44DxG5feeeeeeeeeecaaaadeeeeeeeeeeg6HHH77HAK8geeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeeeeeeeetX99999teeeeeeeeeeeecaaaadeeeeeeeeeeeev0一一一一一veeeeeeeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeeeee丁丂丂七丄丅丆GGGG丆丅丄七丂丂万eeeeeeecaaaadeeeeeee丈三三上下丌不KKKK不丌下上三三与eeeeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceeeee丁丏丐丐丐丑丒丒丒丒专专丒丒丒丒丑丐丐丐且万eeeeecaaaadeeeee丈丕世世世丗丘丘丘丘丙丙丘丘丘丘丗世世世业与eeeeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaceee丁丏丐丐丐丐丐丑丒丒丒丒丛丛丒丒丒丒丑丐丐丐丐丐且万eeecaaaadeee丈丕世世世世世丗丘丘丘丘东东丘丘丘丘丗世世世世世业与eeedaaaaaaaaaaaaaa
-aaaaaaaaaaaaaace丁丏丐丐丐丐丐丐丐丑丒丒丒丒丛丛丒丒丒丒丑丐丐丐丐丐丐丐且万ecaaaade丈丕世世世世世世世丗丘丘丘丘东东丘丘丘丘丗世世世世世世世业与edaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccaaaaddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝aaaaaaaaaa丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffaaaaaaaaaafffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:text_highlight bg:black
 c = fg:panel_border_focus bg:panel_bg
 d = fg:panel_border bg:panel_bg
-e = fg:panel_bg bg:panel_bg
-f = fg:portrait_outline bg:panel_bg
-g = fg:#1d130d bg:panel_bg
-h = fg:portrait_outline bg:hair_brown
-i = fg:hair_brown bg:hair_brown_light
-j = fg:hair_brown bg:hair_brown
-k = fg:#1d130d bg:#351f13
-l = fg:#351f13 bg:#50301c
-m = fg:#351f13 bg:#351f13
-n = fg:hair_brown_light bg:hair_brown_light
-o = fg:hair_brown_light bg:hair_brown
-p = fg:hair_brown bg:hair_brown_dark
-q = fg:#50301c bg:#50301c
-r = fg:#50301c bg:#351f13
-s = fg:#351f13 bg:#2d1c11
-t = fg:portrait_outline bg:portrait_outline
-u = fg:hair_brown_dark bg:hair_brown_dark
-v = fg:#1d130d bg:#1d130d
-w = fg:#2d1c11 bg:#2d1c11
-x = fg:skin_light bg:skin_light_mid
-y = fg:hair_brown_dark bg:skin_light_mid
-z = fg:hair_brown bg:skin_light_mid
-A = fg:#8b6d54 bg:#815f48
-B = fg:#2d1c11 bg:#815f48
-C = fg:#351f13 bg:#815f48
-D = fg:skin_light bg:skin_light
-E = fg:skin_light bg:brow_dark
-F = fg:skin_light_mid bg:brow_dark
-G = fg:skin_light_mid bg:skin_light_mid
-H = fg:#8b6d54 bg:#8b6d54
-I = fg:#8b6d54 bg:#2d1c11
-J = fg:#815f48 bg:#2d1c11
-K = fg:#815f48 bg:#815f48
-L = fg:hair_brown_dark bg:skin_light
-M = fg:portrait_outline bg:eye_white
-N = fg:portrait_outline bg:eye_blue
-O = fg:skin_light bg:skin_light_highlight
-P = fg:#2d1c11 bg:#8b6d54
-Q = fg:#1d130d bg:#918a81
-R = fg:#1d130d bg:#2d4c65
-S = fg:#8b6d54 bg:#917860
-T = fg:skin_light_highlight bg:skin_light_highlight
-U = fg:#917860 bg:#917860
-V = fg:hair_brown bg:portrait_outline
-W = fg:skin_light_highlight bg:skin_light
-X = fg:skin_light bg:skin_light_shadow
-Y = fg:#351f13 bg:#1d130d
-Z = fg:#917860 bg:#8b6d54
-0 = fg:#8b6d54 bg:#724d3a
-1 = fg:skin_light bg:mouth_dark
-2 = fg:#8b6d54 bg:#50211c
-3 = fg:skin_light bg:portrait_outline
-4 = fg:skin_light_shadow bg:skin_light
-5 = fg:skin_light_mid bg:portrait_outline
-6 = fg:#8b6d54 bg:#1d130d
-7 = fg:#724d3a bg:#8b6d54
-8 = fg:#815f48 bg:#1d130d
-9 = fg:skin_light_mid bg:skin_light_shadow
-一 = fg:#815f48 bg:#724d3a
-丁 = fg:armor_steel_light bg:panel_bg
-丂 = fg:armor_steel bg:panel_bg
-七 = fg:trim_gold bg:panel_bg
-丄 = fg:cloth_red bg:panel_bg
-丅 = fg:portrait_outline bg:cloth_red
-丆 = fg:skin_light_mid bg:cloth_red
-万 = fg:armor_steel_dark bg:panel_bg
-丈 = fg:#7f7f81 bg:panel_bg
-三 = fg:#656568 bg:panel_bg
-上 = fg:#7f672b bg:panel_bg
-下 = fg:#692a23 bg:panel_bg
-丌 = fg:#1d130d bg:#692a23
-不 = fg:#815f48 bg:#692a23
-与 = fg:#3e3e41 bg:panel_bg
-丏 = fg:armor_steel_light bg:armor_steel
-丐 = fg:armor_steel bg:armor_steel
-丑 = fg:trim_gold bg:trim_gold
-丒 = fg:cloth_red bg:cloth_red
-专 = fg:trim_gold bg:cloth_red_dark
-且 = fg:armor_steel_dark bg:armor_steel
-丕 = fg:#7f7f81 bg:#656568
-世 = fg:#656568 bg:#656568
-丗 = fg:#7f672b bg:#7f672b
-丘 = fg:#692a23 bg:#692a23
-丙 = fg:#7f672b bg:#471c15
-业 = fg:#3e3e41 bg:#656568
-丛 = fg:cloth_red_dark bg:cloth_red_dark
-东 = fg:#471c15 bg:#471c15
-丝 = fg:text_dim bg:black
+e = fg:text bg:panel_bg
+f = fg:text_dim bg:black
+--- overlays ---
+under sprite 120,64 256x256  portraits/lead_m/neutral.png 0,0 32x32
+under sprite 424,64 256x256  portraits/lead_f/neutral.png 0,0 32x32 opacity=140
