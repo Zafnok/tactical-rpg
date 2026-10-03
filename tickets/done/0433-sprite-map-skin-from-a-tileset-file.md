@@ -236,7 +236,7 @@ frames of the Quick Battle under both skins (start, unit selected, action
 menu, forecast, map menu, danger zone, enemy phase) were composited to
 PNGs offline with a throwaway script, and the web build was run in the
 browser pane, switched to the test tileset from the debug menu, and its
-Quick Battle drawn by `app` from `tilesets/test.png`. Tiles line up with
+Quick Battle drawn by `app` from `tilesets/test.png`. Once 0232 landed on `main`, `cargo xtask frame-png --keys "F2 Up f d Down f f f Right Right"` gave the same picture (the lord selected under the sprite skin). Tiles line up with
 no seams; 23×20 tiles fit with 4 px to spare each side; the move, attack
 and danger ranges read as tinted; the path runs through tile centres
 under the units with its arrowhead over them; the action menu opens
