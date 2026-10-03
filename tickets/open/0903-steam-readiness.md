@@ -24,6 +24,14 @@ done before the Steam page is created) and 0816 (step 3 assumes controller
 input, button names and button rebinding all exist; 0816 is the last of
 them and waits for 0220 and 0815).
 
+**Machine-made content (added 2026-10-03, either order with 0907):** if the
+build has AI-generated voices, a machine-translated language or both
+(`docs/design/voices-languages-and-script.md`), Steam's content survey must
+describe them (pre-generated AI content) and the store page's language
+boxes must match what ships. If 0907 is done, paste its
+`docs/release/store-disclosure.md`; if not, write that paragraph here from
+ADR-0045 and ADR-0046 and add a line to 0907.
+
 ## Nick input
 
 **Setup (when Nick decides to go for Steam):** register at
