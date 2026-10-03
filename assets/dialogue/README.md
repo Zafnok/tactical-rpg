@@ -258,3 +258,38 @@ their own (`docs/story/names.md`, "Short forms"), used like any other:
 - **Lengths** count every name token as the **longest** name in
   `names.ron`, whichever name it is, so renaming anything can't push a line
   over its limit.
+
+## Line ids
+
+Every speech line, narration line and reply has a **line id**
+(ADR-0045 §3). Translations and voice clips attach to it. Nobody writes
+it: the loader computes it, so scripts stay free of ids.
+
+```
+cargo xtask lines ch01_intro
+```
+
+prints one row per line: the id, who says it (`>` for narration, `*` for
+a reply) and the text as written.
+
+```
+ch01_intro_e4a70fe9	lead	Again.
+```
+
+An id is `<scene id>_<8 hex digits>`: a hash of the speaker and the text
+as written (tokens not filled in, continuation lines joined with one
+space). So:
+
+- **Rewording a line changes its id**, even by one letter or comma. That
+  is what marks its translation and its voice clip as out of date: they
+  were made for the old words. Changing who says it, or moving it to
+  another scene, does the same.
+- **Moving a line within its scene, or adding and removing lines around
+  it, changes nothing.** Nor does changing the speaker's expression, a
+  reply's tone, or where a long line is broken over continuation lines.
+- **The same line twice in a scene** (the same speaker saying the same
+  words) gets `_2` on the second, `_3` on the third, in script order:
+  `ch01_intro_e4a70fe9_2`. Removing the first makes the second the first.
+- Renaming a scene changes the id of every line in it.
+- Very rarely, two different lines of one scene hash to the same id; the
+  validator reports both, and the fix is to reword one.

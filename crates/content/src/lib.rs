@@ -43,7 +43,7 @@ pub use battle::BattleRefs;
 pub use chapter::{ChapterDef, NewGameDef, battle_campaign, new_campaign};
 pub use character::{CharacterTable, GenericTemplate, character_unit, check_map_labels};
 pub use credits::{CreditEntry, CreditGroup, Credits};
-pub use dialogue::{ChoiceOption, DialogueTable, MusicLine, Scene, Side, Step};
+pub use dialogue::{ChoiceOption, DialogueTable, LineId, MusicLine, Scene, Side, Step};
 pub use error::{ContentError, ContentErrors};
 pub use font::FontAtlasDef;
 pub use image::{ImageId, ImageInfo, ImageTable};

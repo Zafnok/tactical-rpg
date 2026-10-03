@@ -7,6 +7,7 @@ mod check_keys;
 mod clean_targets;
 mod font_atlas;
 mod frame_png;
+mod lines;
 mod playtest;
 mod portrait_import;
 mod private_assets;
@@ -34,6 +35,7 @@ test-tileset                       write the sprite map skin's test tileset, ass
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
 portrait-import <busts> <id>       cut bought busts into portraits (portrait-import --help)\n  \
+lines [scene]                      list every dialogue line with its line id (lines --help)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -56,6 +58,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
         Some("portrait-import") => portrait_import(&args.collect::<Vec<_>>()),
+        Some("lines") => lines(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -338,6 +341,36 @@ fn parse_pr_branch(args: &[String]) -> Result<Option<String>, String> {
     }
 }
 
+fn lines(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", lines::USAGE);
+        return 0;
+    }
+    let scene = match args {
+        [] => None,
+        [scene] => Some(scene.as_str()),
+        _ => {
+            eprintln!("{}", lines::USAGE);
+            return 2;
+        }
+    };
+    let rows = trpg_content::load_embedded()
+        .map_err(|errors| errors.to_string())
+        .and_then(|content| lines::rows(&content.dialogue, scene));
+    match rows {
+        Ok(rows) => {
+            for row in rows {
+                println!("{row}");
+            }
+            0
+        }
+        Err(e) => {
+            eprintln!("lines: {e}");
+            1
+        }
+    }
+}
+
 /// `xtask` always runs via `cargo xtask`, so `CARGO_MANIFEST_DIR` (this
 /// crate's directory, `<repo>/crates/xtask`) locates the repo root.
 #[allow(clippy::expect_used)] // CARGO_MANIFEST_DIR is baked in at compile time; the two
@@ -543,6 +576,15 @@ mod tests {
         assert_eq!(frame_png(&args(&[&out_arg, "--scale", "1"])), 0);
         assert!(out.is_file());
         std::fs::remove_file(&out).unwrap();
+    }
+
+    #[test]
+    fn lines_lists_a_scene_and_fails_on_an_unknown_one() {
+        assert_eq!(dispatch(args(&["lines", "ch01_intro"]).into_iter()), 0);
+        assert_eq!(lines(&[]), 0);
+        assert_eq!(lines(&args(&["--help"])), 0);
+        assert_eq!(lines(&args(&["no_such_scene"])), 1);
+        assert_eq!(lines(&args(&["ch01_intro", "ch01_prebattle"])), 2);
     }
 
     #[test]

@@ -245,7 +245,10 @@ fn every_reply_rejoins_the_same_way() {
 fn advancing_a_finished_scene_does_nothing() {
     let mut player = play(Scene {
         id: "s".into(),
-        steps: vec![Step::Narrate { text: "x".into() }],
+        steps: vec![Step::Narrate {
+            text: "x".into(),
+            line: trpg_content::LineId::default(),
+        }],
     });
     assert!(!player.is_finished());
     player.advance();
@@ -292,6 +295,7 @@ fn expression_changes_and_offscreen_speakers() {
         speaker: id(who),
         expression: e.map(Into::into),
         text: "t".into(),
+        line: trpg_content::LineId::default(),
     };
     let place = |side, who: &str| Step::Place {
         side,
@@ -329,12 +333,16 @@ fn option(text: &str, steps: Vec<Step>) -> ChoiceOption {
     ChoiceOption {
         tone: "t".into(),
         text: text.into(),
+        line: trpg_content::LineId::default(),
         steps,
     }
 }
 
 fn narration(text: &str) -> Step {
-    Step::Narrate { text: text.into() }
+    Step::Narrate {
+        text: text.into(),
+        line: trpg_content::LineId::default(),
+    }
 }
 
 #[test]
@@ -580,6 +588,7 @@ fn name_tokens_are_filled_in() {
         .map(|text| ChoiceOption {
             tone: "a".into(),
             text: text.into(),
+            line: trpg_content::LineId::default(),
             steps: vec![narration("Fine.")],
         })
         .to_vec();
@@ -636,9 +645,13 @@ fn arb_step() -> impl Strategy<Value = Step> {
                 speaker,
                 expression,
                 text,
+                line: trpg_content::LineId::default(),
             }
         ),
-        "[a-z]{1,6}".prop_map(|text| Step::Narrate { text }),
+        "[a-z]{1,6}".prop_map(|text| Step::Narrate {
+            text,
+            line: trpg_content::LineId::default()
+        }),
         prop_oneof![
             Just(MusicLine::Stop),
             Just(MusicLine::Cue("talk_calm".into())),

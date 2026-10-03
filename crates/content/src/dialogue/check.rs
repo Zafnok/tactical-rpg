@@ -1,16 +1,18 @@
 //! Checks on parsed scenes: who is on screen, known characters and
 //! expressions, text length, lead and name tokens, names written out, lead
-//! lines, reply choices, music cues, and scene ids unique across files.
+//! lines, reply choices, music cues, line ids that clash, and scene ids
+//! unique across files.
 
 use std::collections::BTreeMap;
 
 use trpg_core::CharacterId;
 use trpg_core::lead::{self, LEAD_ID, PORTRAIT_FEMALE, PORTRAIT_MALE, Part};
 
+use super::line_id::line_hash;
 use super::parse::{ChoiceLines, ParsedScene};
 use super::{
     ChoiceOption, MAX_LEAD_LINE_LEN, MAX_OPTION_LEN, MAX_REACTION_TEXTS, MAX_TEXT_LEN, MusicLine,
-    STANDARD_EXPRESSIONS, Side, Step,
+    NARRATION_SPEAKER, REPLY_SPEAKER, STANDARD_EXPRESSIONS, Side, Step,
 };
 use crate::audio::AudioManifest;
 use crate::character::CharacterTable;
@@ -38,6 +40,7 @@ pub fn check_scene(
         portraits,
         names,
         audio,
+        hashes: BTreeMap::new(),
         errors: Vec::new(),
     };
     let mut state = State::default();
@@ -82,6 +85,9 @@ struct Checker<'a> {
     portraits: Option<&'a PortraitTable>,
     names: Option<&'a Names>,
     audio: Option<&'a AudioManifest>,
+    /// The first line of the scene with each line-id hash: its source
+    /// line, speaker and text.
+    hashes: BTreeMap<String, (u32, String, String)>,
     errors: Vec<ContentError>,
 }
 
@@ -100,6 +106,27 @@ impl<'a> Checker<'a> {
 
     fn known(&self, id: &CharacterId) -> bool {
         self.characters.is_none_or(|t| t.can_speak(id))
+    }
+
+    /// Reports a line (`speaker` saying `text`) whose id hash an earlier,
+    /// different line of the scene has: their ids would depend on their
+    /// order. A repeat of the same line is fine (it gets `_2`).
+    fn line_id(&mut self, line: u32, speaker: &str, text: &str) {
+        let hash = line_hash(speaker, text);
+        match self.hashes.get(&hash) {
+            None => {
+                self.hashes
+                    .insert(hash, (line, speaker.to_owned(), text.to_owned()));
+            }
+            Some((_, s, t)) if s == speaker && t == text => {}
+            Some((first, _, t)) => {
+                let message = format!(
+                    "this line and line {first} (\"{t}\") get the same line id hash \
+                     {hash}; reword one of them"
+                );
+                self.err(line, message);
+            }
+        }
     }
 
     /// Checks one step (not a choice) on `line` and applies it to `state`.
@@ -149,7 +176,9 @@ impl<'a> Checker<'a> {
                 speaker,
                 expression,
                 text,
+                ..
             } => {
+                self.line_id(line, &speaker.0, text);
                 if !self.known(speaker) {
                     self.err(line, format!("unknown character \"{}\"", speaker.0));
                 } else if !state.screen.contains(&Some(speaker)) {
@@ -184,7 +213,8 @@ impl<'a> Checker<'a> {
                     self.err(line, message);
                 }
             }
-            Step::Narrate { .. } | Step::Choice { .. } | Step::Music(MusicLine::Stop) => {}
+            Step::Narrate { text, .. } => self.line_id(line, NARRATION_SPEAKER, text),
+            Step::Choice { .. } | Step::Music(MusicLine::Stop) => {}
         }
     }
 
@@ -204,6 +234,7 @@ impl<'a> Checker<'a> {
         let mut first: Option<State<'s>> = None;
         for (option, option_lines) in options.iter().zip(&lines.options) {
             let at = option_lines.line;
+            self.line_id(at, REPLY_SPEAKER, &option.text);
             self.tokens(at, &option.text);
             self.literal_names(at, &option.text);
             let len = self.len(&option.text);
