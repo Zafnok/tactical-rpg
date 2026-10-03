@@ -12,8 +12,10 @@
 //! the [`BattleState`] is untouched.
 //!
 //! Pointing the cursor at an enemy the selected unit can attack after moving
-//! (0428) aims the path at the tile it will attack from; Confirm walks
-//! there and goes straight to the weapon list / forecast on that enemy.
+//! (0428), with a weapon or an attack spell (0430), aims the path at the
+//! tile it will attack from; Confirm walks there and goes straight to the
+//! forecast on that enemy with what the unit has equipped, where left and
+//! right swap between the weapons and spells that reach it.
 //!
 //! Around it (0405): the map menu ([`Mode::MapMenu`], [`Mode::UnitList`],
 //! [`Mode::Objective`]), the end-turn prompt ([`Mode::EndTurnPrompt`]), the
@@ -28,8 +30,8 @@
 //! cursor and applies the [`Effect`]s.
 
 use trpg_core::{
-    BattleState, Command, Faction, Phase, Pos, Reach, TileSet, UnitAction, UnitId, attack_tiles,
-    path_cost, reachable, threat_area,
+    BattleState, Command, Equipped, Faction, Phase, Pos, Reach, TileSet, UnitAction, UnitId,
+    attack_tiles, path_cost, reachable, threat_area,
 };
 
 use super::ai_phase::AiAction;
@@ -634,33 +636,17 @@ fn walk_ended(sel: Selection, state: &BattleState) -> (Mode, Effect) {
     }
 }
 
-/// The unit stands at the path's end, aimed at an enemy (0428): the weapons
-/// that reach it (a list if several, its target first), then the forecast on
-/// it. The action menu if none does.
+/// The unit stands at the path's end, aimed at an enemy (0428, 0430): the
+/// forecast on it with the equipped weapon or spell if that reaches it, else
+/// the first that does; left and right swap between those that do. The
+/// action menu if none does.
 fn open_attack(sel: Selection, state: &BattleState) -> (Mode, Effect) {
-    let Some(target) = sel.target else {
-        return (open_menu(sel, state), Effect::None);
-    };
-    let mut kept: Vec<WeaponChoice> = weapon_choices(state, &sel)
-        .into_iter()
-        .filter(|c| c.targets.contains(&target))
-        .collect();
-    for c in &mut kept {
-        if let Some(i) = c.targets.iter().position(|&t| t == target) {
-            c.targets.rotate_left(i);
+    match Targeting::aimed(state, sel.clone()) {
+        Some(t) => {
+            let at = state.unit(t.target()).map_or(sel.dest(), |u| u.pos);
+            (Mode::Targeting(Box::new(t)), Effect::Cursor(at))
         }
-    }
-    match kept.as_slice() {
-        [] => (open_menu(sel, state), Effect::None),
-        [only] => {
-            let only = only.clone();
-            target_with(state, sel, &only, None)
-        }
-        _ => {
-            let menu = weapon_menu(state, &sel, &kept);
-            let weapons = kept;
-            (Mode::WeaponMenu { sel, menu, weapons }, Effect::None)
-        }
+        None => (open_menu(sel, state), Effect::None),
     }
 }
 
@@ -1409,12 +1395,22 @@ fn step_equip(
 /// targets (right and next go forward, left and previous go back); up and
 /// down move through the arts list (0414) when it is shown, else cycle the
 /// targets too; Confirm attacks with the chosen line, Cancel goes back to
-/// the weapon list or the action menu with the cursor on the unit.
+/// the weapon list or the action menu (on `Attack`, or `Magic` for a spell)
+/// with the cursor on the unit. In the forecast on an enemy pointed at
+/// (0430), left and right swap the weapon or spell instead when several
+/// reach it.
 fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mode, Effect) {
     // Up and Down move the arts list's cursor when there is a list; else
     // they cycle the targets like Left/Right.
     let list = t.has_list();
     let forward = match action {
+        Action::CursorLeft | Action::CursorRight if t.can_swap() => {
+            t.swap(action == Action::CursorRight, state);
+            let effect = state
+                .unit(t.target())
+                .map_or(Effect::None, |u| Effect::Cursor(u.pos));
+            return (Mode::Targeting(Box::new(t)), effect);
+        }
         Action::CursorUp | Action::CursorDown if list => {
             t.move_list(action == Action::CursorDown, state);
             return (Mode::Targeting(Box::new(t)), Effect::None);
@@ -1424,13 +1420,17 @@ fn step_targeting(mut t: Targeting, action: Action, state: &BattleState) -> (Mod
         Action::Confirm => return (Mode::default(), Effect::Apply(t.command())),
         Action::Cancel => {
             let dest = t.sel.dest();
+            let entry = match t.with {
+                Equipped::Weapon(_) => MenuEntry::Attack,
+                Equipped::Spell(_) => MenuEntry::Magic,
+            };
             let back = match t.weapons {
                 Some((menu, weapons)) => Mode::WeaponMenu {
                     sel: t.sel,
                     menu,
                     weapons,
                 },
-                None => back_to_menu(t.sel, state),
+                None => back_to_entry(t.sel, state, entry),
             };
             return (back, Effect::Cursor(dest));
         }
@@ -2226,26 +2226,39 @@ mod tests {
         let (walk, effect) = step(Mode::Selected(sel), Action::Confirm, p(7, 1), &s);
         assert_eq!(effect, Effect::None);
         assert!(matches!(walk, Mode::Moving { .. }), "{walk:?}");
-        let mode = walk.tick(1.0, false, &s);
-        // Two swords reach the raider: the weapon list, then the forecast.
-        let Mode::WeaponMenu { weapons, .. } = &mode else {
-            panic!("{mode:?}");
+        let mut mode = walk.tick(1.0, false, &s);
+        // Two swords reach the raider: the forecast with the equipped one
+        // (0430); right and left swap between them, wrapping.
+        let with = |mode: &Mode| match mode {
+            Mode::Targeting(t) => (t.with.clone(), t.target()),
+            other => panic!("{other:?}"),
         };
-        assert!(weapons.iter().all(|c| c.targets[0] == UnitId(6)));
-        let (targeting, effect) = step(mode, Action::Confirm, p(7, 1), &s);
-        assert_eq!(effect, Effect::Cursor(p(7, 1)));
-        let Mode::Targeting(t) = &targeting else {
-            panic!("{targeting:?}");
-        };
-        assert_eq!(t.target(), UnitId(6));
-        // Cancel: the weapon list, the action menu at the tile, the path.
-        let (list, _) = step(targeting, Action::Cancel, p(7, 1), &s);
-        assert!(matches!(list, Mode::WeaponMenu { .. }));
-        let (menu, _) = step(list, Action::Cancel, dest, &s);
-        let Mode::ActionMenu { sel, .. } = &menu else {
+        assert_eq!(with(&mode), (Equipped::Weapon(0), UnitId(6)));
+        for (key, slot) in [
+            (Action::CursorRight, 1),
+            (Action::CursorRight, 0),
+            (Action::CursorLeft, 1),
+            (Action::CursorLeft, 0),
+        ] {
+            let (next, effect) = step(mode, key, p(7, 1), &s);
+            assert_eq!(effect, Effect::Cursor(p(7, 1)));
+            assert_eq!(with(&next), (Equipped::Weapon(slot), UnitId(6)));
+            mode = next;
+        }
+        // Cancel: the action menu at the tile, on Attack, then the path.
+        let (menu, effect) = step(mode, Action::Cancel, p(7, 1), &s);
+        assert_eq!(effect, Effect::Cursor(dest));
+        let Mode::ActionMenu {
+            sel,
+            menu: m,
+            entries,
+            ..
+        } = &menu
+        else {
             panic!("{menu:?}");
         };
         assert_eq!(sel.dest(), dest);
+        assert_eq!(entries[m.focus()], MenuEntry::Attack);
         let (back, _) = step(menu, Action::Cancel, dest, &s);
         let Mode::Selected(sel) = back else {
             panic!("{back:?}");
@@ -2296,15 +2309,22 @@ mod tests {
         start.steer(p(7, 2), &s);
         let sel = aim(start, p(8, 2), &s);
         let (mode, _) = step(Mode::Selected(sel), Action::Confirm, p(8, 2), &s);
-        let walked = mode.tick(1.0, false, &s);
-        let Mode::WeaponMenu { weapons, .. } = &walked else {
-            panic!("{walked:?}");
-        };
-        assert!(weapons.iter().all(|c| c.targets[0] == UnitId(4)));
-        let (targeting, _) = step(walked, Action::Confirm, p(8, 2), &s);
+        let targeting = mode.tick(1.0, false, &s);
         let Mode::Targeting(t) = &targeting else {
             panic!("{targeting:?}");
         };
         assert_eq!(t.target(), UnitId(4));
+        // The raider is still a target: the next one, wrapping.
+        assert_eq!(t.targets, [UnitId(4), UnitId(6)]);
+        // A swap keeps the brigand under the cursor.
+        let (swapped, effect) = step(targeting, Action::CursorRight, p(8, 2), &s);
+        assert_eq!(effect, Effect::Cursor(p(8, 2)));
+        let Mode::Targeting(t) = &swapped else {
+            panic!("{swapped:?}");
+        };
+        assert_eq!(
+            (&t.with, &t.targets),
+            (&Equipped::Weapon(1), &vec![UnitId(4), UnitId(6)])
+        );
     }
 }
