@@ -36,7 +36,7 @@ GitHub Actions (unlimited free minutes on public repos) runs the following.
 | Dependency updates | Dependabot (cargo + github-actions), grouped weekly | schedule | n/a | 0103 |
 | Secret scanning + push protection | GitHub built-in (repo setting) | always | n/a | 0103 |
 | Coverage + static analysis + quality gate | `cargo-llvm-cov` → SonarCloud (Clippy report imported) | PR, push | ✅ once stable | 0104 |
-| Mutation testing | `cargo-mutants --in-diff` in up to 8 shards, tests run by `cargo-nextest` (PR; ADR-0043), full run weekly | PR, weekly | ✅ | 0105, 0119 |
+| Mutation testing | `cargo-mutants --in-diff` in up to 8 shards, tests run by `cargo-nextest` (PR; ADR-0047), full run weekly | PR, weekly | ✅ | 0105, 0119 |
 | Ticket hygiene | small script: ticket frontmatter valid; ticket referenced by branch/PR is moved to `tickets/done/` | PR | ✅ | 0106 |
 
 Conventions for all workflows:

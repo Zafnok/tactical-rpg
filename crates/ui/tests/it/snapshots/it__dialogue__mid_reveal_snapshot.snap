@@ -1,25 +1,25 @@
 ---
-source: crates/ui/tests/dialogue.rs
+source: crates/ui/tests/it/dialogue.rs
 expression: h.snapshot()
 ---
                                        Village of Heth, dusk                                        
  ╔════════════════════════════════╗                              ┌────────────────────────────────┐ 
- ║            ▄▄▄▄▄▄▄▄            ║                              │           ▄▄▀▀▀▀▀▄▄▄           │ 
- ║         ▄▀▀▀▀▀▀▀▀▀▀▀▀▄         ║                              │        ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄        │ 
- ║       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄       ║                              │      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀         ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║          ▀▀▀▀▀▀▀▀▀▀▀▀          ║                              │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      │ 
- ║            ▀▀▀▀▀▀▀▀            ║                              │           ▄▀▀▀▀▀▀▀▀▄           │ 
- ║       ▄▄▄▄▄▀▀▀▀▀▀▀▀▄▄▄▄▄       ║                              │       ▄▄▄▄▀▀▀▀▀▀▀▀▀▀▄▄▄▄       │ 
- ║     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     ║                              │     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄     │ 
- ║   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   ║                              │   ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄   │ 
- ║ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ ║                              │ ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄ │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
+ ║                                ║                              │                                │ 
  ╚════════════════════════════════╝                              └────────────────────────────────┘ 
              Test Lord                                                      Test Knight             
                                                                                                     
@@ -37,31 +37,31 @@ expression: h.snapshot()
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadddddddddddddddddddddddddddddddddda
-aceeeeeeeeeeeeffffffffeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeegghiiijgggeeeeeeeeeeeda
-aceeeeeeeeefkkllllmmmmkkfeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeegnopppppppqqrsngeeeeeeeeda
-aceeeeeeefkmltummmmmmmmmvkfeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeegnwxpppppppppppqqrngeeeeeeda
-aceeeeeeymmtmmmmmmvmmmmmmzmyeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehpAppppppppppppppBpheeeeeeda
-aceeeeeeymmmmCCDmECCDmmCmmzyeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehwAAFFFFFprFFFFFAxrheeeeeeda
-aceeeeeeymzGHHHHGGGGHHHIJvzyeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehAAAKLMMMppMMMLLApBheeeeeeda
-aceeeeeeymNGGOPOGQGGOPOJJEmyeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehAAARSTUMVWMUTSMAppheeeeeeda
-aceeeeeeymGGGGGGGXGGGGGJJJmyeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehAAARMMMMMYMMMMMAppheeeeeeda
-aceeeeeefZZGGX0GG011GGGJJZZfeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehAAARMMM223MM3YMAppheeeeeeda
-aceeeeeeeeeyGGG455554GJJyeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeehAAARRM677776MMMAppheeeeeeda
-aceeeeeeeeeefOGG8888CJ9feeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeg一一一丁丂R七丄丄丄丄丄M丅丁一丁丁geeeeeeda
-aceeeeeeeeeeeey1丆丆丆丆丆yeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeego万万万万万丈ogeeeeeeeeeeeda
-aceeeeeee三上上下丌不与JJJJ与不丌下上上丏eeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeee丐丑丑丑丒AAAAAApA丒丑丑丑专eeeeeeeda
-aceeeee三且丕丕丕世丗丗丗丗丘丘丗丗丗丗世丕丕丕丙丏eeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeee丐xpppp业业业业丛丛业业业业ppppq专eeeeeda
-aceee三且丕丕丕丕丕世丗丗丗丗东东丗丗丗丗世丕丕丕丕丕丙丏eeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeee丐xpppppp业业业业丛丛业业业业ppppppq专eeeda
-ace三且丕丕丕丕丕丕丕世丗丗丗丗东东丗丗丗丗世丕丕丕丕丕丕丕丙丏ecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaade丐xpppppppp业业业业丛丛业业业业ppppppppq专eda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
+aceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeda
 accccccccccccccccccccccccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadddddddddddddddddddddddddddddddddda
-a丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa丝丝丝丝丝丝丝丝丝丝丝丞丞丞丞丞丞丞丞丞丞丞丝丝丝丝丝丝丝丝丝丝丝丝a
+aeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeeeeeeefffffffffffeeeeeeeeeeeea
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-ddd丟丟丟丟丟丟丟丟丟丟丟dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
-d丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝d
-d丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝d
-d丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝d
-d丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝d
-d丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝丝d
+dddgggggggggggdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -72,93 +72,9 @@ a = fg:text bg:black
 b = fg:text_highlight bg:black
 c = fg:panel_border_focus bg:panel_bg
 d = fg:panel_border bg:panel_bg
-e = fg:panel_bg bg:panel_bg
-f = fg:portrait_outline bg:panel_bg
-g = fg:#1d130d bg:panel_bg
-h = fg:#1d130d bg:#1d130d
-i = fg:#7b3327 bg:#7b3327
-j = fg:#1d130d bg:#7b3327
-k = fg:portrait_outline bg:hair_brown
-l = fg:hair_brown bg:hair_brown_light
-m = fg:hair_brown bg:hair_brown
-n = fg:#1d130d bg:#656568
-o = fg:#1d130d bg:#3e3e41
-p = fg:#656568 bg:#656568
-q = fg:#7f7f81 bg:#656568
-r = fg:#656568 bg:#7f7f81
-s = fg:#1d130d bg:#7f7f81
-t = fg:hair_brown_light bg:hair_brown_light
-u = fg:hair_brown_light bg:hair_brown
-v = fg:hair_brown bg:hair_brown_dark
-w = fg:#656568 bg:#3e3e41
-x = fg:#3e3e41 bg:#656568
-y = fg:portrait_outline bg:portrait_outline
-z = fg:hair_brown_dark bg:hair_brown_dark
-A = fg:#3e3e41 bg:#3e3e41
-B = fg:#7f7f81 bg:#7f7f81
-C = fg:skin_light bg:skin_light_mid
-D = fg:hair_brown_dark bg:skin_light_mid
-E = fg:hair_brown bg:skin_light_mid
-F = fg:#3e3e41 bg:#6d4d39
-G = fg:skin_light bg:skin_light
-H = fg:brow_dark bg:skin_light
-I = fg:brow_dark bg:skin_light_mid
-J = fg:skin_light_mid bg:skin_light_mid
-K = fg:#6d4d39 bg:#2d1c11
-L = fg:#7b5a41 bg:#2d1c11
-M = fg:#7b5a41 bg:#7b5a41
-N = fg:hair_brown_dark bg:skin_light
-O = fg:skin_light bg:portrait_outline
-P = fg:portrait_outline bg:skin_light
-Q = fg:skin_light bg:skin_light_highlight
-R = fg:#6d4d39 bg:#6d4d39
-S = fg:#7b5a41 bg:#918a81
-T = fg:#2d1c11 bg:#355f39
-U = fg:#2d1c11 bg:#1d130d
-V = fg:#656568 bg:#7b5a41
-W = fg:#656568 bg:#85674f
-X = fg:skin_light_highlight bg:skin_light_highlight
-Y = fg:#85674f bg:#85674f
-Z = fg:hair_brown bg:portrait_outline
-0 = fg:skin_light_highlight bg:skin_light
-1 = fg:skin_light bg:skin_light_shadow
-2 = fg:#7b5a41 bg:#5b3e2c
-3 = fg:#85674f bg:#7b5a41
-4 = fg:mouth_dark bg:mouth_dark
-5 = fg:skin_light bg:teeth
-6 = fg:#7b5a41 bg:#50211c
-7 = fg:#50211c bg:#918c83
-8 = fg:lip bg:skin_light
-9 = fg:skin_light_mid bg:portrait_outline
-一 = fg:#3e3e41 bg:#1d130d
-丁 = fg:#656568 bg:#1d130d
-丂 = fg:#6d4d39 bg:#1d130d
-七 = fg:#50211c bg:#6d4d39
-丄 = fg:#50211c bg:#7b5a41
-丅 = fg:#7b5a41 bg:#1d130d
-丆 = fg:skin_light_mid bg:skin_light_shadow
-万 = fg:#6d4d39 bg:#3e3e41
-丈 = fg:#7b5a41 bg:#656568
-三 = fg:armor_steel_light bg:panel_bg
-上 = fg:armor_steel bg:panel_bg
-下 = fg:trim_gold bg:panel_bg
-丌 = fg:cloth_blue bg:panel_bg
-不 = fg:portrait_outline bg:cloth_blue
-与 = fg:skin_light_mid bg:cloth_blue
-丏 = fg:armor_steel_dark bg:panel_bg
-丐 = fg:#3e3e41 bg:panel_bg
-丑 = fg:#656568 bg:panel_bg
-丒 = fg:#1d130d bg:#692a23
-专 = fg:#7f7f81 bg:panel_bg
-且 = fg:armor_steel_light bg:armor_steel
-丕 = fg:armor_steel bg:armor_steel
-世 = fg:trim_gold bg:trim_gold
-丗 = fg:cloth_blue bg:cloth_blue
-丘 = fg:trim_gold bg:cloth_blue_dark
-丙 = fg:armor_steel_dark bg:armor_steel
-业 = fg:#692a23 bg:#692a23
-丛 = fg:#471c15 bg:#471c15
-东 = fg:cloth_blue_dark bg:cloth_blue_dark
-丝 = fg:text bg:panel_bg
-丞 = fg:text_dim bg:panel_bg
-丟 = fg:text_highlight bg:panel_bg
+e = fg:text bg:panel_bg
+f = fg:text_dim bg:panel_bg
+g = fg:text_highlight bg:panel_bg
+--- overlays ---
+under sprite 16,32 256x256  portraits/test_lord/happy.png 0,0 32x32
+under sprite 528,32 256x256  portraits/test_knight/angry.png 0,0 32x32 flip opacity=140

@@ -461,15 +461,7 @@ impl LeadSelectScreen {
         let profile = LeadProfile::new(self.name.clone(), gender);
         if let Some(art) = ctx.content.portraits.get(profile.portrait_id()) {
             let dim = if chosen { 0.0 } else { 0.45 };
-            draw_portrait(
-                buf,
-                &ctx.palette,
-                (x + 1, FRAME_Y + 1),
-                art,
-                "neutral",
-                dim,
-                false,
-            );
+            draw_portrait(buf, (x + 1, FRAME_Y + 1), art, "neutral", dim, false);
         }
         let label = match gender {
             LeadGender::Male => "Male",

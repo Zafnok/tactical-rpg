@@ -154,7 +154,7 @@ The weekly full run is already split into 4 shards; the PR run never was.
 ## Completion notes
 
 **Done.** The PR run of `.github/workflows/mutants.yml` is now three jobs
-(ADR-0043):
+(ADR-0047):
 
 1. `mutants (diff, plan)` counts the diff's mutants with `--list` (no build)
    and picks 1 shard (up to 40 mutants), 4 (up to 160) or 8.

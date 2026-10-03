@@ -1,68 +1,80 @@
-# Character portraits (`.portrait`)
+# Character portraits
 
-Each `*.portrait` file here is one character's portrait, loaded by
-`trpg_content::portrait` and validated by the all-assets test (ADR-0005). The
-file stem is the character id and must equal the header's `character`
-(`ana.portrait` → `"ana"`). The lead is the exception: the character `lead`
-has two portraits, `lead_m` and `lead_f`, and dialogue shows the one for the
-gender the player picked. The style is in ADR-0018,
-`docs/design/look-and-feel.md` and the `ascii-art` skill.
+A portrait is a **sidecar file** here, `<id>.ron`, that maps expression
+names to **PNG images** (ADR-0043). It is loaded by
+`trpg_content::portrait` and validated by the all-assets test (ADR-0005).
+The file stem is the character id and must equal the sidecar's `character`
+(`ana.ron` → `"ana"`). The lead is the exception: the character `lead` has
+two portraits, `lead_m` and `lead_f`, and dialogue shows the one for the
+gender the player picked.
 
 `test_lord` and `test_knight` are **placeholders** for tests and the viewer,
 not real characters. `lead_m` and `lead_f` are placeholder recolours of
-`test_lord`. Real portraits come with ticket 0706.
+`test_lord`. The real portraits are bought art (ADR-0032): they are not in
+this repository but in `assets-private/game/portraits/` (ADR-0040), where a
+file replaces the one at the same path here. Ticket 0706 picks them.
 
 ## Format
 
-```
-// PLACEHOLDER art …
+```ron
+// RON `//` comments are allowed.
 (
     character: "ana",
-    size: (32, 32),
-    colors: { 'K': "portrait_outline", 'h': "hair_brown", 's': "skin_light", 'q': "skin_light_mid", 'e': "eye_green" },
+    expressions: {
+        "neutral": "ana/neutral.png",
+        "happy": "ana/smile.png",
+        "angry": "ana/stern.png",
+        "sad": "ana/sad.png",
+        "surprised": "ana/surprise.png",
+        "sly": "ana/sly.png",
+    },
 )
-=== neutral
-................KKKKKKKK........
-... 32 rows of exactly 32 keys ...
-=== happy
-...
 ```
 
-1. **Header**: a RON struct with
-   - `character`: the character id (the file stem);
-   - `size`: `(32, 32)`, in pixels. It's drawn as 32×16 cells;
-   - `colors`: pixel key (one character) → colour name from
-     `assets/data/palette.ron`. Add portrait colours (skin tones, hair,
-     metals…) to the palette as needed.
-   RON `//` comments are allowed.
-2. **Expressions**: each starts with a line `=== <name>`, followed by the
-   pixel rows, top first: one key per pixel, `.` for transparent. Blank lines
-   at the end of a block are ignored. The first `===` line ends the header.
+- `character`: the character id (the file stem).
+- `expressions`: expression name → image file, relative to this directory.
+  Keep a character's images in a folder named after it. Two expressions may
+  use the same image.
 
-Required expressions: `neutral`, `happy`, `angry`, `sad`, `surprised`. More are
-allowed (dialogue can name them).
+Required expressions: `neutral`, `happy`, `angry`, `sad`, `surprised`. More
+are allowed (dialogue can name them).
+
+Images are PNG with transparency, at their native pixel size, at most
+256×256. The colours are the image's own, not `palette.ron`'s.
 
 ## How it's drawn
 
-Each cell is `▀` with fg = the top pixel and bg = the bottom pixel, so pixels
-are square (8×8 screen px). Where the top pixel is transparent the cell is `▄`
-over the background; where both are, a blank cell. Dimming (the listener in
-a conversation) lerps toward the background. Mirroring reverses each row.
+One sprite item (ADR-0038) in the 32×16-cell portrait frame, which is
+256×256 console pixels: the whole image at the **largest whole scale that
+fits**, centred. A 64×64 cut bust is drawn at 4× and fills the frame; a
+48×48 face at 5× with an 8-pixel margin; the 32×32 placeholders at 8×.
+Transparent pixels show the frame's background. Dimming (the listener in a
+conversation) is the sprite's opacity; mirroring is its left-right flip.
 
 To look at a portrait, run a debug build, press **F2** and pick
-**Portraits**: left/right switch expression, up/down switch character.
+**Portraits**: left/right switch expression, up/down switch character. Or
+render a frame without a window: `cargo xtask frame-png --help`.
+
+## Importing bought busts
+
+```bash
+cargo xtask private-assets --library
+cargo xtask portrait-import assets-private/library/tiny-tales/characters/heroes/<Name> <id>
+```
+
+This cuts each 80×80 bust to its middle 64 columns and bottom 64 rows
+(`--shift-x <pixels>`, −8 to 8, moves the cut sideways), writes the 64×64
+files to `assets-private/game/portraits/<id>/`, and writes a sidecar there
+if there is none. Then push the private repository and pin it (ADR-0040).
+`cargo xtask portrait-import --help` says what else it takes.
 
 ## Rules checked by the loader
 
-Each is reported with `file:line:column` where it has one, and all are
+Each is reported with its file (and line, for an expression), and all are
 reported at once:
 
-- no `===` line at all, or a RON syntax error in the header;
-- `size` other than `(32, 32)`;
-- an expression with the wrong number of rows, or a row of the wrong width;
-- a pixel key that isn't in `colors`;
-- a `colors` entry naming a colour the palette doesn't define, or using
-  `.` (reserved for transparent);
-- an expression with no name, or the same expression twice;
+- a RON syntax error, or a field the format doesn't have;
+- a `character` that doesn't match the file name;
 - a missing required expression;
-- a `character` that doesn't match the file name.
+- an expression whose file isn't a PNG image under `assets/portraits/`;
+- an image wider or taller than 256 pixels.
