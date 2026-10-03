@@ -5,10 +5,10 @@ type: feature
 milestone: M1 Engine
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0233 — Screen text by key from a language file (the mechanism, and the title screen)
@@ -79,14 +79,14 @@ any Japanese text. Help text that names keys keeps going through
 
 ## Acceptance criteria
 
-- [ ] The title screen has no player-facing literal; its snapshots are unchanged.
-- [ ] With the test pack, the title shows the pack's text; a stale or missing entry shows English (Harness test).
-- [ ] A pack entry with an unknown key, or with different placeholders, fails validation with file and key (unit tests).
-- [ ] An unknown key panics in debug builds (test).
-- [ ] `cargo xtask lang-status test` lists the one stale and one missing key.
-- [ ] `cargo xtask check-text` passes and fails when a new literal is added (test).
-- [ ] `core` has no dependency on `lang` (ADR-0004).
-- [ ] All gates in the `run-gates` skill pass.
+- [x] The title screen has no player-facing literal; its snapshots are unchanged.
+- [x] With the test pack, the title shows the pack's text; a stale or missing entry shows English (Harness test).
+- [x] A pack entry with an unknown key, or with different placeholders, fails validation with file and key (unit tests).
+- [x] An unknown key panics in debug builds (test).
+- [x] `cargo xtask lang-status test` lists the one stale and one missing key.
+- [x] `cargo xtask check-text` passes and fails when a new literal is added (test).
+- [x] `core` has no dependency on `lang` (ADR-0004).
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -95,3 +95,39 @@ any Japanese text. Help text that names keys keeps going through
 
 ## Completion notes
 
+Done as planned. Nothing a player sees changes; no gameplay rule was
+decided here.
+
+- `trpg_content::lang`: `LangCode`, `LangInfo`, `MadeBy`, `Entry`,
+  `LangPack`, `Lang` (`text`, `status`, `has`, `english`, `pack`, `codes`),
+  loaded into `Content::lang` from `assets/lang/`.
+- `Ctx::lang`, `Ctx::text(key)`, `Ctx::text_with(key, args)`. The filling
+  is `tips::fill_text`, which `fill_placeholders` now calls; it fills in
+  one pass, so a value is never filled a second time.
+- The title screen reads every text by key. Its help line is one text,
+  `{Cursor} move · {Confirm} select · {Cancel} back`, so a translation can
+  reorder it. `TitleScreen::new` and `with_quick_battle` take the `Ctx`
+  (for the labels), and the menu is labelled again at each refresh, so it
+  follows a change of language. Existing snapshots are unchanged.
+- `assets/lang/test/`: English in capitals; `title.subtitle` is stale and
+  `title.credits` is missing, on purpose.
+- `cargo xtask lang-status <code>` and `cargo xtask check-text` (221
+  literals today), the latter in CI's `tickets` job and in `run-gates`.
+- ADR-0045 is `Accepted`, with what this ticket settled marked *0233*.
+
+Deviations and details settled:
+
+- A pack entry's placeholders are checked against its own `source`, not
+  today's English. Otherwise adding a placeholder to an English text
+  would fail the gate for every pack, which ADR-0045 says must not happen.
+- The test pack is always in the bundle; `Ctx::text` ignores it unless
+  `debug_tools` is on (rather than not loading it).
+- Any file in a language's directory other than `lang.ron` and `ui.ron`
+  is an error until 0235 adds `data.ron` and `dialogue/`.
+- `check-text` counts more than literals passed straight to `print`: most
+  screens keep their text in `&str` constants, so those count too when
+  they look like prose (a capital or a space). A literal the rules get
+  wrong (a picture drawn from text rows, a button's name) is let through
+  with a `// check-text: not player text` comment; 0234 will need a few.
+- The title's `Continue` error notice comes from the save code, so it is
+  0234's.

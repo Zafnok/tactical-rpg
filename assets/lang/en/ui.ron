@@ -1,0 +1,20 @@
+// English screen text, by key (ADR-0045). Screens ask for it with
+// `ctx.text("title.new_game")`. Keys are `screen.thing`: lowercase letters,
+// digits, `_` and `.`.
+//
+// `{Confirm}`, `{Cancel}`, `{Cursor}` and the other action names become
+// the player's keys (never write a key's name here); any other `{name}` is
+// a value the screen fills in.
+{
+    // The title screen.
+    "title.title": "Visions of Shuyi",
+    "title.subtitle": "an ASCII tactics game",
+    "title.press_any_key": "Press any key",
+    "title.continue": "Continue",
+    "title.new_game": "New Game",
+    "title.load_game": "Load Game",
+    "title.quick_battle": "Quick Battle",
+    "title.credits": "Credits",
+    "title.quit": "Quit",
+    "title.help": "{Cursor} move · {Confirm} select · {Cancel} back",
+}
