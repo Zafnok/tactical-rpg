@@ -62,7 +62,7 @@ impl From<[u8; 3]> for Rgb {
 
 /// Rounds and saturates a channel value to `0..=255`.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // clamped first
-fn to_channel(v: f32) -> u8 {
+pub(crate) fn to_channel(v: f32) -> u8 {
     v.round().clamp(0.0, 255.0) as u8
 }
 

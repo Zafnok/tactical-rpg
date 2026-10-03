@@ -26,6 +26,7 @@ pub mod ron_loader;
 pub mod skill;
 pub mod spell;
 pub mod terrain;
+pub mod tileset;
 pub mod tip;
 pub mod trigger;
 
@@ -55,6 +56,7 @@ pub use names::Names;
 pub use palette::PaletteDef;
 pub use portrait::Portrait;
 pub use terrain::{TerrainDef, TerrainDisplay, TerrainDisplayTable};
+pub use tileset::{ImageRect, Picture, Tileset};
 pub use tip::{Tip, TipTable, TipTrigger};
 pub use trigger::check_triggers;
 
@@ -69,6 +71,8 @@ pub struct Content {
     pub font: FontAtlasDef,
     /// Every other image in the bundle, by path, with its size (ADR-0038).
     pub images: ImageTable,
+    /// What sprite map skins paint battle maps with, by id (ADR-0038).
+    pub tilesets: BTreeMap<String, Tileset>,
     /// Terrain rules and looks.
     pub terrain: TerrainDef,
     /// Battle maps by id (file stem).
@@ -175,6 +179,12 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         audio.as_ref().ok(),
     );
     let credits = credits::load(audio.as_ref().ok());
+    let tilesets = load_tilesets(
+        images.as_ref().ok(),
+        terrain.as_ref().ok(),
+        classes.as_ref().ok(),
+        characters.as_ref().ok(),
+    );
     assemble(
         palette,
         KeymapDef::load(),
@@ -196,6 +206,7 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
             audio,
             credits,
             images,
+            tilesets,
             battles,
             chapters,
             new_game,
@@ -221,6 +232,27 @@ fn check_seals(
         }
         (items, _) => items,
     }
+}
+
+/// Loads the tilesets, checked against the images, terrain, classes and
+/// characters. Skipped (none, no errors) when one of those failed.
+fn load_tilesets(
+    images: Option<&ImageTable>,
+    terrain: Option<&TerrainDef>,
+    classes: Option<&ClassTable>,
+    characters: Option<&CharacterTable>,
+) -> Result<BTreeMap<String, Tileset>, Vec<ContentError>> {
+    let (Some(images), Some(terrain), Some(classes), Some(characters)) =
+        (images, terrain, classes, characters)
+    else {
+        return Ok(BTreeMap::new());
+    };
+    tileset::load_all(&tileset::TilesetRefs {
+        images,
+        terrain: &terrain.display,
+        classes,
+        characters,
+    })
 }
 
 /// Loader results for the battles, chapters and New Game file.
@@ -378,6 +410,7 @@ struct Loaded {
     audio: Result<AudioManifest, Vec<ContentError>>,
     credits: Result<Credits, Vec<ContentError>>,
     images: Result<ImageTable, Vec<ContentError>>,
+    tilesets: Result<BTreeMap<String, Tileset>, Vec<ContentError>>,
     battles: Result<BTreeMap<String, BattleDef>, Vec<ContentError>>,
     chapters: Result<BTreeMap<String, ChapterDef>, Vec<ContentError>>,
     new_game: Result<NewGameDef, Vec<ContentError>>,
@@ -423,6 +456,7 @@ fn assemble(
         audio: take(units.audio, &mut errors),
         credits: take(units.credits, &mut errors),
         images: take(units.images, &mut errors),
+        tilesets: take(units.tilesets, &mut errors),
         battles: take(units.battles, &mut errors),
         chapters: take(units.chapters, &mut errors),
         new_game: take(units.new_game, &mut errors),
@@ -496,6 +530,15 @@ mod tests {
         credits::load(audio::load().ok().as_ref())
     }
 
+    fn ok_tilesets() -> Result<BTreeMap<String, Tileset>, Vec<ContentError>> {
+        load_tilesets(
+            ImageTable::load().ok().as_ref(),
+            ok_terrain().ok().as_ref(),
+            ok_classes().ok().as_ref(),
+            ok_characters().ok().as_ref(),
+        )
+    }
+
     fn ok_units() -> Loaded {
         let (battles, chapters, new_game) = ok_story();
         Loaded {
@@ -513,6 +556,7 @@ mod tests {
             audio: audio::load(),
             credits: ok_credits(),
             images: ImageTable::load(),
+            tilesets: ok_tilesets(),
             battles,
             chapters,
             new_game,
@@ -593,6 +637,10 @@ mod tests {
             content.as_ref().map(|c| &c.images),
             ImageTable::load().ok().as_ref()
         );
+        assert_eq!(
+            content.as_ref().map(|c| &c.tilesets),
+            ok_tilesets().ok().as_ref()
+        );
         assert!(
             content.as_ref().is_some_and(
                 |c| c.maps.contains_key("test_small") && c.dialogue.get("test").is_some()
@@ -605,9 +653,9 @@ mod tests {
         );
     }
 
-    const NAMES: [&str; 22] = [
+    const NAMES: [&str; 23] = [
         "p", "k", "f", "t", "m", "c", "i", "s", "x", "a", "n", "u", "o", "d", "w", "y", "v", "r",
-        "j", "b", "h", "g",
+        "j", "z", "b", "h", "g",
     ];
 
     #[test]
@@ -635,6 +683,7 @@ mod tests {
                     audio: Err(e("v")),
                     credits: Err(e("r")),
                     images: Err(e("j")),
+                    tilesets: Err(e("z")),
                     battles: Err(e("b")),
                     chapters: Err(e("h")),
                     new_game: Err(e("g")),
@@ -684,15 +733,45 @@ mod tests {
                     } else {
                         ImageTable::load()
                     },
-                    battles: if i == 19 { Err(e("b")) } else { ok_story().0 },
-                    chapters: if i == 20 { Err(e("h")) } else { ok_story().1 },
-                    new_game: if i == 21 { Err(e("g")) } else { ok_story().2 },
+                    tilesets: if i == 19 { Err(e("z")) } else { ok_tilesets() },
+                    battles: if i == 20 { Err(e("b")) } else { ok_story().0 },
+                    chapters: if i == 21 { Err(e("h")) } else { ok_story().1 },
+                    new_game: if i == 22 { Err(e("g")) } else { ok_story().2 },
                 },
             )
         };
         for (i, f) in NAMES.iter().enumerate() {
             assert_eq!(only(i), Err(ContentErrors(e(f))));
         }
+    }
+
+    #[test]
+    fn tilesets_are_skipped_when_what_they_need_failed() {
+        let (images, terrain) = (ImageTable::load().ok(), ok_terrain().ok());
+        let (classes, characters) = (ok_classes().ok(), ok_characters().ok());
+        let all = [
+            images.is_some(),
+            terrain.is_some(),
+            classes.is_some(),
+            characters.is_some(),
+        ];
+        assert_eq!(all, [true; 4]);
+        for missing in 0..4 {
+            let loaded = load_tilesets(
+                images.as_ref().filter(|_| missing != 0),
+                terrain.as_ref().filter(|_| missing != 1),
+                classes.as_ref().filter(|_| missing != 2),
+                characters.as_ref().filter(|_| missing != 3),
+            );
+            assert_eq!(loaded, Ok(BTreeMap::new()), "{missing}");
+        }
+        let loaded = load_tilesets(
+            images.as_ref(),
+            terrain.as_ref(),
+            classes.as_ref(),
+            characters.as_ref(),
+        );
+        assert!(loaded.is_ok_and(|t| t.contains_key("test")));
     }
 
     #[test]

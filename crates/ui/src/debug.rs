@@ -6,7 +6,9 @@
 //! screen (ticket 0815) until the Options menu (0805) does. The sprite test
 //! draws the test card as sprite items (ticket 0231). The class-choice
 //! screen opens on a test unit, to promote or reclass it (ticket 0603),
-//! until the between-battle menus exist.
+//! until the between-battle menus exist. "Map skin" switches how battle
+//! maps look between the glyph skin and the test tileset (ticket 0433);
+//! the choice isn't saved.
 
 mod portrait_viewer;
 mod sprite_test;
@@ -19,6 +21,7 @@ use crate::color::{Palette, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
+use crate::map_view::{default_skin, skin_named};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::{
     ChangeKind, ClassChangeScreen, DialogueScreen, KeyBindingsScreen, centre_x, print_centred,
@@ -37,7 +40,8 @@ pub const SCREENS: [&str; 5] = [
     SpriteTestScreen::NAME,
 ];
 
-/// The debug tools, in menu order.
+/// The debug tools, in menu order, before "Map skin" ([`MAP_SKIN_TOOL`]),
+/// whose label names the skin in use.
 const TOOLS: [&str; 8] = [
     "Glyph sampler",
     "Portraits",
@@ -56,6 +60,8 @@ const SPRITE_TEST_TOOL: usize = 5;
 const PROMOTE_TOOL: usize = 6;
 /// Index of "Class change: reclass" in [`TOOLS`].
 const RECLASS_TOOL: usize = 7;
+/// Index of "Map skin" in the menu: after [`TOOLS`].
+const MAP_SKIN_TOOL: usize = TOOLS.len();
 /// The scene the "Play test scene" tools play.
 pub const TEST_SCENE: &str = "test";
 /// Row of the debug menu's title.
@@ -71,17 +77,39 @@ impl DebugMenuScreen {
     /// Name reported by [`Screen::name`].
     pub const NAME: &'static str = "debug_menu";
 
-    /// The menu with its first tool focused.
-    pub fn new() -> Self {
+    /// The menu with its first tool focused; "Map skin" names `ctx`'s.
+    pub fn new(ctx: &Ctx) -> Self {
         Self {
-            menu: Menu::new(TOOLS.iter().map(|&t| MenuItem::new(t)).collect()),
+            menu: tools_menu(ctx),
         }
     }
 }
 
-impl Default for DebugMenuScreen {
-    fn default() -> Self {
-        Self::new()
+/// The menu of tools, "Map skin" naming the skin `ctx` uses.
+fn tools_menu(ctx: &Ctx) -> Menu {
+    let skin = format!("Map skin: {}", skin_label(ctx.map_skin.name()));
+    let items = TOOLS.iter().map(|&t| MenuItem::new(t));
+    Menu::new(items.chain([MenuItem::new(skin)]).collect())
+}
+
+/// How the "Map skin" item names the skin called `name`.
+fn skin_label(name: &str) -> &str {
+    match name {
+        "sprite" => "test tileset",
+        other => other,
+    }
+}
+
+/// Swaps `ctx`'s map skin: the glyph skin for the test tileset's sprite
+/// skin (if the content has it), anything else for the glyph skin.
+fn switch_skin(ctx: &mut Ctx) {
+    let next = if ctx.map_skin.name() == "glyph" {
+        skin_named(&ctx.content, "sprite")
+    } else {
+        Some(default_skin())
+    };
+    if let Some(skin) = next {
+        ctx.map_skin = skin;
     }
 }
 
@@ -105,6 +133,10 @@ impl Screen for DebugMenuScreen {
                 }
                 Some(MenuEvent::Chosen(SPRITE_TEST_TOOL)) => {
                     return Transition::Push(Box::new(SpriteTestScreen));
+                }
+                Some(MenuEvent::Chosen(MAP_SKIN_TOOL)) => {
+                    switch_skin(ctx);
+                    self.menu = tools_menu(ctx).focused(MAP_SKIN_TOOL);
                 }
                 Some(MenuEvent::Chosen(tool @ (PROMOTE_TOOL | RECLASS_TOOL))) => {
                     let kind = if tool == PROMOTE_TOOL {
@@ -155,7 +187,7 @@ impl Screen for DebugMenuScreen {
         let km = ctx.help_keys();
         let help = help_line(&[
             (Some(cursor_keys_name(km)), "move"),
-            (Some(key_name(km, Action::Confirm)), "open"),
+            (Some(key_name(km, Action::Confirm)), "choose"),
             (Some(key_name(km, Action::Cancel)), "back"),
         ]);
         let bottom = i32::from(buf.height()) - 1;
@@ -424,7 +456,7 @@ mod tests {
     fn debug_menu_opens_each_tool() {
         use Action::{Cancel, Confirm, CursorDown, CursorUp};
         let mut ctx = crate::screen::tests::ctx();
-        let mut menu = DebugMenuScreen::default();
+        let mut menu = DebugMenuScreen::new(&ctx);
         assert_eq!(menu.name(), "debug_menu");
         let mut outcome = |m: &mut DebugMenuScreen, a: &[Action]| {
             format!(
@@ -468,7 +500,7 @@ mod tests {
         ctx.content.dialogue.scenes.clear();
         ctx.content.characters.characters.clear();
         for downs in [2, 3, PROMOTE_TOOL, RECLASS_TOOL] {
-            let mut menu = DebugMenuScreen::new();
+            let mut menu = DebugMenuScreen::new(&ctx);
             let mut a = vec![CursorDown; downs];
             a.push(Confirm);
             let frame = FrameInput::new(a, 0.0, vec![]);
@@ -499,8 +531,41 @@ mod tests {
             CONSOLE_H,
             Cell::new('x', p.get(UiColor::Text), p.get(UiColor::PanelBg)),
         );
-        DebugMenuScreen::new().draw(&ctx, &mut buf);
+        DebugMenuScreen::new(&ctx).draw(&ctx, &mut buf);
         assert_snapshot!(buf.to_snapshot(p));
+    }
+
+    #[test]
+    fn map_skin_switches_between_the_glyph_skin_and_the_test_tileset() {
+        use Action::{Confirm, CursorDown, CursorUp};
+        let mut ctx = crate::screen::tests::ctx();
+        let mut menu = DebugMenuScreen::new(&ctx);
+        let label = |m: &DebugMenuScreen| m.menu.items()[MAP_SKIN_TOOL].label.clone();
+        assert_eq!(label(&menu), "Map skin: glyph");
+        // Up from the first tool wraps round to it.
+        let frame = |a: &[Action]| FrameInput::new(a.to_vec(), 0.0, vec![]);
+        let stay = menu.update(&mut ctx, &frame(&[CursorUp, Confirm]));
+        assert!(matches!(stay, Transition::None));
+        assert_eq!(ctx.map_skin.name(), "sprite");
+        assert_eq!(label(&menu), "Map skin: test tileset");
+        // Still on it: again, and back to glyphs.
+        assert_eq!(menu.menu.focus(), MAP_SKIN_TOOL);
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        assert_eq!(ctx.map_skin.name(), "glyph");
+        assert_eq!(label(&menu), "Map skin: glyph");
+        // A menu opened later names the skin in use.
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        assert_eq!(label(&DebugMenuScreen::new(&ctx)), "Map skin: test tileset");
+        // Without the test tileset, the glyph skin stays.
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        ctx.content.tilesets.clear();
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        assert_eq!(ctx.map_skin.name(), "glyph");
+        assert_eq!(label(&menu), "Map skin: glyph");
+        let down = menu.update(&mut ctx, &frame(&[CursorDown]));
+        assert!(matches!(down, Transition::None));
+        assert_eq!(skin_label("glyph"), "glyph");
+        assert_eq!(skin_label("sprite"), "test tileset");
     }
 
     #[test]
