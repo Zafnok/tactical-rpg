@@ -157,8 +157,9 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
     );
     let skills = check_skill_references(skill::load(), classes.as_ref().ok());
     let arts = check_art_references(art::load(), items.as_ref().ok());
-    let portraits = match &palette {
-        Ok(p) => portrait::load_all(p),
+    let images = ImageTable::load();
+    let portraits = match &images {
+        Ok(i) => portrait::load_all(i),
         Err(_) => Ok(BTreeMap::new()),
     };
     let audio = audio::load();
@@ -178,7 +179,6 @@ pub fn load_embedded() -> Result<Content, ContentErrors> {
         audio.as_ref().ok(),
     );
     let credits = credits::load(audio.as_ref().ok());
-    let images = ImageTable::load();
     let tilesets = load_tilesets(
         images.as_ref().ok(),
         terrain.as_ref().ok(),
@@ -501,7 +501,7 @@ mod tests {
     }
 
     fn ok_portraits() -> Result<BTreeMap<String, Portrait>, Vec<ContentError>> {
-        portrait::load_all(&PaletteDef::load().unwrap_or_default())
+        portrait::load_all(&ImageTable::load().unwrap_or_default())
     }
 
     fn ok_dialogue() -> Result<DialogueTable, Vec<ContentError>> {

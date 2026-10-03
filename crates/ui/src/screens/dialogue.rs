@@ -365,7 +365,6 @@ fn draw_side(
         let mirror = side == Side::Right;
         draw_portrait(
             buf,
-            &ctx.palette,
             (x + 1, FRAME_Y + 1),
             art,
             portrait.expression,

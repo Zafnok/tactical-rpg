@@ -161,15 +161,7 @@ impl Screen for PortraitViewerScreen {
             let rect = Rect::new(x, TOP, FRAME.0, FRAME.1);
             buf.fill_rect(rect, Cell::new(' ', text, bg));
             buf.draw_box(rect, style, c(border), bg);
-            draw_portrait(
-                buf,
-                &ctx.palette,
-                (x + 1, TOP + 1),
-                portrait,
-                expr,
-                dimmed,
-                mirror,
-            );
+            draw_portrait(buf, (x + 1, TOP + 1), portrait, expr, dimmed, mirror);
             buf.print(x + 1, TOP + FRAME.1, label, dim, black);
         }
 

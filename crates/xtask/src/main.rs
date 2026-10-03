@@ -8,6 +8,7 @@ mod clean_targets;
 mod font_atlas;
 mod frame_png;
 mod playtest;
+mod portrait_import;
 mod private_assets;
 mod sfx;
 mod test_card;
@@ -32,6 +33,7 @@ test-card                          write the sprite test image, assets/images/te
 test-tileset                       write the sprite map skin's test tileset, assets/tilesets/test.*\n  \
 playtest <battle-id> [options]     a bot plays a battle many times and reports (playtest --help)\n  \
 private-assets [--library | --pin] fetch the bought art into assets-private/ (ADR-0040)\n  \
+portrait-import <busts> <id>       cut bought busts into portraits (portrait-import --help)\n  \
 web [--release] [--debug-tools] [--private-assets]\n                                     build and package the web (WASM) shell into dist/web/";
 
 fn main() -> ExitCode {
@@ -53,6 +55,7 @@ fn dispatch(mut args: impl Iterator<Item = String>) -> u8 {
         Some("test-tileset") => test_tileset(&args.collect::<Vec<_>>()),
         Some("playtest") => playtest(&args.collect::<Vec<_>>()),
         Some("private-assets") => private_assets(&args.collect::<Vec<_>>()),
+        Some("portrait-import") => portrait_import(&args.collect::<Vec<_>>()),
         Some(command) => {
             eprintln!("unknown command: {command}");
             eprintln!("{USAGE}");
@@ -299,6 +302,30 @@ fn private_assets(args: &[String]) -> u8 {
     }
 }
 
+fn portrait_import(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "--help") {
+        println!("{}", portrait_import::USAGE);
+        return 0;
+    }
+    let options = match portrait_import::parse_args(args) {
+        Ok(options) => options,
+        Err(e) => {
+            eprintln!("{e}\n\n{}", portrait_import::USAGE);
+            return 2;
+        }
+    };
+    match portrait_import::run(&repo_root(), &options) {
+        Ok(summary) => {
+            println!("{summary}");
+            0
+        }
+        Err(e) => {
+            eprintln!("portrait-import: {e}");
+            1
+        }
+    }
+}
+
 fn parse_pr_branch(args: &[String]) -> Result<Option<String>, String> {
     let mut iter = args.iter();
     match iter.next() {
@@ -402,6 +429,47 @@ mod tests {
             .collect();
         names.sort();
         names
+    }
+
+    /// The workflow and action files under `.github`.
+    fn workflow_files() -> Vec<PathBuf> {
+        let github = repo_root().join(".github");
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(github.join("workflows")).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "yml" || e == "yaml") {
+                files.push(path);
+            }
+        }
+        for entry in std::fs::read_dir(github.join("actions")).unwrap() {
+            let action = entry.unwrap().path().join("action.yml");
+            if action.is_file() {
+                files.push(action);
+            }
+        }
+        files.sort();
+        files
+    }
+
+    /// GitHub runs no job of a workflow file that is not valid YAML, and only
+    /// says so after the merge: an unquoted `run:` line ending in `::`
+    /// stopped every Pages deploy (ticket 0118).
+    #[test]
+    fn every_workflow_file_parses() {
+        let files = workflow_files();
+        assert!(files.len() >= 9, "{files:?}");
+        for file in files {
+            let text = std::fs::read_to_string(&file).unwrap();
+            if let Err(e) = serde_norway::from_str::<serde_norway::Value>(&text) {
+                panic!("{} is not valid YAML: {e}", file.display());
+            }
+        }
+
+        // The check sees the mistake.
+        let broken = "steps:
+  - run: cargo test private_assets::
+";
+        assert!(serde_norway::from_str::<serde_norway::Value>(broken).is_err());
     }
 
     /// Cargo links every file directly under a crate's `tests/` as its own
@@ -569,6 +637,20 @@ mod tests {
         assert_eq!(private_assets(&args(&["--bogus"])), 2);
         assert_eq!(
             dispatch(args(&["private-assets", "--pin", "--library"]).into_iter()),
+            2
+        );
+    }
+
+    #[test]
+    fn portrait_import_help_and_bad_args() {
+        // Only the argument check: a real run writes into `assets-private/`.
+        assert_eq!(portrait_import(&args(&["--help"])), 0);
+        assert_eq!(portrait_import(&[]), 2);
+        assert_eq!(portrait_import(&args(&["busts", "Not An Id"])), 2);
+        // A source that isn't there fails before anything is written.
+        assert_eq!(portrait_import(&args(&["no/such/folder", "k"])), 1);
+        assert_eq!(
+            dispatch(args(&["portrait-import", "busts", "k", "--shift-x", "9"]).into_iter()),
             2
         );
     }
