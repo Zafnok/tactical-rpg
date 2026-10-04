@@ -160,6 +160,10 @@ Preparations set up, and a restart after it goes back to Preparations as
 they were left: `BattleSetup::prepared_as` takes the loadouts, stock and
 pack from the battle's first state, which the suspend save holds.
 
+**Screen text (2026-10-03):** `main` now keeps screen text in
+`assets/lang/en/ui.ron` (ADR-0045), so all of this screen's text is there
+under `prep.` keys, with the capitals copy in the test pack.
+
 **Follow-up tickets:** 0044 (decide the Preparations shop's basics and
 tiers, after the playtest), 0443 (the Shop tab, blocked by 0409 and 0044),
 0822 (Game Over offers Rewind).

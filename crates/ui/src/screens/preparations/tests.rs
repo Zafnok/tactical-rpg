@@ -62,9 +62,12 @@ fn lord_weapons(s: &PreparationsScreen) -> Vec<Option<String>> {
 }
 
 /// The texts of the stock rows.
-fn stock_texts(s: &PreparationsScreen) -> Vec<String> {
-    s.stock_rows().into_iter().map(|r| r.text).collect()
+fn stock_texts(s: &PreparationsScreen, c: &Ctx) -> Vec<String> {
+    s.stock_rows(c).into_iter().map(|r| r.text).collect()
 }
+
+/// The stock row that empties the slot.
+const PUT_BACK: &str = "(put back in stock)";
 
 /// The Quick Battle's Preparations, through the title.
 fn harness() -> Harness {
@@ -84,13 +87,16 @@ fn opens_on_the_loadouts_tab_with_an_empty_pack() {
     assert_eq!(s.outcome(), None);
     assert_eq!(s.message(), None);
     assert!(!s.is_asking_leave());
-    assert_eq!(s.pack_header(), "Pack 0/6");
+    assert_eq!(s.pack_header(&c), "Pack 0/6");
     assert!(s.packed().is_empty());
     assert_eq!(
         s.spare(),
         [(ItemId::new("elixir"), 2), (ItemId::new("potion"), 6)]
     );
-    assert_eq!(Tab::ALL.map(Tab::label), ["Loadouts", "Pack", "Fight!"]);
+    assert_eq!(
+        Tab::ALL.map(|t| c.text(t.key())),
+        ["Loadouts", "Pack", "Fight!"]
+    );
 }
 
 #[test]
@@ -125,7 +131,7 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
     update(&mut s, &mut c, &[CursorDown, Confirm]);
     assert_eq!(s.focus(), Focus::Stock);
     assert_eq!(
-        stock_texts(&s),
+        stock_texts(&s, &c),
         [
             "Steel Spear     can't use spears",
             "Iron Axe        can't use axes",
@@ -133,12 +139,15 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
         ]
     );
     assert_eq!(
-        s.speed_line().as_deref(),
+        s.speed_line(&c).as_deref(),
         Some("AS 7 with no weapon"),
         "a row he can't take changes nothing"
     );
     update(&mut s, &mut c, &[CursorUp]);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 7 → 6 with Iron Sword"));
+    assert_eq!(
+        s.speed_line(&c).as_deref(),
+        Some("AS 7 → 6 with Iron Sword")
+    );
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_select"]);
     assert_eq!(s.focus(), Focus::Slots);
     assert_eq!(
@@ -146,11 +155,11 @@ fn a_stock_weapon_goes_into_an_empty_slot() {
         ["iron_sword", "steel_sword", "iron_sword"].map(|w| Some(w.to_owned()))
     );
     assert_eq!(s.setup().stock.weapons.len(), 2);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 6 with Iron Sword"));
+    assert_eq!(s.speed_line(&c).as_deref(), Some("AS 6 with Iron Sword"));
     // The slot now offers to put it back.
     update(&mut s, &mut c, &[Confirm]);
-    assert_eq!(stock_texts(&s)[0], PUT_BACK);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 6 → 7 with no weapon"));
+    assert_eq!(stock_texts(&s, &c)[0], PUT_BACK);
+    assert_eq!(s.speed_line(&c).as_deref(), Some("AS 6 → 7 with no weapon"));
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(lord_weapons(&s)[2], None);
     assert_eq!(s.setup().stock.weapons.len(), 3);
@@ -167,7 +176,7 @@ fn an_item_the_unit_cant_use_is_refused_with_the_reason() {
     assert_eq!(s.message(), Some("Test Lord can't use spears."));
     assert_eq!(s.focus(), Focus::Stock);
     assert_eq!(s.setup(), &before);
-    assert!(s.stock_rows()[0].unusable.is_some());
+    assert!(s.stock_rows(&c)[0].unusable.is_some());
     // The next key clears the message.
     update(&mut s, &mut c, &[CursorDown]);
     assert_eq!(s.message(), None);
@@ -175,7 +184,11 @@ fn an_item_the_unit_cant_use_is_refused_with_the_reason() {
 
 #[test]
 fn reasons_read_as_the_player_sees_them() {
-    assert_eq!(reason_text(Unusable::Rank(WeaponRank::D)), "needs rank D");
+    let c = ctx();
+    assert_eq!(
+        reason_text(&c, Unusable::Rank(WeaponRank::D)),
+        "needs rank D"
+    );
     let kinds = [
         (WeaponKind::Sword, "can't use swords"),
         (WeaponKind::Spear, "can't use spears"),
@@ -184,7 +197,7 @@ fn reasons_read_as_the_player_sees_them() {
         (WeaponKind::Gauntlet, "can't use gauntlets"),
     ];
     for (kind, text) in kinds {
-        assert_eq!(reason_text(Unusable::Kind(kind)), text);
+        assert_eq!(reason_text(&c, Unusable::Kind(kind)), text);
     }
     let weights = [
         (ArmourWeight::Light, "can't wear light armour"),
@@ -192,7 +205,7 @@ fn reasons_read_as_the_player_sees_them() {
         (ArmourWeight::Heavy, "can't wear heavy armour"),
     ];
     for (weight, text) in weights {
-        assert_eq!(reason_text(Unusable::Armour(weight)), text);
+        assert_eq!(reason_text(&c, Unusable::Armour(weight)), text);
     }
 }
 
@@ -207,7 +220,7 @@ fn armour_and_accessories_come_from_the_stock_with_their_counts() {
         &[Confirm, Confirm, CursorUp, CursorUp, Confirm],
     );
     assert_eq!(
-        stock_texts(&s),
+        stock_texts(&s, &c),
         [
             PUT_BACK,
             "Chain Mail      ×1  Def +3  Wt 2",
@@ -219,16 +232,19 @@ fn armour_and_accessories_come_from_the_stock_with_their_counts() {
     );
     // With no weapon slot highlighted, the speed is the equipped weapon's.
     update(&mut s, &mut c, &[CursorDown]);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 6 → 4 with Iron Sword"));
+    assert_eq!(
+        s.speed_line(&c).as_deref(),
+        Some("AS 6 → 4 with Iron Sword")
+    );
     update(&mut s, &mut c, &[Confirm]);
     let lord = &s.setup().units[0];
     assert_eq!(lord.loadout.armour, Some(ItemId::new("chain_mail")));
     assert_eq!(s.setup().stock.count(&ItemId::new("leather_vest")), 1);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 4 with Iron Sword"));
+    assert_eq!(s.speed_line(&c).as_deref(), Some("AS 4 with Iron Sword"));
     // The accessory slot: empty, so nothing to put back.
     update(&mut s, &mut c, &[CursorDown, Confirm]);
     assert_eq!(
-        stock_texts(&s),
+        stock_texts(&s, &c),
         [
             "Focus Charm     ×1  Dex +2",
             "Power Ring      ×1  Str +2",
@@ -236,7 +252,10 @@ fn armour_and_accessories_come_from_the_stock_with_their_counts() {
         ]
     );
     update(&mut s, &mut c, &[CursorUp]);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 4 → 6 with Iron Sword"));
+    assert_eq!(
+        s.speed_line(&c).as_deref(),
+        Some("AS 4 → 6 with Iron Sword")
+    );
     update(&mut s, &mut c, &[Confirm]);
     let lord = &s.setup().units[0];
     assert_eq!(lord.loadout.accessory, Some(ItemId::new("speed_ring")));
@@ -251,11 +270,11 @@ fn a_slot_with_nothing_in_stock_says_so() {
     update(&mut s, &mut c, &[Confirm, Confirm, CursorDown, CursorDown]);
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_cancel"]);
     assert_eq!(s.focus(), Focus::Slots);
-    assert_eq!(s.message(), Some(NOTHING_IN_STOCK));
+    assert_eq!(s.message(), Some("Nothing in stock for this slot."));
     // A filled slot can still be put back.
     update(&mut s, &mut c, &[CursorUp, Confirm]);
     assert_eq!(s.focus(), Focus::Stock);
-    assert_eq!(stock_texts(&s), [PUT_BACK]);
+    assert_eq!(stock_texts(&s, &c), [PUT_BACK]);
 }
 
 #[test]
@@ -297,7 +316,7 @@ fn the_pack_fills_from_the_stock_up_to_the_cap() {
     // The Elixirs are gone from the stock: the cursor is on the Potions.
     assert_eq!(s.spare(), [(potion(), 6)]);
     update(&mut s, &mut c, &[Confirm, Confirm, Confirm, Confirm]);
-    assert_eq!(s.pack_header(), "Pack 6/6");
+    assert_eq!(s.pack_header(&c), "Pack 6/6");
     assert_eq!(s.packed(), [(ItemId::new("elixir"), 2), (potion(), 4)]);
     assert_eq!(s.message(), None);
     let before = s.setup().clone();
@@ -449,10 +468,10 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
     update(&mut s, &mut c, &[Confirm, CursorUp, Confirm]);
     assert_eq!(s.who(), Some(PrepUnit::Benched(0)));
     assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Scout"));
-    assert_eq!(s.speed_line().as_deref(), Some("AS 2 with Steel Bow"));
+    assert_eq!(s.speed_line(&c).as_deref(), Some("AS 2 with Steel Bow"));
     // Her Steel Bow goes back to the stock.
     update(&mut s, &mut c, &[Confirm]);
-    assert_eq!(stock_texts(&s)[0], PUT_BACK);
+    assert_eq!(stock_texts(&s, &c)[0], PUT_BACK);
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(s.prep().bench[0].loadout.weapon(0), None);
     assert_eq!(s.prep().bench[0].loadout.equipped, None);
@@ -465,7 +484,7 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
     );
     assert_eq!(s.unit().map(|u| u.name.as_str()), Some("Test Archer"));
     assert_eq!(
-        stock_texts(&s).last().map(String::as_str),
+        stock_texts(&s, &c).last().map(String::as_str),
         Some("Steel Bow       Mt 9 Hit 70 Wt 5 Rng2 25/25")
     );
     update(&mut s, &mut c, &[CursorUp, Confirm]);
@@ -481,7 +500,7 @@ fn a_benched_units_gear_is_traded_through_the_stock() {
         &[Cancel, CursorDown, CursorDown, Confirm, Confirm],
     );
     assert_eq!(s.who(), Some(PrepUnit::Benched(0)));
-    assert!(stock_texts(&s)[0].ends_with("can't use spears"));
+    assert!(stock_texts(&s, &c)[0].ends_with("can't use spears"));
 }
 
 #[test]
@@ -565,7 +584,7 @@ fn a_long_list_scrolls_inside_its_box() {
 fn seals_are_not_offered() {
     let mut c = ctx();
     let mut s = screen(&c);
-    let before = (s.spare(), stock_texts(&s));
+    let before = (s.spare(), stock_texts(&s, &c));
     s.prep.setup.stock.add(ItemId::new("tier_2_seal"));
     assert_eq!(s.spare(), before.0);
     // The lord's weapon, armour and accessory lists.
@@ -575,7 +594,7 @@ fn seals_are_not_offered() {
         for _ in 0..down {
             update(&mut t, &mut c, &[CursorDown]);
         }
-        let rows = stock_texts(&t).join("\n");
+        let rows = stock_texts(&t, &c).join("\n");
         assert!(!rows.contains("Seal"), "{rows}");
     }
     assert_eq!(
@@ -594,7 +613,7 @@ fn another_units_item_is_swapped_directly() {
     update(&mut s, &mut c, &[Confirm, CursorDown, CursorDown, Confirm]);
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(
-        stock_texts(&s),
+        stock_texts(&s, &c),
         [
             PUT_BACK,
             "Steel Spear     can't use spears",
@@ -603,11 +622,11 @@ fn another_units_item_is_swapped_directly() {
             "Steel Bow       25/25  from Test Scout",
         ]
     );
-    let last = s.stock_rows().pop().map(|r| r.from);
+    let last = s.stock_rows(&c).pop().map(|r| r.from);
     let scout = PrepUnit::Benched(0);
     assert_eq!(last, Some(Source::Unit(scout, GearSlot::Weapon(0))));
     update(&mut s, &mut c, &[CursorUp]);
-    assert_eq!(s.speed_line().as_deref(), Some("AS 3 → 1 with Steel Bow"));
+    assert_eq!(s.speed_line(&c).as_deref(), Some("AS 3 → 1 with Steel Bow"));
     assert_eq!(sounds(&mut s, &mut c, &[Confirm]), ["menu_select"]);
     let bow = |u: &Unit| u.loadout.weapon(0).map(|w| w.def.0.clone());
     assert_eq!(bow(&s.setup().units[2]).as_deref(), Some("steel_bow"));
@@ -616,7 +635,7 @@ fn another_units_item_is_swapped_directly() {
     // Now the list offers the Iron Bow back, from the scout.
     update(&mut s, &mut c, &[Confirm]);
     assert_eq!(
-        stock_texts(&s).last().map(String::as_str),
+        stock_texts(&s, &c).last().map(String::as_str),
         Some("Iron Bow        20/20  from Test Scout")
     );
     // The lord's armour: the knight's Chain Mail for his Leather Vest,

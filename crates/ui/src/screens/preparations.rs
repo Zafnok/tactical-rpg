@@ -24,6 +24,8 @@
 //!   Left and Right switch sides, Confirm moves one item across. A full
 //!   pack takes no more and says so.
 
+use std::fmt::Display;
+
 use trpg_core::{
     ArmourWeight, BattleSetup, Equipped, GearSlot, ItemDef, ItemId, PrepError, PrepUnit,
     Preparations, StatValue, StockItem, Unit, Unusable, WeaponKind,
@@ -37,20 +39,18 @@ use crate::color::UiColor;
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
-use crate::widgets::help::{SEPARATOR, cursor_keys_name, help_line, key_name};
 
-/// The heading.
-pub const HEADING: &str = "Preparations";
-/// The question Cancel asks on the tabs, when leaving is allowed.
-pub const LEAVE_QUESTION: &str = "Leave preparations?";
+/// Text key of the question Cancel asks on the tabs, when leaving is
+/// allowed. Like all the screen's text it is in `assets/lang/en/ui.ron`
+/// under `prep.` (ADR-0045).
+pub const LEAVE_QUESTION: &str = "prep.leave_question";
 /// Shown for an empty slot.
 const EMPTY: &str = "-";
-/// The stock row that empties the slot.
-pub const PUT_BACK: &str = "(put back in stock)";
-/// Shown under the slots of a unit left out of the battle.
-pub const NOT_IN_BATTLE: &str = "Not in this battle";
-/// Said when a slot is chosen and the stock has nothing for it.
-pub const NOTHING_IN_STOCK: &str = "Nothing in stock for this slot.";
+/// Text key of the stock row that empties the slot.
+pub const PUT_BACK: &str = "prep.put_back";
+/// Text key of what is said when a slot is chosen and the stock has
+/// nothing for it.
+pub const NOTHING_IN_STOCK: &str = "prep.nothing_in_stock";
 
 /// Row of the heading and the tabs.
 const TABS_ROW: i32 = 1;
@@ -82,12 +82,12 @@ impl Tab {
     /// Every tab, left to right.
     pub const ALL: [Tab; 3] = [Tab::Loadouts, Tab::Pack, Tab::Fight];
 
-    /// The tab's name.
-    pub const fn label(self) -> &'static str {
+    /// The text key of the tab's name.
+    pub const fn key(self) -> &'static str {
         match self {
-            Tab::Loadouts => "Loadouts",
-            Tab::Pack => "Pack",
-            Tab::Fight => "Fight!",
+            Tab::Loadouts => "prep.tab.loadouts",
+            Tab::Pack => "prep.tab.pack",
+            Tab::Fight => "prep.tab.fight",
         }
     }
 }
@@ -141,29 +141,32 @@ pub struct StockRow {
 }
 
 /// Why a unit can't use an item, as the player reads it: `needs rank D`.
-pub fn reason_text(why: Unusable) -> String {
+pub fn reason_text(ctx: &Ctx, why: Unusable) -> String {
     match why {
-        Unusable::Kind(kind) => format!("can't use {}", kind_plural(kind)),
-        Unusable::Rank(rank) => format!("needs rank {rank:?}"),
-        Unusable::Armour(weight) => format!("can't wear {} armour", weight_name(weight)),
+        Unusable::Kind(kind) => ctx.text(kind_key(kind)).to_owned(),
+        Unusable::Rank(rank) => {
+            let rank = format!("{rank:?}");
+            ctx.text_with("prep.reason.rank", &[("rank", &rank)])
+        }
+        Unusable::Armour(weight) => ctx.text(weight_key(weight)).to_owned(),
     }
 }
 
-const fn kind_plural(kind: WeaponKind) -> &'static str {
+const fn kind_key(kind: WeaponKind) -> &'static str {
     match kind {
-        WeaponKind::Sword => "swords",
-        WeaponKind::Spear => "spears",
-        WeaponKind::Axe => "axes",
-        WeaponKind::Bow => "bows",
-        WeaponKind::Gauntlet => "gauntlets",
+        WeaponKind::Sword => "prep.reason.kind.sword",
+        WeaponKind::Spear => "prep.reason.kind.spear",
+        WeaponKind::Axe => "prep.reason.kind.axe",
+        WeaponKind::Bow => "prep.reason.kind.bow",
+        WeaponKind::Gauntlet => "prep.reason.kind.gauntlet",
     }
 }
 
-const fn weight_name(weight: ArmourWeight) -> &'static str {
+const fn weight_key(weight: ArmourWeight) -> &'static str {
     match weight {
-        ArmourWeight::Light => "light",
-        ArmourWeight::Medium => "medium",
-        ArmourWeight::Heavy => "heavy",
+        ArmourWeight::Light => "prep.reason.armour.light",
+        ArmourWeight::Medium => "prep.reason.armour.medium",
+        ArmourWeight::Heavy => "prep.reason.armour.heavy",
     }
 }
 
@@ -332,7 +335,7 @@ impl PreparationsScreen {
     /// The stock rows for the chosen unit's chosen slot: the row that
     /// empties the slot (if it holds something), then every stock item of
     /// the slot's kind, the ones the unit can't use with the reason.
-    pub fn stock_rows(&self) -> Vec<StockRow> {
+    pub fn stock_rows(&self, ctx: &Ctx) -> Vec<StockRow> {
         let (Some(unit), Some(slot)) = (self.unit(), self.gear_slot()) else {
             return Vec::new();
         };
@@ -341,13 +344,13 @@ impl PreparationsScreen {
         if self.held(unit, slot).is_some() {
             rows.push(StockRow {
                 from: Source::PutBack,
-                text: PUT_BACK.to_owned(),
+                text: ctx.text(PUT_BACK).to_owned(),
                 unusable: None,
             });
         }
         let row = |item: StockItem, id: &ItemId, name: String, detail: String| {
             let unusable = self.who().and_then(|who| self.prep.unusable(who, id));
-            let detail = unusable.map_or(detail, reason_text);
+            let detail = unusable.map_or(detail, |why| reason_text(ctx, why));
             StockRow {
                 from: Source::Stock(item),
                 text: format!("{name:<15} {detail}"),
@@ -398,14 +401,14 @@ impl PreparationsScreen {
                 }
             }
         }
-        rows.extend(self.unit_rows(slot));
+        rows.extend(self.unit_rows(ctx, slot));
         rows
     }
 
     /// The rows for what the other units hold in slots of `slot`'s kind
     /// that the chosen unit can use, in unit then slot order:
     /// `Steel Bow  25/25  from Test Scout`.
-    fn unit_rows(&self, slot: GearSlot) -> Vec<StockRow> {
+    fn unit_rows(&self, ctx: &Ctx, slot: GearSlot) -> Vec<StockRow> {
         let Some(who) = self.who() else {
             return Vec::new();
         };
@@ -441,10 +444,11 @@ impl PreparationsScreen {
                 if mine == Some(id) {
                     continue;
                 }
+                let from = ctx.text_with("prep.from", &[("unit", &unit.name)]);
                 let detail = if wear.is_empty() {
-                    format!("from {}", unit.name)
+                    from
                 } else {
-                    format!("{wear}  from {}", unit.name)
+                    format!("{wear}  {from}")
                 };
                 rows.push(StockRow {
                     from: Source::Unit(holder, theirs),
@@ -480,9 +484,10 @@ impl PreparationsScreen {
     }
 
     /// `Pack 3/6`.
-    pub fn pack_header(&self) -> String {
+    pub fn pack_header(&self, ctx: &Ctx) -> String {
         let pack = &self.prep.setup.pack;
-        format!("Pack {}/{}", pack.items.len(), pack.cap)
+        let args: [(&str, &dyn Display); 2] = [("packed", &pack.items.len()), ("cap", &pack.cap)];
+        ctx.text_with("prep.pack_header", &args)
     }
 
     /// The army after Confirm on stock row `row`, if that changes it.
@@ -509,7 +514,7 @@ impl PreparationsScreen {
 
     /// The name of the weapon `unit` attacks with from `slot` (`None`: its
     /// equipped weapon or spell); `no weapon` without one.
-    fn in_hand(setup: &BattleSetup, unit: &Unit, slot: Option<usize>) -> String {
+    fn in_hand(ctx: &Ctx, setup: &BattleSetup, unit: &Unit, slot: Option<usize>) -> String {
         let equipped = slot
             .map(Equipped::Weapon)
             .or_else(|| unit.loadout.equipped.clone());
@@ -522,65 +527,51 @@ impl PreparationsScreen {
             Some(Equipped::Spell(spell)) => setup.spells.get(&spell).map(|s| s.name.clone()),
             None => None,
         };
-        name.unwrap_or_else(|| "no weapon".to_owned())
+        name.unwrap_or_else(|| ctx.text("prep.no_weapon").to_owned())
     }
 
     /// The chosen unit's attack speed line: `AS 6 with Iron Sword`, and
     /// while a stock row is highlighted the change taking it would make,
     /// `AS 6 → 4 with Steel Sword`. The speed is with the weapon of the
     /// highlighted weapon slot in hand, else with the equipped weapon.
-    pub fn speed_line(&self) -> Option<String> {
+    pub fn speed_line(&self, ctx: &Ctx) -> Option<String> {
         let (who, unit) = (self.who()?, self.unit()?);
         let slot = self.speed_slot();
         let now: StatValue = self.prep.attack_speed(who, slot)?;
-        let highlighted = self.stock_rows().into_iter().nth(self.stock);
+        let highlighted = self.stock_rows(ctx).into_iter().nth(self.stock);
         let after = (self.focus == Focus::Stock)
             .then_some(highlighted)
             .flatten()
             .and_then(|row| self.after(&row));
-        Some(match after {
-            Some(after) => {
-                let then = after.attack_speed(who, slot).unwrap_or(now);
-                let with = after
-                    .unit(who)
-                    .map(|u| Self::in_hand(&after.setup, u, slot))
-                    .unwrap_or_default();
-                format!("AS {now} → {then} with {with}")
-            }
-            None => format!(
-                "AS {now} with {}",
-                Self::in_hand(&self.prep.setup, unit, slot)
-            ),
-        })
+        let Some(after) = after else {
+            let with = Self::in_hand(ctx, &self.prep.setup, unit, slot);
+            let args: [(&str, &dyn Display); 2] = [("now", &now), ("weapon", &with)];
+            return Some(ctx.text_with("prep.speed", &args));
+        };
+        let then = after.attack_speed(who, slot).unwrap_or(now);
+        let with = after
+            .unit(who)
+            .map(|u| Self::in_hand(ctx, &after.setup, u, slot))
+            .unwrap_or_default();
+        let args: [(&str, &dyn Display); 3] = [("now", &now), ("then", &then), ("weapon", &with)];
+        Some(ctx.text_with("prep.speed_change", &args))
     }
 
     /// The bottom help line.
     pub fn help(&self, ctx: &Ctx) -> String {
-        let km = ctx.help_keys();
-        let keys = Some(cursor_keys_name(km));
-        let confirm = |label| (Some(key_name(km, Action::Confirm)), label);
-        let cancel = |label| (Some(key_name(km, Action::Cancel)), label);
-        if self.leaving {
-            return help_line(&[confirm("yes"), cancel("no")]).replace(SEPARATOR, " / ");
-        }
-        match self.focus {
-            Focus::Tabs => {
-                let open = match self.tab {
-                    Tab::Fight => "start the battle",
-                    _ => "open",
-                };
-                let leave = (
-                    self.can_leave.then(|| key_name(km, Action::Cancel)),
-                    "leave",
-                );
-                help_line(&[(keys, "choose"), confirm(open), leave])
-            }
-            Focus::Units => help_line(&[(keys, "choose"), confirm("change gear"), cancel("back")]),
-            Focus::Slots => help_line(&[(keys, "choose"), confirm("stock"), cancel("back")]),
-            Focus::Stock => help_line(&[(keys, "choose"), confirm("take"), cancel("back")]),
-            Focus::Spare => help_line(&[(keys, "choose"), confirm("pack it"), cancel("back")]),
-            Focus::Pack => help_line(&[(keys, "choose"), confirm("put back"), cancel("back")]),
-        }
+        let key = match (self.leaving, self.focus, self.tab, self.can_leave) {
+            (true, ..) => "prep.help.leaving",
+            (_, Focus::Tabs, Tab::Fight, true) => "prep.help.fight_leave",
+            (_, Focus::Tabs, Tab::Fight, false) => "prep.help.fight",
+            (_, Focus::Tabs, _, true) => "prep.help.tabs_leave",
+            (_, Focus::Tabs, _, false) => "prep.help.tabs",
+            (_, Focus::Units, ..) => "prep.help.units",
+            (_, Focus::Slots, ..) => "prep.help.slots",
+            (_, Focus::Stock, ..) => "prep.help.stock",
+            (_, Focus::Spare, ..) => "prep.help.spare",
+            (_, Focus::Pack, ..) => "prep.help.pack",
+        };
+        ctx.text_with(key, &[])
     }
 
     /// Opens the shown tab (Confirm or Down on the tabs). Returns whether
@@ -625,7 +616,7 @@ impl PreparationsScreen {
     /// Confirm on the highlighted stock row: takes it (or empties the slot)
     /// and goes back to the slots; an item the unit can't use is refused.
     fn take(&mut self, ctx: &mut Ctx) {
-        let Some(row) = self.stock_rows().into_iter().nth(self.stock) else {
+        let Some(row) = self.stock_rows(ctx).into_iter().nth(self.stock) else {
             return;
         };
         if let Some(after) = self.after(&row) {
@@ -637,7 +628,9 @@ impl PreparationsScreen {
         }
         ctx.audio.menu(MenuSound::Denied);
         if let (Some(why), Some(unit)) = (row.unusable, self.unit()) {
-            self.message = Some(format!("{} {}.", unit.name, reason_text(why)));
+            let reason = reason_text(ctx, why);
+            let args: [(&str, &dyn Display); 2] = [("unit", &unit.name), ("reason", &reason)];
+            self.message = Some(ctx.text_with("prep.cant", &args));
         }
     }
 
@@ -652,11 +645,9 @@ impl PreparationsScreen {
                 ctx.audio.menu(MenuSound::Denied);
                 if e == PrepError::PackFull {
                     let pack = &self.prep.setup.pack;
-                    self.message = Some(format!(
-                        "The pack is full ({}/{}).",
-                        pack.items.len(),
-                        pack.cap
-                    ));
+                    let args: [(&str, &dyn Display); 2] =
+                        [("packed", &pack.items.len()), ("cap", &pack.cap)];
+                    self.message = Some(ctx.text_with("prep.pack_full", &args));
                 }
             }
         }
@@ -748,8 +739,8 @@ impl PreparationsScreen {
                 self.slot = Self::moved(self.slot, self.slots().len(), down, ctx);
             }
             (Focus::Slots, Confirm) => {
-                if self.stock_rows().is_empty() {
-                    self.message = Some(NOTHING_IN_STOCK.to_owned());
+                if self.stock_rows(ctx).is_empty() {
+                    self.message = Some(ctx.text(NOTHING_IN_STOCK).to_owned());
                     ctx.audio.menu(MenuSound::Denied);
                 } else {
                     self.focus = Focus::Stock;
@@ -760,7 +751,8 @@ impl PreparationsScreen {
             (Focus::Slots, Cancel) => self.back(Focus::Units, ctx),
 
             (Focus::Stock, CursorUp | CursorDown) => {
-                self.stock = Self::moved(self.stock, self.stock_rows().len(), down, ctx);
+                let rows = self.stock_rows(ctx).len();
+                self.stock = Self::moved(self.stock, rows, down, ctx);
             }
             (Focus::Stock, Confirm) => self.take(ctx),
             (Focus::Stock, Cancel) => self.back(Focus::Slots, ctx),
@@ -784,10 +776,11 @@ impl PreparationsScreen {
     fn draw_tabs(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let c = |u| ctx.palette.get(u);
         let black = c(UiColor::Black);
-        buf.print(2, TABS_ROW, HEADING, c(UiColor::TextHighlight), black);
+        let heading = ctx.text("prep.heading");
+        buf.print(2, TABS_ROW, heading, c(UiColor::TextHighlight), black);
         let mut x = 30;
         for tab in Tab::ALL {
-            let label = format!(" {} ", tab.label());
+            let label = format!(" {} ", ctx.text(tab.key()));
             let (fg, bg) = match (tab == self.tab, self.focus == Focus::Tabs) {
                 (true, true) => (c(UiColor::PanelBg), c(UiColor::PanelBorderFocus)),
                 (true, false) => (c(UiColor::TextHighlight), black),
@@ -855,7 +848,7 @@ impl PreparationsScreen {
             .map(|(who, u)| (u.name.clone(), matches!(who, PrepUnit::Deployed(_))))
             .collect();
         let on_units = self.focus == Focus::Units;
-        Self::draw_box(ctx, buf, UNITS_BOX, "Units", on_units);
+        Self::draw_box(ctx, buf, UNITS_BOX, ctx.text("prep.units"), on_units);
         Self::draw_list(ctx, buf, UNITS_BOX, &units, self.unit, (on_units, in_tab));
 
         let Some(unit) = self.unit() else {
@@ -870,11 +863,11 @@ impl PreparationsScreen {
         let rows: Vec<(String, bool)> = slots
             .iter()
             .map(|&slot| {
-                let label = match slot {
-                    GearSlot::Weapon(_) => "Weapon",
-                    GearSlot::Armour => "Armour",
-                    GearSlot::Accessory => "Accessory",
-                };
+                let label = ctx.text(match slot {
+                    GearSlot::Weapon(_) => "prep.slot.weapon",
+                    GearSlot::Armour => "prep.slot.armour",
+                    GearSlot::Accessory => "prep.slot.accessory",
+                });
                 let (name, wear) = self
                     .held(unit, slot)
                     .unwrap_or_else(|| (EMPTY.to_owned(), String::new()));
@@ -883,24 +876,25 @@ impl PreparationsScreen {
             .collect();
         let marked = self.focus == Focus::Stock;
         Self::draw_list(ctx, buf, SLOTS_BOX, &rows, self.slot, (on_slots, marked));
-        if let Some(line) = self.speed_line() {
+        if let Some(line) = self.speed_line(ctx) {
             let y = SLOTS_BOX.y + 2 + i32::try_from(rows.len()).unwrap_or(0);
             buf.print(SLOTS_BOX.x + 2, y, &line, c(UiColor::Text), bg);
             if matches!(self.who(), Some(PrepUnit::Benched(_))) {
                 let dim = c(UiColor::TextDim);
-                buf.print(SLOTS_BOX.x + 2, y + 2, NOT_IN_BATTLE, dim, bg);
+                let note = ctx.text("prep.not_in_battle");
+                buf.print(SLOTS_BOX.x + 2, y + 2, note, dim, bg);
             }
         }
 
-        let kind = match self.gear_slot() {
-            Some(GearSlot::Weapon(_)) => "weapons",
-            Some(GearSlot::Armour) => "armour",
-            Some(GearSlot::Accessory) | None => "accessories",
-        };
+        let title = ctx.text(match self.gear_slot() {
+            Some(GearSlot::Weapon(_)) => "prep.stock.weapons",
+            Some(GearSlot::Armour) => "prep.stock.armour",
+            Some(GearSlot::Accessory) | None => "prep.stock.accessories",
+        });
         let on_stock = self.focus == Focus::Stock;
-        Self::draw_box(ctx, buf, STOCK_BOX, &format!("Stock: {kind}"), on_stock);
+        Self::draw_box(ctx, buf, STOCK_BOX, title, on_stock);
         let rows: Vec<(String, bool)> = self
-            .stock_rows()
+            .stock_rows(ctx)
             .into_iter()
             .map(|r| (r.text, r.unusable.is_none()))
             .collect();
@@ -918,7 +912,7 @@ impl PreparationsScreen {
     /// The Pack tab: the stock's consumables and the pack.
     fn draw_pack(&self, ctx: &Ctx, buf: &mut GlyphBuffer) {
         let on_spare = self.focus == Focus::Spare;
-        Self::draw_box(ctx, buf, SPARE_BOX, "Stock", on_spare);
+        Self::draw_box(ctx, buf, SPARE_BOX, ctx.text("prep.stock"), on_spare);
         let rows: Vec<(String, bool)> = self
             .spare()
             .iter()
@@ -926,7 +920,7 @@ impl PreparationsScreen {
             .collect();
         Self::draw_list(ctx, buf, SPARE_BOX, &rows, self.spare, (on_spare, false));
         let on_pack = self.focus == Focus::Pack;
-        Self::draw_box(ctx, buf, PACK_BOX, &self.pack_header(), on_pack);
+        Self::draw_box(ctx, buf, PACK_BOX, &self.pack_header(ctx), on_pack);
         let rows: Vec<(String, bool)> = self
             .packed()
             .iter()
@@ -960,12 +954,14 @@ impl Screen for PreparationsScreen {
             Tab::Pack => self.draw_pack(ctx, buf),
             Tab::Fight => {
                 let units = self.prep.setup.player_units().count();
-                let ready = format!("Units {units}{SEPARATOR}{}", self.pack_header());
+                let pack = self.pack_header(ctx);
+                let args: [(&str, &dyn Display); 2] = [("units", &units), ("pack", &pack)];
+                let ready = ctx.text_with("prep.ready", &args);
                 print_centred(buf, 14, &ready, c(UiColor::Text), black);
             }
         }
         let message = if self.leaving {
-            Some(LEAVE_QUESTION)
+            Some(ctx.text(LEAVE_QUESTION))
         } else {
             self.message()
         };
