@@ -411,7 +411,7 @@ fn a_pin_shows_on_the_info_screen_with_when_it_ends() {
         let scene = BattleScreen::new(state.clone()).scene(c);
         let brigand = scene.unit_at(p(8, 2)).unwrap();
         assert_eq!((brigand.id, brigand.label.as_str()), (UnitId(4), "Br"));
-        brigand.has_effect
+        brigand.has_effect()
     };
     assert!(under_effect(&pinned, &c));
     assert!(!under_effect(&plain, &c));

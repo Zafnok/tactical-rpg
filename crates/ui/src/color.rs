@@ -48,6 +48,18 @@ impl Rgb {
         Rgb::new(s(self.r), s(self.g), s(self.b))
     }
 
+    /// This colour as an acted sprite unit shows it
+    /// (`docs/design/look-and-feel.md`): [`DIM_GREY`] of the way to its own
+    /// grey, then [`DIM_DARK`] as bright. A change of brightness, not of
+    /// hue.
+    #[must_use]
+    pub fn dimmed(self) -> Rgb {
+        let [r, g, b] = [self.r, self.g, self.b].map(f32::from);
+        let grey = 0.299 * r + 0.587 * g + 0.114 * b;
+        let dim = |c: f32| to_channel((c + (grey - c) * DIM_GREY) * DIM_DARK);
+        Rgb::new(dim(r), dim(g), dim(b))
+    }
+
     /// Lowercase `#rrggbb`.
     pub fn to_hex(self) -> String {
         trpg_content::palette::format_hex([self.r, self.g, self.b])
@@ -59,6 +71,15 @@ impl From<[u8; 3]> for Rgb {
         Self::new(r, g, b)
     }
 }
+
+/// How far a [dimmed](Rgb::dimmed) colour goes to its own grey (`0` = not
+/// at all, `1` = grey). *Tunable.*
+pub const DIM_GREY: f32 = 0.75;
+
+/// How bright a [dimmed](Rgb::dimmed) colour is left (`1` = as bright as it
+/// was). *Tunable*: the first renders used 0.6; Nick, seeing it in the game
+/// on 2026-10-03, chose to lighten it a bit (ticket 0436).
+pub const DIM_DARK: f32 = 0.75;
 
 /// Rounds and saturates a channel value to `0..=255`.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // clamped first
@@ -213,6 +234,20 @@ pub(crate) mod tests {
         for (i, c) in UiColor::ALL.iter().enumerate() {
             assert_eq!(*c as usize, i);
         }
+    }
+
+    #[test]
+    fn a_dimmed_colour_is_greyer_and_darker() {
+        // A grey stays grey, three quarters as bright.
+        assert_eq!(Rgb::new(200, 200, 200).dimmed(), Rgb::new(150, 150, 150));
+        assert_eq!(Rgb::new(0, 0, 0).dimmed(), Rgb::new(0, 0, 0));
+        assert_eq!(Rgb::new(255, 255, 255).dimmed(), Rgb::new(191, 191, 191));
+        // Red: its grey is 76.245; 255 goes three quarters of the way
+        // there (120.93), the others up to 57.18; then 0.75 of each.
+        assert_eq!(Rgb::new(255, 0, 0).dimmed(), Rgb::new(91, 43, 43));
+        // Green is the brightest to the eye, blue the darkest.
+        assert_eq!(Rgb::new(0, 255, 0).dimmed(), Rgb::new(84, 132, 84));
+        assert_eq!(Rgb::new(0, 0, 255).dimmed(), Rgb::new(16, 16, 64));
     }
 
     #[test]

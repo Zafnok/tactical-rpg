@@ -56,6 +56,7 @@ decision, write a new ADR that supersedes it and set the old one's status to
 | [0046](0046-voice-clips-by-line-id.md) | Voice clips are files keyed by dialogue line id, generated now, replaceable by recordings | Proposed (0238); amends ADR-0026 and ADR-0032 rule 2 |
 | [0047](0047-pr-mutation-gate-in-shards-with-nextest.md) | The PR mutation gate runs in shards, with nextest as its test runner | Accepted |
 | [0048](0048-backdrop-a-second-glyph-picture-panned-and-zoomed.md) | A backdrop: a second glyph picture behind the console, panned by the pixel and zoomed in whole steps | Accepted |
+| [0049](0049-unit-sprites-from-their-own-files-and-the-game-picks-its-map-skin.md) | Unit sprites come from their own image files, a tileset may leave terrain to the glyph skin, and the game picks its map skin from what it has | Accepted; extends ADR-0038 |
 
 Number 0044 is taken by a PR open on 2026-10-03.
 

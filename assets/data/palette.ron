@@ -31,6 +31,11 @@
 
     // Background of a unit under a timed effect (a buff or a debuff).
     "effect": "#4a3468",
+    // The arrows on a sprite unit under a timed effect: up for a bonus,
+    // down for a penalty (tunable). Baked into images/effect_marks.png:
+    // rerun `cargo xtask effect-marks` after changing them.
+    "effect_bonus": "#70d8e8",
+    "effect_penalty": "#c878e8",
 
     // Cursor brackets and the movement path line
     "cursor": "#f0dca0",

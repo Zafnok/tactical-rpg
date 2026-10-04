@@ -110,13 +110,13 @@ fn rows(count: usize) -> u32 {
 }
 
 /// An RGBA8 image being drawn.
-struct Canvas {
-    width: u32,
-    rgba: Vec<u8>,
+pub(crate) struct Canvas {
+    pub(crate) width: u32,
+    pub(crate) rgba: Vec<u8>,
 }
 
 impl Canvas {
-    fn new(width: u32, height: u32) -> Self {
+    pub(crate) fn new(width: u32, height: u32) -> Self {
         let len = usize::try_from(width * height * 4).unwrap_or(0);
         Self {
             width,
@@ -124,14 +124,14 @@ impl Canvas {
         }
     }
 
-    fn set(&mut self, x: u32, y: u32, color: [u8; 4]) {
+    pub(crate) fn set(&mut self, x: u32, y: u32, color: [u8; 4]) {
         let at = usize::try_from((y * self.width + x) * 4).unwrap_or(usize::MAX);
         if let Some(px) = self.rgba.get_mut(at..at + 4) {
             px.copy_from_slice(&color);
         }
     }
 
-    fn get(&self, x: u32, y: u32) -> [u8; 4] {
+    pub(crate) fn get(&self, x: u32, y: u32) -> [u8; 4] {
         let at = usize::try_from((y * self.width + x) * 4).unwrap_or(usize::MAX);
         self.rgba
             .get(at..at + 4)
@@ -146,6 +146,20 @@ impl Canvas {
         let (cw, ch) = (src.font.cell_w, src.font.cell_h);
         let left = x + (TILE - 2 * cw) / 2;
         let top = y + (TILE - ch) / 2;
+        self.stamp_at(src, glyphs, color, (left, top));
+    }
+
+    /// Stamps `glyphs` in `color` side by side, the first one's top-left
+    /// pixel at `(left, top)`, as [`stamp`](Self::stamp) does. A pixel
+    /// that is clear stays clear.
+    pub(crate) fn stamp_at(
+        &mut self,
+        src: &Sources,
+        glyphs: [char; 2],
+        color: [u8; 3],
+        (left, top): (u32, u32),
+    ) {
+        let cw = src.font.cell_w;
         for (i, glyph) in (0..).zip(glyphs) {
             let Some(r) = src.font.glyph_rect(glyph) else {
                 continue;

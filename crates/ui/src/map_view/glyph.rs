@@ -19,6 +19,12 @@ use crate::screen::Ctx;
 /// Cells per map tile, across (a tile is two glyphs wide, ADR-0018).
 const TILE_W_CELLS: i32 = 2;
 
+/// A map tile in console pixels, across × down: for a skin that paints its
+/// units over this skin's terrain (ADR-0049).
+pub(super) fn tile_px() -> (i32, i32) {
+    (TILE_W_CELLS * i32::from(CELL_W_PX), i32::from(CELL_H_PX))
+}
+
 /// How far range overlays tint a tile's background toward their colour
 /// (`look-and-feel.md`: about 75%). *Tunable.*
 pub const OVERLAY_BLEND: f32 = 0.75;
@@ -53,11 +59,7 @@ impl MapSkin for GlyphSkin {
         for overlay in path::path_overlays(&scene.path, &layout.grid(), color) {
             buf.add_overlay(overlay);
         }
-        if let Some(c) = &scene.cursor
-            && let Some((x, y)) = tile_to_cell(c.pos, &layout)
-        {
-            cursor::draw_cursor(buf, &ctx.palette, c, &layout, x, y);
-        }
+        draw_cursor(ctx, buf, scene, &layout);
     }
 
     fn tile_px(&self, scene: &MapScene, area: Rect, tile: Pos) -> Option<PxRect> {
@@ -116,6 +118,15 @@ pub fn tile_to_cell(tile: Pos, layout: &Layout) -> Option<(i32, i32)> {
     inside.then(|| (layout.cell.0 + TILE_W_CELLS * dx, layout.cell.1 + dy))
 }
 
+/// Draws the scene's cursor, if it is on a tile of the layout.
+pub(super) fn draw_cursor(ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene, layout: &Layout) {
+    if let Some(c) = &scene.cursor
+        && let Some((x, y)) = tile_to_cell(c.pos, layout)
+    {
+        cursor::draw_cursor(buf, &ctx.palette, c, layout, x, y);
+    }
+}
+
 /// The palette colour of a range.
 pub(super) const fn range_color(kind: RangeKind) -> UiColor {
     match kind {
@@ -144,7 +155,7 @@ fn draw_terrain(ctx: &Ctx, buf: &mut GlyphBuffer, id: TerrainId, (x, y): (i32, i
 /// towards its glyph colour, fading out; then its ranges tint it, the first
 /// laid on undermost; and a tile a spell would change is drawn as the
 /// terrain it would become instead (0410).
-fn draw_tiles(ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene, layout: &Layout) {
+pub(super) fn draw_tiles(ctx: &Ctx, buf: &mut GlyphBuffer, scene: &MapScene, layout: &Layout) {
     for dy in 0..layout.tiles.1 {
         for dx in 0..layout.tiles.0 {
             let Some(tile) = scene.tile_at(dx, dy) else {
@@ -185,7 +196,7 @@ pub(crate) mod tests {
     use trpg_core::{ClassId, Faction, UnitId};
 
     use super::*;
-    use crate::map_view::scene::{CursorStyle, CursorView, TileView, UnitView};
+    use crate::map_view::scene::{CursorStyle, CursorView, TileView, UnitEffects, UnitView};
     use crate::screen::tests::ctx;
     use crate::screens::battle::layout::MAP_VIEW;
 
@@ -238,6 +249,7 @@ pub(crate) mod tests {
         assert_eq!(big.grid().tile_px(p(0, 3)), (16, 80));
         assert_eq!(big.grid().bounds(), px_rect(big.cells()));
         assert_eq!(big.grid().tile, (16, 16));
+        assert_eq!(tile_px(), (16, 16));
         // The scene is smaller: only its tiles.
         let small = Layout::new(&MapScene::new(p(1, 1), (2, 1)), area);
         assert_eq!(small.cells(), Rect::new(4, 3, 4, 1));
@@ -305,7 +317,7 @@ pub(crate) mod tests {
             character: None,
             acted: false,
             hp: (30, 30),
-            has_effect: false,
+            effects: UnitEffects::default(),
             fade: 0.0,
             highlight: false,
         }
@@ -475,13 +487,16 @@ pub(crate) mod tests {
             pos in any_pos(),
             label in "[A-Za-z]{0,4}",
             hp in -5..40i32,
-            flags in 0u8..8,
+            flags in 0u8..16,
             fade in -0.5f32..1.5,
         ) -> UnitView {
             UnitView {
                 label,
                 acted: flags & 1 != 0,
-                has_effect: flags & 2 != 0,
+                effects: UnitEffects {
+                    bonus: flags & 2 != 0,
+                    penalty: flags & 8 != 0,
+                },
                 highlight: flags & 4 != 0,
                 hp: (hp, 30),
                 fade,
@@ -512,8 +527,9 @@ pub(crate) mod tests {
             units in prop::collection::vec(any_unit(), 0..8),
             cursor in prop::option::of(any_cursor()),
             path in prop::collection::vec(any_pos(), 0..6),
+            clock_ms in 0u64..5000,
         ) -> MapScene {
-            MapScene { origin, size, tiles, units, cursor, path }
+            MapScene { origin, size, tiles, units, cursor, path, clock_ms }
         }
     }
 

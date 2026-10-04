@@ -1,0 +1,49 @@
+---
+source: crates/ui/src/map_view/sprite.rs
+expression: buf.to_snapshot(&c.palette)
+---
+xxxxxxxxxx
+xx  ♣♣..xx
+xx  ..  xx
+xxxxxxxxxx
+--- colours ---
+aaaaaaaaaa
+aabbccddaa
+aaddddeeaa
+aaaaaaaaaa
+--- legend ---
+a = fg:#010203 bg:#040506
+b = fg:grass bg:#273a52
+c = fg:forest bg:forest_bg
+d = fg:grass bg:grass_bg
+e = fg:grass bg:grass
+--- overlays ---
+over  sprite 16,9 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player clip=16,16 16x13
+over  sprite 16,11 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player clip=16,16 16x15
+over  sprite 15,10 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player clip=16,16 15x14
+over  sprite 17,10 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player clip=17,16 16x14
+over  sprite 16,10 16x20  tilesets/test_units/exile.png 16,0 16x20 clip=16,16 16x14
+over  sprite 16,25 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=#74605b clip=16,32 16x13
+over  sprite 16,27 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=#74605b clip=16,32 16x15
+over  sprite 15,26 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=#74605b clip=16,32 15x14
+over  sprite 17,26 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=#74605b clip=17,32 16x14
+over  sprite 16,26 16x20  tilesets/test_units/brigand.png 16,0 16x20 dimmed clip=16,32 16x14
+over  sprite 48,25 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 48,27 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 47,26 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 49,26 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy clip=49,26 15x20
+over  sprite 48,26 16x20  tilesets/test_units/brigand.png 16,0 16x20
+over  17,30 2x2  hp_low
+over  19,30 12x2  black
+over  sprite 26,17 7x7  images/effect_marks.png 0,0 7x7
+over  17,46 14x2  hp_high
+over  sprite 26,33 7x7  images/effect_marks.png 7,0 7x7 dimmed
+over  49,46 14x2  hp_high
+over  31,32 3x1  cursor
+over  31,32 1x3  cursor
+over  45,32 3x1  cursor
+over  47,32 1x3  cursor
+over  31,45 3x1  cursor
+over  31,43 1x3  cursor
+over  45,45 3x1  cursor
+over  47,43 1x3  cursor

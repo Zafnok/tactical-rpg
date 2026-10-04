@@ -65,13 +65,13 @@ fn play(skin: &str) -> (Vec<After>, Vec<AudioRequest>) {
     (after, h.audio_requests())
 }
 
-/// One long scripted Quick Battle, played under the glyph skin and under
-/// the sprite skin, ends the same way: the same battle, the cursor on the
-/// same tile and the same screens after every step, the same sounds.
+/// One long scripted Quick Battle, played under the glyph skin, under the
+/// sprite skin and under the mixed skin (sprite units on glyph terrain),
+/// ends the same way: the same battle, the cursor on the same tile and the
+/// same screens after every step, the same sounds.
 #[test]
 fn the_skin_never_changes_the_game() {
     let (glyph, glyph_audio) = play("glyph");
-    let (sprite, sprite_audio) = play("sprite");
     // The script did what it says: the lord moved and fought, the fight
     // was rewound, and the enemy phase came and went.
     let state = |i: usize| glyph[i].battle.clone().unwrap();
@@ -86,36 +86,64 @@ fn the_skin_never_changes_the_game() {
         .filter(|r| matches!(r, AudioRequest::PlaySound { .. }));
     assert!(sounds.count() > 10);
     // Step by step, the same.
-    for (g, s) in glyph.iter().zip(&sprite) {
-        assert_eq!(g, s, "after {:?}", g.step);
+    for skin in ["sprite", "sprite_units"] {
+        let (sprite, sprite_audio) = play(skin);
+        for (g, s) in glyph.iter().zip(&sprite) {
+            assert_eq!(g, s, "after {:?} under {skin}", g.step);
+        }
+        assert_eq!(glyph.len(), sprite.len(), "{skin}");
+        assert_eq!(glyph_audio, sprite_audio, "{skin}");
     }
-    assert_eq!(glyph.len(), sprite.len());
-    assert_eq!(glyph_audio, sprite_audio);
 }
 
-/// The Quick Battle at its start under the sprite skin: the map as tile
-/// and unit sprites from the test tileset (23 × 20 tiles of 24 px), the
-/// panels and help as glyphs.
+/// The Quick Battle at its start under the mixed skin, on the public
+/// fixture of unit sheets: the terrain, the panels and the help as glyphs
+/// (35 × 30 tiles of 16 px, as under the glyph skin), every unit a sprite
+/// with its side's outline, standing on its 14-pixel HP bar.
 #[test]
-fn quick_battle_under_the_sprite_skin() {
+fn quick_battle_with_sprite_units_on_glyph_terrain() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.with_map_skin("sprite");
+    h.with_map_skin("sprite_units");
     h.keys("Down f f");
     assert_eq!(h.screens(), ["title", "battle"]);
-    assert!(
-        h.map_text().starts_with("origin (-4,-6) size 23x20\n"),
-        "{}",
-        h.map_text()
-    );
+    let mut glyphs = Harness::with_layout(Layout::RightHanded);
+    glyphs.keys("Down f f");
+    // What is shown is what the glyph skin shows.
+    assert_eq!(h.map_text(), glyphs.map_text());
     assert_snapshot!(h.snapshot());
 }
 
-/// The same with the lord selected: its move and attack ranges tinting
-/// the tiles, the path and the cursor.
+/// The same after the knight braced (a bonus) and the archer hit a brigand
+/// with Pinning Shot (a penalty): both grey and darker, having acted; an
+/// up arrow on the knight, dimmed with it; a down arrow on the brigand,
+/// whose bar is part empty; and the mage, standing below the lord, cut at
+/// its tile's top edge.
 #[test]
-fn quick_battle_under_the_sprite_skin_with_a_unit_selected() {
+fn quick_battle_with_sprite_units_after_two_actions() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.with_map_skin("sprite");
-    h.keys("Down f f f Right Right");
+    h.with_map_skin("sprite_units");
+    h.keys("Down f f");
+    // The knight, at (4, 6): Skill, Brace.
+    h.keys("Right Down f f Up Up Up f f").wait(1.0);
+    // The archer, at (2, 4): to (5, 4), Attack, Pinning Shot.
+    h.keys("Left Left Left Up Up f Right Right Right");
+    h.keys("f").wait(1.0);
+    h.keys("f").wait(0.5);
+    h.keys("Down Down f").wait(0.5);
+    h.keys("f").wait(30.0);
+    h.keys("Down Down");
+    let scene = h.map_scene().unwrap();
+    let unit = |x, y| scene.unit_at(Pos::new(x, y)).unwrap();
+    let (knight, archer, brigand) = (unit(4, 6), unit(5, 4), unit(7, 4));
+    assert!(
+        knight.acted && knight.effects.bonus && !knight.effects.penalty,
+        "{knight:?}"
+    );
+    assert!(archer.acted && !archer.has_effect(), "{archer:?}");
+    assert!(
+        brigand.effects.penalty && !brigand.effects.bonus,
+        "{brigand:?}"
+    );
+    assert!(brigand.hp.0 < brigand.hp.1, "{brigand:?}");
     assert_snapshot!(h.snapshot());
 }

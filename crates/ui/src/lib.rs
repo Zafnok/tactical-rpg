@@ -28,7 +28,7 @@ pub use audio::{AudioQueue, AudioRequest, MusicClock, MusicCommand, MusicState};
 pub use color::{Palette, Rgb, UiColor};
 pub use game::{FrameOutput, Game, RawInputEvent};
 pub use glyph_buffer::{
-    Backdrop, BoxStyle, Cell, GlyphBuffer, Item, Layer, Overlay, PxRect, Rect, Sprite,
+    Backdrop, BoxStyle, Cell, GlyphBuffer, Item, Layer, Overlay, Paint, PxRect, Rect, Sprite,
 };
 pub use screen::{Ctx, FrameInput, KeyPrompt, LoadError, Screen, ScreenStack, Transition};
 pub use storage::{MemoryStorage, Storage, StorageError};

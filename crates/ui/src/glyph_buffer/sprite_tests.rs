@@ -56,8 +56,110 @@ fn new_sprite_is_solid_unflipped_and_shows_all_of_dest() {
             layer: Layer::Under,
             flip_x: false,
             opacity: 255,
+            paint: Paint::Image,
+            base: None,
         }
     );
+}
+
+/// A 16 × 20 picture standing on the tile of cells (2, 1) and (3, 1): the
+/// pixels 16..32 × 16..32, its feet 2 px above the tile's bottom, its head
+/// 6 px into the cells above. `dx` moves it sideways (an outline's copy).
+fn standing(dx: i32) -> Sprite {
+    Sprite {
+        base: Some(Rect::new(16, 16, 16, 16)),
+        ..at(16 + dx, 10, 16, 20)
+    }
+}
+
+#[test]
+fn cells_replaced_over_a_base_take_what_stands_above_them() {
+    let cut = |sprite: Sprite, cells: Rect| {
+        let mut b = buf(8, 4);
+        b.add_sprite(sprite);
+        b.fill_rect(cells, BLANK);
+        let mut left = clips(&b);
+        left.sort_by_key(|r| (r.y, r.x));
+        left
+    };
+    let tile = Rect::new(2, 1, 2, 1);
+    // The whole tile: nothing is left, not even the head above it.
+    assert!(cut(standing(0), tile).is_empty());
+    // Without a base, the head stays (cells own only what is over them).
+    assert_eq!(cut(at(16, 10, 16, 20), tile), [Rect::new(16, 10, 16, 6)]);
+    // A copy 1 px left or right of the tile goes whole too.
+    assert!(cut(standing(-1), tile).is_empty());
+    assert!(cut(standing(1), tile).is_empty());
+    // Half the tile: that half, and the head above it.
+    let left_half = Rect::new(2, 1, 1, 1);
+    assert_eq!(
+        cut(standing(0), left_half),
+        [Rect::new(24, 10, 8, 6), Rect::new(24, 16, 8, 14)]
+    );
+    // The copy 1 px left loses its pixel beside the tile as well.
+    assert_eq!(
+        cut(standing(-1), left_half),
+        [Rect::new(24, 10, 7, 6), Rect::new(24, 16, 7, 14)]
+    );
+    // The cells above only: the head, as for any item; the rest stays.
+    let above = Rect::new(2, 0, 2, 1);
+    assert_eq!(cut(standing(0), above), [Rect::new(16, 16, 16, 14)]);
+    // Cells beside the tile, or below it: nothing of this sprite.
+    for beside in [
+        Rect::new(0, 1, 2, 1),
+        Rect::new(4, 1, 2, 1),
+        Rect::new(2, 2, 2, 1),
+    ] {
+        assert_eq!(cut(standing(0), beside), [Rect::new(16, 10, 16, 20)]);
+    }
+    // On the tile at the buffer's left edge, the copy 1 px right goes
+    // whole too: nothing is left in the column past the tile.
+    let first = Sprite {
+        base: Some(Rect::new(0, 16, 16, 16)),
+        ..at(1, 10, 16, 20)
+    };
+    assert!(cut(first, Rect::new(0, 1, 2, 1)).is_empty());
+    // A base two cells tall, its top cell replaced: the head goes, and
+    // what stands on the lower cell stays.
+    let tall = Sprite {
+        base: Some(Rect::new(16, 16, 16, 32)),
+        ..at(16, 10, 16, 36)
+    };
+    assert_eq!(cut(tall, tile), [Rect::new(16, 32, 16, 14)]);
+    // A sprite whose base is elsewhere is cut as any item.
+    let elsewhere = Sprite {
+        base: Some(Rect::new(48, 16, 16, 16)),
+        ..at(16, 10, 16, 20)
+    };
+    assert_eq!(cut(elsewhere, tile), [Rect::new(16, 10, 16, 6)]);
+    // A blit moves the base with the picture.
+    let mut small = buf(4, 3);
+    small.add_sprite(standing(0));
+    let mut b = buf(8, 4);
+    b.blit(&small, 2, 1);
+    let moved = b.sprites()[0];
+    assert_eq!(moved.dest, Rect::new(32, 26, 16, 20));
+    assert_eq!(moved.base, Some(Rect::new(32, 32, 16, 16)));
+}
+
+#[test]
+fn a_paint_colours_a_pixel_and_a_painted_sprite_is_otherwise_the_same() {
+    let grey = Rgb::new(200, 200, 200);
+    assert_eq!(Paint::default(), Paint::Image);
+    assert_eq!(Paint::Image.apply(RED), RED);
+    assert_eq!(Paint::Solid(grey).apply(RED), grey);
+    assert_eq!(Paint::Dimmed.apply(RED), RED.dimmed());
+    assert_ne!(RED.dimmed(), RED);
+    let s = at(8, 8, 48, 48);
+    let solid = s.painted(Paint::Solid(RED));
+    assert_eq!(solid.paint, Paint::Solid(RED));
+    assert_eq!(solid.painted(Paint::Image), s);
+    // The paint stays through clipping and cutting.
+    let mut b = buf(4, 2);
+    b.add_sprite(at(-8, 0, 32, 32).painted(Paint::Dimmed));
+    b.fill_rect(Rect::new(1, 0, 1, 1), BLANK);
+    assert!(b.sprites().len() > 1);
+    assert!(b.sprites().iter().all(|s| s.paint == Paint::Dimmed));
 }
 
 #[test]

@@ -279,10 +279,10 @@ fn a_unit_under_an_effect_shows_the_effect_colour_behind_its_glyphs() {
     // Knight at (4, 6): without an effect the map shows none (each skin
     // marks one its own way: the glyph skin with the effect colour behind
     // its letters).
-    assert!(!shown_unit(&s, &c, "Kn").has_effect);
+    assert!(!shown_unit(&s, &c, "Kn").has_effect());
     focus_entry(&mut s, &mut c, MenuEntry::Skill);
     step(&mut s, &mut c, &[Action::Confirm, Action::Confirm]);
-    assert!(shown_unit(&s, &c, "Kn").has_effect);
+    assert!(shown_unit(&s, &c, "Kn").has_effect());
 }
 
 #[test]

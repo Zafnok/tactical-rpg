@@ -23,7 +23,8 @@
 //! `layer  sprite x,y wxh  image x,y wxh`: where it is drawn (`dest`), the
 //! image's path in the asset bundle, and the part of the image shown
 //! (`src`). After that come, only when they aren't the default, ` flip`,
-//! ` opacity=N` (below 255) and ` clip=x,y wxh` (not all of `dest` is
+//! ` opacity=N` (below 255), ` solid=colour` or ` dimmed` (how its pixels
+//! are coloured, ADR-0049) and ` clip=x,y wxh` (not all of `dest` is
 //! drawn).
 //!
 //! A see-through cell (ADR-0048) gets a key of its own, whose legend line
@@ -38,7 +39,7 @@ use std::fmt::Write as _;
 
 use crate::color::{Palette, Rgb};
 use crate::glyph_buffer::Cell;
-use crate::glyph_buffer::{Backdrop, GlyphBuffer, Item, PxRect, Sprite};
+use crate::glyph_buffer::{Backdrop, GlyphBuffer, Item, Paint, PxRect, Sprite};
 
 /// What a see-through cell's background is called in the legend.
 const SEE_THROUGH: &str = "see-through";
@@ -102,7 +103,7 @@ impl GlyphBuffer {
                     let _ = writeln!(out, "{layer:<5} {}  {}", px(o.rect), name(o.color));
                 }
                 Item::Sprite(s) => {
-                    let _ = writeln!(out, "{layer:<5} {}", sprite_line(s));
+                    let _ = writeln!(out, "{layer:<5} {}", sprite_line(s, &name));
                 }
             }
         }
@@ -138,14 +139,21 @@ fn px(r: PxRect) -> String {
     format!("{},{} {}x{}", r.x, r.y, r.w, r.h)
 }
 
-/// A sprite's snapshot line, after the layer.
-fn sprite_line(s: &Sprite) -> String {
+/// A sprite's snapshot line, after the layer; `name` names a colour.
+fn sprite_line(s: &Sprite, name: &dyn Fn(Rgb) -> String) -> String {
     let mut line = format!("sprite {}  {} {}", px(s.dest), s.image.path(), px(s.src));
     if s.flip_x {
         line.push_str(" flip");
     }
     if s.opacity != u8::MAX {
         let _ = write!(line, " opacity={}", s.opacity);
+    }
+    match s.paint {
+        Paint::Image => {}
+        Paint::Solid(color) => {
+            let _ = write!(line, " solid={}", name(color));
+        }
+        Paint::Dimmed => line.push_str(" dimmed"),
     }
     if s.clip != s.dest {
         let _ = write!(line, " clip={}", px(s.clip));
@@ -280,6 +288,13 @@ mod tests {
             clip: Rect::new(48, 40, 80, 80),
             ..plain
         });
+        b.add_sprite(plain.painted(Paint::Solid(p.get(UiColor::Enemy))));
+        b.add_sprite(plain.painted(Paint::Solid(Rgb::new(1, 2, 3))));
+        b.add_sprite(Sprite {
+            opacity: 128,
+            clip: Rect::new(8, 8, 40, 80),
+            ..plain.painted(Paint::Dimmed)
+        });
         assert_eq!(
             b.to_snapshot(&p)
                 .split_once("--- overlays ---\n")
@@ -290,7 +305,10 @@ mod tests {
              under sprite 0,0 16x8  images/test_card.png 8,0 8x4 flip\n\
              over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 opacity=128\n\
              over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 clip=8,8 40x80\n\
-             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 flip opacity=0 clip=48,40 40x48\n"
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 flip opacity=0 clip=48,40 40x48\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 solid=enemy\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 solid=#010203\n\
+             over  sprite 8,8 80x80  images/test_card.png 0,0 16x16 opacity=128 dimmed clip=8,8 40x80\n"
         );
     }
 

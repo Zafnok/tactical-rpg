@@ -5,10 +5,10 @@ type: feature
 milestone: M3 Battle UI
 model: opus-5.5
 effort: high
-status: todo
+status: done
 blocked_by: ["0433", "0110", "0116"]
 nick_input: sign-off
-completed:
+completed: 2026-10-03
 ---
 
 # 0436 — Units on the battle map as the bought map sprites
@@ -213,25 +213,25 @@ waits for this ticket.
 
 ## Acceptance criteria
 
-- [ ] Content validation: each new error has a test with its message (a
+- [x] Content validation: each new error has a test with its message (a
       unit image that doesn't exist, a frame outside its image, an unknown
       class or character).
-- [ ] A clone **without** `assets-private/` builds, runs with the glyph
+- [x] A clone **without** `assets-private/` builds, runs with the glyph
       skin and passes every gate; every existing glyph snapshot is
       unchanged.
-- [ ] With the private tileset present, the Quick Battle shows every unit
+- [x] With the private tileset present, the Quick Battle shows every unit
       as a sprite on glyph terrain, with the side mark, the acted look and
       the 14-pixel HP bar, the feet above the bar, an up or down arrow on
       a unit under an effect, and a unit standing below another clipped
       at its tile's top edge (snapshot on a **public fixture** tileset with per-file
       unit images, made by `cargo xtask test-tileset`; never a bought
       file).
-- [ ] 0433's `the_skin_never_changes_the_game` and
+- [x] 0433's `the_skin_never_changes_the_game` and
       `every_scene_feature_is_painted` also run under the mixed skin.
-- [ ] `git status` shows no bought file; the PR has no picture made from
+- [x] `git status` shows no bought file; the PR has no picture made from
       one.
-- [ ] Nick was sent the rendered frame and the class → sprite list.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Nick was sent the rendered frame and the class → sprite list.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -249,5 +249,68 @@ waits for this ticket.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done.** ADR-0049 (0048 is taken by an open PR).
+
+- **Format** (`crates/content/src/tileset.rs`): a unit picture is
+  `(column, row)` in the tileset's image or `(image: "…", frame: (c, r))`
+  in a file of its own. `image`, `tile_px` and `terrain` may be left out:
+  the tileset then has only unit pictures. `characters` may name `lead_m`
+  and `lead_f`; the skin picks by the lead's gender.
+- **Skin**: `SpriteSkin` paints the ground itself (tileset with terrain,
+  name `sprite`) or with the glyph skin's own code (no terrain, name
+  `sprite_units`); units always by `map_view/sprite/units.rs`: outline,
+  picture (top row first), then HP bars and arrows. 0433's placeholders
+  (bar along the top, 3×3 mark) are gone under every sprite skin.
+- **Sprite item**: `paint` (`Image`, `Solid(colour)`, `Dimmed`) and
+  `base`. `app` draws a painted sprite from a recoloured copy of the
+  texture; `frame-png` per pixel. 0413's hit flash can use `Paint::Solid`.
+- **Scene**: `UnitView::effects { bonus, penalty }` replaces `has_effect`
+  (`has_effect()` remains); `MapScene::clock_ms` from `Ctx::clock_s`.
+- **Tools**: `cargo xtask effect-marks` (the arrows, from the palette's new
+  `effect_bonus` / `effect_penalty`), `cargo xtask test-tileset` now also
+  writes the `test_units` fixture, `cargo xtask map-sprite-import
+  [--list]` copies 12 bought sheets into `assets-private/game/units/` and
+  writes `tilesets/tiny_tales.ron`. Pushed to the private repository;
+  `assets-private.rev` moved. The opt-in private test checks the tileset.
+- **Default skin**: `tiny_tales` when the content has it, else glyphs. The
+  debug menu goes round the glyph skin and every tileset.
+
+**Nick decided (2026-10-03, on the game's own frames):** the outline
+alone, no corner mark; and the acted look lightened (0.75 as bright, not
+the spike's 0.6). Both in `look-and-feel.md`, with the class → sprite
+table. The corner mark was only ever in a throwaway build.
+
+**Deviations.**
+
+- `terrain: None` isn't written: the three fields are left out (RON would
+  need `Some({…})` in every existing file otherwise).
+- **Enemy Archers look like ours** (Heroes: Archer), not the spike's
+  Rogue: a picture hangs off a class or a character, not a side. A sprite
+  per side would be a format change; say if you want it.
+- A menu over a unit left its head showing above the menu (the head is in
+  the tile above, which the menu doesn't cover). Sprites got a `base`: when
+  cells replace it, what stands past its edges goes too.
+- The sign-off frame shows the knight braced and the archer's Pinning
+  Shot, not the lord's fight, so both arrows are in it.
+- 0441 landed on `main` while this was in work: both looks share the
+  bar's inset, height and fill (`hp_fill`).
+
+**Claude's starting rules (veto any):**
+
+- An effect that lowers any number of the unit shows the **down arrow**;
+  any other shows the **up arrow**. (The rules don't label effects.)
+- On the **top row of the map view** the arrow also sits 4 pixels lower,
+  as it does under another unit, so the view's edge doesn't cut it.
+- A falling unit's outline, bar and arrow are gone by half way through its
+  fall; the picture fades over the whole fall.
+- Units without a sprite of their own are Adventurer M1.
+
+**Seen:** `frame-png` with `--features private-assets`: the Quick Battle
+at its start, and after Brace and Pinning Shot. Sprites stand on their
+bars, the mage's hat is cut under the lord, both arrows show, acted units
+are grey. Not seen: the `app` renderer's recoloured textures in a window
+or the browser (the same `Paint::apply` maths, but macroquad draws it):
+look at the outline and an acted unit on the Pages build.
+
+**Follow-up tickets:** none new (0437 terrain, 0440 walking, 0441 glyph
+bar, 0824 the Options entry already exist).

@@ -1,14 +1,19 @@
-//! Tilesets (ADR-0038): what a sprite map skin paints the battle map with.
-//! `assets/tilesets/<id>.ron` names one image and, in it, a tile for every
-//! terrain and a picture for units by character and by class (format in
+//! Tilesets (ADR-0038, ADR-0049): what a sprite map skin paints the battle
+//! map with. `assets/tilesets/<id>.ron` names a tile for every terrain in
+//! one image (or no terrain at all: the glyph skin then paints it) and a
+//! picture for units by character and by class, each from the tileset's
+//! image or from an image file of its own (format in
 //! `assets/tilesets/README.md`).
 //!
 //! Only looks hang off the game's ids here: nothing in a tileset changes a
 //! rule.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
-use serde::Deserialize;
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer};
+use trpg_core::lead::{PORTRAIT_FEMALE, PORTRAIT_MALE};
 use trpg_core::{CharacterId, ClassId, ClassTable, TerrainId};
 
 use crate::bundle;
@@ -27,6 +32,10 @@ const TILESET_EXTENSION: &str = ".ron";
 /// The smallest and largest side of a map tile or a unit picture, in
 /// pixels.
 pub const SIDE_PX: std::ops::RangeInclusive<u32> = 8..=64;
+
+/// The ids the lead's picture may go by in a tileset's `characters`, by
+/// gender: the lead's portrait ids (`trpg_core::lead`).
+pub const LEAD_PICTURES: [&str; 2] = [PORTRAIT_MALE, PORTRAIT_FEMALE];
 
 /// A rectangle of an image, in image pixels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -51,20 +60,29 @@ pub struct Picture {
     pub rect: ImageRect,
 }
 
-/// A validated tileset.
+/// A tileset's terrain tiles.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Tileset {
-    /// Its id: the file's stem.
-    pub id: String,
-    /// The image its tiles are in.
+pub struct TerrainTiles {
+    /// The image the tiles are in.
     pub image: ImageId,
     /// A map tile's size, across × down, in pixels: in the image, and on
     /// screen.
     pub tile_px: (u32, u32),
     /// Each terrain's tile, in [`image`](Self::image). Every terrain has
     /// one.
-    pub terrain: BTreeMap<TerrainId, ImageRect>,
-    /// Pictures of named characters.
+    pub tiles: BTreeMap<TerrainId, ImageRect>,
+}
+
+/// A validated tileset.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tileset {
+    /// Its id: the file's stem.
+    pub id: String,
+    /// Its terrain tiles; `None` = it has only unit pictures, and the
+    /// terrain is painted as glyphs (ADR-0049).
+    pub terrain: Option<TerrainTiles>,
+    /// Pictures of named characters, by character id; the lead's by
+    /// [`LEAD_PICTURES`] too.
     pub characters: BTreeMap<CharacterId, Picture>,
     /// Pictures of classes.
     pub classes: BTreeMap<ClassId, Picture>,
@@ -74,15 +92,27 @@ pub struct Tileset {
 
 impl Tileset {
     /// The tile of terrain `id`, if the tileset has one.
-    pub fn tile(&self, id: TerrainId) -> Option<ImageRect> {
-        self.terrain.get(&id).copied()
+    pub fn tile(&self, id: TerrainId) -> Option<Picture> {
+        let terrain = self.terrain.as_ref()?;
+        let rect = terrain.tiles.get(&id).copied()?;
+        Some(Picture {
+            image: terrain.image,
+            rect,
+        })
     }
 
-    /// The picture of a unit of `class`, the named `character` if any:
-    /// the character's, else the class's, else the fallback.
-    pub fn unit_picture(&self, character: Option<&CharacterId>, class: &ClassId) -> Picture {
+    /// The picture of a unit of `class`, the named `character` if any: the
+    /// first of `character`'s ids that has one (a character may go by
+    /// several: the lead by gender, then by its own id), else the class's,
+    /// else the fallback.
+    pub fn unit_picture<'a>(
+        &self,
+        character: impl IntoIterator<Item = &'a CharacterId>,
+        class: &ClassId,
+    ) -> Picture {
         character
-            .and_then(|c| self.characters.get(c))
+            .into_iter()
+            .find_map(|c| self.characters.get(c))
             .or_else(|| self.classes.get(class))
             .copied()
             .unwrap_or(self.fallback)
@@ -94,21 +124,81 @@ impl Tileset {
 #[serde(deny_unknown_fields)]
 struct TilesetFile {
     id: String,
-    image: String,
-    tile_px: (u32, u32),
-    terrain: BTreeMap<String, (u32, u32)>,
+    #[serde(default, deserialize_with = "written")]
+    image: Option<String>,
+    #[serde(default, deserialize_with = "written")]
+    tile_px: Option<(u32, u32)>,
+    #[serde(default, deserialize_with = "written")]
+    terrain: Option<BTreeMap<String, (u32, u32)>>,
     unit_px: (u32, u32),
     units: UnitsFile,
+    #[serde(default)]
     units_origin_px: (u32, u32),
+}
+
+/// A field that may be left out: `Some` of what is written.
+fn written<'de, D: Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<Option<T>, D::Error> {
+    T::deserialize(d).map(Some)
 }
 
 /// A tileset file's `units` table.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct UnitsFile {
-    characters: BTreeMap<String, (u32, u32)>,
-    classes: BTreeMap<String, (u32, u32)>,
-    fallback: (u32, u32),
+    characters: BTreeMap<String, UnitEntry>,
+    classes: BTreeMap<String, UnitEntry>,
+    fallback: UnitEntry,
+}
+
+/// A unit picture as written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum UnitEntry {
+    /// `(column, row)` in the tileset's own image, from `units_origin_px`.
+    Grid((u32, u32)),
+    /// `(image: "…", frame: (column, row))`: a frame of an image file of
+    /// its own, counted from its top-left.
+    File(FrameFile),
+}
+
+/// A frame of an image file.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FrameFile {
+    image: String,
+    frame: (u32, u32),
+}
+
+impl<'de> Deserialize<'de> for UnitEntry {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Entry;
+
+        impl<'de> Visitor<'de> for Entry {
+            type Value = UnitEntry;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("(column, row) or (image: \"…\", frame: (column, row))")
+            }
+
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<UnitEntry, A::Error> {
+                let mut next = |i| {
+                    seq.next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(i, &self))
+                };
+                let at = (next(0)?, next(1)?);
+                if seq.next_element::<de::IgnoredAny>()?.is_some() {
+                    return Err(de::Error::invalid_length(3, &self));
+                }
+                Ok(UnitEntry::Grid(at))
+            }
+
+            fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<UnitEntry, A::Error> {
+                FrameFile::deserialize(de::value::MapAccessDeserializer::new(map))
+                    .map(UnitEntry::File)
+            }
+        }
+
+        d.deserialize_any(Entry)
+    }
 }
 
 /// What a tileset is checked against.
@@ -155,6 +245,59 @@ pub fn load_all(refs: &TilesetRefs) -> Result<BTreeMap<String, Tileset>, Vec<Con
     }
 }
 
+/// A tileset file being checked: its own image (if it names one that
+/// exists) and the problems found so far.
+struct Checker<'a> {
+    def: &'a TilesetFile,
+    images: &'a ImageTable,
+    sheet: Option<ImageId>,
+    problems: Vec<String>,
+}
+
+impl Checker<'_> {
+    /// Reports `rect` of `image`, named `what`, if it doesn't lie inside
+    /// the image.
+    fn inside(&mut self, what: &str, image: ImageId, rect: ImageRect) {
+        if let Some(info) = self.images.info(image)
+            && !inside(rect, info)
+        {
+            let ImageRect { x, y, w, h } = rect;
+            let (iw, ih) = (info.width, info.height);
+            self.problems.push(format!(
+                "{what}: its {w}×{h} px at ({x}, {y}) lies outside the {iw}×{ih} px image"
+            ));
+        }
+    }
+
+    /// The picture `entry` names, checked; `what` names it in problems.
+    /// `None` if its image is missing.
+    fn picture(&mut self, what: &str, entry: &UnitEntry) -> Option<Picture> {
+        let (image, rect) = match entry {
+            UnitEntry::Grid(at) => {
+                if self.def.image.is_none() {
+                    self.problems.push(format!(
+                        "{what}: a (column, row) picture needs the tileset's `image`, and it has none"
+                    ));
+                }
+                // An image that is named but missing is reported once.
+                let rect = grid_rect(*at, self.def.unit_px, self.def.units_origin_px);
+                (self.sheet?, rect)
+            }
+            UnitEntry::File(FrameFile { image, frame }) => {
+                let Some(id) = self.images.id(image) else {
+                    self.problems.push(format!(
+                        "{what}: image \"{image}\" is not a PNG in the asset bundle"
+                    ));
+                    return None;
+                };
+                (id, grid_rect(*frame, self.def.unit_px, (0, 0)))
+            }
+        };
+        self.inside(what, image, rect);
+        Some(Picture { image, rect })
+    }
+}
+
 /// Parses tileset `source` (errors attributed to `file`, whose stem is
 /// `stem`) and checks it against `refs`, reporting every problem.
 pub fn parse_tileset(
@@ -164,60 +307,80 @@ pub fn parse_tileset(
     refs: &TilesetRefs,
 ) -> Result<Tileset, Vec<ContentError>> {
     let def: TilesetFile = parse_ron(file, source).map_err(|e| vec![e])?;
-    let mut problems = own_problems(&def, stem);
-    let image = refs.images.id(&def.image);
-    let info = image.and_then(|id| refs.images.info(id));
-    if image.is_none() {
-        problems.push(format!(
-            "image \"{}\" is not a PNG in the asset bundle",
-            def.image
-        ));
-    }
-    let mut check = |what: String, rect: ImageRect| {
-        if let Some(info) = info
-            && !inside(rect, info)
-        {
-            let ImageRect { x, y, w, h } = rect;
-            let (iw, ih) = (info.width, info.height);
-            problems.push(format!(
-                "{what}: its {w}×{h} px at ({x}, {y}) lies outside the {iw}×{ih} px image"
-            ));
-        }
+    let mut check = Checker {
+        def: &def,
+        images: refs.images,
+        sheet: def.image.as_deref().and_then(|path| refs.images.id(path)),
+        problems: own_problems(&def, stem),
     };
-    let mut terrain = BTreeMap::new();
+    if let (Some(path), None) = (&def.image, check.sheet) {
+        let problem = format!("image \"{path}\" is not a PNG in the asset bundle");
+        check.problems.push(problem);
+    }
     let mut unknown = Vec::new();
-    for (name, &at) in &def.terrain {
-        let rect = grid_rect(at, def.tile_px, (0, 0));
-        check(format!("terrain \"{name}\""), rect);
+    let mut tiles = BTreeMap::new();
+    let tile_px = def.tile_px.unwrap_or_default();
+    for (name, &at) in def.terrain.iter().flatten() {
+        let rect = grid_rect(at, tile_px, (0, 0));
+        if let Some(sheet) = check.sheet {
+            check.inside(&format!("terrain \"{name}\""), sheet, rect);
+        }
         match refs.terrain.id_of(name) {
             Some(id) => {
-                terrain.insert(id, rect);
+                tiles.insert(id, rect);
             }
             None => unknown.push(format!("terrain \"{name}\" is not in terrain.ron")),
         }
     }
-    for (name, &at) in &def.units.classes {
-        check(format!("class \"{name}\""), def.unit_rect(at));
-        if refs.classes.get(&ClassId(name.clone())).is_none() {
+    let mut classes = BTreeMap::new();
+    for (name, entry) in &def.units.classes {
+        let id = ClassId(name.clone());
+        if refs.classes.get(&id).is_none() {
             unknown.push(format!("class \"{name}\" is not in classes.ron"));
         }
+        if let Some(picture) = check.picture(&format!("class \"{name}\""), entry) {
+            classes.insert(id, picture);
+        }
     }
-    for (name, &at) in &def.units.characters {
-        check(format!("character \"{name}\""), def.unit_rect(at));
+    let mut characters = BTreeMap::new();
+    for (name, entry) in &def.units.characters {
         let id = CharacterId(name.clone());
-        if !refs.characters.characters.contains_key(&id) {
+        let known = refs.characters.characters.contains_key(&id);
+        if !known && !LEAD_PICTURES.contains(&name.as_str()) {
             unknown.push(format!("character \"{name}\" is not in characters.ron"));
         }
-    }
-    check("fallback".to_owned(), def.unit_rect(def.units.fallback));
-    problems.extend(unknown);
-    for t in &refs.terrain.terrains {
-        if !def.terrain.contains_key(&t.id) {
-            problems.push(format!("terrain \"{}\" has no tile", t.id));
+        if let Some(picture) = check.picture(&format!("character \"{name}\""), entry) {
+            characters.insert(id, picture);
         }
     }
-    match image {
-        Some(image) if problems.is_empty() => Ok(def.into_tileset(image, terrain)),
+    let fallback = check.picture("fallback", &def.units.fallback);
+    let sheet = check.sheet;
+    let mut problems = check.problems;
+    problems.extend(unknown);
+    if let Some(terrain) = &def.terrain {
+        for t in &refs.terrain.terrains {
+            if !terrain.contains_key(&t.id) {
+                problems.push(format!("terrain \"{}\" has no tile", t.id));
+            }
+        }
+    }
+    let terrain = def
+        .terrain
+        .as_ref()
+        .zip(sheet)
+        .map(|(_, image)| TerrainTiles {
+            image,
+            tile_px,
+            tiles,
+        });
+    match fallback {
+        Some(fallback) if problems.is_empty() => Ok(Tileset {
+            id: def.id,
+            terrain,
+            characters,
+            classes,
+            fallback,
+        }),
         _ => Err(problems
             .into_iter()
             .map(|m| ContentError::new(file, m))
@@ -225,7 +388,8 @@ pub fn parse_tileset(
     }
 }
 
-/// The problems of a tileset file `stem` on its own: its id and sizes.
+/// The problems of a tileset file `stem` on its own: its id, its sizes,
+/// and that terrain tiles come with their size and their image.
 fn own_problems(def: &TilesetFile, stem: &str) -> Vec<String> {
     let mut problems = Vec::new();
     if def.id != stem {
@@ -234,46 +398,30 @@ fn own_problems(def: &TilesetFile, stem: &str) -> Vec<String> {
             def.id
         ));
     }
-    for (name, (w, h)) in [("tile_px", def.tile_px), ("unit_px", def.unit_px)] {
-        if !SIDE_PX.contains(&w) || !SIDE_PX.contains(&h) {
+    let sizes = [("tile_px", def.tile_px), ("unit_px", Some(def.unit_px))];
+    for (name, size) in sizes {
+        if let Some((w, h)) = size
+            && (!SIDE_PX.contains(&w) || !SIDE_PX.contains(&h))
+        {
             let (lo, hi) = (SIDE_PX.start(), SIDE_PX.end());
             problems.push(format!(
                 "{name} is ({w}, {h}); each side must be {lo} to {hi} px"
             ));
         }
     }
+    match (&def.terrain, def.tile_px) {
+        (Some(_), None) => problems.push("terrain needs `tile_px`, the size of a tile".to_owned()),
+        (None, Some(_)) => problems.push(
+            "tile_px without `terrain`: with no terrain tiles the map keeps the glyph skin's \
+             tiles; leave `tile_px` out"
+                .to_owned(),
+        ),
+        _ => {}
+    }
+    if def.terrain.is_some() && def.image.is_none() {
+        problems.push("terrain needs `image`, the image its tiles are in".to_owned());
+    }
     problems
-}
-
-impl TilesetFile {
-    /// The rectangle of unit picture `at`.
-    fn unit_rect(&self, at: (u32, u32)) -> ImageRect {
-        grid_rect(at, self.unit_px, self.units_origin_px)
-    }
-
-    /// The checked file as a [`Tileset`] of `image`, with its `terrain`
-    /// tiles resolved.
-    fn into_tileset(self, image: ImageId, terrain: BTreeMap<TerrainId, ImageRect>) -> Tileset {
-        let picture = |at| Picture {
-            image,
-            rect: self.unit_rect(at),
-        };
-        let characters = self.units.characters.iter();
-        let classes = self.units.classes.iter();
-        Tileset {
-            characters: characters
-                .map(|(name, &at)| (CharacterId(name.clone()), picture(at)))
-                .collect(),
-            classes: classes
-                .map(|(name, &at)| (ClassId(name.clone()), picture(at)))
-                .collect(),
-            fallback: picture(self.units.fallback),
-            id: self.id,
-            image,
-            tile_px: self.tile_px,
-            terrain,
-        }
-    }
 }
 
 /// The rectangle of cell `(column, row)` of a grid of `size` cells that
@@ -302,8 +450,8 @@ mod tests {
     use super::*;
     use crate::image::png_header;
 
-    /// The game's terrain, classes and characters, and one 64 × 64 image,
-    /// `tilesets/t.png`.
+    /// The game's terrain, classes and characters, one 64 × 64 image,
+    /// `tilesets/t.png`, and a 48 × 80 sheet of one unit, `units/a.png`.
     struct Fixture {
         content: crate::Content,
         images: ImageTable,
@@ -311,10 +459,14 @@ mod tests {
 
     impl Fixture {
         fn new() -> Self {
-            let header = png_header(64, 64);
+            let (header, sheet) = (png_header(64, 64), png_header(48, 80));
+            let files = [
+                ("tilesets/t.png", header.as_slice()),
+                ("units/a.png", sheet.as_slice()),
+            ];
             Self {
                 content: crate::load_embedded().unwrap(),
-                images: ImageTable::from_files([("tilesets/t.png", header.as_slice())]).unwrap(),
+                images: ImageTable::from_files(files).unwrap(),
             }
         }
 
@@ -352,7 +504,8 @@ mod tests {
     }
 
     /// A tileset file with `fields` in place of the defaults' (a field
-    /// written in `fields` is left out of the defaults).
+    /// written in `fields` is left out of the defaults; one given as `""`
+    /// is left out of the file).
     fn file(f: &Fixture, fields: &[(&str, &str)]) -> String {
         let terrain = format!("{{ {} }}", f.terrain(""));
         let defaults = [
@@ -376,8 +529,10 @@ mod tests {
                     .iter()
                     .find(|(n, _)| n == name)
                     .map_or(value.as_str(), |(_, v)| v);
-                format!("{name}: {value}")
+                (name, value)
             })
+            .filter(|(_, value)| !value.is_empty())
+            .map(|(name, value)| format!("{name}: {value}"))
             .collect();
         format!("({})", body.join(",\n"))
     }
@@ -388,8 +543,10 @@ mod tests {
         let t = f.parse(&file(&f, &[])).unwrap();
         let image = f.images.id("tilesets/t.png").unwrap();
         let display = &f.content.terrain.display;
-        assert_eq!((t.id.as_str(), t.image, t.tile_px), ("t", image, (16, 16)));
-        assert_eq!(t.terrain.len(), display.terrains.len());
+        let terrain = t.terrain.as_ref().unwrap();
+        assert_eq!(t.id, "t");
+        assert_eq!((terrain.image, terrain.tile_px), (image, (16, 16)));
+        assert_eq!(terrain.tiles.len(), display.terrains.len());
         let plain = display.id_of("plain").unwrap();
         let tile = ImageRect {
             x: 0,
@@ -397,7 +554,7 @@ mod tests {
             w: 16,
             h: 16,
         };
-        assert_eq!(t.tile(plain), Some(tile));
+        assert_eq!(t.tile(plain), Some(Picture { image, rect: tile }));
         assert_eq!(t.tile(TerrainId(999)), None);
         // Unit pictures: 16 × 24 cells from (0, 16).
         let at = |x| Picture {
@@ -532,12 +689,173 @@ mod tests {
     fn the_embedded_test_tileset_loads() {
         let f = Fixture::new();
         let tilesets = &f.content.tilesets;
-        assert_eq!(tilesets.keys().collect::<Vec<_>>(), ["test"]);
+        assert_eq!(tilesets.keys().collect::<Vec<_>>(), ["test", "test_units"]);
         let test = &tilesets["test"];
-        assert_eq!(test.tile_px, (24, 24));
-        assert_eq!(test.image.path(), "tilesets/test.png");
+        let terrain = test.terrain.as_ref().unwrap();
+        assert_eq!(terrain.tile_px, (24, 24));
+        assert_eq!(terrain.image.path(), "tilesets/test.png");
         // Every class has a picture of its own.
         assert_eq!(test.classes.len(), f.content.classes.classes.len());
         assert!(test.characters.is_empty());
+        // The fixture of unit sheets: no terrain, a 48 × 80 sheet per class
+        // of the Quick Battle, each unit its standing frame.
+        let units = &tilesets["test_units"];
+        assert_eq!(units.terrain, None);
+        let guard = units.classes[&ClassId("guard".into())];
+        assert_eq!(guard.image.path(), "tilesets/test_units/guard.png");
+        let standing = ImageRect {
+            x: 16,
+            y: 0,
+            w: 16,
+            h: 20,
+        };
+        assert_eq!(guard.rect, standing);
+        assert_eq!(units.fallback.rect, standing);
+        assert_eq!(
+            f.content.images.info(guard.image),
+            Some(ImageInfo {
+                width: 48,
+                height: 80
+            })
+        );
+    }
+
+    /// A tileset of unit sheets only: no image, no terrain, no tile size.
+    fn sheets(units: &str) -> Vec<(&'static str, String)> {
+        vec![
+            ("image", String::new()),
+            ("tile_px", String::new()),
+            ("terrain", String::new()),
+            ("units_origin_px", String::new()),
+            ("unit_px", "(16, 20)".to_owned()),
+            ("units", units.to_owned()),
+        ]
+    }
+
+    fn sheets_file(f: &Fixture, units: &str) -> String {
+        let fields = sheets(units);
+        let fields: Vec<(&str, &str)> = fields.iter().map(|(n, v)| (*n, v.as_str())).collect();
+        file(f, &fields)
+    }
+
+    #[test]
+    fn a_unit_picture_may_be_a_frame_of_its_own_image_file() {
+        let f = Fixture::new();
+        let units = "(characters: { \"lead_f\": (image: \"units/a.png\", frame: (0, 3)) }, \
+                     classes: { \"brigand\": (image: \"units/a.png\", frame: (1, 0)) }, \
+                     fallback: (image: \"units/a.png\", frame: (2, 1)))";
+        let t = f.parse(&sheets_file(&f, units)).unwrap();
+        assert_eq!(t.terrain, None);
+        assert_eq!(t.tile(TerrainId(0)), None);
+        let image = f.images.id("units/a.png").unwrap();
+        let at = |x, y| Picture {
+            image,
+            rect: ImageRect { x, y, w: 16, h: 20 },
+        };
+        // The standing, front-facing frame of a 48 × 80 sheet: (1, 0).
+        let brigand = ClassId("brigand".into());
+        assert_eq!(t.unit_picture(None, &brigand), at(16, 0));
+        assert_eq!(t.fallback, at(32, 20));
+        // The lead goes by gender, then by its own id.
+        let ids = [CharacterId("lead_f".into()), CharacterId("lead".into())];
+        assert_eq!(t.unit_picture(&ids, &brigand), at(0, 60));
+        let ids = [CharacterId("lead_m".into()), CharacterId("lead".into())];
+        assert_eq!(t.unit_picture(&ids, &brigand), at(16, 0));
+        // Both kinds in one file: the grid's from `units_origin_px`, a
+        // file's from its own top-left.
+        let units = "(characters: {}, classes: { \"brigand\": (1, 1) }, \
+                     fallback: (image: \"units/a.png\", frame: (1, 0)))";
+        let t = f.parse(&file(&f, &[("units", units)])).unwrap();
+        let sheet = f.images.id("tilesets/t.png").unwrap();
+        let rect = ImageRect {
+            x: 16,
+            y: 40,
+            w: 16,
+            h: 24,
+        };
+        assert_eq!(t.classes[&brigand], Picture { image: sheet, rect });
+        assert_eq!(t.fallback.rect.h, 24);
+    }
+
+    #[test]
+    fn a_unit_image_must_exist_and_hold_its_frame() {
+        let f = Fixture::new();
+        let units = "(characters: { \"test_lord\": (image: \"units/a.png\", frame: (3, 0)) }, \
+                     classes: { \"brigand\": (image: \"units/none.png\", frame: (1, 0)), \
+                     \"wizard\": (image: \"units/a.png\", frame: (0, 4)) }, \
+                     fallback: (image: \"units/missing.png\", frame: (0, 0)))";
+        assert_eq!(
+            f.errors(&sheets_file(&f, units)),
+            [
+                "class \"brigand\": image \"units/none.png\" is not a PNG in the asset bundle",
+                "class \"wizard\": its 16×20 px at (0, 80) lies outside the 48×80 px image",
+                "character \"test_lord\": its 16×20 px at (48, 0) lies outside the 48×80 px image",
+                "fallback: image \"units/missing.png\" is not a PNG in the asset bundle",
+                "class \"wizard\" is not in classes.ron",
+            ]
+        );
+        // A character that is neither in characters.ron nor the lead's.
+        let units = "(characters: { \"lead_x\": (image: \"units/a.png\", frame: (0, 0)) }, \
+                     classes: {}, fallback: (image: \"units/a.png\", frame: (0, 0)))";
+        assert_eq!(
+            f.errors(&sheets_file(&f, units)),
+            ["character \"lead_x\" is not in characters.ron"]
+        );
+    }
+
+    #[test]
+    fn terrain_its_size_and_the_image_come_together() {
+        let f = Fixture::new();
+        let frame = "(image: \"units/a.png\", frame: (1, 0))";
+        let all = format!("(characters: {{}}, classes: {{}}, fallback: {frame})");
+        // A grid picture with no image to be in.
+        let grid = "(characters: {}, classes: { \"brigand\": (0, 0) }, fallback: (1, 0))";
+        assert_eq!(
+            f.errors(&sheets_file(&f, grid)),
+            [
+                "class \"brigand\": a (column, row) picture needs the tileset's `image`, and it has none",
+                "fallback: a (column, row) picture needs the tileset's `image`, and it has none",
+            ]
+        );
+        // The image alone is fine: grid pictures, glyph terrain.
+        let source = file(&f, &[("tile_px", ""), ("terrain", "")]);
+        assert_eq!(f.parse(&source).unwrap().terrain, None);
+        assert_eq!(
+            f.errors(&file(&f, &[("terrain", ""), ("units", &all)])),
+            [
+                "tile_px without `terrain`: with no terrain tiles the map keeps the glyph skin's \
+                 tiles; leave `tile_px` out"
+            ]
+        );
+        assert_eq!(
+            f.errors(&file(&f, &[("tile_px", ""), ("units", &all)])),
+            ["terrain needs `tile_px`, the size of a tile"]
+        );
+        assert_eq!(
+            f.errors(&file(&f, &[("image", ""), ("units", &all)])),
+            ["terrain needs `image`, the image its tiles are in"]
+        );
+    }
+
+    #[test]
+    fn a_unit_entry_is_two_numbers_or_an_image_and_a_frame() {
+        let f = Fixture::new();
+        for bad in [
+            "(1)",
+            "(1, 2, 3)",
+            "(image: \"units/a.png\")",
+            "(image: \"units/a.png\", frame: (1, 0), flip: true)",
+            "\"units/a.png\"",
+        ] {
+            let units = format!("(characters: {{}}, classes: {{}}, fallback: {bad})");
+            let errors = f.parse(&sheets_file(&f, &units)).unwrap_err();
+            assert_eq!(errors.len(), 1, "{bad}");
+            assert!(errors[0].line.is_some(), "{bad}: {errors:?}");
+        }
+        // What isn't either kind is told what was expected.
+        let units = "(characters: {}, classes: {}, fallback: \"units/a.png\")";
+        let errors = f.parse(&sheets_file(&f, units)).unwrap_err();
+        let expected = "(column, row) or (image: \"…\", frame: (column, row))";
+        assert!(errors[0].message.contains(expected), "{errors:?}");
     }
 }

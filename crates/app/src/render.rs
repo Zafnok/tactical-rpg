@@ -2,9 +2,11 @@
 //! integer-scaled, centred, black letterbox. The buffer's items are drawn
 //! scaled, in the order they were added: `Under` ones after the cell
 //! backgrounds, `Over` ones after the glyphs. A rectangle (ADR-0018) is a
-//! solid fill; a sprite (ADR-0038) is part of an image's texture. A
-//! buffer's backdrop (ADR-0048), a second buffer panned and zoomed, is drawn
-//! the same way inside its window, behind the console.
+//! solid fill; a sprite (ADR-0038) is part of an image's texture, or of a
+//! recoloured copy of it when the sprite isn't painted in the image's own
+//! colours (ADR-0049). A buffer's backdrop (ADR-0048), a second buffer
+//! panned and zoomed, is drawn the same way inside its window, behind the
+//! console.
 
 use std::collections::{HashMap, HashSet};
 
@@ -12,12 +14,23 @@ use macroquad::prelude::*;
 use trpg_content::font::{AtlasRect, FALLBACK_GLYPH};
 use trpg_content::{FontAtlasDef, ImageId, ImageTable, bundle};
 use trpg_ui::console::{CELL_H_PX, CELL_W_PX, Layout, layout};
-use trpg_ui::{Backdrop, GlyphBuffer, Item, Layer, Rgb, Sprite};
+use trpg_ui::{Backdrop, GlyphBuffer, Item, Layer, Paint, Rgb, Sprite};
 
 /// The colour of what is missing: the fallback glyph drawn for a glyph the
 /// atlas lacks, and the rectangle drawn for a sprite whose image has no
 /// texture.
 const MISSING_COLOR: Color = MAGENTA;
+
+/// A recoloured copy of an image, for a sprite that isn't painted in the
+/// image's own colours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Recolour {
+    /// Every pixel white, as see-through as it was: drawn tinted, it is
+    /// the picture's silhouette in one colour ([`Paint::Solid`]).
+    Silhouette,
+    /// Every pixel grey and darker ([`Paint::Dimmed`]).
+    Dimmed,
+}
 
 /// Which solid cells get their background drawn.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -38,6 +51,9 @@ pub struct Renderer {
     warned: HashSet<char>,
     /// A texture per image of the image table.
     images: HashMap<ImageId, Texture2D>,
+    /// The recoloured copies made so far: each is made the first time a
+    /// sprite needs it. `None` for an image that can't be decoded.
+    recoloured: HashMap<(ImageId, Recolour), Option<Texture2D>>,
     /// Images without a texture already logged, so each is reported once.
     warned_images: HashSet<ImageId>,
 }
@@ -69,6 +85,7 @@ impl Renderer {
             clear,
             warned: HashSet::new(),
             images: textures,
+            recoloured: HashMap::new(),
             warned_images: HashSet::new(),
         })
     }
@@ -215,7 +232,20 @@ impl Renderer {
     /// big: the matching part of its image, or a [`MISSING_COLOR`]
     /// rectangle if the image has no texture (logged once per image).
     fn draw_sprite(&mut self, sprite: &Sprite, x: f32, y: f32, size: Vec2) {
-        let Some(texture) = self.images.get(&sprite.image) else {
+        let (recolour, tint) = match sprite.paint {
+            Paint::Image => (None, Rgb::new(255, 255, 255)),
+            Paint::Solid(color) => (Some(Recolour::Silhouette), color),
+            Paint::Dimmed => (Some(Recolour::Dimmed), Rgb::new(255, 255, 255)),
+        };
+        let texture = match recolour {
+            None => self.images.get(&sprite.image),
+            Some(recolour) => self
+                .recoloured
+                .entry((sprite.image, recolour))
+                .or_insert_with(|| recoloured(sprite.image, recolour))
+                .as_ref(),
+        };
+        let Some(texture) = texture else {
             if self.warned_images.insert(sprite.image) {
                 warn!("image {} has no texture", sprite.image.path());
             }
@@ -227,7 +257,7 @@ impl Renderer {
             texture,
             x,
             y,
-            Color::from_rgba(255, 255, 255, sprite.opacity),
+            Color::from_rgba(tint.r, tint.g, tint.b, sprite.opacity),
             DrawTextureParams {
                 dest_size: Some(size),
                 source: Some(Rect::new(sx, sy, sw, sh)),
@@ -261,6 +291,23 @@ fn upload(png: &[u8]) -> Result<Texture2D, String> {
     let texture = Texture2D::from_image(&image);
     texture.set_filter(FilterMode::Nearest);
     Ok(texture)
+}
+
+/// A texture of `image` recoloured as `recolour`, or `None` if the image
+/// can't be decoded.
+fn recoloured(image: ImageId, recolour: Recolour) -> Option<Texture2D> {
+    let png = bundle::bytes(image.path())?;
+    let mut picture = Image::from_file_with_format(png, Some(ImageFormat::Png)).ok()?;
+    for pixel in picture.bytes.as_chunks_mut::<4>().0 {
+        let rgb = match recolour {
+            Recolour::Silhouette => Rgb::new(255, 255, 255),
+            Recolour::Dimmed => Paint::Dimmed.apply(Rgb::new(pixel[0], pixel[1], pixel[2])),
+        };
+        pixel[..3].copy_from_slice(&[rgb.r, rgb.g, rgb.b]);
+    }
+    let texture = Texture2D::from_image(&picture);
+    texture.set_filter(FilterMode::Nearest);
+    Some(texture)
 }
 
 fn color(c: Rgb) -> Color {

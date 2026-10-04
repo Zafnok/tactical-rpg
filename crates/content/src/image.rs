@@ -14,6 +14,12 @@ use crate::font::ATLAS_PNG_PATH;
 /// (`cargo xtask test-card`) for tests and the "Sprite test" debug tool.
 pub const TEST_CARD_PATH: &str = "images/test_card.png";
 
+/// Path of the effect arrows inside the bundle: a generated 14×7 image
+/// (`cargo xtask effect-marks`), an up arrow for a bonus then a down arrow
+/// for a penalty, each 7×7, which a sprite map skin puts on a unit under a
+/// timed effect (ADR-0049).
+pub const EFFECT_MARKS_PATH: &str = "images/effect_marks.png";
+
 /// The longest side an image may have, in pixels: what every graphics card
 /// the game runs on (WebGL included) takes as one texture.
 pub const MAX_SIDE: u32 = 4096;

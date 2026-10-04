@@ -6,6 +6,7 @@
 use std::fmt::Write as _;
 
 use trpg_content::Content;
+use trpg_core::skill::TimedMods;
 use trpg_core::{CharacterId, ClassId, Faction, Pos, StatValue, TerrainId, Unit, UnitId};
 
 /// The visible part of a battle map.
@@ -25,6 +26,10 @@ pub struct MapScene {
     /// The selected unit's path, its own tile first; empty = none. Its
     /// tiles may lie outside the view.
     pub path: Vec<Pos>,
+    /// The screen's animation clock, in milliseconds: what a skin moves
+    /// its marks by (a sprite unit's effect arrows bounce and take turns).
+    /// It only ever goes forward.
+    pub clock_ms: u64,
 }
 
 /// One visible tile.
@@ -68,6 +73,15 @@ impl RangeKind {
     }
 }
 
+/// The kinds of timed effect a unit is under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct UnitEffects {
+    /// One that helps it: a stance, a buff.
+    pub bonus: bool,
+    /// One that hinders it: a debuff.
+    pub penalty: bool,
+}
+
 /// A unit as shown on the map.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnitView {
@@ -87,8 +101,8 @@ pub struct UnitView {
     pub acted: bool,
     /// Current and max HP.
     pub hp: (StatValue, StatValue),
-    /// Whether it is under a timed effect (0412).
-    pub has_effect: bool,
+    /// The kinds of timed effect (0412) it is under.
+    pub effects: UnitEffects,
     /// How far it has fallen (0404): `0` = standing … `1` = gone.
     pub fade: f32,
     /// Whether it is picked out right now: a battle note on screen is
@@ -108,10 +122,18 @@ impl UnitView {
             character: unit.character.clone(),
             acted: unit.acted,
             hp: (unit.hp, unit.stats.hp),
-            has_effect: !unit.effects.is_empty(),
+            effects: UnitEffects {
+                bonus: unit.effects.iter().any(|e| !hinders(&e.mods)),
+                penalty: unit.effects.iter().any(|e| hinders(&e.mods)),
+            },
             fade: 0.0,
             highlight: false,
         }
+    }
+
+    /// Whether it is under any timed effect.
+    pub const fn has_effect(&self) -> bool {
+        self.effects.bonus || self.effects.penalty
     }
 
     /// This unit shown on `pos` instead.
@@ -131,6 +153,18 @@ impl UnitView {
     pub fn highlighted(self, highlight: bool) -> Self {
         Self { highlight, ..self }
     }
+}
+
+/// Whether a timed effect of `mods` hinders the unit it is on (a debuff:
+/// Pinning Shot's Mov −3) rather than helps it (a stance: Sidestep's avoid
+/// +20): whether it lowers any number. One that both raises and lowers
+/// counts as hindering.
+pub fn hinders(mods: &TimedMods) -> bool {
+    let c = &mods.combat;
+    let combat = [c.hit, c.crit, c.might, c.avoid, c.attack_speed, c.pierce];
+    mods.stats.iter().any(|&(_, amount)| amount < 0)
+        || combat.iter().any(|&n| n < 0)
+        || c.single_strike
 }
 
 /// How the cursor is drawn (`docs/design/look-and-feel.md`): corner marks by
@@ -181,6 +215,7 @@ impl MapScene {
             units: Vec::new(),
             cursor: None,
             path: Vec::new(),
+            clock_ms: 0,
         }
     }
 
@@ -283,14 +318,14 @@ impl MapScene {
     }
 
     /// The scene as text, for tests and bug reports. The same scene always
-    /// gives the same text.
+    /// gives the same text. The clock isn't in it: nothing happens by it.
     ///
     /// ```text
     /// origin (-10,-11) size 35x30
     ///  -11: -*35
     ///    0: -*10 sea*2 plain+m*3 forest+da burnt! plain>burning -*18
     /// units 1
-    ///   #4 Br enemy brigand (7,3) hp 20/30 acted effect fade=0.25
+    ///   #4 Br enemy brigand (7,3) hp 20/30 acted bonus penalty fade=0.25
     /// cursor (3,5) corners 1.00
     /// path (3,5) (4,5)
     /// ```
@@ -301,7 +336,8 @@ impl MapScene {
     /// for `n` such tiles in a row. `!` marks a tile flashing after its
     /// terrain changed, and `>` is followed by the terrain a spell being
     /// aimed would turn it into. A unit of a named character has it in
-    /// brackets after its class, and `highlight` if it is picked out. The
+    /// brackets after its class, `bonus` or `penalty` (or both) if it is
+    /// under a timed effect, and `highlight` if it is picked out. The
     /// cursor's number is its brightness.
     pub fn to_text(&self, content: &Content) -> String {
         let mut out = String::new();
@@ -396,8 +432,11 @@ fn unit_text(u: &UnitView) -> String {
     if u.acted {
         text.push_str(" acted");
     }
-    if u.has_effect {
-        text.push_str(" effect");
+    if u.effects.bonus {
+        text.push_str(" bonus");
+    }
+    if u.effects.penalty {
+        text.push_str(" penalty");
     }
     if u.fade > 0.0 {
         let _ = write!(text, " fade={:.2}", u.fade);
@@ -427,7 +466,7 @@ mod tests {
             character: None,
             acted: false,
             hp: (20, 30),
-            has_effect: false,
+            effects: UnitEffects::default(),
             fade: 0.0,
             highlight: false,
         }
@@ -440,6 +479,7 @@ mod tests {
         assert_eq!(s.tiles, vec![TileView::default(); 8]);
         assert_eq!(s.tiles[0].terrain, None);
         assert!(s.units.is_empty() && s.path.is_empty() && s.cursor.is_none());
+        assert_eq!(s.clock_ms, 0);
         // A negative size is an empty view.
         let none = MapScene::new(p(0, 0), (-3, 5));
         assert_eq!((none.size, none.tiles.len()), ((0, 5), 0));
@@ -543,7 +583,8 @@ mod tests {
         assert_eq!(v.character, lord.character);
         assert!(v.character.is_some());
         assert_eq!(v.hp, (lord.hp, lord.stats.hp));
-        assert!(!v.acted && !v.has_effect && !v.highlight);
+        assert!(!v.acted && !v.has_effect() && !v.highlight);
+        assert!(!v.effects.bonus && !v.effects.penalty);
         assert!(v.fade.abs() < f32::EPSILON);
         let mut hurt = lord.clone();
         hurt.hp = 3;
@@ -554,6 +595,89 @@ mod tests {
         assert_eq!((v.pos, v.hp.0, v.acted), (p(9, 9), 3, true));
         assert!((v.fade - 0.5).abs() < f32::EPSILON);
         assert_eq!(v.id, lord.id);
+    }
+
+    /// A timed effect of `mods` from the skill `source`.
+    fn effect(source: &str, mods: TimedMods) -> trpg_core::skill::TimedEffect {
+        trpg_core::skill::TimedEffect {
+            source: trpg_core::SkillId::new(source).into(),
+            mods,
+            until: trpg_core::Phase::Player,
+        }
+    }
+
+    #[test]
+    fn an_effect_that_lowers_a_number_is_a_penalty_and_any_other_a_bonus() {
+        use trpg_core::StatKind;
+        use trpg_core::combat::CombatMods;
+        let stat = |amount| TimedMods {
+            stats: vec![(StatKind::Mov, amount)],
+            ..TimedMods::default()
+        };
+        let combat = |combat| TimedMods {
+            combat,
+            ..TimedMods::default()
+        };
+        let none = CombatMods::default;
+        assert!(hinders(&stat(-3)));
+        assert!(!hinders(&stat(3)));
+        assert!(!hinders(&stat(0)));
+        assert!(!hinders(&TimedMods::default()));
+        assert!(!hinders(&combat(CombatMods {
+            avoid: 20,
+            ..none()
+        })));
+        for lowered in [
+            CombatMods { hit: -1, ..none() },
+            CombatMods { crit: -1, ..none() },
+            CombatMods {
+                might: -1,
+                ..none()
+            },
+            CombatMods {
+                avoid: -1,
+                ..none()
+            },
+            CombatMods {
+                attack_speed: -1,
+                ..none()
+            },
+            CombatMods {
+                pierce: -1,
+                ..none()
+            },
+            CombatMods {
+                single_strike: true,
+                ..none()
+            },
+        ] {
+            assert!(hinders(&combat(lowered)), "{lowered:?}");
+        }
+        // Raised in one number, lowered in another: a penalty.
+        let mixed = TimedMods {
+            stats: vec![(StatKind::Str, 2), (StatKind::Spd, -3)],
+            ..TimedMods::default()
+        };
+        assert!(hinders(&mixed));
+        // On a unit: either kind, or both.
+        let c = ctx();
+        let state = crate::screens::battle::quick_battle(&c.content).unwrap();
+        let mut unit = state.units()[0].clone();
+        unit.add_effect(effect(
+            "sidestep",
+            combat(CombatMods {
+                avoid: 20,
+                ..none()
+            }),
+        ));
+        let v = UnitView::of(&unit);
+        assert!(v.effects.bonus && !v.effects.penalty && v.has_effect());
+        unit.add_effect(effect("pinning_shot", stat(-3)));
+        let v = UnitView::of(&unit);
+        assert!(v.effects.bonus && v.effects.penalty && v.has_effect());
+        unit.effects.remove(0);
+        let v = UnitView::of(&unit);
+        assert!(!v.effects.bonus && v.effects.penalty && v.has_effect());
     }
 
     #[test]
@@ -581,7 +705,7 @@ mod tests {
         lord.class = ClassId("lord".into());
         lord.character = Some(CharacterId("test_lord".into()));
         lord.acted = true;
-        lord.has_effect = true;
+        lord.effects.bonus = true;
         lord.highlight = true;
         s.push_unit(lord);
         s.cursor = Some(CursorView {
@@ -598,7 +722,7 @@ mod tests {
              \x20  4: -*5\n\
              units 2\n\
              \x20 #4 Br enemy brigand (0,2) hp 20/30\n\
-             \x20 #1 Lo player lord [test_lord] (1,3) hp 20/30 acted effect fade=0.25 highlight\n\
+             \x20 #1 Lo player lord [test_lord] (1,3) hp 20/30 acted bonus fade=0.25 highlight\n\
              cursor (1,3) corners 0.76\n\
              path (1,3) (1,2)\n"
         );
@@ -634,8 +758,15 @@ mod tests {
             u.faction = faction;
             // Standing or (wrongly) negative: no fade shown.
             u.fade = -1.0;
+            u.effects.penalty = true;
+            u.effects.bonus = faction == Faction::Ally;
             s.units = vec![u];
-            let line = format!("  #7 Br {name} brigand (0,-1) hp 20/30\n");
+            let effects = if faction == Faction::Ally {
+                "bonus penalty"
+            } else {
+                "penalty"
+            };
+            let line = format!("  #7 Br {name} brigand (0,-1) hp 20/30 {effects}\n");
             assert!(s.to_text(&c.content).contains(&line), "{name}");
         }
     }

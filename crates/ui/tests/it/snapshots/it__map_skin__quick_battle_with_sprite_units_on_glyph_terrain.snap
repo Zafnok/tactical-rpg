@@ -1,0 +1,148 @@
+---
+source: crates/ui/tests/it/map_skin.rs
+expression: h.snapshot()
+---
+                                                                      ┌────────────────────────────┐
+                                                                      │ Plain                      │
+                                                                      │ DEF +0  AVO +0             │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │ Test Lord                  │
+                                                                      │ Exile  Lv 1                │
+                                                                      │ HP 19/19   ██████████      │
+                                                                      │ Player                     │
+                                                                      │                            │
+                                                                      │                            │
+                    ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
+                    ≈≈≈≈≈≈≈≈....··  ··♣♣♣♣^^^^^^                      │                            │
+                    ≈≈≈≈≈≈====······  ..♣♣♣♣....                      │                            │
+                    ..≈≈≈≈..··..............╦╦..                      │                            │
+                    ....  ····....  ..▓▓▓▓▓▓▓▓..                      │                            │
+                    ..♣♣··  ..╦╦......▓▓░░╦╦▓▓..                      │                            │
+                    ♣♣♣♣··    ........▓▓░░░░▓▓..                      │                            │
+                    ♣♣♠♠··..........  ▓▓▓▓▐▌▓▓..                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      │                            │
+                                                                      └────────────────────────────┘
+                                                     w danger zone: OFF · Shift+Space auto-end: OFF 
+ f select · e info · s next unit · r rewind · d menu · Space end turn                      F2 debug 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdddddccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabceeeeeeeeeccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccffffffffffccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcggggggcccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhhhiiiijjjjooooookkkkmmmmmmaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaahhiiiippppoooooojjjjkkkkjjjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjiiiijjoojjjjjjjjjjjjjjqqjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjjjoooooojjjjjjjjrrrrrrrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaajjkkoojjjjqqjjjjjjrrssqqrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakkkkoojjjjjjjjjjjjrrssssrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaakklloojjjjjjjjjjjjrrrrttrrjjaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabccccccccccccccccccccccccccccb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaauuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuua
+auuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuaaaaaaaaaaaaaaaaaaaaaauuuuuuuua
+--- legend ---
+a = fg:text bg:black
+b = fg:panel_border bg:panel_bg
+c = fg:text bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:player bg:panel_bg
+f = fg:hp_high bg:panel_bg
+g = fg:text_dim bg:panel_bg
+h = fg:water bg:sea
+i = fg:water bg:water_bg
+j = fg:grass bg:grass_bg
+k = fg:forest bg:forest_bg
+l = fg:thicket bg:thicket_bg
+m = fg:mountain bg:mountain_bg
+n = fg:peak bg:peak_bg
+o = fg:road bg:road_bg
+p = fg:wood bg:water_bg
+q = fg:fort bg:fort_bg
+r = fg:stone bg:stone_bg
+s = fg:floor bg:floor_bg
+t = fg:wood bg:stone_bg
+u = fg:text_dim bg:black
+--- overlays ---
+over  sprite 272,185 16x20  tilesets/test_units/raider.png 16,0 16x20 solid=enemy
+over  sprite 272,187 16x20  tilesets/test_units/raider.png 16,0 16x20 solid=enemy
+over  sprite 271,186 16x20  tilesets/test_units/raider.png 16,0 16x20 solid=enemy
+over  sprite 273,186 16x20  tilesets/test_units/raider.png 16,0 16x20 solid=enemy
+over  sprite 272,186 16x20  tilesets/test_units/raider.png 16,0 16x20
+over  sprite 288,201 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 288,203 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 287,202 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 289,202 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 288,202 16x20  tilesets/test_units/brigand.png 16,0 16x20
+over  sprite 192,233 16x20  tilesets/test_units/archer.png 16,0 16x20 solid=player
+over  sprite 192,235 16x20  tilesets/test_units/archer.png 16,0 16x20 solid=player
+over  sprite 191,234 16x20  tilesets/test_units/archer.png 16,0 16x20 solid=player
+over  sprite 193,234 16x20  tilesets/test_units/archer.png 16,0 16x20 solid=player
+over  sprite 192,234 16x20  tilesets/test_units/archer.png 16,0 16x20
+over  sprite 272,233 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 272,235 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 271,234 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 273,234 16x20  tilesets/test_units/brigand.png 16,0 16x20 solid=enemy
+over  sprite 272,234 16x20  tilesets/test_units/brigand.png 16,0 16x20
+over  sprite 208,249 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player
+over  sprite 208,251 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player
+over  sprite 207,250 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player
+over  sprite 209,250 16x20  tilesets/test_units/exile.png 16,0 16x20 solid=player
+over  sprite 208,250 16x20  tilesets/test_units/exile.png 16,0 16x20
+over  sprite 224,265 16x20  tilesets/test_units/guard.png 16,0 16x20 solid=player
+over  sprite 224,267 16x20  tilesets/test_units/guard.png 16,0 16x20 solid=player
+over  sprite 223,266 16x20  tilesets/test_units/guard.png 16,0 16x20 solid=player
+over  sprite 225,266 16x20  tilesets/test_units/guard.png 16,0 16x20 solid=player
+over  sprite 224,266 16x20  tilesets/test_units/guard.png 16,0 16x20
+over  sprite 208,265 16x20  tilesets/test_units/mage.png 16,0 16x20 solid=player clip=208,272 16x13
+over  sprite 208,267 16x20  tilesets/test_units/mage.png 16,0 16x20 solid=player clip=208,272 16x15
+over  sprite 207,266 16x20  tilesets/test_units/mage.png 16,0 16x20 solid=player clip=207,272 16x14
+over  sprite 209,266 16x20  tilesets/test_units/mage.png 16,0 16x20 solid=player clip=209,272 16x14
+over  sprite 208,266 16x20  tilesets/test_units/mage.png 16,0 16x20 clip=208,272 16x14
+over  sprite 288,281 16x20  tilesets/test_units/frost_elemental.png 16,0 16x20 solid=enemy
+over  sprite 288,283 16x20  tilesets/test_units/frost_elemental.png 16,0 16x20 solid=enemy
+over  sprite 287,282 16x20  tilesets/test_units/frost_elemental.png 16,0 16x20 solid=enemy
+over  sprite 289,282 16x20  tilesets/test_units/frost_elemental.png 16,0 16x20 solid=enemy
+over  sprite 288,282 16x20  tilesets/test_units/frost_elemental.png 16,0 16x20
+over  209,270 14x2  hp_high
+over  225,286 14x2  hp_high
+over  193,254 14x2  hp_high
+over  289,222 14x2  hp_high
+over  273,254 14x2  hp_high
+over  273,206 14x2  hp_high
+over  289,302 14x2  hp_high
+over  209,286 14x2  hp_high
+over  207,256 3x1  #edd99e
+over  207,256 1x3  #edd99e
+over  221,256 3x1  #edd99e
+over  223,256 1x3  #edd99e
+over  207,269 3x1  #edd99e
+over  207,267 1x3  #edd99e
+over  221,269 3x1  #edd99e
+over  223,267 1x3  #edd99e

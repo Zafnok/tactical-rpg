@@ -154,6 +154,33 @@ impl Overlay {
     }
 }
 
+/// How a [`Sprite`]'s pixels are coloured (ADR-0049). Whichever it is, a
+/// pixel is as see-through as the image has it.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Default)]
+pub enum Paint {
+    /// The image's own colours.
+    #[default]
+    Image,
+    /// Every pixel in this one colour: the picture's silhouette (a unit's
+    /// outline, a hit flash).
+    Solid(Rgb),
+    /// Each pixel [dimmed](Rgb::dimmed): grey and darker (a unit that has
+    /// acted).
+    Dimmed,
+}
+
+impl Paint {
+    /// The colour a pixel of the image's colour `rgb` is drawn in.
+    #[must_use]
+    pub fn apply(self, rgb: Rgb) -> Rgb {
+        match self {
+            Paint::Image => rgb,
+            Paint::Solid(color) => color,
+            Paint::Dimmed => rgb.dimmed(),
+        }
+    }
+}
+
 /// A picture on top of the cell grid (ADR-0038): part of an image file,
 /// scaled into a rectangle of console pixels. `app` draws it from a texture
 /// with nearest-pixel sampling, so whole-number scales stay sharp.
@@ -176,6 +203,14 @@ pub struct Sprite {
     pub flip_x: bool,
     /// 255 = solid; lower lets what is under it show through.
     pub opacity: u8,
+    /// How its pixels are coloured.
+    pub paint: Paint,
+    /// The console pixels it stands on, for a picture that reaches above
+    /// them (a unit's head over the tile above its own): where cells
+    /// replace its base up to one of the base's edges, what it shows past
+    /// that edge goes too, so a menu over a unit doesn't leave its head
+    /// showing above the menu.
+    pub base: Option<PxRect>,
 }
 
 impl Sprite {
@@ -189,7 +224,40 @@ impl Sprite {
             layer,
             flip_x: false,
             opacity: u8::MAX,
+            paint: Paint::Image,
+            base: None,
         }
+    }
+
+    /// What goes of this sprite, beyond `hole` itself, when the pixels
+    /// `hole` are replaced: the part of its [`base`](Self::base) that
+    /// `hole` covers, stretched outwards, past each edge of the base it
+    /// reaches, to this sprite's own edge (up over the head, when it
+    /// covers the base's top). `None` if it has no base or `hole` misses
+    /// it. The rectangle may be empty: the sprite then shows nothing there.
+    fn overhang(&self, hole: PxRect) -> Option<PxRect> {
+        let base = self.base?;
+        let cover = hole.intersect(&base)?;
+        let seen = self.clip;
+        // The low and the high edge of the stretched cover along one axis.
+        let stretch = |cover: (i32, i32), base: (i32, i32), seen: (i32, i32)| {
+            let low = if cover.0 == base.0 { seen.0 } else { cover.0 };
+            let high = if cover.0 + cover.1 == base.0 + base.1 {
+                seen.0 + seen.1
+            } else {
+                cover.0 + cover.1
+            };
+            (low, high)
+        };
+        let (left, right) = stretch((cover.x, cover.w), (base.x, base.w), (seen.x, seen.w));
+        let (top, bottom) = stretch((cover.y, cover.h), (base.y, base.h), (seen.y, seen.h));
+        Some(Rect::new(left, top, right - left, bottom - top))
+    }
+
+    /// This sprite coloured as `paint`.
+    #[must_use]
+    pub const fn painted(self, paint: Paint) -> Self {
+        Self { paint, ..self }
     }
 
     /// The part of `src` that maps to `clip`, as `[x, y, w, h]` in image
@@ -243,6 +311,15 @@ impl Item {
         match self {
             Item::Rect(o) => o.rect,
             Item::Sprite(s) => s.clip,
+        }
+    }
+
+    /// What goes of the item, beyond `hole` itself, when the pixels
+    /// `hole` are replaced: a sprite's [`overhang`](Sprite::overhang).
+    fn overhang(&self, hole: PxRect) -> Option<PxRect> {
+        match self {
+            Item::Rect(_) => None,
+            Item::Sprite(s) => s.overhang(hole),
         }
     }
 
@@ -452,7 +529,9 @@ impl GlyphBuffer {
 
     /// Removes the parts of items over the cells of `rect`: the cells there
     /// were just replaced, and items belong to the cells they were drawn
-    /// with. A sprite is split into up to four with smaller `clip`s.
+    /// with. A sprite is split into up to four with smaller `clip`s; one
+    /// with a `base` also loses what it shows past the base's edges
+    /// beside the cells replaced.
     fn cut_items(&mut self, rect: Rect) {
         let Some(hole) = rect
             .intersect(&self.bounds())
@@ -464,8 +543,13 @@ impl GlyphBuffer {
             .items
             .iter()
             .flat_map(|item| {
+                let overhang = item.overhang(hole);
                 subtract(item.visible(), hole)
                     .into_iter()
+                    .flat_map(move |part| match overhang {
+                        Some(overhang) => subtract(part, overhang),
+                        None => vec![part],
+                    })
                     .map(move |visible| item.with_visible(visible))
             })
             .collect();
@@ -644,7 +728,8 @@ impl GlyphBuffer {
                 Item::Sprite(s) => {
                     // A `dest` whose visible part is on the buffer fits.
                     if let Some(dest) = offset(s.dest, dx, dy) {
-                        let moved = Sprite { dest, ..s };
+                        let base = s.base.and_then(|base| offset(base, dx, dy));
+                        let moved = Sprite { dest, base, ..s };
                         self.items.push(Item::Sprite(moved).with_visible(visible));
                     }
                 }

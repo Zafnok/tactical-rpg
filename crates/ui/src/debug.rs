@@ -24,7 +24,7 @@ use crate::color::{Palette, UiColor};
 use crate::console::{CONSOLE_H, CONSOLE_W};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
 use crate::input::Action;
-use crate::map_view::{default_skin, skin_named};
+use crate::map_view::{MapSkin, TEST_TILESET, next_skin};
 use crate::screen::{Ctx, FrameInput, Screen, Transition};
 use crate::screens::{
     ChangeKind, ClassChangeScreen, DialogueScreen, KeyBindingsScreen, centre_x, print_centred,
@@ -94,30 +94,25 @@ impl DebugMenuScreen {
 
 /// The menu of tools, "Map skin" naming the skin `ctx` uses.
 fn tools_menu(ctx: &Ctx) -> Menu {
-    let skin = format!("Map skin: {}", skin_label(ctx.map_skin.name()));
+    let skin = format!("Map skin: {}", skin_label(ctx.map_skin.as_ref()));
     let items = TOOLS.iter().map(|&t| MenuItem::new(t));
     Menu::new(items.chain([MenuItem::new(skin)]).collect())
 }
 
-/// How the "Map skin" item names the skin called `name`.
-fn skin_label(name: &str) -> &str {
-    match name {
-        "sprite" => "test tileset",
-        other => other,
+/// How the "Map skin" item names `skin`: its tileset's id ("test
+/// tileset" for the test one), or its own name.
+fn skin_label(skin: &dyn MapSkin) -> &str {
+    match skin.tileset_id() {
+        Some(TEST_TILESET) => "test tileset",
+        Some(id) => id,
+        None => skin.name(),
     }
 }
 
-/// Swaps `ctx`'s map skin: the glyph skin for the test tileset's sprite
-/// skin (if the content has it), anything else for the glyph skin.
+/// Swaps `ctx`'s map skin for the next in the round: the glyph skin, each
+/// tileset the content has, then the glyph skin again.
 fn switch_skin(ctx: &mut Ctx) {
-    let next = if ctx.map_skin.name() == "glyph" {
-        skin_named(&ctx.content, "sprite")
-    } else {
-        Some(default_skin())
-    };
-    if let Some(skin) = next {
-        ctx.map_skin = skin;
-    }
+    ctx.map_skin = next_skin(&ctx.content, ctx.map_skin.as_ref());
 }
 
 impl Screen for DebugMenuScreen {
@@ -564,24 +559,27 @@ mod tests {
         assert!(matches!(stay, Transition::None));
         assert_eq!(ctx.map_skin.name(), "sprite");
         assert_eq!(label(&menu), "Map skin: test tileset");
-        // Still on it: again, and back to glyphs.
+        // Still on it: again for the unit sheets on glyph terrain, and
+        // again for glyphs.
         assert_eq!(menu.menu.focus(), MAP_SKIN_TOOL);
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        assert_eq!(ctx.map_skin.name(), "sprite_units");
+        assert_eq!(label(&menu), "Map skin: test_units");
         menu.update(&mut ctx, &frame(&[Confirm]));
         assert_eq!(ctx.map_skin.name(), "glyph");
         assert_eq!(label(&menu), "Map skin: glyph");
         // A menu opened later names the skin in use.
         menu.update(&mut ctx, &frame(&[Confirm]));
         assert_eq!(label(&DebugMenuScreen::new(&ctx)), "Map skin: test tileset");
-        // Without the test tileset, the glyph skin stays.
-        menu.update(&mut ctx, &frame(&[Confirm]));
+        // Without any tileset, the glyph skin stays.
         ctx.content.tilesets.clear();
+        menu.update(&mut ctx, &frame(&[Confirm]));
+        assert_eq!(ctx.map_skin.name(), "glyph");
         menu.update(&mut ctx, &frame(&[Confirm]));
         assert_eq!(ctx.map_skin.name(), "glyph");
         assert_eq!(label(&menu), "Map skin: glyph");
         let down = menu.update(&mut ctx, &frame(&[CursorDown]));
         assert!(matches!(down, Transition::None));
-        assert_eq!(skin_label("glyph"), "glyph");
-        assert_eq!(skin_label("sprite"), "test tileset");
     }
 
     #[test]
