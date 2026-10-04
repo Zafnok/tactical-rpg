@@ -18,7 +18,9 @@ use trpg_core::{LeadGender, LeadProfile};
 use crate::audio::{AudioQueue, MusicClock, pick_from_pool};
 use crate::color::Palette;
 use crate::glyph_buffer::GlyphBuffer;
-use crate::input::{Action, Chord, Device, Keymap, Layout, LayoutBindings, PlayerKeys};
+use crate::input::{
+    Action, Button, Chord, Device, Keymap, Layout, LayoutBindings, PadBindings, PlayerKeys,
+};
 use crate::map_view::{CursorStyle, MapSkin};
 use crate::storage::{MemoryStorage, Storage, StorageError};
 use crate::widgets::help::HelpKeys;
@@ -27,8 +29,8 @@ use crate::widgets::help::HelpKeys;
 /// e.g. `LeftHanded`, which is also valid RON for the enum).
 pub const LAYOUT_KEY: &str = "layout";
 
-/// [`Storage`] key under which the player's key bindings are saved
-/// ([`PlayerKeys::to_ron`], ADR-0031).
+/// [`Storage`] key under which the player's key and controller-button
+/// bindings are saved ([`PlayerKeys::to_ron`], ADR-0031, ADR-0050).
 pub const KEYBINDINGS_KEY: &str = "keybindings";
 
 /// Whether this build offers debug tools: debug builds, and release builds
@@ -109,6 +111,10 @@ pub struct FrameInput {
     text: Vec<char>,
     /// Whether a controller button went down this frame.
     pad: bool,
+    /// The controller buttons that went down this frame, in order.
+    buttons_down: Vec<Button>,
+    /// The controller buttons that went up this frame, in order.
+    buttons_up: Vec<Button>,
 }
 
 impl FrameInput {
@@ -122,7 +128,34 @@ impl FrameInput {
             pressed: Vec::new(),
             text: Vec::new(),
             pad: false,
+            buttons_down: Vec::new(),
+            buttons_up: Vec::new(),
         }
+    }
+
+    /// The same input with the controller buttons that went `down` and
+    /// `up` this frame (and so [`pad_pressed`](Self::pad_pressed) if any
+    /// went down).
+    #[must_use]
+    pub fn with_buttons(mut self, down: Vec<Button>, up: Vec<Button>) -> Self {
+        self.pad = !down.is_empty();
+        self.buttons_down = down;
+        self.buttons_up = up;
+        self
+    }
+
+    /// The controller buttons that went down this frame (bound or not; by
+    /// binding position, stick directions included), for the Key bindings
+    /// screen, which captures the button for a slot. Anything else reacts
+    /// to [`actions`](Self::actions).
+    pub fn pressed_buttons(&self) -> &[Button] {
+        &self.buttons_down
+    }
+
+    /// The controller buttons that went up this frame, as
+    /// [`pressed_buttons`](Self::pressed_buttons).
+    pub fn released_buttons(&self) -> &[Button] {
+        &self.buttons_up
     }
 
     /// The same input with whether a controller button went down this
@@ -192,7 +225,8 @@ pub struct Ctx {
     pub device: Device,
     /// The layout in use; `None` until the player has picked one.
     layout: Option<Layout>,
-    /// The player's key bindings for every layout, loaded from `storage`.
+    /// The player's key bindings for every layout and their controller
+    /// buttons, loaded from `storage`.
     player_keys: PlayerKeys,
     /// Problems found while loading saved data, for `app` to log.
     warnings: Vec<String>,
@@ -331,8 +365,18 @@ impl Ctx {
     /// Switches to `layout`'s bindings (the player's own for that layout,
     /// else its defaults) for this session, without saving the choice.
     pub fn use_layout(&mut self, layout: Layout) {
-        self.keymap = self.keymap_for(layout);
         self.layout = Some(layout);
+        self.refresh_keymap();
+    }
+
+    /// Rebuilds [`keymap`](Self::keymap) from the layout in use (the
+    /// layout picker's keys while there is none) and the player's
+    /// bindings.
+    fn refresh_keymap(&mut self) {
+        self.keymap = match self.layout {
+            Some(layout) => self.keymap_for(layout),
+            None => self.player_keys.layout_picker_keymap(&self.content.keymap),
+        };
     }
 
     /// The keymap `layout` would have: the player's bindings for it, else
@@ -369,6 +413,25 @@ impl Ctx {
             .write(KEYBINDINGS_KEY, &self.player_keys.to_ron())
     }
 
+    /// The player's controller buttons (the defaults until they change
+    /// them), for the Key bindings screen (0816) to edit and hand back to
+    /// [`set_pad_bindings`](Self::set_pad_bindings). The same in both
+    /// layouts.
+    pub fn pad_bindings(&self) -> PadBindings {
+        self.player_keys.pad_bindings(&self.content.keymap)
+    }
+
+    /// Replaces the controller buttons and saves them under
+    /// [`KEYBINDINGS_KEY`]. They work from the next press, whatever the
+    /// layout (and before one is chosen). The change applies even if
+    /// saving fails (it is then lost on quit).
+    pub fn set_pad_bindings(&mut self, bindings: PadBindings) -> Result<(), StorageError> {
+        self.player_keys.set_pad(&self.content.keymap, bindings);
+        self.refresh_keymap();
+        self.storage
+            .write(KEYBINDINGS_KEY, &self.player_keys.to_ron())
+    }
+
     /// Loads the player's key bindings from `storage` (repairing what it
     /// must, with a warning per fix) and re-applies the layout in use.
     fn load_player_keys(&mut self) {
@@ -386,9 +449,7 @@ impl Ctx {
                 .into_iter()
                 .map(|w| format!("{KEYBINDINGS_KEY}: {w}")),
         );
-        if let Some(layout) = self.layout {
-            self.use_layout(layout);
-        }
+        self.refresh_keymap();
     }
 
     /// Takes the warnings gathered while loading saved data (e.g. repaired
@@ -753,6 +814,21 @@ pub(crate) mod tests {
         assert_eq!(i.actions, [Action::Confirm]);
         assert!((i.dt - 0.5).abs() < f32::EPSILON);
         assert!(i.pressed_chords().is_empty());
+        assert!(i.pressed_buttons().is_empty() && i.released_buttons().is_empty());
+        assert!(!i.pad_pressed());
+    }
+
+    #[test]
+    fn frame_input_carries_the_buttons_that_went_down_and_up() {
+        use crate::input::Button::{East, South, West};
+        let i = FrameInput::new(vec![], 0.0, vec![]).with_buttons(vec![South, West], vec![East]);
+        assert_eq!(i.pressed_buttons(), [South, West]);
+        assert_eq!(i.released_buttons(), [East]);
+        assert!(i.pad_pressed());
+        // A release alone isn't a press.
+        let i = FrameInput::new(vec![], 0.0, vec![]).with_buttons(vec![], vec![East]);
+        assert!(!i.pad_pressed());
+        assert_eq!(i.released_buttons(), [East]);
     }
 
     #[test]
@@ -908,6 +984,57 @@ pub(crate) mod tests {
                 .with_default_pad(&c.content.keymap)
         );
         assert_eq!(c.keymap_for(Layout::RightHanded), before);
+    }
+
+    /// Unit info also on the right trigger.
+    fn info_on_right_trigger(c: &Ctx) -> PadBindings {
+        let mut b = c.pad_bindings();
+        assert!(b.bind(Action::Info, 1, Button::RightTrigger).is_ok());
+        b
+    }
+
+    #[test]
+    fn set_pad_bindings_saves_and_applies_in_every_layout_and_before_one_is_chosen() {
+        let mut c = ctx();
+        assert_eq!(c.pad_bindings(), PadBindings::defaults(&c.content.keymap));
+        let b = info_on_right_trigger(&c);
+        assert_eq!(c.set_pad_bindings(b.clone()), Ok(()));
+        assert_eq!(c.pad_bindings(), b);
+        assert_eq!(c.keymap.pad_action(Button::RightTrigger), Some(Action::Info));
+        let saved = c.storage.read(KEYBINDINGS_KEY).unwrap().unwrap();
+        assert_eq!(saved, c.player_keys().to_ron());
+        // The keys are the layout's own; the other layout has the buttons too.
+        assert_eq!(c.keymap, c.keymap_for(Layout::RightHanded));
+        assert_eq!(
+            c.keymap.chords_for(Action::Info),
+            Keymap::for_layout(&c.content.keymap, Layout::RightHanded).chords_for(Action::Info)
+        );
+        c.use_layout(Layout::LeftHanded);
+        assert_eq!(c.keymap.pad_action(Button::RightTrigger), Some(Action::Info));
+        // Before a layout is chosen: the layout picker's keys, these buttons.
+        let mut none = Ctx::embedded().unwrap();
+        assert_eq!(none.set_pad_bindings(b.clone()), Ok(()));
+        assert_eq!(none.layout(), None);
+        assert_eq!(
+            none.keymap,
+            Keymap::layout_picker(&none.content.keymap).with_pad(b.pairs())
+        );
+        // They load with the storage, with or without a layout.
+        let storage = std::mem::replace(&mut none.storage, Box::new(MemoryStorage::new()));
+        let again = Ctx::embedded().unwrap().with_storage(storage);
+        assert_eq!(again.pad_bindings(), b);
+        assert_eq!(
+            again.keymap.pad_action(Button::RightTrigger),
+            Some(Action::Info)
+        );
+        // A failed save still applies them.
+        let mut failing = ctx().with_storage(Box::new(Failing));
+        assert!(failing.set_pad_bindings(b.clone()).is_err());
+        assert_eq!(failing.pad_bindings(), b);
+        assert_eq!(
+            failing.keymap.pad_action(Button::RightTrigger),
+            Some(Action::Info)
+        );
     }
 
     #[test]

@@ -14,6 +14,7 @@ mod key_bindings;
 mod key_bindings_screen;
 mod layout_picker;
 mod map_skin;
+mod rebind_buttons;
 mod save;
 mod split_keys;
 mod sprite_test;

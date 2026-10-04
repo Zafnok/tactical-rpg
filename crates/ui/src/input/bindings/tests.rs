@@ -335,7 +335,8 @@ fn saved_keys_round_trip() {
     keys.set(&def, Layout::LeftHanded, b);
     let text = keys.to_ron();
     assert!(text.starts_with("PlayerKeys("), "{text}");
-    assert!(text.contains("version: 1"), "{text}");
+    assert!(text.contains("version: 2"), "{text}");
+    assert!(text.contains("pad: None"), "{text}");
     assert!(
         text.contains("\"Confirm\": [Some(\"j\"), Some(\"Shift+,\"), None]"),
         "{text}"
@@ -386,10 +387,13 @@ fn unreadable_saved_keys_give_the_defaults_and_a_warning() {
 
 #[test]
 fn another_version_gives_the_defaults_and_a_warning() {
-    let text = saved("\"Info\": [Some(\"g\")]").replace("version: 1", "version: 2");
+    let text = saved("\"Info\": [Some(\"g\")]").replace("version: 1", "version: 3");
     let (keys, warnings) = PlayerKeys::from_ron(&text, &def());
     assert_eq!(keys, PlayerKeys::default());
-    assert_eq!(warnings, ["version 2 isn't 1, using the default keys"]);
+    assert_eq!(warnings, ["version 3 isn't 2, using the default keys"]);
+    let (keys, warnings) = PlayerKeys::from_ron(&text.replace("version: 3", "version: 0"), &def());
+    assert_eq!(keys, PlayerKeys::default());
+    assert_eq!(warnings, ["version 0 isn't 2, using the default keys"]);
 }
 
 #[test]
@@ -482,4 +486,347 @@ fn a_repaired_layout_equal_to_the_defaults_has_no_entry() {
     let (keys, warnings) = PlayerKeys::from_ron(&saved("\"Confirm\": [Some(\"f\")]"), &def());
     assert!(warnings.is_empty());
     assert!(!keys.is_custom(Layout::RightHanded));
+}
+
+// --- Controller buttons (ticket 0816) ---------------------------------------
+
+fn pad() -> PadBindings {
+    PadBindings::defaults(&def())
+}
+
+/// Button slots as names, `-` for empty.
+fn buttons(slots: ButtonSlots) -> [&'static str; SLOTS] {
+    slots.map(|b| b.map_or("-", Button::name))
+}
+
+#[test]
+fn default_buttons_fill_the_first_slots_in_file_order() {
+    let b = pad();
+    assert_eq!(buttons(b.slots(CursorUp)), ["DpadUp", "LeftStickUp", "-"]);
+    assert_eq!(buttons(b.slots(Confirm)), ["South", "-", "-"]);
+    assert_eq!(buttons(b.slots(Cancel)), ["East", "-", "-"]);
+    assert_eq!(buttons(b.slots(Action::Select)), ["-", "-", "-"]);
+    assert_eq!(buttons(b.slots(Debug)), ["-", "-", "-"]);
+    assert!(b.unmapped_required().is_empty());
+    assert!(b.is_unmapped(Action::Menu) && !b.is_unmapped(Info));
+    assert_eq!(b.find(Button::South), Some((Confirm, 0)));
+    assert_eq!(b.find(Button::LeftStickUp), Some((CursorUp, 1)));
+    assert_eq!(b.find(Button::RightStickUp), None);
+    // Every default button, with its action.
+    let def = def();
+    let pairs: Vec<(Button, Action)> = b.pairs().collect();
+    for action in Action::ALL {
+        let bound: Vec<Button> = pairs
+            .iter()
+            .filter(|&&(_, a)| a == action)
+            .map(|&(b, _)| b)
+            .collect();
+        assert_eq!(bound, def.buttons(action), "{action}");
+    }
+}
+
+#[test]
+fn a_bound_button_moves_and_any_button_can_be_bound() {
+    let mut b = pad();
+    // A free button: nothing moves. The right stick's directions count.
+    assert_eq!(b.bind(Info, 1, Button::RightStickUp), Ok(None));
+    assert_eq!(buttons(b.slots(Info)), ["North", "RightStickUp", "-"]);
+    // Confirm's only button goes to Info: Confirm has none left.
+    assert_eq!(b.bind(Info, 2, Button::South), Ok(Some((Confirm, 0))));
+    assert_eq!(buttons(b.slots(Info)), ["North", "RightStickUp", "South"]);
+    assert!(b.is_unmapped(Confirm));
+    assert_eq!(b.unmapped_required(), [Confirm]);
+    // Onto its own slot: nothing happens. Within one action: it moves.
+    assert_eq!(b.bind(Info, 2, Button::South), Ok(None));
+    assert_eq!(b.bind(Info, 0, Button::South), Ok(Some((Info, 2))));
+    assert_eq!(buttons(b.slots(Info)), ["South", "RightStickUp", "-"]);
+    // No button is reserved: every one can go in a slot.
+    for &button in Button::ALL {
+        assert!(b.bind(Action::Menu, 0, button).is_ok(), "{button}");
+        assert_eq!(b.find(button), Some((Action::Menu, 0)));
+    }
+    b.clear(Action::Menu, 0);
+    assert!(b.is_unmapped(Action::Menu));
+    let before = b.clone();
+    b.clear(Action::Menu, SLOTS);
+    b.clear(Debug, 0);
+    assert_eq!(b, before);
+}
+
+#[test]
+fn binding_a_button_to_debug_or_a_missing_slot_is_refused() {
+    let mut b = pad();
+    assert_eq!(
+        b.bind(Debug, 0, Button::West),
+        Err(BindError::NotRebindable(Debug))
+    );
+    assert_eq!(
+        b.bind(Info, SLOTS, Button::West),
+        Err(BindError::NoSuchSlot(SLOTS))
+    );
+    assert_eq!(b, pad());
+}
+
+#[test]
+fn required_actions_without_a_button_are_listed_in_action_order() {
+    let mut b = pad();
+    b.clear(Action::EndTurn, 0);
+    b.clear(Cancel, 0);
+    b.clear(CursorUp, 0);
+    // Cursor up still has the stick.
+    assert_eq!(b.unmapped_required().len(), 2);
+    b.clear(CursorUp, 1);
+    let unmapped = b.unmapped_required();
+    assert_eq!(unmapped.len(), 3);
+    let order: Vec<Action> = Action::ALL
+        .into_iter()
+        .filter(|a| unmapped.contains(a))
+        .collect();
+    assert_eq!(unmapped, order);
+    // Optional actions never count.
+    b.clear(Info, 0);
+    assert_eq!(b.unmapped_required().len(), 3);
+}
+
+/// One edit of the buttons' property test.
+#[derive(Debug, Clone)]
+enum PadOp {
+    Bind(Action, usize, Button),
+    Clear(Action, usize),
+}
+
+fn arb_pad_op() -> impl Strategy<Value = PadOp> {
+    let action = prop::sample::select(Action::ALL.to_vec());
+    let slot = 0..=SLOTS;
+    let button = prop::sample::select(Button::ALL);
+    prop_oneof![
+        (action.clone(), slot.clone(), button).prop_map(|(a, i, b)| PadOp::Bind(a, i, b)),
+        (action, slot).prop_map(|(a, i)| PadOp::Clear(a, i)),
+    ]
+}
+
+proptest! {
+    #[test]
+    fn no_button_is_in_two_slots(ops in prop::collection::vec(arb_pad_op(), 0..80)) {
+        let mut b = pad();
+        for op in ops {
+            match op {
+                PadOp::Bind(a, i, button) => {
+                    let before = b.clone();
+                    if b.bind(a, i, button).is_ok() {
+                        prop_assert_eq!(b.slots(a).get(i).copied().flatten(), Some(button));
+                        prop_assert_eq!(b.find(button), Some((a, i)));
+                    } else {
+                        prop_assert_eq!(&b, &before);
+                    }
+                }
+                PadOp::Clear(a, i) => b.clear(a, i),
+            }
+            let all: Vec<Button> = Action::ALL
+                .into_iter()
+                .flat_map(|a| b.slots(a).into_iter().flatten())
+                .collect();
+            let mut unique = all.clone();
+            unique.sort_unstable();
+            unique.dedup();
+            prop_assert_eq!(unique.len(), all.len(), "a button in two slots: {:?}", all);
+            // The keymap these give has exactly these buttons.
+            let km = Keymap::new([], RepeatDef::default()).with_pad(b.pairs());
+            for action in Action::ALL {
+                let slots: Vec<Button> = b.slots(action).into_iter().flatten().collect();
+                prop_assert_eq!(km.buttons_for(action), slots);
+            }
+        }
+    }
+}
+
+/// The player's buttons with Unit info also on the right trigger.
+fn info_on_right_trigger() -> PadBindings {
+    let mut b = pad();
+    assert_eq!(b.bind(Info, 1, Button::RightTrigger), Ok(None));
+    b
+}
+
+#[test]
+fn the_buttons_are_shared_by_both_layouts_and_the_layout_picker() {
+    let def = def();
+    let mut keys = PlayerKeys::default();
+    assert!(!keys.is_custom_pad());
+    assert_eq!(keys.pad_bindings(&def), pad());
+    let custom = info_on_right_trigger();
+    keys.set_pad(&def, custom.clone());
+    assert!(keys.is_custom_pad());
+    assert_eq!(keys.pad_bindings(&def), custom);
+    let keymaps = [
+        keys.keymap(&def, Layout::RightHanded),
+        keys.keymap(&def, Layout::LeftHanded),
+        keys.layout_picker_keymap(&def),
+    ];
+    for km in &keymaps {
+        assert_eq!(km.pad_action(Button::RightTrigger), Some(Info));
+        assert_eq!(km.buttons_for(Info), [Button::North, Button::RightTrigger]);
+        assert_eq!(km.pad_action(Button::South), Some(Confirm));
+    }
+    // The keys are each layout's own, untouched by the buttons.
+    for layout in Layout::ALL {
+        assert!(!keys.is_custom(layout));
+        let default_keys = LayoutBindings::defaults(&def, layout).keymap(def.repeat);
+        assert_eq!(
+            keys.keymap(&def, layout),
+            default_keys.with_pad(custom.pairs())
+        );
+    }
+    assert_eq!(keymaps[2].primary(Cancel), None);
+    assert_eq!(
+        keymaps[2].chords_for(Confirm),
+        Keymap::layout_picker(&def).chords_for(Confirm)
+    );
+    // Changing a layout's keys leaves the buttons alone.
+    let mut b = keys.bindings(&def, Layout::LeftHanded);
+    b.bind(Info, 0, chord("g")).ok();
+    keys.set(&def, Layout::LeftHanded, b);
+    assert_eq!(keys.pad_bindings(&def), custom);
+    // Buttons equal to the defaults are "no entry".
+    keys.set_pad(&def, pad());
+    assert!(!keys.is_custom_pad());
+    assert_eq!(
+        keys.keymap(&def, Layout::RightHanded),
+        Keymap::for_layout(&def, Layout::RightHanded)
+    );
+    assert_eq!(keys.layout_picker_keymap(&def), Keymap::layout_picker(&def));
+}
+
+#[test]
+fn saved_buttons_round_trip() {
+    let def = def();
+    let mut keys = PlayerKeys::default();
+    let mut custom = info_on_right_trigger();
+    custom.clear(Action::Rewind, 0);
+    keys.set_pad(&def, custom.clone());
+    let text = keys.to_ron();
+    assert!(text.contains("version: 2"), "{text}");
+    assert!(text.contains("layouts: {}"), "{text}");
+    assert!(text.contains("pad: Some({"), "{text}");
+    assert!(
+        text.contains("\"Info\": [Some(\"North\"), Some(\"RightTrigger\"), None]"),
+        "{text}"
+    );
+    assert!(text.contains("\"Rewind\": [None, None, None]"), "{text}");
+    assert!(!text.contains("Debug"), "{text}");
+    let (loaded, warnings) = PlayerKeys::from_ron(&text, &def);
+    assert_eq!(warnings, Vec::<String>::new());
+    assert_eq!(loaded, keys);
+    assert_eq!(loaded.pad_bindings(&def), custom);
+    // Keys and buttons together.
+    let mut b = keys.bindings(&def, Layout::LeftHanded);
+    b.bind(Info, 1, chord("g")).ok();
+    keys.set(&def, Layout::LeftHanded, b);
+    assert_eq!(PlayerKeys::from_ron(&keys.to_ron(), &def), (keys, vec![]));
+}
+
+/// A saved version 2 config with no layouts and the buttons `actions`.
+fn saved_pad(actions: &str) -> String {
+    format!("PlayerKeys(version: 2, layouts: {{}}, pad: Some({{{actions}}}))")
+}
+
+/// Loads `text`: the buttons and the warnings.
+fn load_pad(text: &str) -> (PadBindings, Vec<String>) {
+    let (keys, warnings) = PlayerKeys::from_ron(text, &def());
+    (keys.pad_bindings(&def()), warnings)
+}
+
+#[test]
+fn a_version_1_config_loads_its_keys_with_the_default_buttons() {
+    let (keys, warnings) = PlayerKeys::from_ron(&saved("\"Info\": [Some(\"g\")]"), &def());
+    assert!(warnings.is_empty(), "{warnings:?}");
+    let b = keys.bindings(&def(), Layout::RightHanded);
+    assert_eq!(names(b.slots(Info)), ["g", "-", "-"]);
+    assert!(!keys.is_custom_pad());
+    assert_eq!(keys.pad_bindings(&def()), pad());
+    // Saved again, it is version 2.
+    assert!(keys.to_ron().contains("version: 2"));
+    // Version 2 without buttons, or with `pad: None`: the defaults too.
+    for text in [
+        "PlayerKeys(version: 2, layouts: {})",
+        "PlayerKeys(version: 2, layouts: {}, pad: None)",
+    ] {
+        let (keys, warnings) = PlayerKeys::from_ron(text, &def());
+        assert!(warnings.is_empty(), "{text}: {warnings:?}");
+        assert_eq!(keys, PlayerKeys::default(), "{text}");
+    }
+}
+
+#[test]
+fn unknown_actions_and_buttons_and_extra_slots_are_dropped() {
+    let (b, warnings) = load_pad(&saved_pad(
+        "\"Dance\": [Some(\"West\")], \"Debug\": [Some(\"West\")], \
+         \"Info\": [Some(\"Turbo\"), Some(\"RightTrigger\"), None, Some(\"RightStickUp\")]",
+    ));
+    assert_eq!(buttons(b.slots(Info)), ["-", "RightTrigger", "-"]);
+    assert_eq!(buttons(b.slots(Action::DangerZone)), ["West", "-", "-"]);
+    assert_eq!(warnings.len(), 4, "{warnings:?}");
+    assert_eq!(warnings[0], "controller: unknown action \"Dance\" dropped");
+    assert_eq!(warnings[1], "controller: unknown action \"Debug\" dropped");
+    assert_eq!(
+        warnings[2],
+        "controller: Info: 4 slots, only the first 3 kept"
+    );
+    assert!(
+        warnings[3].starts_with("controller: Info: unknown button \"Turbo\""),
+        "{warnings:?}"
+    );
+    // A short list is padded, and an action that isn't stored keeps its
+    // default buttons.
+    let (b, warnings) = load_pad(&saved_pad("\"Info\": [Some(\"RightTrigger\")]"));
+    assert!(warnings.is_empty());
+    assert_eq!(buttons(b.slots(Info)), ["RightTrigger", "-", "-"]);
+    assert_eq!(buttons(b.slots(Confirm)), ["South", "-", "-"]);
+}
+
+#[test]
+fn a_button_in_two_stored_slots_stays_in_the_first_and_moves_off_a_default() {
+    let (b, warnings) = load_pad(&saved_pad(
+        "\"Rewind\": [Some(\"RightTrigger\")], \
+         \"Info\": [Some(\"North\"), Some(\"RightTrigger\")]",
+    ));
+    assert_eq!(buttons(b.slots(Info)), ["North", "RightTrigger", "-"]);
+    assert!(b.is_unmapped(Action::Rewind));
+    assert_eq!(
+        warnings,
+        ["controller: Rewind: RightTrigger is already on another action"]
+    );
+    // Info takes Rewind's default button; Rewind isn't stored.
+    let (b, warnings) = load_pad(&saved_pad("\"Info\": [Some(\"LeftTrigger\")]"));
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert_eq!(buttons(b.slots(Info)), ["LeftTrigger", "-", "-"]);
+    assert!(b.is_unmapped(Action::Rewind));
+}
+
+#[test]
+fn a_required_action_left_without_a_button_resets_the_buttons_only() {
+    // Info takes Confirm's only default button; the keys are kept.
+    let text = "PlayerKeys(version: 2, layouts: {\"RightHanded\": {\"Info\": [Some(\"g\")]}}, \
+                pad: Some({\"Info\": [Some(\"South\")]}))";
+    let (keys, warnings) = PlayerKeys::from_ron(text, &def());
+    assert_eq!(keys.pad_bindings(&def()), pad());
+    assert!(!keys.is_custom_pad());
+    assert!(keys.is_custom(Layout::RightHanded));
+    assert_eq!(
+        warnings,
+        ["controller: Confirm would have no button, using the default buttons"]
+    );
+    // Buttons repaired to the defaults have no entry.
+    let same = saved_pad("\"Confirm\": [Some(\"South\")]");
+    let (keys, warnings) = PlayerKeys::from_ron(&same, &def());
+    assert!(warnings.is_empty());
+    assert!(!keys.is_custom_pad());
+}
+
+#[test]
+fn unreadable_buttons_give_the_defaults_for_everything() {
+    let text = "PlayerKeys(version: 2, layouts: {}, pad: 5)";
+    let (keys, warnings) = PlayerKeys::from_ron(text, &def());
+    assert_eq!(keys, PlayerKeys::default());
+    assert_eq!(warnings.len(), 1);
+    assert!(warnings[0].starts_with("unreadable, using the default keys"));
 }

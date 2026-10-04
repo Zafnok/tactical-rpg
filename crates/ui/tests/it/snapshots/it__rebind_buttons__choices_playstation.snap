@@ -1,31 +1,31 @@
 ---
-source: crates/ui/tests/it/key_bindings_screen.rs
+source: crates/ui/tests/it/rebind_buttons.rs
 expression: h.snapshot()
 ---
                                                                                                     
   ┌─ Key bindings ───────────────────────────────────────────────────────────────────────────────┐  
   │   Keyboard · Right-handed    Controller                                                      │  
   │                                                                                              │  
-  │                           Key 1             Key 2             Key 3                          │  
-  │ Must have a key                                                                              │  
-  │   Cursor up               Up                ·                 ·                              │  
-  │   Cursor down             Down              ·                 ·                              │  
-  │   Cursor left             Left              ·                 ·                              │  
-  │   Cursor right            Right             ·                 ·                              │  
-  │   Confirm                 f                 Press a key…      ·                              │  
-  │   Cancel  + Escape        d                 ·                 ·                              │  
-  │   End turn                Space             ·                 ·                              │  
+  │                           Button 1          Button 2          Button 3                       │  
+  │ Must have a button                                                                           │  
+  │   Cursor up               ↑                 L-stick ↑         ·                              │  
+  │   Cursor down             ↓                 L-stick ↓         ·                              │  
+  │   Cursor left             ←                 L-stick ←         ·                              │  
+  │   Cursor right            →                 L-stick →         ·                              │  
+  │   Confirm                 ✕                 ·                 ·                              │  
+  │   Cancel                  ◯                 ·                 ·                              │  
+  │   End turn                Options           ·                 ·                              │  
   │                                                                                              │  
   │ Optional                                                                                     │  
   │   Select                  ·                 ·                 ·                 ! not mapped │  
   │   Confirm end turn        ·                 ·                 ·                 ! not mapped │  
-  │   Previous ready unit     a                 ·                 ·                              │  
-  │   Next ready unit         s                 ·                 ·                              │  
-  │   Unit info               e                 ·                 ·                              │  
-  │   Danger zone             w                 ·                 ·                              │  
-  │   Auto-end on/off         Shift+Space       ·                 ·                              │  
-  │   Rewind                  r                 ·                 ·                              │  
-  │   Map menu                ·                 ·                 ·                 ! not mapped │  
+  │   Previous ready unit     L1                ·                 ·                              │  
+  │   Next ready unit         R1                ·                 ·                              │  
+  │   Unit info               △                                   ·                              │  
+  │   Danger zone             □                ╔══════════╗       ·                              │  
+  │   Auto-end on/off         Create           ║ Change   ║       ·                              │  
+  │   Rewind                  L2               ║ Clear    ║       ·                              │  
+  │   Map menu                ·                ╚══════════╝       ·                 ! not mapped │  
   │                                                                                              │  
   │   Restore defaults                                                                           │  
   │                                                                                              │  
@@ -33,20 +33,20 @@ expression: h.snapshot()
                                                                                                     
                                                                                                     
                                                                                                     
-                              Press the key to put here · Escape back                               
+                               D-pad/L-stick move · ✕ select · ◯ back                               
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddcccccccccccccccccccccccddddeeeeeeeeeeddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddeeeeeeeeeeeeeeeeeeeeeeeddddccccccccccddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddeeeeedddddddddddddeeeeedddddddddddddeeeeeddddddddddddddddddddddddddbaa
-aabdfffffffffffffffddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddeeeeeeeeddddddddddeeeeeeeeddddddddddeeeeeeeedddddddddddddddddddddddbaa
+aabdffffffffffffffffffdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddcccccccddddddddddddddddddddddddddddddddddggggggggggggggggdddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddeeeeeeeeddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabdffffffffdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
@@ -54,11 +54,11 @@ aabdddddddddddddddddddddddddddedddddddddddddddddedddddddddddddddddeddddddddddddd
 aabdddddddddddddddddddddddddddedddddddddddddddddedddddddddddddddddedddddddddddddddddeeeeeeeeeeeedbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabdddddddddddddddddddddddddddedddddddddddddddddedddddddddddddddddedddddddddddddddddeeeeeeeeeeeedbaa
+aabdddcccccccccddddddddddddddddddddddddddddddddggggggggggggggggdddeddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddffffffffffffdddddddeddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddfggggggggggfdddddddeddddddddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddddddddddddddddddddddfddddddddddfdddddddeddddddddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddeddddddddddddddddffffffffffffdddddddedddddddddddddddddeeeeeeeeeeeedbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
@@ -66,7 +66,7 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 --- legend ---
 a = fg:text bg:black
 b = fg:panel_border bg:panel_bg

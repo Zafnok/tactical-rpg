@@ -266,7 +266,7 @@ fn the_battle_help_bar_names_buttons_after_a_pad_press_and_keys_after_a_key() {
     );
     // And back, in the frame of the press itself.
     h.hold_pad("DpadUp", 0.0);
-    assert!(shows(&h, "D-pad/stick move"));
+    assert!(shows(&h, "D-pad/L-stick move"));
 }
 
 /// The names follow the pad in use: Xbox letters, Sony's shapes,
@@ -332,7 +332,7 @@ fn a_tip_names_the_buttons_of_the_pad_in_use() {
     let xbox = tip(Some(PadKind::Xbox));
     assert!(shows(
         &xbox,
-        "Steer the cursor with D-pad/stick. Press A on one of"
+        "Steer the cursor with D-pad/L-stick. Press A on one of"
     ));
     assert!(shows(&xbox, "A close"));
     let sony = tip(Some(PadKind::PlayStation));

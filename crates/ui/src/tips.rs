@@ -232,16 +232,16 @@ bb",
         let on = |kind| fill_placeholders(text, HelpKeys::new(&km, Device::Pad(kind)));
         assert_eq!(
             on(PadKind::Xbox),
-            "A/B D-pad/stick A RB {Nope} ! not mapped"
+            "A/B D-pad/L-stick A RB {Nope} ! not mapped"
         );
         assert_eq!(on(PadKind::Generic), on(PadKind::Xbox));
         assert_eq!(
             on(PadKind::PlayStation),
-            "✕/◯ D-pad/stick ✕ R1 {Nope} ! not mapped"
+            "✕/◯ D-pad/L-stick ✕ R1 {Nope} ! not mapped"
         );
         assert_eq!(
             on(PadKind::Nintendo),
-            "A/B D-pad/stick A R {Nope} ! not mapped"
+            "A/B D-pad/L-stick A R {Nope} ! not mapped"
         );
         assert_eq!(
             fill_placeholders(text, HelpKeys::keyboard(&km)),
