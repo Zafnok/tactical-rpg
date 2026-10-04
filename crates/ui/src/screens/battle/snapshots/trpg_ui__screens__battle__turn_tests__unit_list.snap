@@ -89,4 +89,4 @@ r = fg:stone bg:stone_bg
 s = fg:wood bg:stone_bg
 t = fg:text_dim bg:black
 --- overlays ---
-over  288,302 16x2  hp_high
+over  289,302 14x2  hp_high

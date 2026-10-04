@@ -3,8 +3,9 @@
 //! that shows one. The battle screen decides when a trigger has happened.
 
 use std::collections::BTreeSet;
+use std::fmt::Display;
 
-use trpg_content::tip::{CURSOR_PLACEHOLDER, placeholders};
+use trpg_content::tip::CURSOR_PLACEHOLDER;
 
 use crate::color::{Palette, UiColor};
 use crate::glyph_buffer::{BoxStyle, Cell, GlyphBuffer, Rect};
@@ -69,19 +70,39 @@ pub fn reset_tips(storage: &mut dyn Storage) -> Result<(), StorageError> {
 ///
 /// [`Keymap::select_action`]: crate::input::Keymap::select_action
 pub fn fill_placeholders(text: &str, keys: HelpKeys<'_>) -> String {
-    let mut out = text.to_owned();
-    for name in placeholders(text) {
-        let keys = if name == CURSOR_PLACEHOLDER {
-            cursor_keys_name(keys)
-        } else if name == Action::Select.name() {
-            key_name(keys, keys.select_action())
-        } else if let Some(action) = Action::from_name(name) {
-            key_name(keys, action)
-        } else {
-            continue;
+    fill_text(text, keys, &[])
+}
+
+/// [`fill_placeholders`], with each `{name}` that `args` names replaced by
+/// its value first (`("count", &3)` fills `{count}`). What is filled in is
+/// not looked at again, so a value may hold braces.
+pub fn fill_text(text: &str, keys: HelpKeys<'_>, args: &[(&str, &dyn Display)]) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some((before, after)) = rest.split_once('{') {
+        out.push_str(before);
+        let Some((name, tail)) = after.split_once('}') else {
+            // An unclosed `{`: the rest is plain text.
+            out.push('{');
+            rest = after;
+            break;
         };
-        out = out.replace(&format!("{{{name}}}"), &keys);
+        if let Some((_, value)) = args.iter().find(|(arg, _)| *arg == name) {
+            out.push_str(&value.to_string());
+        } else if name == CURSOR_PLACEHOLDER {
+            out.push_str(&cursor_keys_name(keys));
+        } else if name == Action::Select.name() {
+            out.push_str(&key_name(keys, keys.select_action()));
+        } else if let Some(action) = Action::from_name(name) {
+            out.push_str(&key_name(keys, action));
+        } else {
+            out.push('{');
+            out.push_str(name);
+            out.push('}');
+        }
+        rest = tail;
     }
+    out.push_str(rest);
     out
 }
 
@@ -221,6 +242,34 @@ bb",
             fill_placeholders("{Cursor} {Confirm}", HelpKeys::keyboard(&no_cursor)),
             "! not mapped f"
         );
+    }
+
+    /// Ticket 0233: named values beside key names, each filled once.
+    #[test]
+    fn named_values_are_filled_with_the_key_names() {
+        let km = keymap(&[("f", Action::Confirm)]);
+        let keys = HelpKeys::keyboard(&km);
+        assert_eq!(
+            fill_text(
+                "{count} of {total}: {Confirm} {count} {nope}",
+                keys,
+                &[("count", &3), ("total", &"ten")]
+            ),
+            "3 of ten: f 3 {nope}"
+        );
+        // A value wins over a key of the same name, and its own braces
+        // are not filled again.
+        assert_eq!(
+            fill_text(
+                "{Confirm} {a}{b} {",
+                keys,
+                &[("Confirm", &"{a}"), ("a", &"{Confirm}"), ("b", &"}")]
+            ),
+            "{a} {Confirm}} {"
+        );
+        // Text after an unclosed brace is kept as it is.
+        assert_eq!(fill_text("a { b", keys, &[("b", &1)]), "a { b");
+        assert_eq!(fill_text("", keys, &[]), "");
     }
 
     /// Ticket 0220: on a controller a tip names the pad's buttons.
