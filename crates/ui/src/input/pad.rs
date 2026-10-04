@@ -120,10 +120,10 @@ fn names(button: Button) -> [&'static str; 3] {
         Button::DpadDown => ["↓"; 3],
         Button::DpadLeft => ["←"; 3],
         Button::DpadRight => ["→"; 3],
-        Button::LeftStickUp => ["stick ↑"; 3],
-        Button::LeftStickDown => ["stick ↓"; 3],
-        Button::LeftStickLeft => ["stick ←"; 3],
-        Button::LeftStickRight => ["stick →"; 3],
+        Button::LeftStickUp => ["L-stick ↑"; 3],
+        Button::LeftStickDown => ["L-stick ↓"; 3],
+        Button::LeftStickLeft => ["L-stick ←"; 3],
+        Button::LeftStickRight => ["L-stick →"; 3],
         Button::RightStickUp => ["R-stick ↑"; 3],
         Button::RightStickDown => ["R-stick ↓"; 3],
         Button::RightStickLeft => ["R-stick ←"; 3],
@@ -237,13 +237,13 @@ const RIGHT_STICK: StickButtons = [
 /// gives the whole set.
 const DIRECTION_SETS: [(&str, StickButtons); 3] = [
     ("D-pad", DPAD),
-    ("stick", LEFT_STICK),
+    ("L-stick", LEFT_STICK),
     ("R-stick", RIGHT_STICK),
 ];
 
 /// What moves the cursor on a pad of `kind`, for help text. `bound` is the
 /// buttons of the cursor's up, down, left and right. Every whole set of
-/// directions among them is named, joined with `/` (`D-pad/stick` with the
+/// directions among them is named, joined with `/` (`D-pad/L-stick` with the
 /// defaults); if there is none, each direction's first button, in
 /// up-left-down-right order. `None` if a direction has no button.
 pub(super) fn cursor_buttons_name(kind: PadKind, bound: &[Vec<Button>; 4]) -> Option<String> {

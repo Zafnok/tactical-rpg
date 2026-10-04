@@ -22,7 +22,7 @@ pub mod pad;
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
-pub use bindings::{BindError, LayoutBindings, PlayerKeys, Slots};
+pub use bindings::{BindError, ButtonSlots, LayoutBindings, PadBindings, PlayerKeys, Slots};
 pub use pad::{ButtonSet, PadId, PadKind, PadState, Pads};
 pub use trpg_content::keymap::{
     Action, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS, StickDef,
@@ -42,6 +42,10 @@ const CLEAR_SLOT: Chord = Chord::plain(Key::Delete);
 /// What a slot on the Key bindings screen shows while it waits for a key
 /// (`docs/design/controls.md`, *Rebinding keys*).
 pub const CAPTURE_PROMPT: &str = "Press a key…";
+
+/// What a slot shows while it waits for a controller button
+/// (`docs/design/controls.md`, *Rebinding buttons*).
+pub const CAPTURE_BUTTON_PROMPT: &str = "Press a button…";
 
 /// Whether `chord` backs out of the Key bindings screen's "Press a key…"
 /// (`docs/design/controls.md`, *Rebinding keys*). The screen asks this
@@ -262,7 +266,7 @@ impl Keymap {
 
     /// What moves the cursor on a pad of `kind`, for help text: the whole
     /// sets of direction buttons the four cursor actions are on, joined
-    /// with `/` (`D-pad/stick` with the defaults); if they are on no whole
+    /// with `/` (`D-pad/L-stick` with the defaults); if they are on no whole
     /// set, each one's [`primary_button`](Self::primary_button)'s name in
     /// up-left-down-right order. `None` if any cursor action has no button.
     pub fn cursor_buttons_name(&self, kind: PadKind) -> Option<String> {
@@ -944,7 +948,10 @@ mod tests {
             PadKind::Nintendo,
             PadKind::Generic,
         ] {
-            assert_eq!(km.cursor_buttons_name(kind).as_deref(), Some("D-pad/stick"));
+            assert_eq!(
+                km.cursor_buttons_name(kind).as_deref(),
+                Some("D-pad/L-stick")
+            );
         }
     }
 
@@ -974,11 +981,11 @@ mod tests {
         ]);
         let xbox = PadKind::Xbox;
         assert_eq!(name(&dpad, xbox).as_deref(), Some("D-pad"));
-        assert_eq!(name(&stick, xbox).as_deref(), Some("stick"));
+        assert_eq!(name(&stick, xbox).as_deref(), Some("L-stick"));
         assert_eq!(name(&right, xbox).as_deref(), Some("R-stick"));
         // Whole sets are named D-pad first, whatever the slot order.
         let all = [right, stick, dpad].concat();
-        assert_eq!(name(&all, xbox).as_deref(), Some("D-pad/stick/R-stick"));
+        assert_eq!(name(&all, xbox).as_deref(), Some("D-pad/L-stick/R-stick"));
         // A set with a direction elsewhere isn't whole; the whole one is
         // still named, and the odd button isn't.
         let mut mixed = [dpad, stick].concat();

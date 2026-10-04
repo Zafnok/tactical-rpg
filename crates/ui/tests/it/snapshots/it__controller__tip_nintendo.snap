@@ -3,14 +3,14 @@ source: crates/ui/tests/it/controller.rs
 expression: "tip(Some(PadKind::Nintendo)).snapshot()"
 ---
                                                                       ┌────────────────────────────┐
-       ╔═ Your move ══════════════════════════════════════════╗       │ Plain                      │
-       ║                                                      ║       │ DEF +0  AVO +0             │
-       ║ Steer the cursor with D-pad/stick. Press A on one of ║       │                            │
-       ║ your units to select it. R jumps to the next unit    ║       │                            │
-       ║ that can still act; X shows a unit's details.        ║       │ Test Lord                  │
-       ║                                                      ║       │ Exile  Lv 1                │
-       ║ A close                                              ║       │ HP 19/19   ██████████      │
-       ╚══════════════════════════════════════════════════════╝       │ Player                     │
+      ╔═ Your move ════════════════════════════════════════════╗      │ Plain                      │
+      ║                                                        ║      │ DEF +0  AVO +0             │
+      ║ Steer the cursor with D-pad/L-stick. Press A on one of ║      │                            │
+      ║ your units to select it. R jumps to the next unit      ║      │                            │
+      ║ that can still act; X shows a unit's details.          ║      │ Test Lord                  │
+      ║                                                        ║      │ Exile  Lv 1                │
+      ║ A close                                                ║      │ HP 19/19   ██████████      │
+      ╚════════════════════════════════════════════════════════╝      │ Player                     │
                                                                       │                            │
                                                                       │                            │
                     ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
@@ -36,14 +36,14 @@ expression: "tip(Some(PadKind::Nintendo)).snapshot()"
  A close                                                                                   F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaabbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaabdcccccddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabdeeeeeeeeeddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabdfffffffddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddggggggggggddddddb
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaabdffffffdddddddddddddddddddddb
+aaaaaabbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaabdcccccddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabdeeeeeeeeeddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabdfffffffddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddggggggggggddddddb
+aaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaabdffffffdddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb

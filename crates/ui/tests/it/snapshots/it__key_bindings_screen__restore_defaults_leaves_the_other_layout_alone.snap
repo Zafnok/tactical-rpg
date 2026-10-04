@@ -1,9 +1,10 @@
 ---
-source: crates/ui/tests/key_bindings_screen.rs
+source: crates/ui/tests/it/key_bindings_screen.rs
 expression: h.snapshot()
 ---
                                                                                                     
-  ┌─ Key bindings · Right-handed ────────────────────────────────────────────────────────────────┐  
+  ┌─ Key bindings ───────────────────────────────────────────────────────────────────────────────┐  
+  │   Keyboard · Right-handed    Controller                                                      │  
   │                                                                                              │  
   │                           Key 1             Key 2             Key 3                          │  
   │ Must have a key                                                                              │  
@@ -14,20 +15,19 @@ expression: h.snapshot()
   │   Confirm                 f                 g                 ·                              │  
   │   Cancel  + Escape        d                 ·                 ·                              │  
   │   End turn                Space             ·                 ·                              │  
-  │                                                                                              │  
-  │ Optional               ╔════════════════════════════════════════════╗                        │  
-  │   Select               ║                                            ║           ! not mapped │  
-  │   Confirm end turn     ║ Restore the default keys for Right-handed? ║           ! not mapped │  
-  │   Previous ready unit  ║ f yes / d no                               ║                        │  
-  │   Next ready unit      ║                                            ║                        │  
-  │   Unit info            ╚════════════════════════════════════════════╝                        │  
+  │                        ╔════════════════════════════════════════════╗                        │  
+  │ Optional               ║                                            ║                        │  
+  │   Select               ║ Restore the default keys for Right-handed? ║           ! not mapped │  
+  │   Confirm end turn     ║ f yes / d no                               ║           ! not mapped │  
+  │   Previous ready unit  ║                                            ║                        │  
+  │   Next ready unit      ╚════════════════════════════════════════════╝                        │  
+  │   Unit info               e                 ·                 ·                              │  
   │   Danger zone             w                 ·                 ·                              │  
   │   Auto-end on/off         Shift+Space       ·                 ·                              │  
   │   Rewind                  r                 ·                 ·                              │  
   │   Map menu                ·                 ·                 ·                 ! not mapped │  
   │                                                                                              │  
   │   Restore defaults                                                                           │  
-  │                                                                                              │  
   │                                                                                              │  
   └──────────────────────────────────────────────────────────────────────────────────────────────┘  
                                                                                                     
@@ -36,7 +36,8 @@ expression: h.snapshot()
                                             f yes · d no                                            
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aabbcccccccccccccccccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabdddcccccccccccccccccccccccddddeeeeeeeeeeddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddeeeeedddddddddddddeeeeedddddddddddddeeeeeddddddddddddddddddddddddddbaa
 aabdfffffffffffffffddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
@@ -47,20 +48,19 @@ aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddd
 aabdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddeeeeeeeeddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
-aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
-aabdffffffffdddddddddddddddffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddbaa
+aabdffffffffdddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfdddddddddddeeeeeeeeeeeedbaa
-aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfdddddddddddeeeeeeeeeeeedbaa
-aabddddddddddddddddddddddddfdeeeeeeeeeeeedddddddddddddddddddddddddddddddfddddddddddddddddddddddddbaa
+aabddddddddddddddddddddddddfdeeeeeeeeeeeedddddddddddddddddddddddddddddddfdddddddddddeeeeeeeeeeeedbaa
 aabddddddddddddddddddddddddfddddddddddddddddddddddddddddddddddddddddddddfddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddffffffffffffffffffffffffffffffffffffffffffffffddddddddddddddddddddddddbaa
+aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddddddddddddddddddddedddddddddddddddddeddddddddddddddddddddddddddddddbaa
 aabdddddddddddddddddddddddddddedddddddddddddddddedddddddddddddddddedddddddddddddddddeeeeeeeeeeeedbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddggggggggggggggggggddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
-aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

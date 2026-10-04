@@ -97,7 +97,7 @@ pub fn all_key_names(keys: HelpKeys<'_>, action: Action) -> String {
 
 /// What moves the cursor: `arrows` when the four cursor actions are on the
 /// arrow keys, otherwise their keys in up-left-down-right order (`wasd`).
-/// On a controller, `D-pad/stick` or whatever the cursor is on
+/// On a controller, `D-pad/L-stick` or whatever the cursor is on
 /// ([`Keymap::cursor_buttons_name`]). [`NOT_MAPPED`] if any cursor action
 /// has no key. See [`Keymap::cursor_keys_name`].
 pub fn cursor_keys_name(keys: HelpKeys<'_>) -> String {
@@ -172,18 +172,18 @@ mod tests {
             line(Device::Keyboard),
             "arrows move · f select · e info · s next unit · r rewind · d back · Space end turn"
         );
-        let xbox = "D-pad/stick move · A select · Y info · RB next unit · LT rewind · B back \
+        let xbox = "D-pad/L-stick move · A select · Y info · RB next unit · LT rewind · B back \
                     · Start end turn";
         assert_eq!(line(XBOX), xbox);
         assert_eq!(line(Device::Pad(PadKind::Generic)), xbox);
         assert_eq!(
             line(PLAYSTATION),
-            "D-pad/stick move · ✕ select · △ info · R1 next unit · L2 rewind · ◯ back \
+            "D-pad/L-stick move · ✕ select · △ info · R1 next unit · L2 rewind · ◯ back \
              · Options end turn"
         );
         assert_eq!(
             line(NINTENDO),
-            "D-pad/stick move · A select · X info · R next unit · ZL rewind · B back \
+            "D-pad/L-stick move · A select · X info · R next unit · ZL rewind · B back \
              · + end turn"
         );
     }
@@ -237,7 +237,7 @@ mod tests {
     fn all_key_names_lists_every_button_in_order_on_a_pad() {
         let km = defaults();
         let names = |device, action| all_key_names(HelpKeys::new(&km, device), action);
-        assert_eq!(names(XBOX, Action::CursorUp), "↑/stick ↑");
+        assert_eq!(names(XBOX, Action::CursorUp), "↑/L-stick ↑");
         assert_eq!(names(PLAYSTATION, Action::Confirm), "✕");
         // No fixed extra on a pad: Cancel is its button alone.
         assert_eq!(names(NINTENDO, Action::Cancel), "B");
@@ -261,7 +261,7 @@ mod tests {
         let km = defaults();
         assert_eq!(
             cursor_keys_name(HelpKeys::new(&km, PLAYSTATION)),
-            "D-pad/stick"
+            "D-pad/L-stick"
         );
         assert_eq!(cursor_keys_name(HelpKeys::keyboard(&km)), "arrows");
         // Keys but no buttons, and the other way round.

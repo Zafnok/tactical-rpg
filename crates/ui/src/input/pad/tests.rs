@@ -71,10 +71,10 @@ fn buttons_are_named_as_the_pad_in_use_labels_them() {
         (Button::DpadDown, "↓", "↓", "↓"),
         (Button::DpadLeft, "←", "←", "←"),
         (Button::DpadRight, "→", "→", "→"),
-        (LeftStickUp, "stick ↑", "stick ↑", "stick ↑"),
-        (LeftStickDown, "stick ↓", "stick ↓", "stick ↓"),
-        (LeftStickLeft, "stick ←", "stick ←", "stick ←"),
-        (LeftStickRight, "stick →", "stick →", "stick →"),
+        (LeftStickUp, "L-stick ↑", "L-stick ↑", "L-stick ↑"),
+        (LeftStickDown, "L-stick ↓", "L-stick ↓", "L-stick ↓"),
+        (LeftStickLeft, "L-stick ←", "L-stick ←", "L-stick ←"),
+        (LeftStickRight, "L-stick →", "L-stick →", "L-stick →"),
         (RightStickUp, "R-stick ↑", "R-stick ↑", "R-stick ↑"),
         (RightStickDown, "R-stick ↓", "R-stick ↓", "R-stick ↓"),
         (RightStickLeft, "R-stick ←", "R-stick ←", "R-stick ←"),
@@ -159,7 +159,7 @@ fn the_sets_of_directions_are_each_up_down_left_right() {
         [
             ("D-pad", ["DpadUp", "DpadDown", "DpadLeft", "DpadRight"]),
             (
-                "stick",
+                "L-stick",
                 [
                     "LeftStickUp",
                     "LeftStickDown",

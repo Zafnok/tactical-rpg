@@ -4,7 +4,8 @@
 //!
 //! Rows, top to bottom: Cursor up, down, left, right, Confirm, Cancel, End
 //! turn, Select, Confirm end turn, Previous / Next ready unit, Unit info, …,
-//! Restore defaults (one `Up` from the first row).
+//! Restore defaults, the keyboard / controller switch (one `Up` from the
+//! first row). The controller side is tested in `rebind_buttons.rs`.
 
 use insta::assert_snapshot;
 use trpg_ui::harness::Harness;
@@ -67,7 +68,10 @@ fn the_list_snapshot() {
 #[test]
 fn the_left_handed_list_shows_that_layouts_keys() {
     let h = open(Layout::LeftHanded);
-    assert!(h.snapshot().contains(" Key bindings · Left-handed "));
+    assert!(
+        h.snapshot()
+            .contains("  Keyboard · Left-handed    Controller  ")
+    );
     assert!(row(&h, "Confirm").contains(" j "));
     assert!(row(&h, "Cursor up").contains(" w "));
 }
@@ -243,9 +247,10 @@ fn restore_defaults_leaves_the_other_layout_alone() {
         defaults(&h, Layout::RightHanded)
     );
     reopen(&mut h);
-    // One Up from the first row is Restore defaults. It asks first, and
-    // Cancel there answers no without leaving the screen.
-    h.keys("Up f");
+    // Two Ups from the first row (past the keyboard / controller switch)
+    // is Restore defaults. It asks first, and Cancel there answers no
+    // without leaving the screen.
+    h.keys("Up Up f");
     assert!(
         h.snapshot()
             .contains("Restore the default keys for Right-handed?")

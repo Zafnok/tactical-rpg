@@ -3,14 +3,14 @@ source: crates/ui/tests/it/controller.rs
 expression: sony.snapshot()
 ---
                                                                       ┌────────────────────────────┐
-       ╔═ Your move ══════════════════════════════════════════╗       │ Plain                      │
-       ║                                                      ║       │ DEF +0  AVO +0             │
-       ║ Steer the cursor with D-pad/stick. Press ✕ on one of ║       │                            │
-       ║ your units to select it. R1 jumps to the next unit   ║       │                            │
-       ║ that can still act; △ shows a unit's details.        ║       │ Test Lord                  │
-       ║                                                      ║       │ Exile  Lv 1                │
-       ║ ✕ close                                              ║       │ HP 19/19   ██████████      │
-       ╚══════════════════════════════════════════════════════╝       │ Player                     │
+      ╔═ Your move ════════════════════════════════════════════╗      │ Plain                      │
+      ║                                                        ║      │ DEF +0  AVO +0             │
+      ║ Steer the cursor with D-pad/L-stick. Press ✕ on one of ║      │                            │
+      ║ your units to select it. R1 jumps to the next unit     ║      │                            │
+      ║ that can still act; △ shows a unit's details.          ║      │ Test Lord                  │
+      ║                                                        ║      │ Exile  Lv 1                │
+      ║ ✕ close                                                ║      │ HP 19/19   ██████████      │
+      ╚════════════════════════════════════════════════════════╝      │ Player                     │
                                                                       │                            │
                                                                       │                            │
                     ≈≈≈≈≈≈≈≈≈≈....♣♣♣♣♠♠♠♠^^^^▲▲                      │                            │
@@ -36,14 +36,14 @@ expression: sony.snapshot()
  ✕ close                                                                                   F2 debug 
 --- colours ---
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaaabbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaabdcccccddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabdeeeeeeeeeddddddddddddddddddb
-aaaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddddddddddddddddddb
-aaaaaaabdfffffffddddddddddddddddddddddddddddddddddddddddddddddbaaaaaaabddddddddddddggggggggggddddddb
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaabdffffffdddddddddddddddddddddb
+aaaaaabbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaabdcccccddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabdeeeeeeeeeddddddddddddddddddb
+aaaaaabddddddddddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddddddddddddddddddb
+aaaaaabdfffffffddddddddddddddddddddddddddddddddddddddddddddddddbaaaaaabddddddddddddggggggggggddddddb
+aaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaabdffffffdddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb
 aaaaaaaaaaaaaaaaaaaahhhhhhiiiijjjjkkkkllllmmmmnnaaaaaaaaaaaaaaaaaaaaaabddddddddddddddddddddddddddddb

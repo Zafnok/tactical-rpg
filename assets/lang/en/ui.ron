@@ -17,4 +17,20 @@
     "title.credits": "Credits",
     "title.quit": "Quit",
     "title.help": "{Cursor} move · {Confirm} select · {Cancel} back",
+
+    // The Key bindings screen: the text its controller side added (ticket
+    // 0816). The rest of the screen's text moves here with ticket 0234.
+    "key_bindings.keyboard": "Keyboard",
+    "key_bindings.controller": "Controller",
+    "key_bindings.button_column": "Button {n}",
+    "key_bindings.must_have_button": "Must have a button",
+    "key_bindings.optional": "Optional",
+    "key_bindings.change": "Change",
+    "key_bindings.clear": "Clear",
+    "key_bindings.hold_to_cancel": "hold any button to cancel",
+    "key_bindings.restore_buttons": "Restore the default buttons?",
+    "key_bindings.blocked_button": "Give {action} a button first",
+    "key_bindings.help_choice": "{Cursor} move · {Confirm} select · {Cancel} back",
+    "key_bindings.help_switch": "{CursorLeft}/{CursorRight} keyboard or controller · {Cursor} move · {Cancel} back",
+    "key_bindings.help_slot_pad": "{Cursor} move · {Confirm} change · {Cancel} back",
 }

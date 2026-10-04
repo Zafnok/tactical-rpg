@@ -127,7 +127,9 @@ buf.fill_rect(text_box, Cell::new(' ', text, panel_bg));   // a solid box
 2. `Game` feeds them to `InputState`, which turns them into this frame's
    `Action`s (presses, then repeats of the held cursor key or button). The
    raw key presses also go into `FrameInput::pressed_chords()`, which text
-   boxes and the Key bindings screen read (to capture a key for a slot).
+   boxes and the Key bindings screen read (to capture a key for a slot;
+   `pressed_buttons` / `released_buttons` are the same for a controller
+   button, ADR-0050).
 3. Only the **top** screen's `update(ctx, input)` runs. It returns a
    `Transition`: `None`, `Push(screen)`, `Pop`, `Replace(screen)` or `Quit`.
    Popping the last screen also quits.
