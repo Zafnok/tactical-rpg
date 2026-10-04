@@ -7,7 +7,8 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 
 | Module | What |
 | ------ | ---- |
-| `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console (cells, plus rectangles and sprites placed in pixels; see *What a frame holds*), palette colours, the text snapshot format |
+| `glyph_buffer`, `color`, `snapshot`, `console` | The 100×32 `GlyphBuffer` virtual console (cells, plus rectangles and sprites placed in pixels, and a backdrop behind see-through cells; see *What a frame holds*), palette colours, the text snapshot format |
+| `cinema` | `view`: where a backdrop's window starts to look at a point at a zoom, stopping at the scene's edges (ADR-0048) |
 | `map_view` | The battle map (ADR-0038): `MapScene` (what is on the visible map, plain data), `MapSkin` (how it looks), the `GlyphSkin` and the `SpriteSkin` (from a tileset file), and what skins share: `Grid` (where tiles go in pixels) and `path` (the path arrow for any tile size). See *Map view* below |
 | `input` | `Action`s, `Layout`, `Keymap`, `InputState` (key repeat) |
 | `screen` | `Screen` trait, `Transition`, `FrameInput`, `Ctx` (shared resources, active layout), `ScreenStack` |
@@ -17,7 +18,7 @@ the buffer it returns; tests drive the same `Game` headlessly with the
 | `flow` | `FlowScreen`: the game flow (ADR-0035). One screen on the stack that owns the `Campaign` and hosts the flow's screens itself: mode, lead, a chapter's scenes, Preparations, its battle, the results of a won battle, Game Over, "To be continued" |
 | `screens` | Game screens: `TitleScreen`, `ModeSelectScreen`, `LeadSelectScreen` (with the name grid), `PreparationsScreen` (loadouts and the pack before a battle, 0408), `GameOverScreen`, `ToBeContinuedScreen`, `ResultsScreen` (a won battle's gold, rewind bonus and EXP bars, then its level-up pages, 0810), `LayoutPickerScreen`, `KeyBindingsScreen` (rebinding, 0815), `CreditsScreen` (0808), `DialogueScreen` (full-screen or over the map), `ClassChangeScreen` (`screens/class_change`: promotion and reclass between battles, 0603), `BattleScreen` (`screens/battle`: its `mode` state machine, `attack` targeting, `forecast` panel and combat `playback`, which runs as a mode of the battle screen, ADR-0025) |
 | `portrait` | `draw_portrait`: a portrait's PNG as one sprite item at the largest whole scale that fits the 32×16-cell frame, dimmed and/or mirrored (ADR-0043); `fit_whole_scale` for any picture in any frame |
-| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), sprite test, class change on a test unit (promote, reclass), Map skin (glyph / test tileset; not saved) |
+| `debug` | Debug menu (F2 in debug builds): glyph sampler, portrait viewer, test scene (full-screen or overlay), Key bindings (until Options, 0805, opens it), sprite test, class change on a test unit (promote, reclass), scene camera (the test map as a backdrop: pan, zoom 1× to 4×), Map skin (glyph / test tileset; not saved) |
 | `dialogue` | `DialoguePlayer`: plays a dialogue `Scene` one text box at a time and gives the `View` (portraits, speaker, text, caption) to draw |
 | `harness` | Headless test driver (tests, or the `harness` feature) |
 
@@ -78,6 +79,42 @@ buf.add_sprite(sprite);
   (`snapshot.rs`).
 - The "Sprite test" debug tool shows each of these on the test card; look
   at it after touching how `app` draws items.
+
+### A backdrop: a second picture, panned and zoomed
+
+A frame may also hold one **backdrop** (ADR-0048): another `GlyphBuffer`,
+the *scene*, of any size, shown through a window of the console's cells at
+a pixel offset and a whole zoom. It is how the cinematic pans over a map.
+
+```rust
+// 1. The scene: any buffer. A map skin can paint a whole map into it.
+let scene: Rc<GlyphBuffer> = Rc::new(scene);
+// 2. Mark the window: cells with no background.
+buf.fill_rect(window, Cell::see_through(' ', text));
+// 3. Where the window starts in the scene, to look at `centre` at 2×.
+let origin = cinema::view(scene_px, window_px, centre, 2);
+buf.set_backdrop(Rc::clone(&scene), window, origin, 2);
+// 4. Anything drawn now is over the scene.
+buf.print_fg(x, y, "Text over the scene", hi);   // glyphs, no box
+buf.fill_rect(text_box, Cell::new(' ', text, panel_bg));   // a solid box
+```
+
+- The scene shows **only** behind see-through cells
+  (`Cell::see_through(glyph, fg)`); every other cell is solid and hides
+  it. `print_fg` keeps a cell see-through; `print`, `set`, `fill_rect`,
+  `draw_box` and `blit` make it solid.
+- `zoom` is a whole number, 1 to 4 (`cinema::MAX_ZOOM`): Nick ruled out
+  smooth zoom (`docs/design/title-screen.md`, *Intro cinematic*).
+  `origin_px` is in scene pixels and may be a fraction; the renderer
+  rounds the scene's place to whole window pixels, so glyphs stay sharp.
+- Past the scene's edge the window shows the console's clear colour.
+- Clearing the frame removes the backdrop, so set it every frame.
+- In a snapshot, see-through cells have their own colour key
+  (`bg:see-through`), and the frame ends with
+  `--- backdrop: clip x,y wxh  origin x,y  zoom N ---` and the scene's own
+  snapshot.
+- The "Scene camera" debug tool shows the test map this way; look at it
+  after touching how `app` draws a backdrop.
 
 ## How a frame runs
 
@@ -238,6 +275,17 @@ terrain changed; `>` then the terrain a spell would turn it into; `*n` =
      `cursor_keys_name`, `help_line`) with `ctx.help_keys()`: each layout
      binds actions to different keys, and after a controller press the same
      calls name that pad's buttons instead (ADR-0036).
+   - Text the player reads is never a string literal (ADR-0045). Put it
+     in `assets/lang/en/ui.ron` under a `screen.thing` key and ask for it
+     with `ctx.text("title.new_game")`, or `ctx.text_with("results.turns",
+     &[("count", &n)])` for text with `{count}`-style values in it (which
+     also fills `{Confirm}`-style key names, so a help line is one key:
+     `"{Cursor} move · {Confirm} select"`). One key per meaning, and one
+     key for a whole sentence rather than pieces joined in code: word
+     order differs by language. A key the file lacks panics in debug
+     builds. Look text up when drawing, or again whenever the screen is
+     shown, so it follows `ctx.lang`. `cargo xtask check-text` counts the
+     literals left and fails on a new one.
    - Never compute game rules here; send `core` commands and animate events.
    - Shared state that several screens need goes in `Ctx` (a plain struct).
    - Sounds and music: `ctx.audio.play_sound("menu_move")`,

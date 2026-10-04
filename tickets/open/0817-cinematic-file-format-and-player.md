@@ -32,8 +32,10 @@ loader).
 
 ## Nick input
 
-**Answer first:** ticket 0036: the zoom rule, and cuts or fades between
-shots.
+**Answer first:** ticket 0036 (answered 2026-10-03,
+`docs/design/title-screen.md`, *Intro cinematic*): zoom is a whole step
+(2×, 3×, 4×) and a shot keeps one size; shots change with **hard cuts**,
+no fades between shots.
 
 ## Scope
 
@@ -43,7 +45,9 @@ shots.
 - `trpg_ui::cinematic`: a timeline and a player that draws the shot for any
   time `t`.
 - Shot kinds `MapPan` and `Logo`.
-- The change between shots that 0036 decided (cut, or fade through black).
+- Hard cuts between shots (0036). The player still takes a whole-frame
+  `brightness` (0..1) so the title can fade the cinematic in under its
+  menu (0819); the file has no fades.
 - `assets/cinematics/test.ron` and a debug tool to watch it.
 - An ADR (`write-adr`) for the format and the "pure function of time" rule.
 
@@ -52,8 +56,7 @@ shots.
 - Anything on the title screen, or following the music (0819). The debug
   tool runs on its own frame clock.
 - The real title cinematic (0820).
-- Units moving or fighting inside a shot. If 0036 asked for that, it wrote
-  its own ticket.
+- Units moving or fighting inside a shot: ticket 0827 (0036 chose it).
 
 ## Implementation steps
 
@@ -71,8 +74,8 @@ shots.
    `at` is seconds from the start. A shot lasts until the next shot's `at`;
    the last one lasts until the track's end. `from`/`to` are the map tile
    (fractions allowed) at the centre of the screen at the shot's start and
-   end. `zoom` takes the values 0036 allows. If 0036 chose fades, the file
-   has one `fade_ms` for the whole cinematic. The length is the music cue's
+   end. `zoom` is 1, 2, 3 or 4 (0036: whole steps, one size per shot).
+   There is no fade setting: shots cut. The length is the music cue's
    `length_ms` (0227); the file doesn't repeat it.
 2. **Loader and validator** (`crates/content/src/cinematic.rs`,
    `Content::cinematics`, the all-assets test): shots sorted by `at`, the
@@ -80,7 +83,7 @@ shots.
    `to` are on its map; `zoom` is allowed; the music cue exists. All errors
    at once, with the file name.
 3. **Timeline** (`crates/ui/src/cinematic.rs`): `Timeline::at(t) ->
-   ShotAt { index, progress /* 0..1 */, fade /* 0..1 brightness */ }`, with
+   ShotAt { index, progress /* 0..1 */ }`, with
    `t` wrapped at the length. **Every shot is drawn from `t` alone**: no
    state carried from frame to frame. That is what lets 0819 follow the
    music, jump and loop, and lets tests snapshot any moment.
@@ -97,10 +100,11 @@ shots.
      moving from `from` to `to` with an ease-in-out on `progress`.
    - `Logo`: 0811's title art, drawn by the same function `TitleScreen`
      uses (make it shareable; don't copy it).
-   - Fades: `buf.dim` and the backdrop's brightness by `fade`. A fade must
-     cover everything in the frame: cells, rectangles and sprite items
-     (ADR-0038). `dim` only changes cells, so if 0231 is done, fade items
-     too (rectangles by colour, sprites by `opacity`).
+   - `draw` takes a `brightness` (0..1) for the whole frame, used by 0819
+     when the title's menu fades into the cinematic: `buf.dim` and the
+     backdrop's brightness. It must cover everything in the frame: cells,
+     rectangles and sprite items (ADR-0038). `dim` only changes cells, so
+     fade items too (rectangles by colour, sprites by `opacity`).
 5. **Debug tool** (`crates/ui/src/debug.rs`, `TOOLS`): "Play test
    cinematic", a screen that advances `t` by `dt` and loops; Cancel closes
    it. Help line per the `keyboard-input` skill.
@@ -110,8 +114,8 @@ shots.
 ## Acceptance criteria
 
 - [ ] Content validation loads `test.ron`; each validator error has a test.
-- [ ] Unit: `Timeline::at` at a shot's start, middle and end, at the wrap,
-      and (if fades) the brightness on both sides of a change.
+- [ ] Unit: `Timeline::at` at a shot's start, middle and end and at the
+      wrap. A snapshot at `brightness` 0.5 dims cells and items alike.
 - [ ] Snapshot: the test cinematic at three times (start of the pan, its
       middle, the logo). Drawing the same `t` twice gives the same buffer.
 - [ ] Harness: F2 → "Play test cinematic" plays, loops and closes on

@@ -5,10 +5,10 @@ type: infra
 milestone: M7 Chapter 1 & game flow
 model: sonnet-5
 effort: low
-status: todo
+status: done
 blocked_by: ["0802"]
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0821 — Save format guard test
@@ -74,12 +74,12 @@ so 0901 is blocked by this ticket).
 
 ## Acceptance criteria
 
-- [ ] Adding a field to `Unit` (try it locally, then revert) makes
+- [x] Adding a field to `Unit` (try it locally, then revert) makes
       `cargo test -p trpg-core --test it save_format::` fail with the message
       from step 3.
-- [ ] The fixtures are named after the version they hold, and the test
+- [x] The fixtures are named after the version they hold, and the test
       fails if no fixture exists for the current `SAVE_VERSION`.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -87,5 +87,31 @@ so 0901 is blocked by this ticket).
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+- `crates/core/tests/replay.rs` moved to `tests/it/replay.rs`; `tests/it/main.rs`
+  lists `replay` and `save_format`.
+- `tests/fixtures/save_v1_chapter.ron` and `save_v1_suspend.ron` are the golden
+  saves. `tests/it/save_format.rs` reads them, writes them back and compares
+  to the byte, replays the suspend save and checks the turn, phase, every
+  unit's HP, the player units' level and EXP, a position and the charges
+  left. A missing fixture for the current `SAVE_VERSION` fails with the same
+  message. Older fixtures (none yet) must parse as `SaveHeader` with the
+  version in their name.
+- Tried: a `#[serde(default)]` field added to `Unit` fails
+  `the_current_versions_golden_saves_read_and_write_back_the_same` with the
+  step 3 message; reverted.
+- `SAVE_VERSION`'s doc comment says what to do; so does the test module's
+  header.
+
+**Deviations**
+
+- The golden saves are built from the fixtures of `tests/it/replay.rs`
+  (its setup, tables and script), not from `crates/core/src/battle/tests.rs`:
+  those are `pub(crate)` inside the library's unit tests, and the
+  integration test needs the same content tables to replay the suspend save.
+  The battle is 23 commands of the replay script (attacks, two equips, a
+  potion, a talk, a wait) with one rewind charge spent.
+- The generator is kept, as an ignored test, instead of a one-off print:
+  `cargo test -p trpg-core --test it save_format::regenerate -- --ignored`
+  writes the fixtures for the current `SAVE_VERSION`.
+
+No follow-up tickets. No gameplay rules decided. Nothing for Nick to check.

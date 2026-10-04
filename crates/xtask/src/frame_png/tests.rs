@@ -333,3 +333,121 @@ fn a_16_bit_picture_without_alpha_decodes_to_rgba8() {
         (1, 1, vec![0x12, 0x56, 0x9a, 255])
     );
 }
+
+const RED: Rgb = Rgb::new(200, 0, 0);
+const BLUE: Rgb = Rgb::new(0, 0, 128);
+const GREEN: Rgb = Rgb::new(0, 128, 0);
+const WHITE: Rgb = Rgb::new(255, 255, 255);
+
+/// A 6×3-cell console over a 2×1-cell scene (a red 'A' on blue, then a
+/// green cell with a white `Over` dot at scene pixel (9, 1)). The scene
+/// shows at 2× from scene pixel `origin` through the window of cells
+/// (1, 1) to (4, 2): console pixels 8..40 × 16..48. In the window, cell
+/// (2, 1) holds a white 'A' with no background and cell (4, 2) is solid,
+/// in the clear colour.
+fn backdrop_frame(origin: (f32, f32)) -> GlyphBuffer {
+    let mut scene = GlyphBuffer::new(2, 1, Cell::new(' ', CLEAR, GREEN));
+    scene.set(0, 0, Cell::new('A', RED, BLUE));
+    scene.add_overlay(Overlay::new(Rect::new(9, 1, 1, 1), WHITE, Layer::Over));
+    let mut buf = GlyphBuffer::new(6, 3, Cell::new(' ', CLEAR, CLEAR));
+    let window = Rect::new(1, 1, 4, 2);
+    buf.fill_rect(window, Cell::see_through(' ', CLEAR));
+    buf.set_backdrop(std::rc::Rc::new(scene), window, origin, 2);
+    buf.print_fg(2, 1, "A", WHITE);
+    buf.set(4, 2, Cell::new(' ', CLEAR, CLEAR));
+    buf
+}
+
+/// Pixels of [`backdrop_frame`] from origin (2, 1) at scale 1, worked out
+/// by hand: scene pixel (sx, sy) is the 2×2 square at
+/// (8 + (sx − 2) × 2, 16 + (sy − 1) × 2).
+const BACKDROP_EXPECTED: [((u32, u32), Rgb); 16] = [
+    // The scene's 'A' block (scene x and y under 4), then its cell's bg.
+    ((8, 16), RED),
+    ((11, 16), RED),
+    ((12, 16), BLUE),
+    ((10, 45), BLUE),
+    // The console's own 'A' over the scene, and the scene beside it.
+    ((16, 16), WHITE),
+    ((19, 19), WHITE),
+    ((20, 16), GREEN),
+    // The scene's dot, scaled with it.
+    ((22, 16), WHITE),
+    ((23, 17), WHITE),
+    ((22, 18), GREEN),
+    // Clipped to the window: nothing left of or above it.
+    ((7, 16), CLEAR),
+    ((8, 15), CLEAR),
+    // Past the scene's right and bottom edges: the clear colour.
+    ((35, 16), GREEN),
+    ((36, 16), CLEAR),
+    ((10, 46), CLEAR),
+    // The solid cell hides the scene, though it is in the clear colour.
+    ((33, 33), CLEAR),
+];
+
+#[test]
+fn a_backdrop_is_scaled_shifted_and_clipped_behind_the_see_through_cells() {
+    let (painter, _) = painter(false);
+    let buf = backdrop_frame((2.0, 1.0));
+    for scale in [1, 2, 3] {
+        let image = painter.render(&buf, scale);
+        assert_eq!((image.width, image.height), (48 * scale, 48 * scale));
+        for ((x, y), Rgb { r, g, b }) in BACKDROP_EXPECTED {
+            for (dx, dy) in [(0, 0), (scale - 1, scale - 1)] {
+                let at = (x * scale + dx, y * scale + dy);
+                assert_eq!(
+                    image.pixel(at.0, at.1),
+                    Some([r, g, b, 255]),
+                    "({x}, {y}) at scale {scale}"
+                );
+            }
+        }
+        // Beside the solid cell the scene still shows.
+        let Rgb { r, g, b } = GREEN;
+        assert_eq!(image.pixel(31 * scale, 33 * scale), Some([r, g, b, 255]));
+    }
+}
+
+#[test]
+fn half_a_scene_pixel_pans_by_one_window_pixel() {
+    let (painter, _) = painter(false);
+    let at = |origin, x| painter.render(&backdrop_frame(origin), 1).pixel(x, 16);
+    let px = |Rgb { r, g, b }: Rgb| Some([r, g, b, 255]);
+    // From (2, 1) the block ends before window pixel 12; from (2.5, 1),
+    // one pixel sooner; from (3, 1), two.
+    assert_eq!((at((2.0, 1.0), 10), at((2.0, 1.0), 11)), (px(RED), px(RED)));
+    assert_eq!(
+        (at((2.5, 1.0), 10), at((2.5, 1.0), 11)),
+        (px(RED), px(BLUE))
+    );
+    assert_eq!((at((3.0, 1.0), 9), at((3.0, 1.0), 10)), (px(RED), px(BLUE)));
+    // At 2 × 2 a quarter of a scene pixel is a window pixel.
+    let at2 = |origin, x| painter.render(&backdrop_frame(origin), 2).pixel(x, 32);
+    assert_eq!(
+        (at2((2.0, 1.0), 23), at2((2.0, 1.0), 24)),
+        (px(RED), px(BLUE))
+    );
+    assert_eq!(
+        (at2((2.25, 1.0), 22), at2((2.25, 1.0), 23)),
+        (px(RED), px(BLUE))
+    );
+    // A window that starts before the scene shows the clear colour first.
+    assert_eq!(at((-1.0, 1.0), 9), px(CLEAR));
+    assert_eq!(at((-1.0, 1.0), 10), px(RED));
+}
+
+#[test]
+fn the_scene_camera_frame_shows_the_map_in_its_window() {
+    let dir = temp_dir("frame-png-backdrop");
+    let mut options = parse_args(&args(&["camera.png", "--keys", "F2 Up Up f f"])).unwrap();
+    options.scale = 1;
+    let printed = run(&dir, &options).unwrap();
+    assert!(printed.contains("scene_camera"), "{printed}");
+    let frame = Image::decode(&fs::read(dir.join("camera.png")).unwrap()).unwrap();
+    // The middle of the window (cells 26..74 × 4..18) isn't the clear
+    // colour: the map is there.
+    let middle = frame.pixel(50 * 8, 11 * 16).unwrap();
+    assert_ne!(middle, [0, 0, 0, 255]);
+    let _ = fs::remove_dir_all(&dir);
+}

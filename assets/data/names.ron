@@ -31,7 +31,8 @@
     "envoy": "Ragna Holt",
     "battlemage": "Oriel Mast",
 
-    // Short forms (ticket 0712): what people say instead of the full name.
+    // Short forms (tickets 0712, 0713): what people say instead of the full
+    // name.
     // Each is its own entry, so renaming a character means changing the
     // full name above and its short forms here.
     "retainer.first": "Hollis",
@@ -39,16 +40,24 @@
     "sergeant.last": "Rook",
     "rival.first": "Dace",
     "vowmaster.first": "Absalom",
+    "vowmaster.last": "Crane",
     "vowmaster.title": "the Master of Vows",
     "red_captain.first": "Harl",
+    "red_captain.last": "Coster",
     "red_captain.nickname": "Red Harl",
     "sister.first": "Wren",
     "vosse.first": "Harrick",
+    "vosse.last": "Vosse",
     "defector.first": "Joss",
+    "defector.last": "Pellam",
     "prizefighter.first": "Gil",
+    "prizefighter.last": "Parrow",
     "shieldbearer.first": "Hedda",
+    "shieldbearer.last": "Ravn",
     "envoy.first": "Ragna",
+    "envoy.last": "Holt",
     "battlemage.first": "Oriel",
+    "battlemage.last": "Mast",
     "family.marr": "Marr",
     "family.veyne": "Veyne",
     "faction.brennmark.adj": "Brennish",

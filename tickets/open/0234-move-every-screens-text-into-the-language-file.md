@@ -55,7 +55,10 @@ number in each.
    placeholder (`"Lv {level}"`), because word order differs by language.
 4. Screens where new screens were added since 0233 (check `git log` for
    `crates/ui/src/screens`) are covered too.
-5. Set the number in `check-text` to 0.
+5. Set the number in `check-text` to 0. What it lists that is not text
+   for a translator (a picture drawn from rows of `X` and `.`, a
+   controller button's name) gets a `// check-text: not player text`
+   comment instead of a key.
 6. Add a line to `crates/ui/src/screens/README` or the `work-ticket`
    skill's checklist, wherever new-screen rules live: new screens take
    their text from `ctx.text`.

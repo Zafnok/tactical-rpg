@@ -326,6 +326,10 @@ starting rule* or look, for Nick to judge at the sign-off.
     tile showing fire or ice is terrain to change).
   - On an **ally** (a heal): `Heal on Rex: HP 10 → 25` over the help bar,
     and the allies it can heal tinted green.
+- **Pointing at an enemy** with a caster selected (ticket 0430) walks to a
+  tile the spell reaches it from and opens the forecast of the equipped
+  spell; left / right swap spells. The rules are in `turn-structure.md`
+  (*Pointing at an enemy*). Tiles and allies are still cast on from `Magic`.
 - **Affinity markers in the forecast:** Weak shows the `!` of an effective
   strike; `(resist)` or `heals N` is written under the caster's crit.
 - **The unit info screen** marks an equipped spell `E` and lists the class's

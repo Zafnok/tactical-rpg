@@ -1,0 +1,18 @@
+// The test pack's screen text: each entry is the English in capitals.
+// Kept on purpose: `title.subtitle` is stale (its `source` is not today's
+// English) and `title.credits` is missing, so both show in English.
+[
+    (key: "title.title", source: "Visions of Shuyi", text: "VISIONS OF SHUYI"),
+    (key: "title.subtitle", source: "an ASCII strategy game", text: "AN ASCII STRATEGY GAME"),
+    (key: "title.press_any_key", source: "Press any key", text: "PRESS ANY KEY"),
+    (key: "title.continue", source: "Continue", text: "CONTINUE"),
+    (key: "title.new_game", source: "New Game", text: "NEW GAME"),
+    (key: "title.load_game", source: "Load Game", text: "LOAD GAME"),
+    (key: "title.quick_battle", source: "Quick Battle", text: "QUICK BATTLE"),
+    (key: "title.quit", source: "Quit", text: "QUIT"),
+    (
+        key: "title.help",
+        source: "{Cursor} move · {Confirm} select · {Cancel} back",
+        text: "{Cursor} MOVE · {Confirm} SELECT · {Cancel} BACK",
+    ),
+]

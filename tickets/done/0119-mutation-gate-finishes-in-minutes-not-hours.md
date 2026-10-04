@@ -5,10 +5,10 @@ type: infra
 milestone: M0 Foundation
 model: sonnet-5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0119 — Make the PR mutation gate finish in minutes, not hours
@@ -128,21 +128,21 @@ The weekly full run is already split into 4 shards; the PR run never was.
 
 ## Acceptance criteria
 
-- [ ] A PR whose diff gives 400+ `crates/ui` mutants gets its mutation
+- [x] A PR whose diff gives 400+ `crates/ui` mutants gets its mutation
       result in under 45 minutes of wall-clock time (numbers in the
       completion notes).
-- [ ] A PR whose diff gives fewer than 40 mutants is no slower than today.
-- [ ] A docs-only PR and a PR with no `.rs` changes still pass without
+- [x] A PR whose diff gives fewer than 40 mutants is no slower than today.
+- [x] A docs-only PR and a PR with no `.rs` changes still pass without
       building.
-- [ ] A deliberately missed mutant (a throwaway commit that adds an
+- [x] A deliberately missed mutant (a throwaway commit that adds an
       untested `pub fn` returning a `bool` to `crates/core`) turns
       `mutants-result` red; the commit is removed afterwards.
-- [ ] The set of mutants tested is the same as before: the sum of
+- [x] The set of mutants tested is the same as before: the sum of
       "Found N mutants" over the shards equals `--list` on the whole
       diff.
-- [ ] `.cargo/mutants.toml` is unchanged except for options that do not
+- [x] `.cargo/mutants.toml` is unchanged except for options that do not
       remove mutants.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -153,5 +153,64 @@ The weekly full run is already split into 4 shards; the PR run never was.
 
 ## Completion notes
 
-*(Filled in by the session that completes the ticket: what was done, deviations,
-follow-up tickets created, notes for Nick.)*
+**Done.** The PR run of `.github/workflows/mutants.yml` is now three jobs
+(ADR-0047):
+
+1. `mutants (diff, plan)` counts the diff's mutants with `--list` (no build)
+   and picks 1 shard (up to 40 mutants), 4 (up to 160) or 8.
+2. `mutants (diff, shard N)`: `cargo mutants --in-diff git.diff --jobs 2
+   --shard N/n --sharding round-robin --test-tool=nextest`, 90-minute limit.
+3. `mutants (diff)`: the aggregate, and the required check.
+
+**Measured on CI, 2026-10-03** (throwaway draft PRs #178, #179, #180, all
+closed and their branches deleted; nothing of them is in this PR):
+
+| Run | Mutants | Wall-clock | Per mutant |
+| --- | --- | --- | --- |
+| Before (ticket table): 0432 | 420 | 4 h 45 min | about 40 s (`ui`: 12–16 s build + 24–27 s tests) |
+| Before: 0433 (PR #174's diff) | 511 | about 4 h 20 min expected | about 30 s |
+| After, PR #174's diff, nextest + `--in-place` ([run](https://github.com/Zafnok/visions-of-shuyi/actions/runs/37103328087)) | 511 | shards of 13–23 min | 17 s (`ui`: 13.6 s build + 7.7 s tests) |
+| After, same diff, nextest + `--jobs 2`, the variant kept ([run, attempt 2](https://github.com/Zafnok/visions-of-shuyi/actions/runs/37103330073)) | 511 | **19 min** (07:46:52 to 08:05:53 UTC; shards of 12–18 min) | about 30 s each, two at a time (`ui`: 22 s build + 14 s tests) |
+| After, 5 mutants, one of them an untested `pub fn -> bool` in `crates/core` ([run](https://github.com/Zafnok/visions-of-shuyi/actions/runs/37103332251)) | 5 | plan 15 s + one shard of 4 min | **red**, 5 missed |
+
+- Same mutants as before: the plan job's `--list` says 511; the shards found
+  64 × 7 + 63 = 511. Both variants reported the same 8 missed mutants.
+- nextest was kept: tests per `ui` mutant fell from 24–27 s to 7.7 s, and the
+  unmutated run passes under it on every shard.
+- `--jobs 2` was kept over `--in-place`: on runners of the same speed, a shard
+  of 64 took 17–20 min against 21–23 min.
+- This PR itself has no `.rs` change: the plan job finds 0 mutants, no shard
+  runs, and `mutants (diff)` is green without building.
+- A diff under 40 mutants: one shard as before, plus about 20 s for the plan
+  job; each mutant is cheaper, so it is not slower than before.
+
+**Deviations from the plan**
+
+- The aggregate job has the id `mutants-result` but the *name*
+  `mutants (diff)`, the name the single job had. The required check in the
+  "protect main" ruleset is therefore unchanged, and Nick has nothing to set
+  up.
+- `--sharding round-robin` is given explicitly: cargo-mutants' default is now
+  `slice` (consecutive ranges), which is not what step 1 describes.
+- The measurement used scratch draft PRs, not a throwaway commit on this
+  branch, so this branch never carried one.
+- The first measured runs took 67–74 min of wall-clock time, because three
+  scratch PRs and PR #174's own run were competing for GitHub's 20 jobs at
+  once: jobs waited up to 20 min for a runner. The 19 min above is the same
+  run started again with the queue empty. Several large PRs open at once will
+  still queue.
+
+**For the next sessions**
+
+- nextest does not run doc tests. `crates/ui` has 3 (`audio.rs` twice,
+  `harness.rs`); they no longer help catch mutants. A mutant only a doc test
+  would catch is reported as missed: stricter, not weaker.
+- PR #174 (ticket 0433) has 8 missed mutants in its diff
+  (`map_view/path.rs:28`, `map_view/sprite.rs:324` twice,
+  `xtask/src/test_tileset.rs:135, 164, 164, 192, 192`). That is that PR's
+  work; once it merges `main` it will get the answer in about 20 minutes.
+
+**Follow-up tickets:** none. The `ui` test suite did not need its own ticket:
+under nextest a caught mutant pays 7.7 s of tests, not the whole suite.
+
+**Gameplay rules decided:** none (infra ticket).

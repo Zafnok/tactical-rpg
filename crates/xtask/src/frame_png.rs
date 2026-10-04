@@ -4,7 +4,8 @@
 //!
 //! [`Painter`] is a software copy of `app`'s `Renderer::draw`, pixel for
 //! pixel at whole scales: the clear colour, cell backgrounds, `Under`
-//! items in order, glyphs tinted with their fg, `Over` items in order.
+//! items in order, glyphs tinted with their fg, `Over` items in order;
+//! and before all that, a backdrop's scene in its window (ADR-0048).
 //! Textures are sampled at the nearest pixel and blended over what is
 //! beneath with their alpha, as the GPU does.
 
@@ -17,7 +18,7 @@ use trpg_content::{FontAtlasDef, ImageId, ImageTable};
 use trpg_ui::console::{CELL_H_PX, CELL_W_PX};
 use trpg_ui::harness::Harness;
 use trpg_ui::input::{Button, Chord, Layout};
-use trpg_ui::{GlyphBuffer, Item, Layer, PxRect, Rgb, Sprite, UiColor};
+use trpg_ui::{Backdrop, GlyphBuffer, Item, Layer, PxRect, Rgb, Sprite, UiColor};
 
 use crate::font_atlas::{decode_png, encode_png};
 
@@ -205,6 +206,17 @@ pub struct Image {
 }
 
 impl Image {
+    /// A `width` × `height` picture of `color`, solid.
+    fn filled(width: u32, height: u32, color: Rgb) -> Self {
+        let mut image = Self {
+            width,
+            height,
+            rgba: vec![0; width as usize * height as usize * 4],
+        };
+        image.fill((0, 0, i64::from(width), i64::from(height)), color);
+        image
+    }
+
     /// Decodes PNG file `png`.
     fn decode(png: &[u8]) -> Result<Self, String> {
         let (width, height, rgba) = decode_png(png)?;
@@ -312,31 +324,80 @@ impl Painter {
     }
 
     /// Draws `buf` with each console pixel `scale` × `scale` pixels big.
+    /// With a backdrop (ADR-0048): the clear colour, the scene inside its
+    /// window, then the console over it, as in `app`.
     pub fn render(&self, buf: &GlyphBuffer, scale: u32) -> Image {
         let s = i64::from(scale);
         let (cell_w, cell_h) = (i64::from(CELL_W_PX) * s, i64::from(CELL_H_PX) * s);
         let width = u32::try_from(i64::from(buf.width()) * cell_w).unwrap_or(0);
         let height = u32::try_from(i64::from(buf.height()) * cell_h).unwrap_or(0);
-        let mut out = Image {
-            width,
-            height,
-            rgba: vec![0; width as usize * height as usize * 4],
-        };
-        out.fill((0, 0, i64::from(width), i64::from(height)), self.clear);
+        let mut out = Image::filled(width, height, self.clear);
+        if let Some(backdrop) = buf.backdrop() {
+            self.draw_backdrop(&mut out, backdrop, scale);
+        }
+        // Over a scene, a cell in the clear colour must hide it.
+        let all_fills = buf.backdrop().is_some();
+        self.draw_layers(&mut out, buf, (0, 0), s, all_fills);
+        out
+    }
+
+    /// Draws `backdrop`'s scene in its window of `out`: every scene pixel
+    /// `zoom × scale` pixels big, placed by [`Backdrop::scene_offset`].
+    /// The scene is drawn into a picture the size of the window, which
+    /// clips it, and that is copied in.
+    fn draw_backdrop(&self, out: &mut Image, backdrop: &Backdrop, scale: u32) {
+        let s = i64::from(scale);
+        let clip = backdrop.clip_px();
+        let size = |v: i32| u32::try_from(i64::from(v) * s).unwrap_or(0);
+        let mut window = Image::filled(size(clip.w), size(clip.h), self.clear);
+        let scene_px = i64::from(backdrop.zoom()) * s;
+        self.draw_layers(
+            &mut window,
+            backdrop.scene(),
+            backdrop.scene_offset(scale),
+            scene_px,
+            false,
+        );
+        let (left, top) = (i64::from(clip.x) * s, i64::from(clip.y) * s);
+        for y in 0..i64::from(window.height) {
+            for x in 0..i64::from(window.width) {
+                let [r, g, b, _] = window.texel(x, y);
+                out.blend(left + x, top + y, unit(Rgb::new(r, g, b)), 1.0);
+            }
+        }
+    }
+
+    /// Draws `buf`'s cells and items into `out` with its top-left corner
+    /// at `corner` and each of its pixels `px` × `px` big: cell
+    /// backgrounds (all of them if `all_fills`, else all but those in the
+    /// clear colour; never a see-through cell's), `Under` items, glyphs,
+    /// `Over` items.
+    fn draw_layers(
+        &self,
+        out: &mut Image,
+        buf: &GlyphBuffer,
+        corner: (i64, i64),
+        px: i64,
+        all_fills: bool,
+    ) {
+        let (cell_w, cell_h) = (i64::from(CELL_W_PX) * px, i64::from(CELL_H_PX) * px);
         let cells = || {
             (0..i32::from(buf.height())).flat_map(move |y| {
                 (0..i32::from(buf.width())).filter_map(move |x| {
-                    let at = (i64::from(x) * cell_w, i64::from(y) * cell_h);
+                    let at = (
+                        corner.0 + i64::from(x) * cell_w,
+                        corner.1 + i64::from(y) * cell_h,
+                    );
                     buf.get(x, y).map(|cell| (at, cell))
                 })
             })
         };
         for ((x, y), cell) in cells() {
-            if cell.bg != self.clear {
+            if !cell.see_through && (all_fills || cell.bg != self.clear) {
                 out.fill((x, y, cell_w, cell_h), cell.bg);
             }
         }
-        self.draw_items(&mut out, buf, Layer::Under, s);
+        self.draw_items(out, buf, Layer::Under, corner, px);
         for ((x, y), cell) in cells() {
             if cell.glyph == ' ' {
                 continue;
@@ -348,7 +409,7 @@ impl Painter {
             #[allow(clippy::cast_precision_loss)] // atlas coordinates are small
             let src = [rect.x, rect.y, rect.w, rect.h].map(|v| v as f32);
             blit(
-                &mut out,
+                out,
                 &self.atlas_image,
                 src,
                 (x, y, cell_w, cell_h),
@@ -356,17 +417,24 @@ impl Painter {
                 [fg[0], fg[1], fg[2], 1.0],
             );
         }
-        self.draw_items(&mut out, buf, Layer::Over, s);
-        out
+        self.draw_items(out, buf, Layer::Over, corner, px);
     }
 
-    /// Draws `buf`'s items of `layer`, in order.
-    fn draw_items(&self, out: &mut Image, buf: &GlyphBuffer, layer: Layer, scale: i64) {
+    /// Draws `buf`'s items of `layer`, in order, from `corner`, each of
+    /// the buffer's pixels `scale` big.
+    fn draw_items(
+        &self,
+        out: &mut Image,
+        buf: &GlyphBuffer,
+        layer: Layer,
+        corner: (i64, i64),
+        scale: i64,
+    ) {
         for item in buf.items().iter().filter(|item| item.layer() == layer) {
             let to_px = |r: PxRect| {
                 (
-                    i64::from(r.x) * scale,
-                    i64::from(r.y) * scale,
+                    corner.0 + i64::from(r.x) * scale,
+                    corner.1 + i64::from(r.y) * scale,
                     i64::from(r.w) * scale,
                     i64::from(r.h) * scale,
                 )

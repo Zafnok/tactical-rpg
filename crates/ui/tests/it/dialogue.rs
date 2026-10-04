@@ -233,6 +233,7 @@ fn two_reply_choice_snapshot() {
         speaker: CharacterId(who.into()),
         expression: None,
         text: text.into(),
+        line: trpg_content::LineId::default(),
     };
     let place = |side, who: &str| Step::Place {
         side,
@@ -242,6 +243,7 @@ fn two_reply_choice_snapshot() {
     let reply = |tone: &str, text: &str, reaction| ChoiceOption {
         tone: tone.into(),
         text: text.into(),
+        line: trpg_content::LineId::default(),
         steps: vec![say("test_knight", reaction)],
     };
     let scene = Scene {
@@ -278,7 +280,10 @@ fn two_reply_choice_snapshot() {
 /// with `@music village` before `Two.`, `@music talk_calm` before `Three.`
 /// and nothing after it.
 fn music_scene() -> Harness {
-    let narrate = |text: &str| Step::Narrate { text: text.into() };
+    let narrate = |text: &str| Step::Narrate {
+        text: text.into(),
+        line: trpg_content::LineId::default(),
+    };
     let music = |cue: &str| Step::Music(MusicLine::Cue(cue.into()));
     let scene = Scene {
         id: "music".into(),

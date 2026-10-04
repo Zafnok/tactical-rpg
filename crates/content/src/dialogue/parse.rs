@@ -4,7 +4,7 @@
 
 use trpg_core::CharacterId;
 
-use super::{ChoiceOption, MusicLine, Scene, Side, Step};
+use super::{ChoiceOption, LineId, MusicLine, Scene, Side, Step};
 use crate::error::ContentError;
 
 /// A scene as written in a file, with the source lines the checks point at.
@@ -67,7 +67,7 @@ pub fn parse_dlg(file: &str, source: &str) -> (Vec<ParsedScene>, Vec<ContentErro
     p.close_choice_without_end();
     if let Some(open) = p.open.take() {
         p.no_end(&open);
-        p.scenes.push(open);
+        p.finish(open);
     }
     (p.scenes, p.errors)
 }
@@ -128,6 +128,14 @@ impl Parser<'_> {
         );
     }
 
+    /// Adds the complete scene `open` to the scenes read, giving its lines
+    /// their ids (their text is final only now: continuation lines add to
+    /// it).
+    fn finish(&mut self, mut open: ParsedScene) {
+        open.scene.assign_line_ids();
+        self.scenes.push(open);
+    }
+
     /// Reads line `n` (1-based).
     fn line(&mut self, n: u32, raw: &str) {
         let line = raw.trim_end();
@@ -171,7 +179,13 @@ impl Parser<'_> {
                 self.err(n, "narration has no text");
             } else {
                 self.check_chars(n, line, text);
-                self.push(n, Step::Narrate { text: text.into() });
+                self.push(
+                    n,
+                    Step::Narrate {
+                        text: text.into(),
+                        line: LineId::default(),
+                    },
+                );
                 self.continuable = self.open.is_some();
             }
         } else {
@@ -218,6 +232,7 @@ impl Parser<'_> {
             choice.options.push(ChoiceOption {
                 tone: tone.into(),
                 text: text.into(),
+                line: LineId::default(),
                 steps: Vec::new(),
             });
             choice.lines.options.push(OptionLines {
@@ -298,7 +313,7 @@ impl Parser<'_> {
         let continuable = self.continuable;
         let last = self.last_step_mut().filter(|_| continuable);
         match last {
-            Some(Step::Say { text, .. } | Step::Narrate { text }) => {
+            Some(Step::Say { text, .. } | Step::Narrate { text, .. }) => {
                 text.push(' ');
                 text.push_str(body);
                 self.check_chars(n, line, body);
@@ -336,7 +351,7 @@ impl Parser<'_> {
         self.close_choice_without_end();
         if let Some(open) = self.open.take() {
             self.no_end(&open);
-            self.scenes.push(open);
+            self.finish(open);
         }
         let ok = args.split_whitespace().count() == 1;
         if !ok {
@@ -362,7 +377,7 @@ impl Parser<'_> {
         }
         self.close_choice_without_end();
         match self.open.take() {
-            Some(open) => self.scenes.push(open),
+            Some(open) => self.finish(open),
             None => self.err(n, "@end without an open @scene"),
         }
     }
@@ -447,6 +462,7 @@ impl Parser<'_> {
                 speaker: CharacterId(speaker.into()),
                 expression: expression.map(Into::into),
                 text: text.into(),
+                line: LineId::default(),
             },
         );
         self.continuable = self.open.is_some();

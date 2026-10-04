@@ -159,6 +159,9 @@ jobs:
       # No key hard-coded in game code or player text (keyboard-input skill).
       - name: Check for hard-coded keys
         run: cargo xtask check-keys
+      # No new screen text written as a string literal (ADR-0045).
+      - name: Check for screen text written as literals
+        run: cargo xtask check-text
 
   # Single required check for this workflow. Matrix jobs skipped by `if:`
   # report one check with an unexpanded name, never the per-leg names, so

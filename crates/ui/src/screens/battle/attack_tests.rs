@@ -349,17 +349,20 @@ fn pointing_at_an_enemy_walks_there_and_opens_its_forecast() {
     // Select the lord, steer to (7, 2), point at the raider above it.
     h.keys("f Right Up");
     assert_eq!(help(&h), "arrows move · f attack · d cancel");
-    // Confirm walks, then the weapon list, then the forecast on the raider.
+    // Confirm walks, then the forecast on the raider with the equipped
+    // sword; left and right swap to the other sword (0430).
     h.keys("f").wait(0.5);
-    assert_eq!(help(&h), "arrows choose · f confirm · d back");
-    h.keys("f");
     assert_eq!(
         help(&h),
-        "Left/Right target · Up/Down art · f attack · d back"
+        "Left/Right swap · a/s target · Up/Down art · f attack · d back"
     );
     assert_eq!(panel(&h, 2), "Test Lord     Raider");
-    // Cancel goes back through the list and the menu to the path, the
-    // cursor on the lord's tile.
-    h.keys("d d d");
+    assert_eq!(panel(&h, 3), "Iron Sword    Steel Axe");
+    h.keys("Right");
+    assert_eq!(panel(&h, 3), "Steel Sword   Steel Axe");
+    assert_eq!(panel(&h, 2), "Test Lord     Raider");
+    // Cancel goes back through the menu to the path, the cursor on the
+    // lord's tile.
+    h.keys("d d");
     assert_eq!(help(&h), "arrows move · f move here · d cancel");
 }

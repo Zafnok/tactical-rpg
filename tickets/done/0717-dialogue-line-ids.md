@@ -5,10 +5,10 @@ type: feature
 milestone: M6 Story & dialogue
 model: opus-5.5
 effort: medium
-status: todo
+status: done
 blocked_by: []
 nick_input: none
-completed:
+completed: 2026-10-03
 ---
 
 # 0717 — Every dialogue line gets a stable id
@@ -65,13 +65,13 @@ the same way.
 
 ## Acceptance criteria
 
-- [ ] Every text-showing step and reply in every `.dlg` has an id; ids are unique (all-assets test).
-- [ ] The id of a known line is a fixed string in a test (so the hash can never change silently).
-- [ ] Inserting a line above another, or moving a line within its scene, leaves the other ids unchanged (test).
-- [ ] Changing one word changes that line's id only (test).
-- [ ] Two identical lines in a scene get `_2` on the second (test).
-- [ ] `cargo xtask lines ch01_intro` prints one row per line.
-- [ ] All gates in the `run-gates` skill pass.
+- [x] Every text-showing step and reply in every `.dlg` has an id; ids are unique (all-assets test).
+- [x] The id of a known line is a fixed string in a test (so the hash can never change silently).
+- [x] Inserting a line above another, or moving a line within its scene, leaves the other ids unchanged (test).
+- [x] Changing one word changes that line's id only (test).
+- [x] Two identical lines in a scene get `_2` on the second (test).
+- [x] `cargo xtask lines ch01_intro` prints one row per line.
+- [x] All gates in the `run-gates` skill pass.
 
 ## Tests required
 
@@ -81,3 +81,24 @@ the same way.
 
 ## Completion notes
 
+- `LineId` and the hash are in `crates/content/src/dialogue/line_id.rs`.
+  `Step::Say`, `Step::Narrate` and `ChoiceOption` carry a `line: LineId`;
+  the parser fills it when a scene is complete (`Scene::assign_line_ids`).
+  `Scene::lines()` lists every line with its id, speaker and text, in
+  script order (a reply, then its reaction, then the next reply).
+- Ids are unique within a scene by construction (repeats are numbered per
+  hash). `dialogue/check.rs` reports two *different* lines of one scene
+  with the same hash, naming both; the test uses a real colliding pair
+  found by search. The all-assets test checks every id's shape and that no
+  two lines of any `.dlg` share one.
+- `cargo xtask lines [scene]` prints `id<TAB>speaker<TAB>text`
+  (`crates/xtask/src/lines.rs`); without a scene, every scene by scene id.
+- A step built by hand (tests) has an empty id until `assign_line_ids`
+  runs. Nothing on screen changed; `ui` ignores the ids.
+- `assets/dialogue/README.md` has a "Line ids" section.
+- **ADR-0045 stays `Proposed`**: ticket 0233 has not landed. §3 gained an
+  "As built" paragraph (what stands for the speaker of narration and
+  replies, the low 32 bits, expression and tone not hashed, the clash
+  error, the listing command). No decision in it changed.
+- No deviations from the implementation steps.
+- No gameplay rules were decided. No follow-up tickets.

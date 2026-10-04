@@ -87,7 +87,7 @@ pub fn run(repo_root: &Path) -> Vec<String> {
 }
 
 /// Whether `file` has extension `ext` (any case).
-fn has_ext(file: &Path, ext: &str) -> bool {
+pub(crate) fn has_ext(file: &Path, ext: &str) -> bool {
     file.extension()
         .is_some_and(|e| e.eq_ignore_ascii_case(ext))
 }
@@ -101,7 +101,7 @@ fn read_and(file: &Path, rel: &str, errors: &mut Vec<String>, scan: fn(&str, &st
 }
 
 /// Every file under `dir`, recursively, sorted so output is stable.
-fn files_under(dir: &Path, errors: &mut Vec<String>) -> Vec<std::path::PathBuf> {
+pub(crate) fn files_under(dir: &Path, errors: &mut Vec<String>) -> Vec<std::path::PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(d) = stack.pop() {
@@ -126,14 +126,14 @@ fn files_under(dir: &Path, errors: &mut Vec<String>) -> Vec<std::path::PathBuf> 
 }
 
 /// `file` relative to `root`, with `/` separators.
-fn relative(root: &Path, file: &Path) -> String {
+pub(crate) fn relative(root: &Path, file: &Path) -> String {
     let rel = file.strip_prefix(root).unwrap_or(file);
     rel.to_string_lossy().replace('\\', "/")
 }
 
 /// Test-only Rust files: `tests.rs`, `*_tests.rs`, anything in a `tests/`
 /// directory, and the test harness.
-fn is_test_file(rel: &str) -> bool {
+pub(crate) fn is_test_file(rel: &str) -> bool {
     let name = rel.rsplit('/').next().unwrap_or(rel);
     name == "tests.rs"
         || name.ends_with("_tests.rs")
@@ -147,7 +147,7 @@ pub fn scan_rust(rel: &str, source: &str) -> Vec<String> {
     let lines = lex(source);
     let key_file = KEY_FILES.contains(&rel) || KEY_DIRS.iter().any(|dir| rel.starts_with(dir));
     let picture_file = PICTURE_FILES.contains(&rel);
-    let exempt = exempt_lines(&lines, picture_file);
+    let exempt = exempt_lines(&lines, picture_file.then_some(MARKER));
     let mut errors = Vec::new();
     for (i, line) in lines.iter().enumerate() {
         let n = i + 1;
@@ -312,17 +312,17 @@ fn contains_token(code: &str, pattern: &str) -> bool {
     })
 }
 
-fn is_ident(c: char) -> bool {
+pub(crate) fn is_ident(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
 /// For each line, whether it is skipped: inside a `#[cfg(test)]` item, or
-/// (with `honour_marker`) covered by a [`MARKER`] comment.
-fn exempt_lines(lines: &[Line], honour_marker: bool) -> Vec<bool> {
+/// covered by a comment holding `marker` (if one is given).
+pub(crate) fn exempt_lines(lines: &[Line], marker: Option<&str>) -> Vec<bool> {
     let mut exempt = vec![false; lines.len()];
     for (i, line) in lines.iter().enumerate() {
-        let marked = honour_marker && line.comment.contains(MARKER);
-        if marked || line.code.contains("#[cfg(test)]") {
+        let allowed = marker.is_some_and(|m| line.comment.contains(m));
+        if allowed || line.code.contains("#[cfg(test)]") {
             mark_item(lines, i, &mut exempt);
         }
     }
@@ -334,7 +334,7 @@ fn exempt_lines(lines: &[Line], honour_marker: bool) -> Vec<bool> {
 /// comment or `#[…]` attributes never ends an item, so an attribute or a
 /// marker comment on its own line covers the item below it, and a marker
 /// after code on a line covers that line's item.
-fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
+pub(crate) fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
     let mut depth: i64 = 0;
     for (i, line) in lines.iter().enumerate().skip(start) {
         if let Some(e) = exempt.get_mut(i) {
@@ -356,14 +356,14 @@ fn mark_item(lines: &[Line], start: usize, exempt: &mut [bool]) {
 
 /// One source line split into its parts.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-struct Line {
+pub(crate) struct Line {
     /// The code, with comments removed and string/char literal contents
     /// blanked (the quotes stay).
-    code: String,
+    pub(crate) code: String,
     /// The text of every comment on the line.
-    comment: String,
+    pub(crate) comment: String,
     /// Contents of the string literals that start on this line.
-    strings: Vec<String>,
+    pub(crate) strings: Vec<String>,
 }
 
 /// Lexer state between characters.
@@ -382,7 +382,7 @@ enum State {
 /// Splits Rust (or RON) source into [`Line`]s. Good enough for this scan:
 /// handles `//` and nested `/* */` comments, `"…"` strings with escapes,
 /// raw strings, and tells char literals from lifetimes.
-fn lex(source: &str) -> Vec<Line> {
+pub(crate) fn lex(source: &str) -> Vec<Line> {
     let mut lexer = Lexer {
         chars: source.chars().collect(),
         lines: vec![Line::default()],

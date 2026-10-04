@@ -243,7 +243,7 @@ pub fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Strin
         let mut encoder = png::Encoder::new(BufWriter::new(&mut out), width, height);
         encoder.set_color(png::ColorType::Rgba);
         encoder.set_depth(png::BitDepth::Eight);
-        encoder.set_compression(png::Compression::Best);
+        encoder.set_compression(png::Compression::High);
         let mut writer = encoder.write_header().map_err(|e| e.to_string())?;
         writer.write_image_data(rgba).map_err(|e| e.to_string())?;
     }
@@ -252,14 +252,17 @@ pub fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Strin
 
 /// Decodes a PNG to (width, height, RGBA8 pixels).
 pub fn decode_png(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
-    let mut decoder = png::Decoder::new(bytes);
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(bytes));
     // Any PNG comes out as RGBA8.
     let mut wanted = png::Transformations::EXPAND;
     wanted.insert(png::Transformations::ALPHA);
     wanted.insert(png::Transformations::STRIP_16);
     decoder.set_transformations(wanted);
     let mut reader = decoder.read_info().map_err(|e| e.to_string())?;
-    let mut buf = vec![0; reader.output_buffer_size()];
+    let size = reader
+        .output_buffer_size()
+        .ok_or("the picture is too large to decode")?;
+    let mut buf = vec![0; size];
     let info = reader.next_frame(&mut buf).map_err(|e| e.to_string())?;
     buf.truncate(info.buffer_size());
     Ok((info.width, info.height, buf))
