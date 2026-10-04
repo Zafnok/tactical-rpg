@@ -852,5 +852,10 @@ mod tests {
             assert_eq!(errors.len(), 1, "{bad}");
             assert!(errors[0].line.is_some(), "{bad}: {errors:?}");
         }
+        // What isn't either kind is told what was expected.
+        let units = "(characters: {}, classes: {}, fallback: \"units/a.png\")";
+        let errors = f.parse(&sheets_file(&f, units)).unwrap_err();
+        let expected = "(column, row) or (image: \"…\", frame: (column, row))";
+        assert!(errors[0].message.contains(expected), "{errors:?}");
     }
 }

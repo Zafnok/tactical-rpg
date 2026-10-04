@@ -231,22 +231,19 @@ impl Sprite {
 
     /// What goes of this sprite, beyond `hole` itself, when the pixels
     /// `hole` are replaced: the part of its [`base`](Self::base) that
-    /// `hole` covers, stretched outwards past each edge of the base it
-    /// reaches (up over the head, when it covers the base's top). `None`
-    /// if it has no base or `hole` misses it.
+    /// `hole` covers, stretched outwards, past each edge of the base it
+    /// reaches, to this sprite's own edge (up over the head, when it
+    /// covers the base's top). `None` if it has no base or `hole` misses
+    /// it. The rectangle may be empty: the sprite then shows nothing there.
     fn overhang(&self, hole: PxRect) -> Option<PxRect> {
         let base = self.base?;
         let cover = hole.intersect(&base)?;
         let seen = self.clip;
         // The low and the high edge of the stretched cover along one axis.
         let stretch = |cover: (i32, i32), base: (i32, i32), seen: (i32, i32)| {
-            let low = if cover.0 == base.0 {
-                cover.0.min(seen.0)
-            } else {
-                cover.0
-            };
+            let low = if cover.0 == base.0 { seen.0 } else { cover.0 };
             let high = if cover.0 + cover.1 == base.0 + base.1 {
-                (cover.0 + cover.1).max(seen.0 + seen.1)
+                seen.0 + seen.1
             } else {
                 cover.0 + cover.1
             };

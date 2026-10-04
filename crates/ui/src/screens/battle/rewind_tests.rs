@@ -316,7 +316,9 @@ fn the_scene_is_the_map_before_the_highlighted_action() {
     assert!(now.cursor.is_some());
     press(&mut s, &mut c, &[Rewind], 0.0);
     assert!(s.rewind().is_some());
+    c.clock_s = 2.25;
     let scene = s.scene(&c);
+    assert_eq!(scene.clock_ms, 2250);
     assert_eq!((scene.origin, scene.size), (now.origin, now.size));
     let before: Vec<_> = start
         .units()

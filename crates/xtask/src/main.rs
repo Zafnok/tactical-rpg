@@ -279,9 +279,14 @@ fn test_tileset(args: &[String]) -> u8 {
 }
 
 fn map_sprite_import(args: &[String]) -> u8 {
+    map_sprite_import_in(&repo_root(), args)
+}
+
+/// `map-sprite-import` with the repo at `root`.
+fn map_sprite_import_in(root: &Path, args: &[String]) -> u8 {
     use map_sprite_import::{SPRITES, USAGE, list, run};
     match args {
-        [] => match run(&repo_root(), &SPRITES) {
+        [] => match run(root, &SPRITES) {
             Ok(summary) => {
                 println!("{summary}");
                 0
@@ -838,6 +843,9 @@ mod tests {
         assert_eq!(map_sprite_import(&args(&["--help"])), 0);
         assert_eq!(map_sprite_import(&args(&["--list"])), 0);
         assert_eq!(map_sprite_import(&args(&["--bogus"])), 2);
+        // No arguments runs it: in a folder with no checkout, that fails.
+        let bare = std::env::temp_dir().join(format!("xtask-msi-none-{}", std::process::id()));
+        assert_eq!(map_sprite_import_in(&bare, &[]), 1);
         assert_eq!(
             dispatch(args(&["map-sprite-import", "--list", "x"]).into_iter()),
             2

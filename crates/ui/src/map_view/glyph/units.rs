@@ -341,6 +341,8 @@ mod tests {
         assert_eq!(cleared(0.75, false), Cell::new('.', bg.lerp(fg, 0.5), bg));
         assert_eq!(cleared(1.0, false), Cell::new('.', fg, bg));
         assert_eq!(cleared(7.0, false), Cell::new('.', fg, bg));
+        // Picked out while falling: still on the glyph colour.
+        assert_eq!(cleared(0.75, true), Cell::new('.', fg, fg));
         // At the buffer's edge: the cell that exists.
         let mut b = GlyphBuffer::new(1, 1, Cell::new('.', fg, bg));
         clear_glyphs(&mut b, 0, 0, 0.0, false);

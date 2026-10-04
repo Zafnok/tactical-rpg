@@ -72,7 +72,8 @@ fn pixel(colors: &Colors, x: u32, y: u32) -> [u8; 4] {
     if on_arrow(bx, by, down) {
         return solid(colors.arrows[usize::from(down)]);
     }
-    let near = (-1..=1).any(|dy| (-1..=1).any(|dx| on_arrow(bx + dx, by + dy, down)));
+    let beside = |v: i64| v - 1..=v + 1;
+    let near = beside(by).any(|ny| beside(bx).any(|nx| on_arrow(nx, ny, down)));
     if near { solid(colors.edge) } else { [0; 4] }
 }
 

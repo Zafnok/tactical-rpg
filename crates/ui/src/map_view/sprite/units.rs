@@ -117,7 +117,7 @@ pub fn outline_dests(dest: PxRect) -> [PxRect; 4] {
 /// part, along the bottom, [`HP_BAR_INSET`] in from each side: the glyph
 /// skin's bar (ticket 0441), for any tile size.
 pub fn hp_bar(unit: &UnitView, tile: PxRect) -> [(PxRect, UiColor); 2] {
-    let full = (tile.w - 2 * HP_BAR_INSET).max(0);
+    let full = (tile.w - HP_BAR_INSET - HP_BAR_INSET).max(0);
     let (filled, color) = hp_fill(unit.hp.0, unit.hp.1, full);
     let (x, y) = (tile.x + HP_BAR_INSET, tile.y + tile.h - HP_BAR_H);
     [
@@ -205,8 +205,9 @@ pub fn paint_pictures(
         };
         let view = grid.bounds();
         let view = if has_unit_above(scene, unit) {
-            let cut = tile.y - view.y;
-            Rect::new(view.x, tile.y, view.w, view.h - cut)
+            // The view from this tile's top edge down.
+            let below = Rect::new(view.x, tile.y, view.w, view.h);
+            view.intersect(&below).unwrap_or(view)
         } else {
             view
         };

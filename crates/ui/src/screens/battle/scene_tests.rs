@@ -58,9 +58,16 @@ fn ranges(scene: &MapScene) -> Vec<(RangeKind, usize)> {
 
 #[test]
 fn browsing_shows_the_terrain_the_units_and_the_cursor() {
-    let c = ctx();
+    let mut c = ctx();
     let s = quick();
     let scene = s.scene(&c);
+    // The game's clock, in milliseconds, for a skin's moving marks.
+    assert_eq!(scene.clock_ms, 0);
+    c.clock_s = 1.5;
+    assert_eq!(s.scene(&c).clock_ms, 1500);
+    c.clock_s = -3.0;
+    assert_eq!(s.scene(&c).clock_ms, 0);
+    c.clock_s = 0.0;
     // `test_small` (14 × 8) centred in the glyph skin's 35 × 30 tiles.
     assert_eq!((scene.origin, scene.size), (p(-10, -11), (35, 30)));
     assert_eq!(scene.tiles.len(), 35 * 30);

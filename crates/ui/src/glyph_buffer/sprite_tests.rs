@@ -112,6 +112,20 @@ fn cells_replaced_over_a_base_take_what_stands_above_them() {
     ] {
         assert_eq!(cut(standing(0), beside), [Rect::new(16, 10, 16, 20)]);
     }
+    // On the tile at the buffer's left edge, the copy 1 px right goes
+    // whole too: nothing is left in the column past the tile.
+    let first = Sprite {
+        base: Some(Rect::new(0, 16, 16, 16)),
+        ..at(1, 10, 16, 20)
+    };
+    assert!(cut(first, Rect::new(0, 1, 2, 1)).is_empty());
+    // A base two cells tall, its top cell replaced: the head goes, and
+    // what stands on the lower cell stays.
+    let tall = Sprite {
+        base: Some(Rect::new(16, 16, 16, 32)),
+        ..at(16, 10, 16, 36)
+    };
+    assert_eq!(cut(tall, tile), [Rect::new(16, 32, 16, 14)]);
     // A sprite whose base is elsewhere is cut as any item.
     let elsewhere = Sprite {
         base: Some(Rect::new(48, 16, 16, 16)),
