@@ -192,7 +192,9 @@ shows as `! not mapped` there too.
 
 **The screen's look** (ticket 0815, Nick picked from three rendered
 mockups, 2026-09-30: "B: grouped panel", rows "Required first, then
-optional"): one panel titled `Key bindings · <layout>` with columns `Key 1`
+optional"): one panel titled `Key bindings` (until ticket 0816 the title
+also named the layout; it is now in the switch row under it, see
+*Rebinding buttons*) with columns `Key 1`
 `Key 2` `Key 3` and two groups. **Must have a key:** Cursor up, down, left,
 right, Confirm, Cancel (`+ Escape` after its name), End turn. **Optional:**
 Select, Confirm end turn, Previous ready unit, Next ready unit, Unit info,
@@ -366,7 +368,8 @@ Help bars and tips name buttons the way **the pad in use** labels them:
   0220)* below).
 - An action with no button shows `! not mapped`, as for keys.
 - **Moving the cursor** names both the D-pad and the stick (Nick: "just
-  render both somehow"): `D-pad/stick move` with the defaults. If the
+  render both somehow"): `D-pad/L-stick move` with the defaults (`L-stick`
+  since ticket 0816, when Nick asked for both sticks to be named). If the
   player rebinds the cursor, the help names whatever it's bound to,
   like the keyboard's `arrows` / `wasd`.
 
@@ -435,6 +438,60 @@ Same rules as *Rebinding keys* above, on the same Key bindings screen:
   keyboard, Confirm on a slot still goes straight to `Press a key…` and
   `Delete` empties it, as decided in 0030.
 
+**The look and the names** (ticket 0816, Nick picked from rendered
+mockups, 2026-10-03). Screenshots of the built screen:
+[`0816-controller-buttons.png`](../screenshots/0816-controller-buttons.png),
+[`0816-change-or-clear.png`](../screenshots/0816-change-or-clear.png),
+[`0816-press-a-button.png`](../screenshots/0816-press-a-button.png).
+
+> **How the screen shows buttons.** Options: A it shows whatever you
+> pressed last, no switch; B a `Keyboard | Controller` switch row at the
+> top; C a small menu first, then one screen each (Celeste, Hollow
+> Knight). "B: switch row"
+>
+> **Names of stick directions and presses.** Options: keep `stick ↑` /
+> `R-stick ↑`; name both sticks; short `L↑` / `R↑`. "Name both sticks"
+>
+> **The two lines of the choice on a slot.** Options: `Change` / `Clear`;
+> `Rebind` / `Clear`; a choice only on a filled slot. "Change / Clear"
+
+- **A switch row** under the title: `Keyboard · <layout>` and
+  `Controller`. The side shown is highlighted. It is one row up from the
+  first action; there, left shows the keys and right the buttons. The rest
+  of the screen is the same panel for both: columns `Button 1` `Button 2`
+  `Button 3`, `Must have a button`, `Optional`, `Restore defaults`.
+- **Stick names:** the left stick's directions are `L-stick ↑ ↓ ← →`, the
+  right stick's `R-stick ↑ ↓ ← →`; pressing a stick in is `LS` / `RS`
+  (PlayStation: `L3` / `R3`). The help bar says `D-pad/L-stick move`.
+- **With a controller, Confirm on any slot opens `Change` / `Clear`** (an
+  empty slot too, so the screen behaves one way). `Change` goes to `Press a
+  button…`; `Clear` empties the slot; Cancel closes the choice.
+
+*Claude's starting rules (ticket 0816; Nick can veto):*
+
+- **The screen opens on the side you pressed last**: buttons after a
+  button press, keys after a key press.
+- **Confirm on the switch row** also flips the side, like left / right.
+- **Hold time:** 1 second (*tunable*) backs out of `Press a button…`. Let
+  go sooner and the button goes in the slot. Example: Mia picks `Change`
+  on Unit info, taps `RT`, and `RT` is Unit info; had she held `RT` for a
+  second, nothing would have changed.
+- **Leaving is blocked for either side.** The message reads `Give Confirm
+  a button first` (or `a key first`), and the screen switches to the side
+  that lacks it. Example: on the keyboard side, Mia presses Cancel while
+  Confirm has no button: the screen flips to the controller side and says
+  `Give Confirm a button first`.
+- **Restore defaults restores only the side shown**, after asking
+  `Restore the default buttons?` (the keys' question is unchanged).
+- **With the keyboard on the controller side**, Confirm goes straight to
+  `Press a button…`, `Esc` backs out and `Delete` empties the slot, as for
+  keys. A key pressed there isn't a button and does nothing.
+- **With a controller on the keyboard side**, Confirm opens `Change` /
+  `Clear` too; `Change` waits for a key, and holding any button backs out.
+- **Until a controller is used**, the controller side shows Xbox names.
+- **Rebound buttons count from the moment you leave the screen**, like
+  keys; it is steered with the buttons you had when you opened it.
+
 ### Rumble
 
 **None for now** (Q7). Nick: "we might add it later"; that would be its own
@@ -466,7 +523,7 @@ Claude proposed six small rules; Nick's replies:
 Controllers work on every build: the default buttons above, D-pad and left
 stick, the Switch-style swap, several pads, plugging in and unplugging while
 playing. Help bars and tips named keys until ticket 0220 (done, below);
-rebinding buttons is ticket 0816; the `Press any key or button` prompt and when "Pick
+rebinding buttons is ticket 0816 (done); the `Press any key or button` prompt and when "Pick
 your layout" shows are ticket 0226.
 
 - A pad counts as **Switch-style** when it says Nintendo made it. Other
@@ -508,10 +565,11 @@ letter, drawn with thin lines: `✕ ○ □ △`.
   the keyboard.
 - **The Key bindings screen** names buttons in its help line on a pad, but
   still only rebinds keys, and its `Escape` / `Delete` hints stay until
-  rebinding buttons (0816).
+  rebinding buttons (0816, done: see *Rebinding buttons*).
 - **Names nobody sees until buttons can be rebound (0816)**, chosen so
   every button has one: a stick's single direction is `stick ↑` (left
-  stick) or `R-stick ↑`; pressing a stick in is `LS` / `RS` (PlayStation:
+  stick; **`L-stick ↑` since 0816**, Nick's pick) or `R-stick ↑`; pressing
+  a stick in is `LS` / `RS` (PlayStation:
   `L3` / `R3`); a cursor moved to the right stick reads `R-stick move`; a
   cursor on four unrelated buttons lists them, e.g. `Y/X/A/B move`.
 

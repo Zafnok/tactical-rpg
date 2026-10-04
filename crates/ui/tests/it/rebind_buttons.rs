@@ -132,7 +132,9 @@ fn a_hold_backs_out_a_tap_binds_and_clear_empties() {
     h.hold_pad("RightTrigger", 1.2);
     assert!(!row(&h, "Unit info").contains("Press a button…"));
     assert!(!row(&h, "Unit info").contains("RT"));
-    h.pad("DpadLeft").pad(INFO_TO_CONFIRM).pad("DpadUp DpadUp DpadUp DpadUp");
+    h.pad("DpadLeft")
+        .pad(INFO_TO_CONFIRM)
+        .pad("DpadUp DpadUp DpadUp DpadUp");
     assert_eq!(h.snapshot(), before, "nothing changed");
     // A hold just short of the time is a tap.
     h.pad(TO_INFO).pad("DpadRight South South");
@@ -201,7 +203,8 @@ fn a_stick_direction_can_be_bound_like_a_button() {
 #[test]
 fn switching_layout_leaves_the_buttons_unchanged() {
     let mut h = open(PadKind::Xbox);
-    h.pad(TO_INFO).pad("DpadRight South South RightTrigger East East");
+    h.pad(TO_INFO)
+        .pad("DpadRight South South RightTrigger East East");
     let edited = buttons(&h);
     assert_eq!(slots(&h, Action::Info), ["North", "RightTrigger", "-"]);
     for layout in [Layout::LeftHanded, Layout::RightHanded] {
@@ -224,7 +227,8 @@ fn switching_layout_leaves_the_buttons_unchanged() {
 #[test]
 fn edited_buttons_survive_a_restart() {
     let mut h = open(PadKind::Xbox);
-    h.pad(TO_CONFIRM).pad("DpadRight South South RightTrigger East East");
+    h.pad(TO_CONFIRM)
+        .pad("DpadRight South South RightTrigger East East");
     let edited = buttons(&h);
     assert_eq!(slots(&h, Action::Confirm), ["South", "RightTrigger", "-"]);
     let mut h = Harness::with_storage(h.into_storage());

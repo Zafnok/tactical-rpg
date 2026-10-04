@@ -524,7 +524,14 @@ impl PlayerKeys {
         if let Some(actions) = &file.pad {
             let defaults = PadBindings::defaults(def).table;
             let warn = |message: String| warnings.push(format!("{PAD_WARNING}: {message}"));
-            let table = repair(&defaults, actions, "button", Button::parse, |_| Ok(()), warn);
+            let table = repair(
+                &defaults,
+                actions,
+                "button",
+                Button::parse,
+                |_| Ok(()),
+                warn,
+            );
             keys.set_pad(def, PadBindings { table });
         }
         (keys, warnings)

@@ -33,7 +33,7 @@ use crate::check_keys::{
 /// The most literals allowed: the count when the title screen had been
 /// converted (ticket 0233). Lower it whenever the count goes down; ticket
 /// 0234 brings it to zero.
-pub const MAX_LITERALS: usize = 221;
+pub const MAX_LITERALS: usize = 220;
 
 /// The comment that lets the next item (or its own line) through.
 pub const MARKER: &str = "check-text: not player text";

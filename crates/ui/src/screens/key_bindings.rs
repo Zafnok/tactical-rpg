@@ -69,30 +69,6 @@ pub enum Side {
 }
 
 impl Side {
-    /// What a slot on this side holds, for text: `key` or `button`.
-    fn thing(self) -> &'static str {
-        match self {
-            Self::Keyboard => "key",
-            Self::Controller => "button",
-        }
-    }
-
-    /// Heading of a slot column, before its number.
-    fn column(self) -> &'static str {
-        match self {
-            Self::Keyboard => "Key",
-            Self::Controller => "Button",
-        }
-    }
-
-    /// Heading over the required actions.
-    fn required_heading(self) -> &'static str {
-        match self {
-            Self::Keyboard => REQUIRED_HEADING,
-            Self::Controller => REQUIRED_BUTTON_HEADING,
-        }
-    }
-
     /// What a slot on this side shows while it waits.
     fn prompt(self) -> &'static str {
         match self {
@@ -104,25 +80,28 @@ impl Side {
 
 /// Screen title.
 pub const TITLE: &str = "Key bindings";
-/// The switch row's name for the keyboard side, followed by the layout's.
-pub const KEYBOARD_SIDE: &str = "Keyboard";
-/// The switch row's name for the controller side.
-pub const CONTROLLER_SIDE: &str = "Controller";
+/// Text key of the switch row's name for the keyboard side, which the
+/// layout's name follows.
+pub const KEYBOARD_SIDE: &str = "key_bindings.keyboard";
+/// Text key of the switch row's name for the controller side.
+pub const CONTROLLER_SIDE: &str = "key_bindings.controller";
 /// Heading over the required actions, on the keyboard side.
 pub const REQUIRED_HEADING: &str = "Must have a key";
-/// Heading over the required actions, on the controller side.
-pub const REQUIRED_BUTTON_HEADING: &str = "Must have a button";
-/// Heading over the optional actions.
-pub const OPTIONAL_HEADING: &str = "Optional";
+/// Text key of the heading over the required actions, on the controller
+/// side.
+pub const REQUIRED_BUTTON_HEADING: &str = "key_bindings.must_have_button";
+/// Text key of the heading over the optional actions.
+pub const OPTIONAL_HEADING: &str = "key_bindings.optional";
 /// The row under the actions that puts the shown side's defaults back.
 pub const RESTORE_DEFAULTS: &str = "Restore defaults";
 /// Help text while a slot waits for a key.
 pub const CAPTURE_HELP: &str = "Press the key to put here";
-/// Help text for backing out of a capture with only a controller.
-pub const HOLD_TO_CANCEL: &str = "hold any button to cancel";
-/// What Confirm on a slot offers when the controller was used last: put
-/// another key or button in it, or empty it.
-pub const CHOICES: [&str; 2] = ["Change", "Clear"];
+/// Text key of the help for backing out of a capture with only a
+/// controller.
+pub const HOLD_TO_CANCEL: &str = "key_bindings.hold_to_cancel";
+/// Text keys of what Confirm on a slot offers when the controller was used
+/// last: put another key or button in it, or empty it.
+pub const CHOICES: [&str; 2] = ["key_bindings.change", "key_bindings.clear"];
 /// Shown when the key pressed for a slot is reserved.
 pub const RESERVED_MESSAGE: &str = "That key can't be used";
 /// How long the row that just lost its key to another slot stays
@@ -186,8 +165,13 @@ pub fn label(action: Action) -> &'static str {
 
 /// The blocked-leave message for `action` on `side` (`Give Cancel a key
 /// first`, `Give Cancel a button first`).
-pub fn blocked_message(side: Side, action: Action) -> String {
-    format!("Give {} a {} first", label(action), side.thing())
+pub fn blocked_message(ctx: &Ctx, side: Side, action: Action) -> String {
+    match side {
+        Side::Keyboard => format!("Give {} a key first", label(action)),
+        Side::Controller => {
+            ctx.text_with("key_bindings.blocked_button", &[("action", &label(action))])
+        }
+    }
 }
 
 /// Left edge of slot `i`'s highlight bar.
@@ -327,13 +311,13 @@ impl KeyBindingsScreen {
     }
 
     /// The question asked before restoring the shown side's defaults.
-    pub fn restore_question(&self) -> String {
+    pub fn restore_question(&self, ctx: &Ctx) -> String {
         match self.side {
             Side::Keyboard => format!(
                 "Restore the default keys for {}?",
                 layout_picker::label(self.layout)
             ),
-            Side::Controller => "Restore the default buttons?".to_owned(),
+            Side::Controller => ctx.text("key_bindings.restore_buttons").to_owned(),
         }
     }
 
@@ -347,7 +331,10 @@ impl KeyBindingsScreen {
     /// used).
     fn slot_names(&self, ctx: &Ctx, action: Action) -> [Option<String>; SLOTS] {
         match self.side {
-            Side::Keyboard => self.bindings.slots(action).map(|c| c.map(|c| c.to_string())),
+            Side::Keyboard => self
+                .bindings
+                .slots(action)
+                .map(|c| c.map(|c| c.to_string())),
             Side::Controller => {
                 let kind = match ctx.device {
                     Device::Pad(kind) => kind,
@@ -632,7 +619,7 @@ impl KeyBindingsScreen {
             .find_map(|side| Some((side, self.first_unmapped(side)?)));
         if let Some((side, action)) = blocked {
             self.side = side;
-            self.message = Some(blocked_message(side, action));
+            self.message = Some(blocked_message(ctx, side, action));
             ctx.audio.menu(MenuSound::Denied);
             return false;
         }
@@ -648,7 +635,8 @@ impl KeyBindingsScreen {
     }
 
     /// The bottom help line, naming the keys the screen was opened with
-    /// (or their buttons, on a controller).
+    /// (or their buttons, on a controller): the same as `ctx`'s until the
+    /// screen closes.
     pub fn help(&self, ctx: &Ctx) -> String {
         let km = HelpKeys::new(&self.opened_with, ctx.device);
         let on_pad = matches!(ctx.device, Device::Pad(_));
@@ -657,39 +645,35 @@ impl KeyBindingsScreen {
                 Side::Keyboard => CAPTURE_HELP,
                 Side::Controller => CAPTURE_BUTTON_PROMPT,
             };
-            let hold = (on_pad || self.side == Side::Controller).then_some(HOLD_TO_CANCEL);
+            let hold = on_pad || self.side == Side::Controller;
+            let hold = hold.then(|| ctx.text(HOLD_TO_CANCEL));
             let back = (!on_pad).then(|| help_line(&[(Some(capture_abort_key_name()), "back")]));
             let hints = [Some(what), hold, back.as_deref()];
-            return hints.into_iter().flatten().collect::<Vec<_>>().join(SEPARATOR);
+            return hints
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(SEPARATOR);
         }
         let confirm = || Some(key_name(km, Action::Confirm));
         let cancel = || Some(key_name(km, Action::Cancel));
         if self.asking_restore {
             return help_line(&[(confirm(), "yes"), (cancel(), "no")]);
         }
-        let cursor = || Some(cursor_keys_name(km));
         if self.choice.is_some() {
-            return help_line(&[(cursor(), "move"), (confirm(), "select"), (cancel(), "back")]);
+            return ctx.text_with("key_bindings.help_choice", &[]);
         }
         if self.is_on_switch() {
-            let (left, right) = (Action::CursorLeft, Action::CursorRight);
-            let across = format!("{}/{}", key_name(km, left), key_name(km, right));
-            return help_line(&[
-                (Some(across), "keyboard or controller"),
-                (cursor(), "move"),
-                (cancel(), "back"),
-            ]);
+            return ctx.text_with("key_bindings.help_switch", &[]);
         }
         let on_slot = self.focus().is_some();
-        let confirms = match (on_slot, on_pad) {
-            (false, _) => "restore",
-            (true, false) => "bind",
-            (true, true) => "change",
-        };
+        if on_slot && on_pad {
+            return ctx.text_with("key_bindings.help_slot_pad", &[]);
+        }
         help_line(&[
-            (cursor(), "move"),
-            (confirm(), confirms),
-            ((on_slot && !on_pad).then(clear_slot_key_name), "clear"),
+            (Some(cursor_keys_name(km)), "move"),
+            (confirm(), if on_slot { "bind" } else { "restore" }),
+            (on_slot.then(clear_slot_key_name), "clear"),
             (cancel(), "back"),
         ])
     }
@@ -701,7 +685,7 @@ impl KeyBindingsScreen {
         let c = |u| ctx.palette.get(u);
         let bg = c(UiColor::PanelBg);
         let km = HelpKeys::new(&self.opened_with, ctx.device);
-        let question = self.restore_question();
+        let question = self.restore_question(ctx);
         let answers = format!(
             "{} yes / {} no",
             key_name(km, Action::Confirm),
@@ -738,7 +722,7 @@ impl KeyBindingsScreen {
         buf.fill_rect(rect, Cell::new(' ', c(UiColor::Text), bg));
         buf.draw_box(rect, BoxStyle::Double, bar, bg);
         let inner = usize::try_from(CHOICE_W - 3).unwrap_or(0);
-        for (i, choice) in (0..).zip(CHOICES) {
+        for (i, choice) in (0..).zip(CHOICES.map(|key| ctx.text(key))) {
             let (x, y) = (rect.x + 1, rect.y + 1 + i);
             if usize::try_from(i).is_ok_and(|i| i == line) {
                 buf.print(x, y, &format!(" {choice:<inner$}"), bg, bar);
@@ -754,13 +738,14 @@ impl KeyBindingsScreen {
         let c = |u| ctx.palette.get(u);
         let (bg, bar) = (c(UiColor::PanelBg), c(UiColor::PanelBorderFocus));
         let keyboard = format!(
-            "{KEYBOARD_SIDE}{SEPARATOR}{}",
+            "{}{SEPARATOR}{}",
+            ctx.text(KEYBOARD_SIDE),
             layout_picker::label(self.layout)
         );
         let mut x = LABEL_X;
         for (side, name) in [
             (Side::Keyboard, keyboard.as_str()),
-            (Side::Controller, CONTROLLER_SIDE),
+            (Side::Controller, ctx.text(CONTROLLER_SIDE)),
         ] {
             if side != self.side {
                 buf.print(x, SWITCH_Y, name, c(UiColor::TextDim), bg);
@@ -903,17 +888,20 @@ impl Screen for KeyBindingsScreen {
         self.draw_switch(ctx, buf);
 
         for j in 0..SLOTS {
-            let heading = format!("{} {}", self.side.column(), j + 1);
+            let heading = match self.side {
+                Side::Keyboard => format!("Key {}", j + 1),
+                Side::Controller => ctx.text_with("key_bindings.button_column", &[("n", &(j + 1))]),
+            };
             buf.print(slot_x(j) + 1, COLUMNS_Y, &heading, dim, bg);
         }
         let mut group = None;
         for (i, &(action, _)) in ROWS.iter().enumerate() {
             let required = action.is_required();
             if group != Some(required) {
-                let heading = if required {
-                    self.side.required_heading()
-                } else {
-                    OPTIONAL_HEADING
+                let heading = match (required, self.side) {
+                    (true, Side::Keyboard) => REQUIRED_HEADING,
+                    (true, Side::Controller) => ctx.text(REQUIRED_BUTTON_HEADING),
+                    (false, _) => ctx.text(OPTIONAL_HEADING),
                 };
                 buf.print(HEADING_X, row_y(i) - 1, heading, bar, bg);
                 group = Some(required);

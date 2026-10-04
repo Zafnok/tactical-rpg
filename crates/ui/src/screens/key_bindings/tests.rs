@@ -118,11 +118,11 @@ fn rows_list_every_rebindable_action_once_required_first() {
     assert_eq!(label(Action::Info), "Unit info");
     assert_eq!(label(Action::Debug), "Debug");
     assert_eq!(
-        blocked_message(Side::Keyboard, Cancel),
+        blocked_message(&ctx(), Side::Keyboard, Cancel),
         "Give Cancel a key first"
     );
     assert_eq!(
-        blocked_message(Side::Controller, Cancel),
+        blocked_message(&ctx(), Side::Controller, Cancel),
         "Give Cancel a button first"
     );
 }
@@ -571,7 +571,7 @@ fn the_restore_question_can_be_backed_out_of() {
     s.update(&mut c, &act(&[Confirm]));
     assert!(s.is_asking_restore());
     assert_eq!(
-        s.restore_question(),
+        s.restore_question(&c),
         "Restore the default keys for Right-handed?"
     );
     assert_eq!(s.help(&c), "f yes · d no");
@@ -608,7 +608,7 @@ fn the_restore_question_can_be_backed_out_of() {
     let mut s = KeyBindingsScreen::new(&left);
     s.asking_restore = true;
     assert_eq!(
-        s.restore_question(),
+        s.restore_question(&c),
         "Restore the default keys for Left-handed?"
     );
     assert_eq!(s.help(&c), "j yes · k no");
@@ -826,8 +826,8 @@ fn the_controller_side_draws_buttons_as_the_pad_names_them() {
     assert!(row_text(&buf, 4).contains("Button 1"));
     assert!(row_text(&buf, 4).contains("Button 3"));
     assert!(!row_text(&buf, 4).contains("Key 1"));
-    assert!(row_text(&buf, 5).contains(REQUIRED_BUTTON_HEADING));
-    assert!(row_text(&buf, 14).contains(OPTIONAL_HEADING));
+    assert!(row_text(&buf, 5).contains("Must have a button"));
+    assert!(row_text(&buf, 14).contains("Optional"));
     assert!(row_of(&buf, "Cursor up").contains(" ↑                 L-stick ↑         · "));
     assert!(row_of(&buf, "Confirm").contains(" A  "));
     assert!(!row_of(&buf, "Cancel").contains('+'), "no fixed button");
@@ -842,8 +842,11 @@ fn the_controller_side_draws_buttons_as_the_pad_names_them() {
         i32::try_from(cells).unwrap()
     };
     let fg = |buf: &GlyphBuffer, word: &str| buf.get(col(buf, word), 2).unwrap().fg;
-    assert_eq!(fg(&buf, CONTROLLER_SIDE), c.palette.get(UiColor::TextHighlight));
-    assert_eq!(fg(&buf, KEYBOARD_SIDE), c.palette.get(UiColor::TextDim));
+    assert_eq!(
+        fg(&buf, "Controller"),
+        c.palette.get(UiColor::TextHighlight)
+    );
+    assert_eq!(fg(&buf, "Keyboard"), c.palette.get(UiColor::TextDim));
     // A Sony pad's names; on the keyboard, an Xbox pad's.
     c.device = Device::Pad(PadKind::PlayStation);
     assert!(row_of(&drawn(&s, &c), "End turn").contains(" Options "));
@@ -853,7 +856,7 @@ fn the_controller_side_draws_buttons_as_the_pad_names_them() {
     s.update(&mut c, &act(&[CursorUp]));
     let buf = drawn(&s, &c);
     let bar = c.palette.get(UiColor::PanelBorderFocus);
-    let x = col(&buf, CONTROLLER_SIDE);
+    let x = col(&buf, "Controller");
     assert_eq!(buf.get(x - 1, 2).unwrap().bg, bar);
     assert_eq!(buf.get(x + 10, 2).unwrap().bg, bar);
     assert_ne!(buf.get(x + 11, 2).unwrap().bg, bar);
@@ -1025,7 +1028,10 @@ fn on_a_controller_confirm_offers_change_or_clear() {
     s.update(&mut c, &act(&[CursorUp]));
     assert_eq!(s.choice(), Some(1));
     assert_eq!(sounds(&mut c), vec![cue(MenuSound::Move); 3]);
-    s.update(&mut c, &act(&[CursorLeft, CursorRight, Info, Action::EndTurn]));
+    s.update(
+        &mut c,
+        &act(&[CursorLeft, CursorRight, Info, Action::EndTurn]),
+    );
     s.update(&mut c, &press("Delete"));
     assert_eq!(s.choice(), Some(1));
     assert_eq!(s.focus(), Some((Info, 0)));
@@ -1270,7 +1276,7 @@ fn restore_defaults_on_the_controller_side_resets_only_the_buttons() {
     focus_on_restore(&mut s, &mut c);
     s.update(&mut c, &act(&[Confirm]));
     assert!(s.is_asking_restore());
-    assert_eq!(s.restore_question(), "Restore the default buttons?");
+    assert_eq!(s.restore_question(&c), "Restore the default buttons?");
     assert!(row_text(&drawn(&s, &c), 15).contains("Restore the default buttons?"));
     s.update(&mut c, &act(&[Confirm]));
     assert_eq!(s.pad_bindings(), &PadBindings::defaults(&c.content.keymap));
@@ -1282,7 +1288,7 @@ fn restore_defaults_on_the_controller_side_resets_only_the_buttons() {
     let pad = s.pad_bindings().clone();
     s.side = Side::Keyboard;
     assert_eq!(
-        s.restore_question(),
+        s.restore_question(&c),
         "Restore the default keys for Right-handed?"
     );
     focus_on_restore(&mut s, &mut c);
@@ -1366,7 +1372,7 @@ fn every_button_name_fits_a_slot() {
         }
     }
     assert!(CAPTURE_BUTTON_PROMPT.chars().count() <= SLOT_W);
-    for choice in CHOICES {
+    for choice in CHOICES.map(|key| ctx().text(key).to_owned()) {
         assert!(i32::try_from(choice.chars().count()).unwrap() <= CHOICE_W - 4);
     }
 }

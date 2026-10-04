@@ -68,7 +68,10 @@ fn the_list_snapshot() {
 #[test]
 fn the_left_handed_list_shows_that_layouts_keys() {
     let h = open(Layout::LeftHanded);
-    assert!(h.snapshot().contains("  Keyboard · Left-handed    Controller  "));
+    assert!(
+        h.snapshot()
+            .contains("  Keyboard · Left-handed    Controller  ")
+    );
     assert!(row(&h, "Confirm").contains(" j "));
     assert!(row(&h, "Cursor up").contains(" w "));
 }

@@ -12,18 +12,20 @@ keys*), so a key written into game code or text is a bug: it stops working
 or lies after a rebind, and the two layouts already use different keys.
 
 Background: [ADR-0015](../../../docs/adr/0015-input-actions-and-keymap-layouts.md)
-(actions, layouts), and [ADR-0031](../../../docs/adr/0031-player-key-bindings.md)
-(player bindings, slots, fixed keys, saved config).
+(actions, layouts), [ADR-0031](../../../docs/adr/0031-player-key-bindings.md)
+(player bindings, slots, fixed keys, saved config), and
+[ADR-0050](../../../docs/adr/0050-player-controller-buttons.md) (the
+player's controller buttons in the same saved config).
 
 ## The pipeline (only these places know about keys)
 
 ```
 app/src/keys.rs        macroquad KeyCode → Key / Chord         (only macroquad key code)
 assets/data/keymap.ron default chords per action, per layout   (Nick's keys, controls.md)
-player config          Storage key `keybindings`               (per-layout, 3 slots; input/bindings.rs)
+player config          Storage key `keybindings`               (keys per layout + shared buttons, 3 slots; input/bindings.rs)
 ui/src/input.rs        Keymap + InputState: Chord → Action      (fixed Esc = Cancel)
 screens                see only `FrameInput.actions` / `is_held(Action)`
-screens/key_bindings.rs  the player edits their slots (reads `pressed_chords` to capture)
+screens/key_bindings.rs  the player edits their slots (reads `pressed_chords` / `pressed_buttons` to capture)
 widgets/help.rs, tips  Action → key or button name for text     (`ctx.help_keys()`)
 ```
 
@@ -62,14 +64,21 @@ buttons*; a test pins it).
 app/src/pads.rs, pads/   gilrs / browser Gamepad API → PadState   (only pad reads)
 ui/src/input/pad.rs      Pads: PadState → Button down/up          (sticks, Switch swap, merging)
 assets/data/keymap.ron   `pad`: default buttons per action; `stick` thresholds
+ui/src/input/bindings.rs PadBindings: the player's buttons        (one setup for both layouts; saved under `pad`)
 ui/src/input.rs          Keymap + InputState: Button → Action     (same repeat as keys)
 ui/src/input/pad.rs      PadKind::button_name: the only table of button names
 ```
 
 `Button::` may be named only where `Key::` may, plus
 `crates/app/src/pads.rs` and `crates/app/src/pads/` (`check-keys` enforces
-it). In code and data buttons are named by position (`South`, not "A");
-rebinding them is ticket 0816. Harness tests press them with
+it). In code and data buttons are named by position (`South`, not "A").
+Players rebind them on the Key bindings screen's controller side (ticket
+0816, ADR-0050): `PadBindings`, edited like `LayoutBindings` and handed
+back with `ctx.set_pad_bindings(…)`; **no button is fixed or reserved**,
+so nothing may assume a button keeps its default action, and a screen
+that must work with only a controller can't rely on a "safe" button
+(the Key bindings screen binds on release and backs out on a hold).
+Harness tests press them with
 `h.pad("DpadDown South")` / `h.hold_pad("DpadRight", 1.0)`, on the kind of
 pad set with `h.use_pad(PadKind::PlayStation)` (a generic one by default).
 
@@ -91,10 +100,10 @@ Nintendo's `A` on the right). You get this for free by following rule 2:
 - `HelpKeys::keyboard(&keymap)` only where the text is about the keyboard
   whatever the player holds: the layout picker's key list, the debug hint.
 - A button's name comes only from `PadKind::button_name` (D-pad directions
-  are `↑ ↓ ← →`; the cursor is `D-pad/stick` via `cursor_keys_name`). A new
+  are `↑ ↓ ← →`; the cursor is `D-pad/L-stick` via `cursor_keys_name`). A new
   name needs its glyphs in the font: `assets/fonts/README.md`, *Our own
   glyphs*; a test checks every name can be drawn.
-- Width: button names are longer than keys (`Options`, `D-pad/stick`).
+- Width: button names are longer than keys (`Options`, `D-pad/L-stick`).
   A help line must still fit the row on every pad; test the longest one
   (`the_longest_help_bar_fits_on_every_pad` in `tests/it/controller.rs`).
 - Tests that compare a controller run with a keyboard run compare
@@ -105,11 +114,12 @@ Nintendo's `A` on the right). You get this for free by following rule 2:
 1. **React to `Action`s, not keys.** Match on `Action::Confirm`, never on
    `Key::F`. Need a new kind of input? Add an `Action` (below); don't read
    raw keys. The exceptions: the Key bindings screen
-   (`screens/key_bindings.rs`, 0815), which reads
+   (`screens/key_bindings.rs`, 0815, 0816), which reads
    `FrameInput::pressed_chords()` to capture a key and to see the
-   clear-slot key, and asks `input.rs` helpers (`is_capture_abort`,
+   clear-slot key, and `pressed_buttons()` / `released_buttons()` to
+   capture a button, and asks `input.rs` helpers (`is_capture_abort`,
    `is_clear_slot`, `capture_abort_key_name`, `clear_slot_key_name`,
-   `CAPTURE_PROMPT`) instead of naming keys;
+   `CAPTURE_PROMPT`, `CAPTURE_BUTTON_PROMPT`) instead of naming keys;
    and **text boxes** (the lead's name, 0801), which ignore actions while
    open, take `FrameInput::text()` (typed characters, from `app`'s
    `RawKeyEvent::Text`) and ask `input::text_key` for their fixed
@@ -164,13 +174,15 @@ Nintendo's `A` on the right). You get this for free by following rule 2:
 - Harness scripts (`h.keys("Down f")`) may use key names: they pin the
   default right-handed layout on purpose. When a test is about the player's
   own keys, rebind in the test (`h.ctx_mut().set_layout_bindings(…)`
-  with an edited `ctx.layout_bindings(layout)`) and press the new key.
+  with an edited `ctx.layout_bindings(layout)`) and press the new key;
+  for buttons, `set_pad_bindings(…)` with an edited `ctx.pad_bindings()`.
 
 ## Checklist before pushing input work
 
 - [ ] No `Key::`, `Chord::` or `KeyCode` outside the allowed files.
 - [ ] No key names in player text or data; placeholders/helpers used.
-- [ ] Works in both layouts and with a rebound key (test at least one).
+- [ ] Works in both layouts and with a rebound key or button (test at
+      least one).
 - [ ] Unbound optional actions don't panic and show `! not mapped`.
 - [ ] Text that names a key uses `ctx.help_keys()`, reads right on a pad
       (Harness: `h.pad(…)` then look), and still fits its row.

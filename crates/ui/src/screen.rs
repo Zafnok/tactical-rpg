@@ -1077,7 +1077,10 @@ pub(crate) mod tests {
         let b = info_on_right_trigger(&c);
         assert_eq!(c.set_pad_bindings(b.clone()), Ok(()));
         assert_eq!(c.pad_bindings(), b);
-        assert_eq!(c.keymap.pad_action(Button::RightTrigger), Some(Action::Info));
+        assert_eq!(
+            c.keymap.pad_action(Button::RightTrigger),
+            Some(Action::Info)
+        );
         let saved = c.storage.read(KEYBINDINGS_KEY).unwrap().unwrap();
         assert_eq!(saved, c.player_keys().to_ron());
         // The keys are the layout's own; the other layout has the buttons too.
@@ -1087,7 +1090,10 @@ pub(crate) mod tests {
             Keymap::for_layout(&c.content.keymap, Layout::RightHanded).chords_for(Action::Info)
         );
         c.use_layout(Layout::LeftHanded);
-        assert_eq!(c.keymap.pad_action(Button::RightTrigger), Some(Action::Info));
+        assert_eq!(
+            c.keymap.pad_action(Button::RightTrigger),
+            Some(Action::Info)
+        );
         // Before a layout is chosen: the layout picker's keys, these buttons.
         let mut none = Ctx::embedded().unwrap();
         assert_eq!(none.set_pad_bindings(b.clone()), Ok(()));

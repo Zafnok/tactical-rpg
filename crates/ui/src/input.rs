@@ -22,9 +22,7 @@ pub mod pad;
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
-pub use bindings::{
-    BindError, ButtonSlots, LayoutBindings, PadBindings, PlayerKeys, Slots,
-};
+pub use bindings::{BindError, ButtonSlots, LayoutBindings, PadBindings, PlayerKeys, Slots};
 pub use pad::{ButtonSet, PadId, PadKind, PadState, Pads};
 pub use trpg_content::keymap::{
     Action, Button, Chord, Key, KeymapDef, Layout, LayoutKeys, PadKeys, RepeatDef, SLOTS, StickDef,
@@ -950,7 +948,10 @@ mod tests {
             PadKind::Nintendo,
             PadKind::Generic,
         ] {
-            assert_eq!(km.cursor_buttons_name(kind).as_deref(), Some("D-pad/L-stick"));
+            assert_eq!(
+                km.cursor_buttons_name(kind).as_deref(),
+                Some("D-pad/L-stick")
+            );
         }
     }
 

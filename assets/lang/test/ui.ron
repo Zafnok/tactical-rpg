@@ -15,4 +15,46 @@
         source: "{Cursor} move · {Confirm} select · {Cancel} back",
         text: "{Cursor} MOVE · {Confirm} SELECT · {Cancel} BACK",
     ),
+    // The Key bindings screen (ticket 0816).
+    (key: "key_bindings.keyboard", source: "Keyboard", text: "KEYBOARD"),
+    (key: "key_bindings.controller", source: "Controller", text: "CONTROLLER"),
+    (key: "key_bindings.button_column", source: "Button {n}", text: "BUTTON {n}"),
+    (
+        key: "key_bindings.must_have_button",
+        source: "Must have a button",
+        text: "MUST HAVE A BUTTON",
+    ),
+    (key: "key_bindings.optional", source: "Optional", text: "OPTIONAL"),
+    (key: "key_bindings.change", source: "Change", text: "CHANGE"),
+    (key: "key_bindings.clear", source: "Clear", text: "CLEAR"),
+    (
+        key: "key_bindings.hold_to_cancel",
+        source: "hold any button to cancel",
+        text: "HOLD ANY BUTTON TO CANCEL",
+    ),
+    (
+        key: "key_bindings.restore_buttons",
+        source: "Restore the default buttons?",
+        text: "RESTORE THE DEFAULT BUTTONS?",
+    ),
+    (
+        key: "key_bindings.blocked_button",
+        source: "Give {action} a button first",
+        text: "GIVE {action} A BUTTON FIRST",
+    ),
+    (
+        key: "key_bindings.help_choice",
+        source: "{Cursor} move · {Confirm} select · {Cancel} back",
+        text: "{Cursor} MOVE · {Confirm} SELECT · {Cancel} BACK",
+    ),
+    (
+        key: "key_bindings.help_switch",
+        source: "{CursorLeft}/{CursorRight} keyboard or controller · {Cursor} move · {Cancel} back",
+        text: "{CursorLeft}/{CursorRight} KEYBOARD OR CONTROLLER · {Cursor} MOVE · {Cancel} BACK",
+    ),
+    (
+        key: "key_bindings.help_slot_pad",
+        source: "{Cursor} move · {Confirm} change · {Cancel} back",
+        text: "{Cursor} MOVE · {Confirm} CHANGE · {Cancel} BACK",
+    ),
 ]

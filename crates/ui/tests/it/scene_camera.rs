@@ -147,7 +147,7 @@ fn the_help_line_names_the_keys_or_the_buttons() {
     assert!(keys.contains("d back"), "{keys}");
     h.use_pad(PadKind::Xbox).pad("South");
     let pad = h.snapshot();
-    assert!(pad.contains("D-pad/stick pan (hold)"), "{pad}");
+    assert!(pad.contains("D-pad/L-stick pan (hold)"), "{pad}");
     assert!(pad.contains("A zoom"), "{pad}");
     assert!(pad.contains("B back"), "{pad}");
     assert_eq!(h.game().buffer().backdrop().unwrap().zoom(), 2);
