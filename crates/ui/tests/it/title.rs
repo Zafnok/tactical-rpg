@@ -72,7 +72,7 @@ fn holding_down_repeats_and_wraps() {
     // Quick Battle is there), wrapping round to Quick Battle.
     let mut h = title();
     h.hold("Down", 0.48).wait(0.5).keys("f");
-    assert_eq!(h.top_screen(), "battle");
+    assert_eq!(h.top_screen(), "preparations");
 }
 
 #[test]

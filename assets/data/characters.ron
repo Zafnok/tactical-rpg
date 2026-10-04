@@ -62,6 +62,16 @@
             weapon_ranks: [(Bow, D)],
             loadout: (weapons: ["iron_bow"], armour: Some("leather_vest")),
         ),
+        // A second archer who sits the debug Quick Battle out, with the
+        // better bow: for trading gear on the Preparations screen (0408).
+        (
+            id: "test_scout", class: "archer", level: 1,
+            map_label: Some("Sc"),
+            talent: Spd,
+            base: (16, 4, 0, 6, 7, 2, 1),
+            weapon_ranks: [(Bow, D)],
+            loadout: (weapons: ["steel_bow"], armour: Some("leather_vest")),
+        ),
         // An enemy the lord can talk into joining: the debug Quick
         // Battle's trigger fixture (ticket 0705).
         (

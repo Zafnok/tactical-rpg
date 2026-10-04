@@ -26,9 +26,10 @@ pub const BATTLES_DIR: &str = "battles";
 /// Extension of a battle file.
 const EXTENSION: &str = ".ron";
 
-/// The message for a battle that asks for the Preparations screen, which
-/// doesn't exist yet (ticket 0408 removes this check).
-pub const NO_PREPARATIONS: &str = "Preparations screen not built yet, ticket 0408";
+/// The message for a battle with Preparations that also lists a default
+/// pack: there the player brings only what they own (Nick, 0408).
+pub const PACK_WITH_PREPARATIONS: &str =
+    "default_pack: a battle with Preparations has none; the player packs their own items";
 
 /// The most battle notes a battle may have: with [`MAX_NOTE_CHARS`], they
 /// always fit the notes panel and the `Objective` page.
@@ -73,6 +74,10 @@ struct RawBattle {
     pack_cap: Option<usize>,
     #[serde(default)]
     default_pack: Vec<String>,
+    #[serde(default)]
+    solo_stock: Vec<String>,
+    #[serde(default)]
+    solo_bench: Vec<String>,
     #[serde(default)]
     clear_gold: u32,
     objective: RawObjective,
@@ -218,9 +223,6 @@ pub fn from_source(
         v.err(format!("no map \"{}\"", raw.map));
         return Err(v.errors);
     };
-    if raw.preparations {
-        v.err(NO_PREPARATIONS.to_owned());
-    }
     let slot_ids = slot_ids(&raw.player_slots, raw.enemies.len());
     let early = raw.player_slots.iter().filter(|s| !s.after_enemies).count();
     let mut next_id = BattleDef::first_enemy_id(early);
@@ -263,7 +265,8 @@ pub fn from_source(
         .collect();
     let objective = v.objective(&raw.objective, &map, &everyone);
     let pack_cap = raw.pack_cap.unwrap_or(refs.items.rules.default_pack_cap);
-    let default_pack = v.pack(&raw.default_pack, pack_cap);
+    let default_pack = v.pack(&raw.default_pack, pack_cap, raw.preparations);
+    let (solo_stock, solo_bench) = v.solo(&raw.solo_stock, &raw.solo_bench);
     v.music(&raw.music);
     v.errors.extend(check_map_labels(file, &everyone));
     v.errors.extend(check_triggers(
@@ -295,6 +298,8 @@ pub fn from_source(
         preparations: raw.preparations,
         pack_cap,
         default_pack,
+        solo_stock,
+        solo_bench,
         clear_gold: raw.clear_gold,
         objective: objective.unwrap_or(Objective::Rout { turn_limit: None }),
         triggers: raw.triggers,
@@ -641,8 +646,17 @@ impl<'a, 'r> Checker<'a, 'r> {
         }
     }
 
-    /// The default pack's items: known consumables, at most `cap`.
-    fn pack(&mut self, items: &[String], cap: usize) -> Vec<ItemId> {
+    /// The stock and the bench of the battle played on its own.
+    fn solo(&mut self, stock: &[String], bench: &[String]) -> (Vec<ItemId>, Vec<CharacterId>) {
+        (self.solo_stock(stock), self.solo_bench(bench))
+    }
+
+    /// The default pack's items: known consumables, at most `cap`, and
+    /// none in a battle with `preparations`.
+    fn pack(&mut self, items: &[String], cap: usize, preparations: bool) -> Vec<ItemId> {
+        if preparations && !items.is_empty() {
+            self.err(PACK_WITH_PREPARATIONS.to_owned());
+        }
         if items.len() > cap {
             self.err(format!(
                 "default_pack: {} items, more than the pack cap {cap}",
@@ -654,6 +668,35 @@ impl<'a, 'r> Checker<'a, 'r> {
                 Some(ItemDef::Consumable(_)) => {}
                 Some(_) => self.err(format!("default_pack: \"{item}\" isn't a consumable")),
                 None => self.err(format!("default_pack: no item \"{item}\"")),
+            }
+        }
+        items.iter().map(|i| ItemId::new(i)).collect()
+    }
+
+    /// The solo bench's characters: known, and not in the battle.
+    fn solo_bench(&mut self, characters: &[String]) -> Vec<CharacterId> {
+        for (i, c) in characters.iter().enumerate() {
+            if !self
+                .refs
+                .characters
+                .characters
+                .contains_key(&CharacterId(c.clone()))
+            {
+                self.err(format!("solo_bench: no character \"{c}\""));
+            } else if self.cast.contains(c) || characters[..i].contains(c) {
+                self.err(format!(
+                    "solo_bench: \"{c}\" is already in the battle or listed twice"
+                ));
+            }
+        }
+        characters.iter().map(|c| CharacterId(c.clone())).collect()
+    }
+
+    /// The solo stock's items: any known items.
+    fn solo_stock(&mut self, items: &[String]) -> Vec<ItemId> {
+        for item in items {
+            if self.refs.items.get(&ItemId::new(item)).is_none() {
+                self.err(format!("solo_stock: no item \"{item}\""));
             }
         }
         items.iter().map(|i| ItemId::new(i)).collect()

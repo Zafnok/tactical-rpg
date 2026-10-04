@@ -13,7 +13,8 @@ use trpg_ui::map_view::RangeKind;
 /// under turn 1's `PLAYER PHASE` banner.
 fn quick_battle_banner() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down f");
+    // Quick Battle, then Preparations: Left wraps to `Fight!`.
+    h.keys("Down f Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     h
 }
@@ -481,7 +482,7 @@ fn the_lord_fights_the_near_brigand_on_turn_one() {
 #[test]
 fn tips_show_when_switched_on() {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.with_tips().keys("Down f");
+    h.with_tips().keys("Down f Left f");
     // The start tip waits for the `PLAYER PHASE` banner.
     assert!(shows(&h, "PLAYER PHASE"));
     assert!(!shows(&h, "Your move"));
@@ -579,7 +580,10 @@ fn a_battle_keeps_the_cue_its_file_names() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     let quick = h.ctx_mut().content.battles.get_mut("quick").unwrap();
     quick.music = trpg_core::BattleMusic::Cue("battle_bright".into());
-    h.keys("Down f f");
+    // The track starts on the Preparations screen and stays on.
+    h.keys("Down f");
+    assert_eq!(music(&h), ["title", "battle_bright"]);
+    h.keys("Left f f");
     assert_eq!(music(&h), ["title", "battle_bright"]);
     nothing_changes_the_music(&mut h);
     assert_eq!(music(&h), ["title", "battle_bright"]);

@@ -31,7 +31,7 @@ fn full_screen() -> Harness {
 /// menu's "Play test scene (overlay)".
 fn over_the_map() -> Harness {
     let mut h = Harness::with_layout(Layout::RightHanded);
-    h.keys("Down f f F2 Down Down Down f");
+    h.keys("Down f Left f f F2 Down Down Down f");
     assert_eq!(h.screens(), ["title", "battle", "dialogue"]);
     h
 }

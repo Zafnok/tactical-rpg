@@ -284,7 +284,7 @@ fn save_after_victory_then_load_starts_the_next_chapter() {
     let mut h = first_launch(true);
     // Nothing saved yet: Load Game can't be chosen (Down skips it).
     h.keys("Down f");
-    assert_eq!(h.screens(), ["title", "battle"], "Quick Battle");
+    assert_eq!(h.screens(), ["title", "preparations"], "Quick Battle");
     let mut h = relaunch(h, true);
     to_battle(&mut h);
     h.wait(5.0);
@@ -298,7 +298,8 @@ fn save_after_victory_then_load_starts_the_next_chapter() {
     assert_eq!(h.screens(), ["title", "save_slots"]);
     assert_snapshot!("save_slots_empty", h.snapshot());
     h.keys("f");
-    assert_eq!(h.screens(), ["title", "battle"], "the next chapter");
+    // The next chapter: the Quick Battle, which has Preparations.
+    assert_eq!(h.screens(), ["title", "preparations"], "the next chapter");
     assert_eq!(campaign(&h).chapter, "quick");
     let saved = stored(&h, &slot_key(1)).unwrap_or_else(|| panic!("slot 1 is empty"));
     let mut saved: SaveFile = ron::from_str(&saved).unwrap_or_else(|e| panic!("{e}"));
@@ -317,7 +318,7 @@ fn save_after_victory_then_load_starts_the_next_chapter() {
     assert!(shows(&h, "0:00:05"));
     assert_snapshot!("load_slots", h.snapshot());
     h.keys("f");
-    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(h.screens(), ["title", "preparations"]);
     let loaded = campaign(&h);
     assert_eq!(loaded.chapter, "quick");
     assert_eq!(loaded.roster, won.roster);
@@ -328,7 +329,9 @@ fn save_after_victory_then_load_starts_the_next_chapter() {
     assert_eq!(h.game().ctx().lead, won.lead);
     let chapter = h.flow().and_then(|f| f.chapter()).map(|c| c.id.clone());
     assert_eq!(chapter.as_deref(), Some("quick"));
-    // Only the knight has a slot in the Quick Battle.
+    // Fight! (Left wraps to it). Only the knight has a slot in the Quick
+    // Battle.
+    h.keys("Left f");
     let players: Vec<String> = battle(&h)
         .units()
         .iter()
@@ -387,7 +390,7 @@ fn saving_again_opens_on_an_empty_slot_and_asks_before_overwriting() {
     // Yes, the first empty slot (1).
     h.keys("f f");
     assert!(stored(&h, &slot_key(1)).is_some());
-    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(h.screens(), ["title", "preparations"]);
     // The next launch: Load Game opens on that save; back to the title.
     let mut h = relaunch(h, true);
     h.keys("Down f");
@@ -410,7 +413,7 @@ fn saving_again_opens_on_an_empty_slot_and_asks_before_overwriting() {
     assert_eq!(stored(&h, &slot_key(1)), first);
     // No: back to the list. Down to the empty slot and save there.
     h.keys("d Down f");
-    assert_eq!(h.screens(), ["title", "battle"]);
+    assert_eq!(h.screens(), ["title", "preparations"]);
     assert_eq!(stored(&h, &slot_key(1)), first);
     assert!(stored(&h, &slot_key(2)).is_some());
 }
@@ -510,7 +513,8 @@ fn a_suspend_save_of_an_unknown_chapter_cant_be_continued() {
 #[test]
 fn the_quick_battle_suspends_too() {
     let mut h = first_launch(false);
-    h.keys("Down f");
+    // Through Preparations (Left wraps to `Fight!`).
+    h.keys("Down f Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     close_banner(&mut h);
     let archer = battle(&h).unit(UnitId(3)).map(|u| u.pos);

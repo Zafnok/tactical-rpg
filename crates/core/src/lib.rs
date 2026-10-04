@@ -14,6 +14,7 @@ pub mod legal;
 pub mod magic;
 pub mod map;
 pub mod movement;
+pub mod prep;
 pub mod progression;
 pub mod rng;
 pub mod save;
@@ -60,6 +61,7 @@ pub use movement::{
     AttackRange, MoveError, PathError, Reach, TileSet, attack_tiles, danger_zone, path_cost,
     reachable, threat_area,
 };
+pub use prep::{GearSlot, PrepError, PrepUnit, Preparations, StockItem, Unusable};
 pub use progression::{
     ChangeTables, ClassChangeError, CombatResult, StatGains, apply_gains, exp_for_combat,
     grant_class_points, grant_exp, growth, has_mastered, level_up, promote, promotion_gains,

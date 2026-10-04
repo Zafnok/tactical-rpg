@@ -1083,7 +1083,8 @@ mod tests {
                 "test_knight",
                 "test_lord",
                 "test_mage",
-                "test_rogue"
+                "test_rogue",
+                "test_scout"
             ]
         );
         assert_eq!(t.generics.len(), 3);

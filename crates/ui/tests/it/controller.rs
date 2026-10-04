@@ -18,7 +18,8 @@ fn title() -> Harness {
 /// with the keyboard, and its `PLAYER PHASE` banner closed.
 fn quick_battle() -> Harness {
     let mut h = title();
-    h.keys("Down f f");
+    // Quick Battle, then Preparations: Left wraps to `Fight!`.
+    h.keys("Down f Left f f");
     h
 }
 
@@ -75,6 +76,8 @@ fn the_title_menu_works_with_a_pad() {
     assert_eq!(h.screens(), ["title"]);
     // The D-pad and the left stick both move the menu.
     h.pad("DpadDown South");
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    h.pad("DpadLeft South");
     assert_eq!(h.screens(), ["title", "battle"]);
     let mut h = title();
     h.pad("LeftStickDown LeftStickDown LeftStickDown South");
@@ -84,7 +87,7 @@ fn the_title_menu_works_with_a_pad() {
 #[test]
 fn quick_battle_starts_the_same_from_a_pad() {
     let mut h = title();
-    h.pad("DpadDown South South");
+    h.pad("DpadDown South DpadLeft South South");
     assert_eq!(as_keys(&mut h), quick_battle().snapshot());
 }
 
@@ -193,7 +196,7 @@ fn holding_confirm_on_the_pad_fast_forwards_like_the_key() {
 #[test]
 fn keys_and_buttons_work_side_by_side() {
     let mut mixed = title();
-    mixed.pad("DpadDown").keys("f");
+    mixed.pad("DpadDown").keys("f").pad("DpadLeft").keys("f");
     assert_eq!(mixed.screens(), ["title", "battle"]);
     // The `PLAYER PHASE` banner.
     mixed.pad("South");
@@ -319,8 +322,8 @@ fn a_tip_names_the_buttons_of_the_pad_in_use() {
         let mut h = title();
         h.with_tips();
         match kind {
-            Some(kind) => h.use_pad(kind).pad("DpadDown South South"),
-            None => h.keys("Down f f"),
+            Some(kind) => h.use_pad(kind).pad("DpadDown South DpadLeft South South"),
+            None => h.keys("Down f Left f f"),
         };
         assert_eq!(h.screens(), ["title", "battle"]);
         h.wait(0.5);

@@ -52,7 +52,7 @@ use trpg_content::{Content, TipTrigger, battle_campaign};
 
 use trpg_core::lead::DEFAULT_NAME;
 use trpg_core::{
-    BattleHistory, BattleState, CastTarget, Command, Equipped, Event, Faction, GameMode,
+    BattleHistory, BattleState, CastTarget, Command, Equipped, Event, Faction, GameMode, ItemId,
     LeadGender, LeadProfile, Phase, Pos, StatValue, TileSet, Unit, UnitId, danger_zone,
     next_command,
 };
@@ -92,6 +92,8 @@ pub const QUICK_BATTLE: &str = "quick";
 /// (a caster among them, unit 8) against generic enemies (rout), one
 /// brigand close enough to fight on turn 1, a Frost Elemental holding its
 /// tile, and a trigger of each kind about a rogue who arrives on turn 2.
+/// Its pack holds [`QUICK_PACK_POTIONS`] Potions from its stock, as if
+/// packed on the Preparations screen the title's Quick Battle opens first.
 /// Fails with a message if the content lacks it.
 pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
     let def = content
@@ -100,8 +102,17 @@ pub fn quick_battle(content: &Content) -> Result<BattleState, String> {
         .ok_or_else(|| format!("no battle \"{QUICK_BATTLE}\""))?;
     let lead = LeadProfile::new(DEFAULT_NAME, LeadGender::Male);
     let campaign = battle_campaign(content, def, GameMode::Classic, lead);
-    Ok(BattleState::new(campaign.battle_setup(def, &content.tables())).0)
+    let mut setup = campaign.battle_setup(def, &content.tables());
+    for _ in 0..QUICK_PACK_POTIONS {
+        setup
+            .pack_from_stock(&ItemId::new("potion"))
+            .map_err(|e| format!("packing a potion: {e}"))?;
+    }
+    Ok(BattleState::new(setup).0)
 }
+
+/// Potions in the pack of [`quick_battle`].
+pub const QUICK_PACK_POTIONS: usize = 3;
 
 /// How long the `Auto-end: ON/OFF` message stays, in seconds. *Tunable.*
 pub const TOAST_S: f32 = 1.5;

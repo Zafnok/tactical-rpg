@@ -25,7 +25,7 @@ type Step = (&'static str, f32);
 /// attacks it, the fight is rewound, the turn ends, the enemy phase plays,
 /// and turn 2 starts.
 const SCRIPT: [Step; 16] = [
-    ("Down f", 0.0),
+    ("Down f Left f", 0.0),
     ("f", 0.0),
     ("f Right Right Right Up", 0.0),
     ("f", 0.5),
@@ -100,7 +100,7 @@ fn the_skin_never_changes_the_game() {
 fn quick_battle_under_the_sprite_skin() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     h.with_map_skin("sprite");
-    h.keys("Down f f");
+    h.keys("Down f Left f f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert!(
         h.map_text().starts_with("origin (-4,-6) size 23x20\n"),
@@ -116,6 +116,6 @@ fn quick_battle_under_the_sprite_skin() {
 fn quick_battle_under_the_sprite_skin_with_a_unit_selected() {
     let mut h = Harness::with_layout(Layout::RightHanded);
     h.with_map_skin("sprite");
-    h.keys("Down f f f Right Right");
+    h.keys("Down f Left f f f Right Right");
     assert_snapshot!(h.snapshot());
 }

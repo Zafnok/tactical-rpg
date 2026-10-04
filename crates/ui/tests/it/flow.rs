@@ -449,7 +449,8 @@ fn the_phase_banner_waits_for_the_battle_notes() {
 #[test]
 fn no_notes_box_for_a_battle_without_notes() {
     let mut h = title();
-    h.keys("Down f");
+    // Quick Battle, then Preparations: Left wraps to `Fight!`.
+    h.keys("Down f Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     assert!(battle(&h).battle_notes().is_empty());
     assert!(!notes_open(&h));
@@ -594,13 +595,17 @@ fn back_out_of_new_game() {
 #[test]
 fn quick_battle_runs_through_the_flow() {
     let mut h = title();
+    // Preparations first; Left wraps to `Fight!`.
     h.keys("Down f");
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    h.keys("Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     let campaign = flow.campaign().unwrap_or_else(|| panic!("no campaign"));
     assert_eq!(campaign.chapter, "quick");
     assert_eq!(campaign.mode, GameMode::Classic);
-    assert_eq!(campaign.roster.len(), 4);
+    // Its four slots' characters and the scout left out of the battle.
+    assert_eq!(campaign.roster.len(), 5);
     assert_eq!(battle(&h).units().len(), 8);
 }
 
@@ -636,6 +641,16 @@ fn the_next_chapter_follows_a_victory() {
     past_results(&mut h);
     skip_scene(&mut h);
     decline_save(&mut h);
+    // The Quick Battle has Preparations, with the army's own stock: the
+    // two Potions left over from the test battle.
+    assert_eq!(h.screens(), ["title", "preparations"]);
+    let prep = h.flow().and_then(|f| f.preparations());
+    let prep = prep.unwrap_or_else(|| panic!("no preparations"));
+    assert_eq!(prep.spare(), [(trpg_core::ItemId::new("potion"), 2)]);
+    // A story battle's Preparations can't be left.
+    h.keys("d");
+    assert!(!shows(&h, "Leave preparations?"), "{}", h.snapshot());
+    h.keys("Left f");
     assert_eq!(h.screens(), ["title", "battle"]);
     let flow = h.flow().unwrap_or_else(|| panic!("no flow"));
     assert_eq!(flow.chapter().map(|c| c.id.as_str()), Some("quick"));

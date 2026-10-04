@@ -10,7 +10,8 @@ here.
 | ----- | ---- | ------ | ------ |
 | Stats & combat maths | [`stats-and-combat.md`](stats-and-combat.md) | 0001 | ✅ decided 2026-09-25 |
 | Turn structure | [`turn-structure.md`](turn-structure.md) | 0002 | ✅ decided 2026-09-25 |
-| Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003 | ✅ decided 2026-09-25 |
+| Weapons, gear, items, shops | [`weapons-and-items.md`](weapons-and-items.md) | 0003, 0408 (Preparations) | ✅ decided 2026-09-25 (Preparations: bring only your own items, retry returns there, 2026-10-01) |
+| The Preparations shop: basic items and tiers | `weapons-and-items.md` | 0044 | ⏳ after playtest 0804 |
 | Combat Arts (and active-skill costs) | [`combat-arts.md`](combat-arts.md) | 0014 | ✅ decided 2026-09-25 (non-attack actives cost uses per battle, 2026-10-01) |
 | Combat Arts for ranks C–S, special weapons | `combat-arts.md` | 0018 | ⏳ after playtest 0804 |
 | Magic & healing | [`magic.md`](magic.md) | 0004 | ✅ decided 2026-09-25 (spells after a class change and terrain magic details revised 2026-09-27; casting on the battle screen added 2026-10-01) |

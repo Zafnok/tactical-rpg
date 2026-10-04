@@ -103,6 +103,7 @@ fn a_valid_battle_loads() {
     assert_eq!(rogue.unit.role, Role::Regular);
     assert_eq!(rogue.unit.name, "Test Rogue");
     assert!(!def.preparations);
+    assert!(def.solo_stock.is_empty() && def.solo_bench.is_empty());
     assert_eq!(def.pack_cap, 3);
     assert_eq!(
         def.default_pack,
@@ -174,14 +175,56 @@ fn file_level_errors() {
         errors(&c, "\"test_small\"", "\"nowhere\""),
         ["no map \"nowhere\""]
     );
+    // With Preparations the player packs their own items.
     assert_eq!(
         errors(&c, "pack_cap: 3,", "pack_cap: 3, preparations: true,"),
-        [NO_PREPARATIONS]
+        [PACK_WITH_PREPARATIONS]
     );
     assert_eq!(
-        NO_PREPARATIONS,
-        "Preparations screen not built yet, ticket 0408"
+        PACK_WITH_PREPARATIONS,
+        "default_pack: a battle with Preparations has none; the player packs their own items"
     );
+    let prepared = OK.replacen(
+        "default_pack: [\"potion\", \"elixir\"],",
+        "preparations: true, solo_stock: [\"potion\", \"iron_sword\"],",
+        1,
+    );
+    let def = load(&c, &prepared).unwrap_or_else(|e| panic!("{e:?}"));
+    assert!(def.preparations && def.default_pack.is_empty());
+    assert_eq!(
+        def.solo_stock,
+        [ItemId::new("potion"), ItemId::new("iron_sword")]
+    );
+    assert_eq!(
+        errors(&c, "pack_cap: 3,", "pack_cap: 3, solo_stock: [\"nope\"],"),
+        ["solo_stock: no item \"nope\""]
+    );
+    // The solo bench: characters of the army who sit the battle out.
+    let benched = OK.replacen(
+        "pack_cap: 3,",
+        "pack_cap: 3, solo_bench: [\"test_archer\"],",
+        1,
+    );
+    let def = load(&c, &benched).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(def.solo_bench, [CharacterId("test_archer".into())]);
+    for (bench, error) in [
+        ("\"nobody\"", "solo_bench: no character \"nobody\""),
+        (
+            "\"test_knight\"",
+            "solo_bench: \"test_knight\" is already in the battle or listed twice",
+        ),
+        (
+            "\"test_rogue\"",
+            "solo_bench: \"test_rogue\" is already in the battle or listed twice",
+        ),
+        (
+            "\"test_archer\", \"test_archer\"",
+            "solo_bench: \"test_archer\" is already in the battle or listed twice",
+        ),
+    ] {
+        let to = format!("pack_cap: 3, solo_bench: [{bench}],");
+        assert_eq!(errors(&c, "pack_cap: 3,", &to), [error]);
+    }
     // A RON error is positioned.
     let e = load(&c, "(id: 1)").err().unwrap_or_default();
     assert_eq!(e.len(), 1);

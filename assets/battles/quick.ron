@@ -26,7 +26,19 @@
     reinforcements: [
         (turn: 2, unit: (character: "test_rogue", pos: (12, 3))),
     ],
-    default_pack: ["potion", "potion", "potion"],
+    // Preparations first (ticket 0408), with spare gear and consumables to
+    // try it with: an axe nobody here can use, plate only the knight can
+    // wear, a robe the knight can't. The scout sits the battle out with a
+    // Steel Bow the archer could use.
+    preparations: true,
+    solo_bench: ["test_scout"],
+    solo_stock: [
+        "steel_spear", "iron_axe", "iron_sword",
+        "iron_plate", "warded_robe", "chain_mail",
+        "speed_ring", "power_ring", "focus_charm",
+        "potion", "potion", "potion", "potion", "potion", "potion",
+        "elixir", "elixir",
+    ],
     objective: Rout(),
     triggers: [
         (when: TurnStart(turn: 3, phase: Player), scene: "test_turn_3", once: true),

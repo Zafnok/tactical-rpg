@@ -1,0 +1,78 @@
+---
+source: crates/ui/src/screens/preparations/tests.rs
+expression: h.snapshot()
+---
+                                                                                                    
+  Preparations                 Loadouts      Pack      Fight!                                       
+                                                                                                    
+        ┌─ Stock ──────────────────────────────┐    ┌─ Pack 6/6 ───────────────────────────┐        
+        │ Elixir          ×1   Restore all HP  │    │ Elixir          ×1   Restore all HP  │        
+        │ Potion          ×1   Restore 10 HP   │    │ Potion          ×5   Restore 10 HP   │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        │                                      │    │                                      │        
+        └──────────────────────────────────────┘    └──────────────────────────────────────┘        
+                                                                                                    
+                                      The pack is full (6/6).                                       
+                                                                                                    
+                                 arrows choose · f pack it · d back                                 
+--- colours ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaccdddddddcccccccccccccccccccccccccccccccaaaaeeddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacggggggggggggggggggggggggggggggggggggggcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaacffffffffffffffffffffffffffffffffffffffcaaaaeffffffffffffffffffffffffffffffffffffffeaaaaaaaa
+aaaaaaaaccccccccccccccccccccccccccccccccccccccccaaaaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- legend ---
+a = fg:text bg:black
+b = fg:text_highlight bg:black
+c = fg:panel_border_focus bg:panel_bg
+d = fg:text_highlight bg:panel_bg
+e = fg:panel_border bg:panel_bg
+f = fg:text bg:panel_bg
+g = fg:panel_bg bg:panel_border_focus
+h = fg:text_dim bg:black

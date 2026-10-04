@@ -252,7 +252,7 @@ fn writes_the_title_screen_and_the_same_bytes_twice() {
 #[test]
 fn keys_reach_the_quick_battle_map() {
     let dir = temp_dir("battle");
-    let options = parse_args(&args(&["b.png", "--keys", "Down f", "--scale", "1"])).unwrap();
+    let options = parse_args(&args(&["b.png", "--keys", "Down f Left f", "--scale", "1"])).unwrap();
     let summary = run(&dir, &options).unwrap();
     assert!(summary.starts_with("frame-png: battle → "), "{summary}");
     fs::remove_dir_all(&dir).unwrap();

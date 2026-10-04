@@ -11,7 +11,7 @@ use crate::stats::Growths;
 use crate::terrain::MovementTypeId;
 use crate::unit::{Faction, UnitId};
 
-fn id(s: &str) -> ItemId {
+pub(crate) fn id(s: &str) -> ItemId {
     ItemId::new(s)
 }
 
@@ -41,7 +41,7 @@ fn bonus(f: impl FnOnce(&mut Stats)) -> Stats {
 }
 
 /// Swords (E and D), a bow, an axe, a vest, chain mail, a ring, a potion.
-fn items() -> ItemTable {
+pub(crate) fn items() -> ItemTable {
     let entries = [
         ("sword", weapon(WeaponKind::Sword, WeaponRank::E, (1, 1))),
         (
@@ -98,7 +98,7 @@ fn items() -> ItemTable {
     }
 }
 
-fn class() -> ClassDef {
+pub(crate) fn class() -> ClassDef {
     ClassDef {
         id: ClassId("fencer".into()),
         name: "Fencer".into(),
@@ -125,7 +125,7 @@ fn class() -> ClassDef {
     }
 }
 
-fn classes_with(class: ClassDef) -> ClassTable {
+pub(crate) fn classes_with(class: ClassDef) -> ClassTable {
     ClassTable {
         classes: BTreeMap::from([(class.id.clone(), class)]),
         hard_ceilings: Stats::from_growable([60, 30, 30, 30, 30, 30, 30], 15),
@@ -133,12 +133,12 @@ fn classes_with(class: ClassDef) -> ClassTable {
     }
 }
 
-fn classes() -> ClassTable {
+pub(crate) fn classes() -> ClassTable {
     classes_with(class())
 }
 
 /// A tier-3 mage with 0 weapon slots.
-fn mage_class() -> ClassDef {
+pub(crate) fn mage_class() -> ClassDef {
     ClassDef {
         weapon_slots: 0,
         ..class()
@@ -156,7 +156,7 @@ fn learn(mut u: Unit, spell: &str, uses: u8) -> Unit {
     u
 }
 
-fn unit() -> Unit {
+pub(crate) fn unit() -> Unit {
     let mut u = Unit::generic(
         UnitId(1),
         &ClassId("fencer".into()),

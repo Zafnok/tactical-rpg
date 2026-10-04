@@ -28,7 +28,7 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
     reinforcements: [
         (turn: 3, unit: (template: "brigand", pos: (23, 8))),
     ],
-    preparations: false,                // true once 0408 exists
+    preparations: false,                // true: the Preparations screen first
     pack_cap: 3,
     default_pack: ["potion", "potion", "potion"],
     clear_gold: 1000,
@@ -55,9 +55,11 @@ plays; later the world map's battles and skirmishes (1007, 1008) will too.
 | `player_slots` | Where each roster member goes: `(character, pos)`. A slot whose character isn't in the army (e.g. dead in Classic) stays empty; roster members without a slot sit the battle out. The first slot's unit is unit 1, the next unit 2, … A slot with `after_enemies: true` is numbered after the enemies instead (and before the reinforcements): for adding a unit to a battle without renumbering the others. |
 | `enemies` | The other units on the map at the start (numbered after the slots). Each is a generic `template` (from `characters.ron`'s `generics`) **or** a named `character`, written bare (`template: "brigand"`). Optional: `level: Some(n)` (templates only; a character's level is its own), `ai` (`Aggressive` default, `Guard`, `Stationary`, `Healer`), `loadout: Some((weapons: [...], armour: Some(..), accessory: Some(..)))` instead of the template's or character's, `boss: true`, `name: Some("Garth")` (a display name; the map label becomes its first two letters), `id: "frost_1"` (written bare: a name for `battle_notes` to point at this unit). Enemies carry no consumables (`weapons-and-items.md`). |
 | `reinforcements` | Units that arrive later: `(turn, unit: <an enemy entry>)`, numbered after the enemies. One on an occupied tile waits (`turn-structure.md`). |
-| `preparations` | Whether the Preparations screen comes first. **Not built yet (0408)**: `true` is refused. |
+| `preparations` | Whether the Preparations screen comes first (0408): the player changes the loadouts of the deployed units and fills the pack **from their own stock**, so such a battle has no `default_pack`. Default `false`. |
 | `pack_cap` | How many consumables the pack may hold, written bare (`pack_cap: 3`). Default: `default_pack_cap` in `items.ron` (6). |
-| `default_pack` | The consumables brought in without Preparations. |
+| `default_pack` | The consumables brought in without Preparations (given for free). Must be empty with `preparations: true`. |
+| `solo_bench` | Characters in the army but not in the battle when it is played on its own (the Quick Battle): Preparations lists them so their gear can be traded. Ignored in the story. Default: empty. |
+| `solo_stock` | The stock when the battle is played on its own (the debug Quick Battle): item ids, one entry per item. Ignored in the story, where the stock is the campaign's. Default: empty. |
 | `clear_gold` | Gold for winning. Default 0. |
 | `objective` | `Rout()`, `DefeatUnit(unit: "garth")` (a character among the enemies or reinforcements), `Seize(pos: (x, y), by_lord: true)`, `Survive(turns: 8)`. The first three take an optional `turn_limit: Some(n)`. |
 | `triggers` | The battle's story moments (0705, ADR-0030): `(when: …, scene: "id", once: true)`, with `when` one of `TurnStart(turn, phase)`, `UnitEntersArea(who: Character("id") \| Faction(Player), area: (x, y, w, h))`, `CombatStart(unit, against: Some("id"))`, `HalfHp(unit)`, `UnitFell(unit, mode: Some(Classic), recruit: true)`, `Talk(a, b)`. |
@@ -72,7 +74,7 @@ All reported at once, naming the entry (`player slot 2 ("bors")`,
 `enemy 3`, `reinforcement 1`):
 
 - the id doesn't match the file name; an unknown map;
-- `preparations: true` ("Preparations screen not built yet, ticket 0408");
+- `preparations: true` with a `default_pack`; an unknown `solo_stock` item; a `solo_bench` character that is unknown, in the battle or listed twice;
 - an unknown character or template; an enemy with both or neither;
 - a level outside `1..=level_cap`, or a level given for a character;
 - a loadout the unit can't carry;
